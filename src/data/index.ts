@@ -2,14 +2,16 @@
 // Loads puzzle definitions from the local JSON files.
 // Swap the import (or add a second loader) for Greek support later.
 
-import type { Puzzle, Language } from "@/types";
+import type { Language, Puzzle } from "@/types";
+
 import englishPuzzles from "./puzzles-en.json";
+import greekPuzzles from "./puzzles-el.json";
 
 // Cast the imported JSON to the typed Puzzle array.
 // TypeScript will warn us if the JSON shape ever drifts from the Puzzle interface.
 const PUZZLES: Record<Language, Puzzle[]> = {
   en: englishPuzzles as Puzzle[],
-  el: [], // Greek puzzles will be added here in a future step
+  el: greekPuzzles as Puzzle[],
 };
 
 /**
