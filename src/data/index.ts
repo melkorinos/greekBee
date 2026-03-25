@@ -38,3 +38,20 @@ export function getTodaysPuzzle(language: Language = "en"): Puzzle {
   const today = new Date().toISOString().split("T")[0];
   return getPuzzleForDate(today, language);
 }
+
+/**
+ * Returns a puzzle by its unique ID, or null if not found.
+ */
+export function getPuzzleById(id: string, language: Language): Puzzle | null {
+  return PUZZLES[language].find((p) => p.id === id) ?? null;
+}
+
+/**
+ * Returns the puzzle after the given one in the list, or null if it's the last.
+ * Used to build the "New Game" URL server-side.
+ */
+export function getNextPuzzle(current: Puzzle): Puzzle | null {
+  const list = PUZZLES[current.language as Language];
+  const idx = list.findIndex((p) => p.id === current.id);
+  return idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null;
+}

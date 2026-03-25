@@ -16,11 +16,11 @@ import { useGameState } from "@/hooks/useGameState";
 
 interface GameBoardProps {
   puzzle: Puzzle;
-  /** Optional second puzzle to load when the player hits "New Game" */
-  nextPuzzle?: Puzzle;
+  /** URL to navigate to when the player clicks "New Game" (built server-side) */
+  nextPuzzleUrl?: string;
 }
 
-export function GameBoard({ puzzle, nextPuzzle }: GameBoardProps) {
+export function GameBoard({ puzzle, nextPuzzleUrl }: GameBoardProps) {
   const {
     puzzle: activePuzzle,
     currentInput,
@@ -33,7 +33,6 @@ export function GameBoard({ puzzle, nextPuzzle }: GameBoardProps) {
     clearInput,
     submitWord,
     shuffleLetters,
-    newGame,
   } = useGameState(puzzle);
 
   // ── Keyboard support ───────────────────────────────────────────────────────
@@ -136,15 +135,15 @@ const styles = {
         </button>
       </div>
 
-      {/* New Game button — only shown when a next puzzle is available */}
-      {nextPuzzle && (
-        <button
+      {/* New Game link — navigates to the next puzzle URL (server-side load) */}
+      {nextPuzzleUrl && (
+        <a
           data-testid="btn-new-game"
-          onClick={() => newGame(nextPuzzle)}
+          href={nextPuzzleUrl}
           className={styles.buttonNewGame}
         >
           New Game
-        </button>
+        </a>
       )}
 
       {/* Found words list */}
