@@ -1,10 +1,10 @@
 // page.tsx — server component entry point.
 // Loads the puzzle on the server based on ?lang= and optional ?puzzle= / ?random= params.
-// ?lang=el                   → today's Greek puzzle
+// ?lang=el                   → random Greek puzzle (default)
 // ?puzzle=2026-03-26-el      → specific puzzle by ID
 // ?random=1&exclude=some-id  → random puzzle (skips the excluded ID)
 
-import { getPuzzleById, getRandomPuzzle, getTodaysPuzzle } from "@/data";
+import { getPuzzleById, getRandomPuzzle } from "@/data";
 
 import { GameBoard } from "@/components/GameBoard";
 import type { Language } from "@/types";
@@ -18,11 +18,10 @@ export default async function Home({
 
   const language: Language = lang === "en" ? "en" : "el";
 
-  // Load puzzle: specific ID → random (excluding current) → today's
+  // Load puzzle: specific ID → random (always — excluding current if provided)
   const puzzle =
-    puzzleId ? (getPuzzleById(puzzleId, language) ?? getTodaysPuzzle(language))
-    : random  ? getRandomPuzzle(language, exclude)
-    :           getTodaysPuzzle(language);
+    puzzleId ? (getPuzzleById(puzzleId, language) ?? getRandomPuzzle(language))
+    :           getRandomPuzzle(language, exclude);
 
   return (
     <div className="flex flex-col flex-1 items-center justify-start bg-zinc-50 font-sans min-h-screen">
