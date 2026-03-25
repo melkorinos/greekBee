@@ -47,11 +47,13 @@ export function getPuzzleById(id: string, language: Language): Puzzle | null {
 }
 
 /**
- * Returns the puzzle after the given one in the list, or null if it's the last.
- * Used to build the "New Game" URL server-side.
+ * Returns the puzzle after the given one in the list.
+ * Cycles back to the first puzzle when the last one is reached.
+ * Used to build the "Next Puzzle" URL server-side.
  */
-export function getNextPuzzle(current: Puzzle): Puzzle | null {
+export function getNextPuzzle(current: Puzzle): Puzzle {
   const list = PUZZLES[current.language as Language];
   const idx = list.findIndex((p) => p.id === current.id);
-  return idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null;
+  const nextIdx = idx >= 0 ? (idx + 1) % list.length : 0;
+  return list[nextIdx];
 }

@@ -24,9 +24,7 @@ export default async function Home({
 
   // Compute the next puzzle URL server-side so GameBoard just renders a link
   const nextPuzzle = getNextPuzzle(puzzle);
-  const nextPuzzleUrl = nextPuzzle
-    ? `/?lang=${language}&puzzle=${nextPuzzle.id}`
-    : undefined;
+  const nextPuzzleUrl = `/?lang=${language}&puzzle=${nextPuzzle.id}`;
 
   return (
     <div className="flex flex-col flex-1 items-center justify-start bg-zinc-50 font-sans min-h-screen">

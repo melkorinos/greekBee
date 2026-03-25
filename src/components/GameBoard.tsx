@@ -16,8 +16,8 @@ import { useGameState } from "@/hooks/useGameState";
 
 interface GameBoardProps {
   puzzle: Puzzle;
-  /** URL to navigate to when the player clicks "New Game" (built server-side) */
-  nextPuzzleUrl?: string;
+  /** URL to navigate to when the player clicks "Next Puzzle" (built server-side) */
+  nextPuzzleUrl: string;
 }
 
 export function GameBoard({ puzzle, nextPuzzleUrl }: GameBoardProps) {
@@ -135,16 +135,14 @@ const styles = {
         </button>
       </div>
 
-      {/* New Game link — navigates to the next puzzle URL (server-side load) */}
-      {nextPuzzleUrl && (
-        <a
-          data-testid="btn-new-game"
-          href={nextPuzzleUrl}
-          className={styles.buttonNewGame}
-        >
-          New Game
-        </a>
-      )}
+      {/* Next Puzzle button — always visible, cycles through all puzzles */}
+      <a
+        data-testid="btn-new-game"
+        href={nextPuzzleUrl}
+        className={styles.buttonNewGame}
+      >
+        Next Puzzle →
+      </a>
 
       {/* Found words list */}
       <FoundWordsList words={foundWords} puzzle={activePuzzle} />

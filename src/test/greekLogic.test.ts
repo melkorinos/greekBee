@@ -95,7 +95,7 @@ describe("getPuzzleForDate (Greek)", () => {
 
   it("falls back to the latest puzzle when date is not found", () => {
     const loaded = getPuzzleForDate("1900-01-01", "el");
-    // Should still return the only available Greek puzzle
-    expect(loaded.id).toBe("2026-03-25-el");
+    // Should return the last puzzle in the list (most recently added)
+    expect(loaded.id).toBe("2026-04-01-el");
   });
 });
