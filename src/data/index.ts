@@ -1,0 +1,38 @@
+// Puzzle data access layer.
+// Loads puzzle definitions from the local JSON files.
+// Swap the import (or add a second loader) for Greek support later.
+
+import type { Puzzle, Language } from "@/types";
+import englishPuzzles from "./puzzles-en.json";
+
+// Cast the imported JSON to the typed Puzzle array.
+// TypeScript will warn us if the JSON shape ever drifts from the Puzzle interface.
+const PUZZLES: Record<Language, Puzzle[]> = {
+  en: englishPuzzles as Puzzle[],
+  el: [], // Greek puzzles will be added here in a future step
+};
+
+/**
+ * Returns the puzzle for a given date and language.
+ * Falls back to the most recent available puzzle if no match is found.
+ */
+export function getPuzzleForDate(date: string, language: Language = "en"): Puzzle {
+  const puzzles = PUZZLES[language];
+
+  if (puzzles.length === 0) {
+    throw new Error(`No puzzles available for language: ${language}`);
+  }
+
+  const match = puzzles.find((p) => p.date === date);
+
+  // Fall back to the last puzzle in the list (most recent)
+  return match ?? puzzles[puzzles.length - 1];
+}
+
+/**
+ * Returns today's puzzle using the current date in ISO format (YYYY-MM-DD).
+ */
+export function getTodaysPuzzle(language: Language = "en"): Puzzle {
+  const today = new Date().toISOString().split("T")[0];
+  return getPuzzleForDate(today, language);
+}

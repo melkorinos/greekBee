@@ -1,0 +1,17 @@
+[
+  {
+    "id": "2026-03-25-en",
+    "language": "en",
+    "date": "2026-03-25",
+    "centerLetter": "a",
+    "outerLetters": ["p", "i", "n", "t", "e", "d"],
+    "validWords": [
+      "aide",  "anti",  "ante",  "aped",  "date",  "idea",
+      "nape",  "paid",  "pain",  "pane",  "pant",  "pate",  "tape",
+      "anted", "inapt", "naiad", "paint", "panda", "patin", "taint", "titan",
+      "detain", "pained", "panted", "patina", "taipan", "pandit", "pentad",
+      "adapted", "patient", "tainted",
+      "painted"
+    ]
+  }
+]
