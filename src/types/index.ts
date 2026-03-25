@@ -85,4 +85,6 @@ export interface GameState {
   currentRank: RankName;
   /** Timestamp (ms) of when this game session started */
   startedAt: number;
+  /** Result of the most recent word submission — used to drive UI feedback messages */
+  lastSubmission: { word: string; result: ValidationResult } | null;
 }
