@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "parse-dict": "tsx scripts/parse-dictionary.ts",
-    "generate-puzzle": "tsx scripts/generate-puzzle.ts"
+    "generate-puzzle": "tsx scripts/generate-puzzle.ts",
+    "batch-generate": "tsx scripts/batch-generate.ts"
   },
   "dependencies": {
     "next": "16.2.1",

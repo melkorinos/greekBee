@@ -1,9 +1,10 @@
 // page.tsx — server component entry point.
-// Loads the puzzle on the server based on ?lang= and optional ?puzzle= params.
-// ?lang=el          → today's Greek puzzle
-// ?puzzle=2026-03-26-el → specific puzzle by ID
+// Loads the puzzle on the server based on ?lang= and optional ?puzzle= / ?random= params.
+// ?lang=el                   → today's Greek puzzle
+// ?puzzle=2026-03-26-el      → specific puzzle by ID
+// ?random=1&exclude=some-id  → random puzzle (skips the excluded ID)
 
-import { getNextPuzzle, getPuzzleById, getTodaysPuzzle } from "@/data";
+import { getPuzzleById, getRandomPuzzle, getTodaysPuzzle } from "@/data";
 
 import { GameBoard } from "@/components/GameBoard";
 import type { Language } from "@/types";
@@ -11,20 +12,17 @@ import type { Language } from "@/types";
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ lang?: string; puzzle?: string }>;
+  searchParams: Promise<{ lang?: string; puzzle?: string; random?: string; exclude?: string }>;
 }) {
-  const { lang, puzzle: puzzleId } = await searchParams;
+  const { lang, puzzle: puzzleId, random, exclude } = await searchParams;
 
   const language: Language = lang === "en" ? "en" : "el";
 
-  // Load a specific puzzle by ID if requested, otherwise load today's
-  const puzzle = puzzleId
-    ? (getPuzzleById(puzzleId, language) ?? getTodaysPuzzle(language))
-    : getTodaysPuzzle(language);
-
-  // Compute the next puzzle URL server-side so GameBoard just renders a link
-  const nextPuzzle = getNextPuzzle(puzzle);
-  const nextPuzzleUrl = `/?lang=${language}&puzzle=${nextPuzzle.id}`;
+  // Load puzzle: specific ID → random (excluding current) → today's
+  const puzzle =
+    puzzleId ? (getPuzzleById(puzzleId, language) ?? getTodaysPuzzle(language))
+    : random  ? getRandomPuzzle(language, exclude)
+    :           getTodaysPuzzle(language);
 
   return (
     <div className="flex flex-col flex-1 items-center justify-start bg-zinc-50 font-sans min-h-screen">
@@ -55,7 +53,7 @@ export default async function Home({
         </div>
       </header>
       <main className="flex flex-1 w-full flex-col items-center bg-white">
-        <GameBoard puzzle={puzzle} nextPuzzleUrl={nextPuzzleUrl} />
+        <GameBoard puzzle={puzzle} />
       </main>
     </div>
   );

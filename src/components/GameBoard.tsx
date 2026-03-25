@@ -5,7 +5,6 @@
 
 import { useCallback, useEffect } from "react";
 
-import { normalizeLetters } from "@/lib/normalize";
 import { FeedbackMessage } from "./FeedbackMessage";
 import { FoundWordsList } from "./FoundWordsList";
 import { HoneycombGrid } from "./HoneycombGrid";
@@ -13,15 +12,14 @@ import type { Puzzle } from "@/types";
 import { ScoreBar } from "./ScoreBar";
 import { WordInput } from "./WordInput";
 import { maxScore } from "@/lib/scoring";
+import { normalizeLetters } from "@/lib/normalize";
 import { useGameState } from "@/hooks/useGameState";
 
 interface GameBoardProps {
   puzzle: Puzzle;
-  /** URL to navigate to when the player clicks "Next Puzzle" (built server-side) */
-  nextPuzzleUrl: string;
 }
 
-export function GameBoard({ puzzle, nextPuzzleUrl }: GameBoardProps) {
+export function GameBoard({ puzzle }: GameBoardProps) {
   const {
     puzzle: activePuzzle,
     currentInput,
@@ -135,13 +133,13 @@ const styles = {
         </button>
       </div>
 
-      {/* Next Puzzle button — always visible, cycles through all puzzles */}
+      {/* Random Puzzle — client-side: passes current ID so server can exclude it */}
       <a
         data-testid="btn-new-game"
-        href={nextPuzzleUrl}
+        href={`/?lang=${activePuzzle.language}&random=1&exclude=${activePuzzle.id}`}
         className={styles.buttonNewGame}
       >
-        Next Puzzle →
+        🎲 Random Puzzle
       </a>
 
       {/* Found words list */}

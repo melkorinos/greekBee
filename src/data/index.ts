@@ -47,6 +47,17 @@ export function getPuzzleById(id: string, language: Language): Puzzle | null {
 }
 
 /**
+ * Returns a random puzzle for the given language, optionally excluding one by ID.
+ * Used for the "Random Puzzle" feature.
+ */
+export function getRandomPuzzle(language: Language, excludeId?: string): Puzzle {
+  const list = PUZZLES[language];
+  const candidates = excludeId ? list.filter((p) => p.id !== excludeId) : list;
+  const pool = candidates.length > 0 ? candidates : list;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/**
  * Returns the puzzle after the given one in the list.
  * Cycles back to the first puzzle when the last one is reached.
  * Used to build the "Next Puzzle" URL server-side.
