@@ -112,6 +112,14 @@ const styles = {
           ⌫ Delete
         </button>
         <button
+          data-testid="btn-clear"
+          onClick={clearInput}
+          className={styles.buttonSecondary}
+          aria-label="Clear input"
+        >
+          ✕ Clear
+        </button>
+        <button
           data-testid="btn-shuffle"
           onClick={shuffleLetters}
           className={styles.buttonSecondary}
