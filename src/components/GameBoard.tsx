@@ -42,8 +42,8 @@ export function GameBoard({ puzzle, nextPuzzleUrl }: GameBoardProps) {
         submitWord();
       } else if (e.key === "Backspace") {
         deleteLetter();
-      } else if (/^[a-zA-Z]$/.test(e.key)) {
-        // Only accept letters that are in the puzzle
+      } else if (/^\p{L}$/u.test(e.key)) {
+        // \p{L} matches any Unicode letter — supports Greek, Latin and beyond
         const letter = e.key.toLowerCase();
         const allowed = new Set([
           activePuzzle.centerLetter,

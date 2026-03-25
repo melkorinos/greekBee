@@ -15,7 +15,7 @@ export default async function Home({
 }) {
   const { lang, puzzle: puzzleId } = await searchParams;
 
-  const language: Language = lang === "el" ? "el" : "en";
+  const language: Language = lang === "en" ? "en" : "el";
 
   // Load a specific puzzle by ID if requested, otherwise load today's
   const puzzle = puzzleId
@@ -36,7 +36,7 @@ export default async function Home({
           {/* Language switcher — navigates to today's puzzle in the chosen language */}
           <div className="flex gap-2 text-sm font-medium">
             <a
-              href="/"
+              href="/?lang=en"
               data-testid="lang-en"
               className={language === "en"
                 ? "px-3 py-1 rounded-full bg-stone-800 text-white"
@@ -45,7 +45,7 @@ export default async function Home({
               EN
             </a>
             <a
-              href="/?lang=el"
+              href="/"
               data-testid="lang-el"
               className={language === "el"
                 ? "px-3 py-1 rounded-full bg-stone-800 text-white"

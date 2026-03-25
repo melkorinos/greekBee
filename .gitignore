@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# word list source files (dev-only, generated — do NOT bundle with the app)
+src/data/words-en.json
+src/data/words-el.json
+src/data/*.dic
