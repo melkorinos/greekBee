@@ -5,7 +5,7 @@
 
 import { buildInitialState, gameReducer } from "./gameReducer";
 import { clearPersistedState, loadPersistedState, usePersistence } from "./usePersistence";
-import { useCallback, useReducer } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 
 import type { Puzzle } from "@/types";
 
@@ -15,16 +15,24 @@ import type { Puzzle } from "@/types";
  * @param initialPuzzle - The puzzle to start with (loaded from data layer)
  */
 export function useGameState(initialPuzzle: Puzzle) {
+  // Always start from a clean state — avoids SSR/client hydration mismatch.
+  // localStorage is only available in the browser, so we never read it during SSR.
   const [state, dispatch] = useReducer(
     gameReducer,
     initialPuzzle,
-    // Lazy initialiser: merge persisted progress (if any) into the initial state
-    (puzzle) => {
-      const base = buildInitialState(puzzle);
-      const saved = loadPersistedState(puzzle);
-      return saved ? { ...base, ...saved } : base;
-    }
+    buildInitialState
   );
+
+  // After first client render, rehydrate from localStorage if a saved session exists.
+  // useEffect only runs in the browser, never on the server.
+  useEffect(() => {
+    const saved = loadPersistedState(initialPuzzle);
+    if (saved) {
+      dispatch({ type: "RESTORE_STATE", saved });
+    }
+    // Only run once on mount — intentionally no deps on initialPuzzle
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-save to localStorage whenever relevant state changes
   usePersistence(state);

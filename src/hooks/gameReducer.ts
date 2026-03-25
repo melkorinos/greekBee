@@ -15,7 +15,8 @@ export type GameAction =
   | { type: "CLEAR_INPUT" }                  // Player clears the whole input
   | { type: "SUBMIT_WORD" }                  // Player hits Enter / Submit
   | { type: "SHUFFLE_LETTERS" }              // Randomise the outer ring display order
-  | { type: "NEW_GAME"; puzzle: Puzzle };    // Load a fresh puzzle
+  | { type: "NEW_GAME"; puzzle: Puzzle }     // Load a fresh puzzle
+  | { type: "RESTORE_STATE"; saved: Partial<GameState> }; // Rehydrate from localStorage (client-only)
 
 // ─── Initial State Factory ────────────────────────────────────────────────────
 
@@ -104,6 +105,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "NEW_GAME": {
       // Replace the entire state with a fresh session for the new puzzle
       return buildInitialState(action.puzzle);
+    }
+
+    case "RESTORE_STATE": {
+      // Merge saved localStorage fields into current state.
+      // Only called once after first client render to avoid hydration mismatch.
+      return { ...state, ...action.saved };
     }
 
     default:
