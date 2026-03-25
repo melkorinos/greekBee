@@ -5,6 +5,7 @@
 
 import { useCallback, useEffect } from "react";
 
+import { normalizeLetters } from "@/lib/normalize";
 import { FeedbackMessage } from "./FeedbackMessage";
 import { FoundWordsList } from "./FoundWordsList";
 import { HoneycombGrid } from "./HoneycombGrid";
@@ -43,12 +44,11 @@ export function GameBoard({ puzzle, nextPuzzleUrl }: GameBoardProps) {
       } else if (e.key === "Backspace") {
         deleteLetter();
       } else if (/^\p{L}$/u.test(e.key)) {
-        // \p{L} matches any Unicode letter — supports Greek, Latin and beyond
-        const letter = e.key.toLowerCase();
-        const allowed = new Set([
-          activePuzzle.centerLetter,
-          ...activePuzzle.outerLetters,
-        ]);
+        // Normalise the typed letter so accented input (ά) matches puzzle letter (α)
+        const letter = normalizeLetters(e.key);
+        const allowed = new Set(
+          [activePuzzle.centerLetter, ...activePuzzle.outerLetters].map(normalizeLetters)
+        );
         if (allowed.has(letter)) addLetter(letter);
       }
     },
