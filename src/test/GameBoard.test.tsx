@@ -46,7 +46,7 @@ describe("GameBoard rendering", () => {
   it("renders the score bar with Beginner rank at start", () => {
     setup();
     expect(screen.getByTestId("rank-label")).toHaveTextContent("Beginner");
-    expect(screen.getByTestId("score-label")).toHaveTextContent("0 /");
+    expect(screen.getByTestId("score-label")).toHaveTextContent("0 pts");
   });
 
   it("renders the found words list empty at start", () => {
@@ -125,7 +125,7 @@ describe("Word submission", () => {
   it("updates the score after a valid word", async () => {
     const { user } = setup();
     await user.keyboard("paint{Enter}"); // 5 pts
-    expect(screen.getByTestId("score-label")).toHaveTextContent("5 / 33 pts");
+    expect(screen.getByTestId("score-label")).toHaveTextContent("5 pts");
   });
 });
 
