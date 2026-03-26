@@ -45,12 +45,14 @@ export function GameBoard({ puzzle }: GameBoardProps) {
         // Normalise the typed letter so accented input (ά) matches puzzle letter (α)
         const letter = normalizeLetters(e.key);
         const allowed = new Set(
-          [activePuzzle.centerLetter, ...activePuzzle.outerLetters].map(normalizeLetters)
+          [activePuzzle.centerLetter, ...activePuzzle.outerLetters].map(
+            normalizeLetters,
+          ),
         );
         if (allowed.has(letter)) addLetter(letter);
       }
     },
-    [activePuzzle, addLetter, deleteLetter, submitWord]
+    [activePuzzle, addLetter, deleteLetter, submitWord],
   );
 
   useEffect(() => {
@@ -60,18 +62,21 @@ export function GameBoard({ puzzle }: GameBoardProps) {
 
   const puzzleMaxScore = maxScore(activePuzzle);
 
-// ── Class constants ──────────────────────────────────────────────────────────
-const styles = {
-  container:       "flex flex-col items-center gap-6 w-full max-w-sm mx-auto px-4 py-8",
-  buttonRow:       "flex items-center gap-3 w-full justify-center",
-  buttonSecondary: "px-4 py-2 rounded-full border border-stone-300 text-stone-700 text-sm font-medium hover:bg-stone-100 active:bg-stone-200 transition-colors",
-  buttonPrimary:   "px-4 py-2 rounded-full bg-stone-800 text-white text-sm font-semibold hover:bg-stone-700 active:bg-stone-900 transition-colors",
-  buttonNewGame:   "text-xs text-stone-400 underline hover:text-stone-600 transition-colors",
-};
+  // ── Class constants ──────────────────────────────────────────────────────────
+  const styles = {
+    container:
+      "flex flex-col items-center gap-6 w-full max-w-sm mx-auto px-4 py-8",
+    buttonRow: "flex items-center gap-3 w-full justify-center",
+    buttonSecondary:
+      "px-4 py-2 rounded-full border border-stone-300 text-stone-700 text-sm font-medium hover:bg-stone-100 active:bg-stone-200 transition-colors",
+    buttonPrimary:
+      "px-4 py-2 rounded-full bg-stone-800 text-white text-sm font-semibold hover:bg-stone-700 active:bg-stone-900 transition-colors",
+    buttonNewGame:
+      "text-xs text-stone-400 underline hover:text-stone-600 transition-colors",
+  };
 
   return (
     <div data-testid="game-board" className={styles.container}>
-
       {/* Score + rank */}
       <ScoreBar
         score={score}
@@ -80,7 +85,10 @@ const styles = {
       />
 
       {/* Current word input display */}
-      <WordInput value={currentInput} centerLetter={activePuzzle.centerLetter} />
+      <WordInput
+        value={currentInput}
+        centerLetter={activePuzzle.centerLetter}
+      />
 
       {/* Feedback from the last submission — disappears on next input */}
       {lastSubmission && (
@@ -106,7 +114,7 @@ const styles = {
           onClick={deleteLetter}
           className={styles.buttonSecondary}
         >
-          ⌫ Delete
+          Delete
         </button>
         <button
           data-testid="btn-clear"
@@ -114,7 +122,7 @@ const styles = {
           className={styles.buttonSecondary}
           aria-label="Clear input"
         >
-          ✕ Clear
+          Clear
         </button>
         <button
           data-testid="btn-shuffle"
@@ -122,7 +130,7 @@ const styles = {
           className={styles.buttonSecondary}
           aria-label="Shuffle outer letters"
         >
-          ⟳ Shuffle
+          Shuffle
         </button>
         <button
           data-testid="btn-enter"

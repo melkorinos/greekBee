@@ -23,11 +23,11 @@ const DIST = R * Math.sqrt(3);
  * Order: right → lower-right → lower-left → left → upper-left → upper-right
  */
 const OUTER_OFFSETS: [number, number][] = [
-  [DIST, 0],            // right
-  [DIST / 2, R * 1.5],  // lower-right
+  [DIST, 0], // right
+  [DIST / 2, R * 1.5], // lower-right
   [-DIST / 2, R * 1.5], // lower-left
-  [-DIST, 0],           // left
-  [-DIST / 2, -R * 1.5],// upper-left
+  [-DIST, 0], // left
+  [-DIST / 2, -R * 1.5], // upper-left
   [DIST / 2, -R * 1.5], // upper-right
 ];
 
