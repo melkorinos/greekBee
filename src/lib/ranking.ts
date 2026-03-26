@@ -8,16 +8,14 @@ import type { Rank, RankName } from "@/types";
  * A player achieves a rank when their score % >= that rank's threshold.
  */
 export const RANKS: Rank[] = [
-  { name: "Beginner",   threshold: 0  },
-  { name: "Good Start", threshold: 2  },
-  { name: "Moving Up",  threshold: 5  },
-  { name: "Good",       threshold: 8  },
-  { name: "Solid",      threshold: 15 },
-  { name: "Nice",       threshold: 25 },
-  { name: "Great",      threshold: 40 },
-  { name: "Amazing",    threshold: 50 },
-  { name: "Genius",     threshold: 70 },
-  { name: "Queen Bee",  threshold: 100 },
+  { name: "Beginner",  threshold: 0  },
+  { name: "Moving Up", threshold: 4  },
+  { name: "Good",      threshold: 6  },
+  { name: "Solid",     threshold: 12 },
+  { name: "Great",     threshold: 32 },
+  { name: "Amazing",   threshold: 40 },
+  { name: "Genius",    threshold: 56 },
+  { name: "Queen Bee", threshold: 80 },
 ];
 
 /**

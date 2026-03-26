@@ -14,7 +14,7 @@ interface FoundWordsListProps {
 // ── Class constants ──────────────────────────────────────────────────────────
 const styles = {
   container:    "w-full space-y-2",
-  heading:      "text-sm font-semibold text-stone-500 uppercase tracking-wide",
+  heading:      "text-sm font-semibold text-stone-500 tracking-wide",
   count:        "text-stone-800 font-bold",
   empty:        "text-sm text-stone-400 italic",
   list:         "flex flex-wrap gap-2 max-h-40 overflow-y-auto",
@@ -29,12 +29,12 @@ export function FoundWordsList({ words, puzzle }: FoundWordsListProps) {
   return (
     <div data-testid="found-words-list" className={styles.container}>
       <h2 className={styles.heading}>
-        Found words{" "}
+        Λέξεις που βρήκες:{" "}
         <span data-testid="found-words-count" className={styles.count}>{words.length}</span>
       </h2>
 
       {sorted.length === 0 ? (
-        <p className={styles.empty}>None yet — start typing!</p>
+        <p className={styles.empty}>Καμία ακόμα — αρχίσε να γράφεις!</p>
       ) : (
         <ul className={styles.list}>
           {sorted.map((word) => (

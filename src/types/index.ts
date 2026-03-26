@@ -32,11 +32,9 @@ export interface Puzzle {
  *  Ranks are calculated as a percentage of the maximum possible score. */
 export type RankName =
   | "Beginner"
-  | "Good Start"
   | "Moving Up"
   | "Good"
   | "Solid"
-  | "Nice"
   | "Great"
   | "Amazing"
   | "Genius"

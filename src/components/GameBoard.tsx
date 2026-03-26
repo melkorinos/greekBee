@@ -72,7 +72,7 @@ export function GameBoard({ puzzle }: GameBoardProps) {
     buttonPrimary:
       "px-4 py-2 rounded-full bg-stone-800 text-white text-sm font-semibold hover:bg-stone-700 active:bg-stone-900 transition-colors",
     buttonNewGame:
-      "text-xs text-stone-400 underline hover:text-stone-600 transition-colors",
+      "px-4 py-2 rounded-full border border-stone-300 text-stone-600 text-sm font-medium hover:bg-stone-100 active:bg-stone-200 transition-colors",
   };
 
   return (
@@ -114,7 +114,7 @@ export function GameBoard({ puzzle }: GameBoardProps) {
           onClick={deleteLetter}
           className={styles.buttonSecondary}
         >
-          Delete
+          Διαγραφή
         </button>
         <button
           data-testid="btn-clear"
@@ -122,7 +122,7 @@ export function GameBoard({ puzzle }: GameBoardProps) {
           className={styles.buttonSecondary}
           aria-label="Clear input"
         >
-          Clear
+          Καθαρισμός
         </button>
         <button
           data-testid="btn-shuffle"
@@ -130,25 +130,27 @@ export function GameBoard({ puzzle }: GameBoardProps) {
           className={styles.buttonSecondary}
           aria-label="Shuffle outer letters"
         >
-          Shuffle
+          Ανακάτεμα
         </button>
         <button
           data-testid="btn-enter"
           onClick={submitWord}
           className={styles.buttonPrimary}
         >
-          Enter
+          Εισαγωγή
         </button>
       </div>
 
-      {/* Random Puzzle — client-side: passes current ID so server can exclude it */}
-      <a
-        data-testid="btn-new-game"
-        href={`/?lang=${activePuzzle.language}&random=1&exclude=${activePuzzle.id}`}
-        className={styles.buttonNewGame}
-      >
-        🎲 Random Puzzle
-      </a>
+      {/* Νέο Παζλ — separated from the game controls by a divider */}
+      <div className="w-full border-t border-stone-100 pt-2 flex justify-center">
+        <a
+          data-testid="btn-new-game"
+          href={`/?lang=${activePuzzle.language}&random=1&exclude=${activePuzzle.id}`}
+          className={styles.buttonNewGame}
+        >
+          🎲 Νέο Παζλ
+        </a>
+      </div>
 
       {/* Found words list */}
       <FoundWordsList words={foundWords} puzzle={activePuzzle} />
