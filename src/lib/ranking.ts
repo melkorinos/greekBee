@@ -9,12 +9,12 @@ import type { Rank, RankName } from "@/types";
  */
 export const RANKS: Rank[] = [
   { name: "Beginner",  threshold: 0  },
-  { name: "Moving Up", threshold: 4  },
-  { name: "Good",      threshold: 6  },
-  { name: "Solid",     threshold: 12 },
-  { name: "Great",     threshold: 32 },
-  { name: "Amazing",   threshold: 40 },
-  { name: "Genius",    threshold: 56 },
+  { name: "Moving Up", threshold: 6  },
+  { name: "Good",      threshold: 12  },
+  { name: "Solid",     threshold: 20  },
+  { name: "Great",     threshold: 30 },
+  { name: "Amazing",   threshold: 42 },
+  { name: "Genius",    threshold: 55 },
   { name: "Queen Bee", threshold: 80 },
 ];
 
