@@ -7,6 +7,7 @@
 import { getPuzzleById, getRandomPuzzle } from "@/data";
 
 import { GameBoard } from "@/components/GameBoard";
+import { HowToPlayModal } from "@/components/HowToPlayModal";
 import type { Language } from "@/types";
 
 export default async function Home({
@@ -16,7 +17,7 @@ export default async function Home({
 }) {
   const { lang, puzzle: puzzleId, random, exclude } = await searchParams;
 
-  const language: Language = lang === "en" ? "en" : "el";
+  const language: Language = "el";
 
   // Load puzzle: specific ID → random (always — excluding current if provided)
   const puzzle =
@@ -29,26 +30,7 @@ export default async function Home({
         <div className="flex items-center justify-between max-w-sm mx-auto">
           <h1 className="text-xl font-bold tracking-tight text-stone-800">🍯 Spelling Bee</h1>
           {/* Language switcher — navigates to today's puzzle in the chosen language */}
-          <div className="flex gap-2 text-sm font-medium">
-            <a
-              href="/?lang=en"
-              data-testid="lang-en"
-              className={language === "en"
-                ? "px-3 py-1 rounded-full bg-stone-800 text-white"
-                : "px-3 py-1 rounded-full border border-stone-300 text-stone-600 hover:bg-stone-100"}
-            >
-              EN
-            </a>
-            <a
-              href="/"
-              data-testid="lang-el"
-              className={language === "el"
-                ? "px-3 py-1 rounded-full bg-stone-800 text-white"
-                : "px-3 py-1 rounded-full border border-stone-300 text-stone-600 hover:bg-stone-100"}
-            >
-              ΕΛ
-            </a>
-          </div>
+          <HowToPlayModal />
         </div>
       </header>
       <main className="flex flex-1 w-full flex-col items-center bg-white">

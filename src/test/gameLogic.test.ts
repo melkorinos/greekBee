@@ -14,7 +14,7 @@ import { validateWord } from "@/lib/validation";
 /** Minimal puzzle used across all logic tests */
 const puzzle: Puzzle = {
   id: "test-puzzle",
-  language: "en",
+  language: "el",
   date: "2026-01-01",
   centerLetter: "a",
   outerLetters: ["p", "i", "n", "t", "e", "d"],

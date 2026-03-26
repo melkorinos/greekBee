@@ -12,7 +12,7 @@ import userEvent from "@testing-library/user-event";
 
 const puzzle: Puzzle = {
   id: "test-puzzle",
-  language: "en",
+  language: "el",
   date: "2026-01-01",
   centerLetter: "a",
   outerLetters: ["p", "i", "n", "t", "e", "d"],

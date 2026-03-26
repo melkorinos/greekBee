@@ -5,7 +5,7 @@
 
 /** Supported game languages. Adding a new language only requires a new entry here
  *  plus the matching word list JSON and puzzle data file. */
-export type Language = "en" | "el";
+export type Language = "el";
 
 // ─── Puzzle ───────────────────────────────────────────────────────────────────
 
