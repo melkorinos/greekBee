@@ -6,8 +6,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { RANKS } from "@/lib/ranking";
 import type { RankName } from "@/types";
+import { rankProgress } from "@/lib/ranking";
 
 interface ScoreBarProps {
   score: number;
@@ -40,21 +40,8 @@ function RankIcon() {
 export function ScoreBar({ score, maxScore, currentRank }: ScoreBarProps) {
   const [showRanks, setShowRanks] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const currentIdx = RANKS.findIndex((r) => r.name === currentRank);
-  const nextRank   = RANKS[currentIdx + 1] ?? null;
 
-  let pct         = 100;
-  let ptsToNext: number | null = null;
-
-  if (nextRank && maxScore > 0) {
-    // Convert rank thresholds (percentages) to actual point values
-    const currentPts = Math.ceil((RANKS[currentIdx].threshold / 100) * maxScore);
-    const nextPts    = Math.ceil((nextRank.threshold / 100) * maxScore);
-    const span       = nextPts - currentPts;
-
-    pct       = span > 0 ? Math.min(((score - currentPts) / span) * 100, 100) : 100;
-    ptsToNext = Math.max(nextPts - score, 0);
-  }
+  const { pct, ptsToNext, nextRank, ladder } = rankProgress(score, maxScore, currentRank);
 
   // Close popover when clicking outside
   useEffect(() => {
@@ -92,26 +79,21 @@ export function ScoreBar({ score, maxScore, currentRank }: ScoreBarProps) {
       {/* Rank ladder popover */}
       {showRanks && (
         <div className="rounded-xl border border-stone-200 bg-white shadow-md p-3 space-y-1">
-          {[...RANKS].reverse().map((r) => {
-            const pts = Math.ceil((r.threshold / 100) * maxScore);
-            const isActive = r.name === currentRank;
-            const achieved = score >= pts;
-            return (
-              <div
-                key={r.name}
-                className={`flex justify-between text-sm px-2 py-0.5 rounded-lg ${
-                  isActive
-                    ? "bg-yellow-100 font-semibold text-yellow-800"
-                    : achieved
-                    ? "text-stone-500"
-                    : "text-stone-400"
-                }`}
-              >
-                <span>{r.name}</span>
-                <span>{pts} pts</span>
-              </div>
-            );
-          })}
+          {ladder.map((row) => (
+            <div
+              key={row.name}
+              className={`flex justify-between text-sm px-2 py-0.5 rounded-lg ${
+                row.isActive
+                  ? "bg-yellow-100 font-semibold text-yellow-800"
+                  : row.achieved
+                  ? "text-stone-500"
+                  : "text-stone-400"
+              }`}
+            >
+              <span>{row.name}</span>
+              <span>{row.pts} pts</span>
+            </div>
+          ))}
         </div>
       )}
 
@@ -128,8 +110,8 @@ export function ScoreBar({ score, maxScore, currentRank }: ScoreBarProps) {
       {nextRank && ptsToNext !== null && (
         <p className={styles.nextLabel}>
           {ptsToNext > 0
-            ? `${ptsToNext} pts to ${nextRank.name}`
-            : `${nextRank.name} reached!`}
+            ? `${ptsToNext} pts to ${nextRank}`
+            : `${nextRank} reached!`}
         </p>
       )}
     </div>

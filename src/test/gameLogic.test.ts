@@ -55,9 +55,10 @@ describe("scoreWord", () => {
 });
 
 describe("maxScore", () => {
-  it("sums scores for all valid words in the puzzle", () => {
-    // anti(1) + paid(1) + paint(5) + painted(14) + panted(6) + patina(6) = 33
-    expect(maxScore(puzzle)).toBe(33);
+  it("returns 80% of the raw word-score total", () => {
+    // raw: anti(1) + paid(1) + paint(5) + painted(14) + panted(6) + patina(6) = 33
+    // capped at 80%: ceil(33 * 0.8) = 27
+    expect(maxScore(puzzle)).toBe(27);
   });
 });
 

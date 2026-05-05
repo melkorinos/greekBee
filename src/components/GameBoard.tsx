@@ -11,8 +11,6 @@ import { HoneycombGrid } from "./HoneycombGrid";
 import type { Puzzle } from "@/types";
 import { ScoreBar } from "./ScoreBar";
 import { WordInput } from "./WordInput";
-import { maxScore } from "@/lib/scoring";
-import { normalizeLetters } from "@/lib/normalize";
 import { useGameState } from "@/hooks/useGameState";
 
 interface GameBoardProps {
@@ -26,12 +24,14 @@ export function GameBoard({ puzzle }: GameBoardProps) {
     foundWords,
     score,
     currentRank,
+    puzzleMaxScore,
     lastSubmission,
     addLetter,
     deleteLetter,
     clearInput,
     submitWord,
     shuffleLetters,
+    handleKeyboardLetter,
   } = useGameState(puzzle);
 
   // ── Keyboard support ───────────────────────────────────────────────────────
@@ -42,17 +42,10 @@ export function GameBoard({ puzzle }: GameBoardProps) {
       } else if (e.key === "Backspace") {
         deleteLetter();
       } else if (/^\p{L}$/u.test(e.key)) {
-        // Normalise the typed letter so accented input (ά) matches puzzle letter (α)
-        const letter = normalizeLetters(e.key);
-        const allowed = new Set(
-          [activePuzzle.centerLetter, ...activePuzzle.outerLetters].map(
-            normalizeLetters,
-          ),
-        );
-        if (allowed.has(letter)) addLetter(letter);
+        handleKeyboardLetter(e.key);
       }
     },
-    [activePuzzle, addLetter, deleteLetter, submitWord],
+    [handleKeyboardLetter, deleteLetter, submitWord],
   );
 
   useEffect(() => {
@@ -60,7 +53,6 @@ export function GameBoard({ puzzle }: GameBoardProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  const puzzleMaxScore = maxScore(activePuzzle);
 
   // ── Class constants ──────────────────────────────────────────────────────────
   const styles = {

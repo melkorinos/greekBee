@@ -5,9 +5,10 @@
 
 import { buildInitialState, gameReducer } from "./gameReducer";
 import { clearPersistedState, loadPersistedState, usePersistence } from "./usePersistence";
-import { useCallback, useEffect, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer } from "react";
 
 import type { Puzzle } from "@/types";
+import { normalizeLetters } from "@/lib/normalize";
 
 /**
  * Central game hook — all components talk to this, never to the reducer directly.
@@ -36,7 +37,13 @@ export function useGameState(initialPuzzle: Puzzle) {
 
   // Auto-save to localStorage whenever relevant state changes
   usePersistence(state);
-
+  // Pre-compute the allowed letter set once per puzzle.
+  // Depends only on puzzle ID — shuffle reorders but doesn’t change the set.
+  const allowedLetters = useMemo(
+    () => new Set([state.puzzle.centerLetter, ...state.puzzle.outerLetters].map(normalizeLetters)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [state.puzzle.id]
+  );
   // ── Dispatch helpers ──────────────────────────────────────────────────────
   // Wrapped in useCallback so component references stay stable between renders
 
@@ -70,6 +77,15 @@ export function useGameState(initialPuzzle: Puzzle) {
     []
   );
 
+  /** Normalise and filter a raw keyboard key, then add it if it’s an allowed letter */
+  const handleKeyboardLetter = useCallback(
+    (rawKey: string) => {
+      const letter = normalizeLetters(rawKey);
+      if (allowedLetters.has(letter)) dispatch({ type: "ADD_LETTER", letter });
+    },
+    [allowedLetters]
+  );
+
   /** Load a completely new puzzle, resetting all progress */
   const newGame = useCallback(
     (puzzle: Puzzle) => {
@@ -87,14 +103,16 @@ export function useGameState(initialPuzzle: Puzzle) {
     foundWords: state.foundWords,
     score: state.score,
     currentRank: state.currentRank,
+    puzzleMaxScore: state.puzzleMaxScore,
     lastSubmission: state.lastSubmission,
 
-    // ── Actions ─────────────────────────────────────────────────────────────
+    // ── Actions ──────────────────────────────────────────────
     addLetter,
     deleteLetter,
     clearInput,
     submitWord,
     shuffleLetters,
+    handleKeyboardLetter,
     newGame,
   };
 }

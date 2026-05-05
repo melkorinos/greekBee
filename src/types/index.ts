@@ -81,6 +81,8 @@ export interface GameState {
   score: number;
   /** The player's current rank based on their score */
   currentRank: RankName;
+  /** Maximum achievable score for the active puzzle — computed once at puzzle load */
+  puzzleMaxScore: number;
   /** Timestamp (ms) of when this game session started */
   startedAt: number;
   /** Result of the most recent word submission — used to drive UI feedback messages */

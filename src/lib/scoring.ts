@@ -25,10 +25,14 @@ export function scoreWord(word: string, puzzle: Puzzle): number {
  * Calculates the maximum achievable score for a puzzle
  * (sum of scores for every valid word).
  * Used to convert a raw score into a rank percentage.
+ *
+ * Capped at 80% of the raw total so rank thresholds feel reachable —
+ * a player doesn't need to find every obscure word to reach the top rank.
  */
 export function maxScore(puzzle: Puzzle): number {
-  return puzzle.validWords.reduce(
+  const raw = puzzle.validWords.reduce(
     (total, word) => total + scoreWord(word, puzzle),
     0
   );
+  return Math.ceil(raw * 0.8);
 }

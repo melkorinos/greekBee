@@ -31,6 +31,7 @@ export function buildInitialState(puzzle: Puzzle): GameState {
     foundWords: [],
     score: 0,
     currentRank: "Beginner",
+    puzzleMaxScore: maxScore(puzzle),
     startedAt: Date.now(),
     lastSubmission: null,
   };
@@ -83,7 +84,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
       // Word accepted — update found list, score and rank
       const newScore = state.score + result.points;
-      const newRank = calculateRank(newScore, maxScore(state.puzzle));
+      const newRank = calculateRank(newScore, state.puzzleMaxScore);
 
       return {
         ...base,

@@ -5,5 +5,5 @@
 export { validateWord } from "./validation";
 export { scoreWord, maxScore } from "./scoring";
 export { isPangram } from "./pangram";
-export { calculateRank, RANKS } from "./ranking";
+export { calculateRank, RANKS, rankProgress } from "./ranking";
 export { normalizeLetters } from "./normalize";

@@ -7,6 +7,30 @@ import { isPangram } from "./pangram";
 import { normalizeLetters } from "./normalize";
 import { scoreWord } from "./scoring";
 
+// ─── Puzzle index cache ───────────────────────────────────────────────────────
+// Sets are built once per puzzle ID and reused across every validation call.
+// This avoids re-allocating three Set objects on every keypress.
+
+interface PuzzleIndex {
+  allLetters:   Set<string>;
+  centerLetter: string;
+  validSet:     Set<string>;
+}
+
+const puzzleIndexCache = new Map<string, PuzzleIndex>();
+
+function getPuzzleIndex(puzzle: Puzzle): PuzzleIndex {
+  const cached = puzzleIndexCache.get(puzzle.id);
+  if (cached) return cached;
+  const index: PuzzleIndex = {
+    allLetters:   new Set([puzzle.centerLetter, ...puzzle.outerLetters].map(normalizeLetters)),
+    centerLetter: normalizeLetters(puzzle.centerLetter),
+    validSet:     new Set(puzzle.validWords.map(normalizeLetters)),
+  };
+  puzzleIndexCache.set(puzzle.id, index);
+  return index;
+}
+
 /**
  * Validates a submitted word against the current puzzle rules.
  * Returns a ValidationResult describing the outcome and any points earned.
@@ -42,11 +66,7 @@ function getValidationStatus(
   // Rule 1: minimum length of 4 letters
   if (word.length < 4) return "too_short";
 
-  // Normalise puzzle letter set so ς and σ are treated as the same letter
-  const allLetters = new Set(
-    [puzzle.centerLetter, ...puzzle.outerLetters].map(normalizeLetters)
-  );
-  const centerLetter = normalizeLetters(puzzle.centerLetter);
+  const { allLetters, centerLetter, validSet } = getPuzzleIndex(puzzle);
 
   // Rule 2: every letter must be one of the 7 puzzle letters
   if (!Array.from(word).every((ch) => allLetters.has(ch))) return "invalid_letter";
@@ -55,7 +75,6 @@ function getValidationStatus(
   if (!word.includes(centerLetter)) return "missing_center";
 
   // Rule 4: word must exist in the puzzle's accepted word list (normalised)
-  const validSet = new Set(puzzle.validWords.map(normalizeLetters));
   if (!validSet.has(word)) return "not_in_list";
 
   // Rule 5: player hasn't already found this word
