@@ -58,13 +58,11 @@ export function GameBoard({ puzzle }: GameBoardProps) {
   const styles = {
     container:
       "flex flex-col items-center gap-6 w-full max-w-sm mx-auto px-4 py-8",
-    buttonRow: "flex items-center gap-3 w-full justify-center",
+    buttonRow: "flex items-center gap-2 w-full justify-center",
     buttonSecondary:
       "px-4 py-2 rounded-full border border-stone-300 text-stone-700 text-sm font-medium hover:bg-stone-100 active:bg-stone-200 transition-colors",
     buttonPrimary:
-      "px-4 py-2 rounded-full bg-stone-800 text-white text-sm font-semibold hover:bg-stone-700 active:bg-stone-900 transition-colors",
-    buttonNewGame:
-      "px-4 py-2 rounded-full border border-stone-300 text-stone-600 text-sm font-medium hover:bg-stone-100 active:bg-stone-200 transition-colors",
+      "px-8 py-2 rounded-full bg-stone-800 text-white text-sm font-semibold hover:bg-stone-700 active:bg-stone-900 transition-colors",
   };
 
   return (
@@ -99,7 +97,7 @@ export function GameBoard({ puzzle }: GameBoardProps) {
         onLetterClick={addLetter}
       />
 
-      {/* Action buttons row */}
+      {/* Action buttons — row 1: secondary actions */}
       <div className={styles.buttonRow}>
         <button
           data-testid="btn-delete"
@@ -124,6 +122,10 @@ export function GameBoard({ puzzle }: GameBoardProps) {
         >
           Ανακάτεμα
         </button>
+      </div>
+
+      {/* Action buttons — row 2: primary submit */}
+      <div className="flex w-full justify-center">
         <button
           data-testid="btn-enter"
           onClick={submitWord}
@@ -131,17 +133,6 @@ export function GameBoard({ puzzle }: GameBoardProps) {
         >
           Εισαγωγή
         </button>
-      </div>
-
-      {/* Νέο Παζλ — separated from the game controls by a divider */}
-      <div className="w-full border-t border-stone-100 pt-2 flex justify-center">
-        <a
-          data-testid="btn-new-game"
-          href={`/?lang=${activePuzzle.language}&random=1&exclude=${activePuzzle.id}`}
-          className={styles.buttonNewGame}
-        >
-          🎲 Νέο Παζλ
-        </a>
       </div>
 
       {/* Found words list */}

@@ -8,6 +8,7 @@ import { getPuzzleById, getRandomPuzzle } from "@/data";
 
 import { GameBoard } from "@/components/GameBoard";
 import { HowToPlayModal } from "@/components/HowToPlayModal";
+import { NewPuzzleButton } from "@/components/NewPuzzleButton";
 import type { Language } from "@/types";
 
 export default async function Home({
@@ -29,8 +30,10 @@ export default async function Home({
       <header className="w-full border-b border-stone-200 bg-white px-4 py-3">
         <div className="flex items-center justify-between max-w-sm mx-auto">
           <h1 className="text-xl font-bold tracking-tight text-stone-800">🍯 Spelling Bee</h1>
-          {/* Language switcher — navigates to today's puzzle in the chosen language */}
-          <HowToPlayModal />
+          <div className="flex items-center gap-2">
+            <NewPuzzleButton puzzleId={puzzle.id} language={language} />
+            <HowToPlayModal />
+          </div>
         </div>
       </header>
       <main className="flex flex-1 w-full flex-col items-center bg-white">
