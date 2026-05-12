@@ -1,9 +1,81 @@
 # Agent Log — Greek Word Games Platform
 
-## 2026-05-12 — Session 2: Phase 1 Implementation
+> Entries newest-first. Full file list kept only for the most recent session.
 
-### What happened
-Executed all three steps of Phase 1 in order. `npm run test` (72/72) and `npm run build` passed after each step.
+---
+
+## 2026-05-12 — Session 5: Phase 3 — Connections ✅
+
+**Outcome:** Connections live end-to-end. 167/167 tests. Build clean.
+
+- `src/games/connections/types.ts` — `ConnectionsPuzzle`, `ConnectionGroup`, `ConnectionsState`, `ConnectionsPersistedState`, `ConnectionsAction` (no `language` field — locked ADR)
+- `src/data/connections/puzzles-connections.json` — seed puzzle 2026-05-12
+- `src/data/connections/index.ts` — `getTodaysConnectionsPuzzle(date)`, fallback to last in array
+- `src/games/connections/hooks/connectionsReducer.ts` — pure reducer (SELECT_WORD, SUBMIT_GUESS, SHUFFLE, CLEAR_FEEDBACK); 4-mistake limit; one-away detection
+- `src/games/connections/hooks/useConnectionsState.ts` — React hook; persistence via `writeSlice("connections")`
+- `src/components/shared/FeedbackBanner.tsx` — **graduated** shared primitive; `theme` prop (`light`/`dark`); used by Wordle + Connections
+- `src/components/connections/` — `WordCard`, `GroupGrid`, `CategoryReveal`, `index.ts`
+- `src/app/connections/ConnectionsBoard.tsx` — client board (state + layout + mistake dots)
+- `src/app/connections/page.tsx` — server page; replaced stub
+- `src/components/wordle/WordleBoard.tsx` — replaced inline banner with `<FeedbackBanner theme="dark" />`
+- `src/app/page.tsx` — Connections card `available: true`
+- `scripts/validate-connections.mjs` — validates 4 groups × 4 words, no duplicates, unique dates
+- `src/test/connectionsReducer.test.ts` — 14 unit tests
+- `src/test/connectionsGroupGrid.test.tsx` — 5 RTL smoke tests
+
+---
+
+## 2026-05-12 — Session 4: Phase 2.5 — Theming ✅
+
+**Outcome:** All `dark:` Tailwind classes removed from Wordle. Theme seam lives solely at `<main>` root of `/wordle/page.tsx`. Shell + Spelling Bee confirmed clean. 151/151 tests.
+
+- `src/app/wordle/page.tsx` — `bg-zinc-900 text-stone-100` on `<main>`
+- `src/components/wordle/Keyboard.tsx` — `unknown` → `bg-stone-700 text-stone-100 border-stone-600`
+- `src/components/wordle/Tile.tsx` — `empty/pending` → unconditional `border-stone-600/500 text-stone-100`
+- `src/components/wordle/WordleBoard.tsx` — banners → `bg-green-900/red-900/stone-700`
+- `src/test/Shell.test.tsx` — added `bg-white` header assertion
+- `src/test/wordleTheme.test.tsx` — new; smoke-tests Tile + Keyboard dark classes
+
+---
+
+## 2026-05-12 — Session 3: Phase 2 — Wordle GR ✅
+
+**Outcome:** Wordle GR (5-letter) live. 143/143 tests. Build clean.
+
+Key decisions:
+- `evaluateGuess` — two-pass (exact first, then frequency-map for present); handles duplicates correctly
+- `getTodaysWordlePuzzle` — deterministic (epoch-day mod list length); date passed as server prop
+- Dictionary: `words-el.raw.json` (826k, immutable) → `words-el.json` (811k, pre-normalised, committed); `words-5.json` gitignored (generated)
+- Answer pool: `answers-5.json` (~3.8k curated words) for daily answer; `words-5.json` for guess validation
+- Persistence: `wordgames:state` envelope, slice key `wordle` → nested `{ "5": WordlePersistedSession }`
+
+Files: `src/games/wordle/types.ts`, `lib/{evaluateGuess,scoring,letterState,index}.ts`, `hooks/{wordleReducer,useWordleState,index}.ts`, `src/data/wordle/index.ts`, `src/components/wordle/{Tile,GuessGrid,Keyboard,WordleBoard,index}.ts`
+
+Tests: `evaluateGuess.test.ts` (7), `wordleReducer.test.ts` (11), `wordleLogic.test.ts` (9), `wordleDataLoader.test.ts` (14) = 41 new tests
+
+---
+
+## 2026-05-12 — Session 2: Phase 1 — Foundation ✅
+
+**Outcome:** Mono-game → multi-game structure. Shell + routing. Unified persistence. 72/72 tests.
+
+Key moves:
+- All Spelling Bee code → `src/games/spelling-bee/{lib,hooks,types.ts}`
+- `src/data/puzzles-el.json` → `src/data/spelling-bee/puzzles-el.json`
+- All components → `src/components/spelling-bee/`
+- `src/types/index.ts` stripped to `Language`, `GameId`, `PersistenceEnvelope`
+- `src/components/shared/Shell.tsx` — sticky header, hamburger drawer, Escape + backdrop dismiss
+- `src/hooks/useGameStore.ts` — `readSlice<T>`, `writeSlice<T>`, `clearSlice`, `migrateFromLegacyKeys`
+- `src/hooks/usePersistence.ts` — delegates to `useGameStore`; zero direct `localStorage` calls
+- `src/app/page.tsx` → game picker; `/spelling-bee`, `/wordle`, `/connections` routes created
+
+---
+
+## 2026-05-12 — Session 1: Architecture Planning ✅
+
+- 7-question architecture interview; multi-game platform PRD produced
+- Created `.agents/` files; updated README
+
 
 ### Step A — Folder Restructure ✅
 - Created `src/games/spelling-bee/lib/` — all 6 lib files moved with import paths updated to `../types` and relative siblings
@@ -76,11 +148,53 @@ Architecture analysis using `/improve-codebase-architecture` skill surfaced one 
 - **FeedbackBanner shared component** — deferred; only one game needs it (standing constraint: no speculative graduation to `shared/`)
 - **GameBoard.tsx button contrast** — design hygiene, no structural change needed
 
+### Step F — Tests ✅
+- Updated `src/test/Shell.test.tsx` — added assertion that `<header>` has `bg-white` class
+- Created `src/test/wordleTheme.test.tsx` — smoke tests rendering `<Tile>` and `<Keyboard>` in isolation; asserts `border-stone-600`, `text-stone-100`, `bg-stone-700` unconditional dark classes
+- 151/151 tests passing
+
 ### Definition of done — verified ✅
-- [x] `npm run test` — 143/143 pass
+- [x] `npm run test` — 151/151 pass
 - [x] `npm run build` — clean
 - [x] No `dark:` classes remain in any Wordle component
 - [x] Shell, Spelling Bee, and game picker files confirmed clean (no dark: classes, no changes needed)
+
+---
+
+## 2026-05-12 — Session 5: Phase 3 — Connections
+
+### What happened
+Built the full Connections game from scratch, graduated FeedbackBanner to shared/, enabled home page card.
+
+### Files created
+- `src/games/connections/types.ts` — `ConnectionsPuzzle`, `ConnectionGroup`, `ConnectionsState`, `ConnectionsPersistedState`, `ConnectionsAction`
+- `src/data/connections/puzzles-connections.json` — seed puzzle (2026-05-12)
+- `src/data/connections/index.ts` — `getTodaysConnectionsPuzzle(date)` with last-puzzle fallback
+- `src/games/connections/hooks/connectionsReducer.ts` — pure reducer (SELECT_WORD, SUBMIT_GUESS, SHUFFLE, CLEAR_FEEDBACK)
+- `src/games/connections/hooks/useConnectionsState.ts` — React hook; persistence via writeSlice("connections")
+- `src/components/shared/FeedbackBanner.tsx` — graduated shared primitive; light + dark theme variants
+- `src/components/connections/WordCard.tsx`, `GroupGrid.tsx`, `CategoryReveal.tsx`, `index.ts`
+- `src/app/connections/ConnectionsBoard.tsx` — client board component
+- `scripts/validate-connections.mjs` — validator: 4 groups × 4 words, no duplicates, valid dates
+- `src/test/connectionsReducer.test.ts` — 14 unit tests
+- `src/test/connectionsGroupGrid.test.tsx` — 5 RTL smoke tests
+
+### Files modified
+- `src/app/connections/page.tsx` — replaced stub with real server page
+- `src/components/wordle/WordleBoard.tsx` — replaced inline banner with `<FeedbackBanner theme="dark" />`
+- `src/app/page.tsx` — Connections card `available: true`
+
+### Architecture decisions (locked)
+- `ConnectionsPuzzle` has no `language` field
+- Persistence: `writeSlice("connections")` only — no direct localStorage
+- `FeedbackBanner` graduated because two games now use it (constraint satisfied)
+- Daily puzzle: match by date string; fallback to last in array
+- 4 mistakes max (NYT rules)
+
+### Definition of done — verified ✅
+- [x] `npm run test` — 167/167 pass
+- [x] `npm run build` — clean (all 6 routes)
+- [x] `node scripts/validate-connections.mjs` — seed puzzle valid
 
 ---
 

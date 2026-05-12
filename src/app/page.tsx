@@ -26,7 +26,7 @@ const GAMES = [
     title: "Connections",
     description: "Ομαδοποίησε 16 λέξεις σε 4 κατηγορίες των 4.",
     href: "/connections",
-    available: false,
+    available: true,
   },
 ] as const;
 

@@ -66,11 +66,11 @@ export function Shell({ children }: ShellProps) {
   return (
     <div className="min-h-screen flex flex-col">
       {/* ── Sticky header ─────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 w-full border-b border-stone-200 bg-white px-4 py-3">
+      <header className="sticky top-0 z-30 w-full border-b border-stone-800 bg-stone-900 px-4 py-3">
         <div className="flex items-center justify-between max-w-sm mx-auto">
           <Link
             href="/"
-            className="text-sm font-semibold text-stone-500 hover:text-stone-800 transition-colors"
+            className="text-sm font-semibold text-stone-300 hover:text-white transition-colors"
           >
             🎮 Word Games
           </Link>
@@ -78,7 +78,7 @@ export function Shell({ children }: ShellProps) {
             onClick={() => setDrawerOpen((v) => !v)}
             aria-label={drawerOpen ? "Close menu" : "Open menu"}
             aria-expanded={drawerOpen}
-            className="flex items-center justify-center w-9 h-9 rounded-full text-stone-600 hover:bg-stone-100 active:bg-stone-200 transition-colors"
+            className="flex items-center justify-center w-9 h-9 rounded-full text-stone-400 hover:bg-stone-700 active:bg-stone-600 transition-colors"
           >
             <HamburgerIcon open={drawerOpen} />
           </button>

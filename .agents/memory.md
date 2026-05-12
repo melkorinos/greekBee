@@ -4,7 +4,7 @@
 - **Repo:** `c:\repos\try` (or wherever cloned)
 - **Stack:** Next.js 15 · TypeScript · Tailwind CSS · Vitest + RTL
 - **Language focus:** Greek (`el`) primary, English (`en`) infrastructure exists but is dormant
-## Current state (as of 2026-05-12):** Two live games: Spelling Bee + Wordle GR (5-letter)
+## Current state (as of 2026-05-12):** Three live games: Spelling Bee + Wordle GR (5-letter) + Connections
 
 ## Key Decisions Made (Session 2026-05-12)
 

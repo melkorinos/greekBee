@@ -1,5 +1,20 @@
 # Agent Reflections — Greek Word Games Platform
 
+## 2026-05-12 — Post-Phase 3 (Connections)
+
+### What went well
+- `FeedbackBanner` graduation was clean: the shared primitive was designed before either game hardcoded a third variant, and the light/dark theme toggle (`theme` prop) covered both Wordle (dark) and Connections (light) with no duplication.
+- Pure reducer approach paid off again: all 14 Connections reducer tests run in <5ms with zero React setup.
+- The date-based puzzle selection with a last-puzzle fallback is simple and operator-friendly: add a new entry to the JSON, deploy, and the next day it's live.
+
+### Tensions to watch
+- **Connections puzzle freshness**: only one seed puzzle exists. The operator must manually add new dated entries. The validator script (`validate-connections.mjs`) protects against malformed data, but there is no reminder system for when new puzzles run out.
+- **Connections "one away" hint**: the reducer detects "one away" and shows "Μία παραπάνω! 🟡" but the GroupGrid does not visually highlight which group the player is close to. This may feel inconsistent with the NYT version — consider a subtle visual hint in Phase 4 polish.
+- **No animation on CategoryReveal**: deferred by design decision. When adding animations in Phase 4, the `CategoryReveal` component already has a clear seam (`data-testid="category-reveal-{difficulty}"`) that tests can target.
+- **ConnectionsBoard lives under `src/app/connections/`**: it is a client component co-located with the server page. If the board grows large, consider moving it to `src/components/connections/ConnectionsBoard.tsx`.
+
+---
+
 ## 2026-05-12 — Post-Phase 2.5 (Theming)
 
 ### What went well

@@ -27,6 +27,13 @@ describe("Shell rendering", () => {
     expect(screen.getByRole("link", { name: /word games/i })).toBeInTheDocument();
   });
 
+  it("header has dark bg-stone-900 background", () => {
+    setup();
+    const header = document.querySelector("header");
+    expect(header).not.toBeNull();
+    expect(header!.className).toContain("bg-stone-900");
+  });
+
   it("renders the hamburger button", () => {
     setup();
     expect(getHamburger()).toBeInTheDocument();

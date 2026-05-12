@@ -3,6 +3,7 @@
 // Top-level Wordle board — assembles GuessGrid + Keyboard + feedback message.
 // Wires physical keyboard events.
 
+import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { GuessGrid } from "./GuessGrid";
 import { Keyboard } from "./Keyboard";
 import type { WordlePuzzle } from "@/games/wordle/types";
@@ -63,21 +64,11 @@ export function WordleBoard({ puzzle, validWords }: WordleBoardProps) {
     <div className="flex flex-col items-center gap-4 py-4">
       {/* Feedback banner */}
       <div className="h-8">
-        {lastMessage && (
-          <p
-            className={[
-              "px-4 py-1 rounded text-sm font-medium",
-              status === "won"
-                ? "bg-green-900 text-green-100"
-                : status === "lost"
-                  ? "bg-red-900 text-red-100"
-                  : "bg-stone-700 text-stone-100",
-            ].join(" ")}
-            role="alert"
-          >
-            {lastMessage}
-          </p>
-        )}
+        <FeedbackBanner
+          message={lastMessage}
+          variant={status === "won" ? "success" : status === "lost" ? "error" : "neutral"}
+          theme="dark"
+        />
       </div>
 
       {/* Guess grid */}
