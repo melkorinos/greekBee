@@ -1,5 +1,19 @@
 # Agent Reflections — Greek Word Games Platform
 
+## 2026-05-12 — Post-Phase 2.5 (Theming)
+
+### What went well
+- The `/improve-codebase-architecture` skill correctly identified the `dark:` class pattern as a structural contradiction of the locked ADR — not just a styling fix. Framing it as a "dead/leaky seam" made the solution obvious: the seam belongs at the page root, not sprinkled across leaf components.
+- The scan-first approach (reading all colour classes before touching anything) confirmed that Shell, Spelling Bee, and the game picker were already clean. Zero accidental changes to working code.
+- Removing `dark:` classes means RTL tests can now assert dark theme classes without any DOM setup gymnastics — the classes are unconditional and always present.
+
+### Tensions to watch
+- **Theme test coverage gap**: `Shell.test.tsx` does not yet assert `bg-white` on the header; no smoke test for Wordle dark background. Deferred but should be done before Phase 3 to prevent regression.
+- **FeedbackBanner graduation**: The `WordleBoard` feedback banner uses `bg-green-900/red-900` — the same pattern Connections will likely need. When Connections builds its feedback UI, this is the graduation trigger for a shared `FeedbackBanner` primitive.
+- **`bg-zinc-900` is set on `<main>`, not `<body>`**: The Shell header sits outside `<main>` in the layout, so it correctly stays white. But the area *between* the Shell bottom edge and `<main>` top (if any padding/margin exists) will show the body background, not `bg-zinc-900`. Visual check needed.
+
+---
+
 ## 2026-05-12 — Post-Phase 2 (Wordle GR)
 
 ### What went well

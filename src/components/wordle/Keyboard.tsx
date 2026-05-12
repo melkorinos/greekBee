@@ -24,7 +24,7 @@ const STATE_CLASSES: Record<string, string> = {
   correct: "bg-green-600  text-white border-green-600",
   present: "bg-yellow-500 text-white border-yellow-500",
   absent:  "bg-stone-500  text-white border-stone-500",
-  unknown: "bg-stone-200  text-stone-900 border-stone-300 dark:bg-stone-700 dark:text-stone-100 dark:border-stone-600",
+  unknown: "bg-stone-700  text-stone-100 border-stone-600",
 };
 
 export function Keyboard({
@@ -51,8 +51,8 @@ export function Keyboard({
     "flex items-center justify-center",
     "h-14 px-3 rounded border",
     "text-sm font-semibold cursor-pointer select-none",
-    "bg-stone-300 dark:bg-stone-600 border-stone-400 dark:border-stone-500",
-    "text-stone-900 dark:text-stone-100",
+    "bg-stone-600 border-stone-500",
+    "text-stone-100",
     "active:opacity-70 transition-colors",
     disabled ? "opacity-50 pointer-events-none" : "",
   ].join(" ");

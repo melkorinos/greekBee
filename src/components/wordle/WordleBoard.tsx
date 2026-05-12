@@ -68,10 +68,10 @@ export function WordleBoard({ puzzle, validWords }: WordleBoardProps) {
             className={[
               "px-4 py-1 rounded text-sm font-medium",
               status === "won"
-                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"
+                ? "bg-green-900 text-green-100"
                 : status === "lost"
-                  ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"
-                  : "bg-stone-100 text-stone-800 dark:bg-stone-700 dark:text-stone-100",
+                  ? "bg-red-900 text-red-100"
+                  : "bg-stone-700 text-stone-100",
             ].join(" ")}
             role="alert"
           >

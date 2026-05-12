@@ -28,12 +28,12 @@ Ship a polished multi-game Greek word game platform where Spelling Bee, Wordle G
 > **Decision:** Wordle is dark-themed. Spelling Bee and the Shell top bar are light-themed.
 > Each game owns its own background and foreground; the Shell header is always light.
 
-- [ ] **Shell header** — keep light (`bg-white`, `text-stone-800`); add a `theme` context or data-attribute so game pages can signal their theme to the shell if needed
-- [ ] **Spelling Bee** — keep current light theme (`bg-zinc-50` / `bg-white` cards); audit all components for consistency; ensure no dark-mode classes bleed in
-- [ ] **Wordle** — full dark theme: page background `bg-zinc-900`, `WordleBoard` background dark, tile colours adjusted for dark background, keyboard dark, feedback banner dark-aware
-- [ ] **Game picker** (`/`) — light theme (matches Spelling Bee aesthetic)
-- [ ] **Globals** — no global `dark:` classes that apply to both games; theming is explicit per-route, not system-preference driven
-- [ ] **Tests** — update `Shell.test.tsx` and `GameBoard.test.tsx` to assert theme class presence; no snapshot regressions
+- [x] **Shell header** — confirmed light (`bg-white`, `text-stone-800`); no dark: classes present; always-light is structurally enforced
+- [x] **Spelling Bee** — confirmed light theme; no dark: classes in any component; no changes needed
+- [x] **Wordle** — full dark theme: `bg-zinc-900 text-stone-100` on page root; all `dark:` classes removed from Tile, Keyboard, WordleBoard and replaced with unconditional dark equivalents
+- [x] **Game picker** (`/`) — confirmed light theme; no dark classes; no changes needed
+- [x] **Globals** — no global `dark:` classes; theming is explicit per-route, not system-preference driven
+- [ ] **Tests** — update `Shell.test.tsx` and add `wordleTheme.test.tsx` smoke test (deferred to next session)
 
 ## Phase 3 — Connections
 - [ ] Design `ConnectionsPuzzle` and `ConnectionsState` types

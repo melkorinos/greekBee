@@ -23,7 +23,7 @@
 | Components | `src/components/shared/` for cross-game primitives; game-specific stay co-located |
 | Persistence | Single `wordgames:state` localStorage key; typed envelope `{ "spelling-bee": ..., "wordle": ..., "connections": ... }`; `useGameStore` is the only code that touches localStorage |
 | Scripts | Per-game; Connections is manual JSON only |
-| Styling | **Per-game theming** — Wordle = dark (`bg-zinc-900`); Spelling Bee + Shell header = light (`bg-white` / `bg-zinc-50`); no system-preference dark mode; theming is explicit per-route |
+| Styling | **Per-game theming** — Wordle = dark (`bg-zinc-900` on page `<main>`, `text-stone-100` inherited by all descendants); Spelling Bee + Shell header = light (`bg-white` / `bg-zinc-50`); no system-preference dark mode; theming is explicit per-route via root element className. All `dark:` Tailwind classes removed from Wordle components — unconditional classes only. |
 | Scoring | Per-game; no unified rank ladder yet |
 
 ### Planned Folder Structure

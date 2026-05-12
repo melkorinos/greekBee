@@ -15,8 +15,8 @@ const STATE_CLASSES: Record<TileState, string> = {
   correct: "bg-green-600  border-green-600  text-white",
   present: "bg-yellow-500 border-yellow-500 text-white",
   absent:  "bg-stone-600  border-stone-600  text-white",
-  empty:   "bg-transparent border-stone-300 dark:border-stone-600 text-stone-900 dark:text-stone-100",
-  pending: "bg-transparent border-stone-500 text-stone-900 dark:text-stone-100",
+  empty:   "bg-transparent border-stone-600 text-stone-100",
+  pending: "bg-transparent border-stone-500 text-stone-100",
 };
 
 export function Tile({ letter = "", state, animate = false }: TileProps) {

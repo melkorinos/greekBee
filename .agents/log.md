@@ -61,6 +61,29 @@ Executed all three steps of Phase 1 in order. `npm run test` (72/72) and `npm ru
 
 ---
 
+## 2026-05-12 — Session 4: Phase 2.5 — Theming (Step B)
+
+### What happened
+Architecture analysis using `/improve-codebase-architecture` skill surfaced one structural finding: Wordle components used `dark:` Tailwind classes (system-preference seam) instead of unconditional dark-theme classes — contradicting the locked ADR that theming is explicit per-route. These classes were unreachable dead code (no ancestor ever sets `.dark`) and posed a future bleed risk. Replaced all `dark:` classes with unconditionals; dark context is now encoded solely at the `<main>` root of `/wordle/page.tsx`.
+
+### Files changed (Step B)
+- `src/app/wordle/page.tsx` — `<main>` gains `bg-zinc-900 text-stone-100`; `h1` → `text-stone-100`; subtitle → `text-stone-400` (unconditional)
+- `src/components/wordle/Keyboard.tsx` — `unknown` key state and `actionClass` use unconditional `bg-stone-700 / text-stone-100 / border-stone-600/500`
+- `src/components/wordle/Tile.tsx` — `empty` and `pending` states use unconditional `border-stone-600 / text-stone-100`
+- `src/components/wordle/WordleBoard.tsx` — feedback banner uses `bg-green-900/red-900/stone-700` and `text-green-100/red-100/stone-100` unconditionally
+
+### Architecture candidates not implemented
+- **FeedbackBanner shared component** — deferred; only one game needs it (standing constraint: no speculative graduation to `shared/`)
+- **GameBoard.tsx button contrast** — design hygiene, no structural change needed
+
+### Definition of done — verified ✅
+- [x] `npm run test` — 143/143 pass
+- [x] `npm run build` — clean
+- [x] No `dark:` classes remain in any Wordle component
+- [x] Shell, Spelling Bee, and game picker files confirmed clean (no dark: classes, no changes needed)
+
+---
+
 ## 2026-05-12 — Session 3: Phase 2 — Wordle GR + Dictionary Normalisation
 
 ### What happened

@@ -13,11 +13,11 @@ export default function WordlePage() {
   const validWords = getValidWords(5);
 
   return (
-    <main className="flex flex-col items-center gap-2 px-4 pt-4">
-      <h1 className="text-2xl font-bold tracking-tight text-stone-800 dark:text-stone-100">
+    <main className="flex flex-col items-center gap-2 px-4 pt-4 bg-zinc-900 text-stone-100">
+      <h1 className="text-2xl font-bold tracking-tight text-stone-100">
         🟩 Wordle GR
       </h1>
-      <p className="text-sm text-stone-500 dark:text-stone-400">
+      <p className="text-sm text-stone-400">
         {today} · 5 γράμματα · {validWords.length.toLocaleString()} λέξεις
       </p>
       <WordleBoard puzzle={puzzle} validWords={validWords} />
