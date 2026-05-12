@@ -9,29 +9,48 @@ Ship a polished multi-game Greek word game platform where Spelling Bee, Wordle G
 - [x] **`useGameStore`:** Implement unified localStorage envelope (`wordgames:state`); migrate `usePersistence` to use it; verify no cross-game leakage
 - [x] **Types split:** Extract `Language`, `GameId`, `PersistenceEnvelope` into root `src/types/index.ts`; move Spelling Bee-specific types to `src/games/spelling-bee/types.ts`
 
-## Phase 2 — Wordle GR
-- [ ] Design `WordlePuzzle` and `WordleState` types
-- [ ] Implement `evaluateGuess` pure function (correct / wrong-position / absent)
-- [ ] Build `wordleReducer` + `useWordleState` hook
-- [ ] Create `scripts/wordle/generate-puzzle.ts` (picks answer by length + date from `words-el.json`)
-- [ ] Build `GuessGrid`, `Tile`, `Keyboard`, `VariantPicker` components
-- [ ] Wire `/wordle/page.tsx` (picker) and `/wordle/[length]/page.tsx` (game)
-- [ ] Wordle persistence slice (nested by length inside the `wordle` envelope key)
+## Phase 2 — Wordle GR ✅ COMPLETE
+- [x] Design `WordlePuzzle`, `WordleState`, `TileState`, `GuessResult`, `LetterStateMap` types
+- [x] Implement `evaluateGuess` pure function (two-pass, duplicate-letter-safe)
+- [x] Build `wordleReducer` + `useWordleState` hook
+- [x] Deterministic daily answer via `getTodaysWordlePuzzle` (date → stable index into sorted word list)
+- [x] Build `GuessGrid`, `Tile`, `Keyboard`, `WordleBoard` components
+- [x] Wire `/wordle/page.tsx` (5-letter game, server component)
+- [x] Wordle persistence slice (`wordle.5` nested inside `wordgames:state`)
+- [x] Generate `src/data/wordle/words-5.json` (9,568 words via `normalize-wordlist.mjs`)
+- [x] Normalize full dictionary: `words-el.json` → lowercase, no accents, ς→σ (original backed up as `words-el.raw.json`)
+- [x] 27 new tests: `evaluateGuess` (7), `wordleReducer` (11), `wordleLogic` (9) — total 129 passing
+- [x] Curated answer pool: `answers-5.json` (~3.8k everyday words) — `words-5.json` remains full valid-guess list
+- [x] 14 new data-loader tests (`wordleDataLoader.test.ts`) — total 143 passing
+- [x] `words-el.json` committed to repo (pre-normalised, no-accent form); `words-el.raw.json` + `words-*.json` gitignored
+
+## Phase 2.5 — Theming (Dark / Light per game)
+> **Decision:** Wordle is dark-themed. Spelling Bee and the Shell top bar are light-themed.
+> Each game owns its own background and foreground; the Shell header is always light.
+
+- [ ] **Shell header** — keep light (`bg-white`, `text-stone-800`); add a `theme` context or data-attribute so game pages can signal their theme to the shell if needed
+- [ ] **Spelling Bee** — keep current light theme (`bg-zinc-50` / `bg-white` cards); audit all components for consistency; ensure no dark-mode classes bleed in
+- [ ] **Wordle** — full dark theme: page background `bg-zinc-900`, `WordleBoard` background dark, tile colours adjusted for dark background, keyboard dark, feedback banner dark-aware
+- [ ] **Game picker** (`/`) — light theme (matches Spelling Bee aesthetic)
+- [ ] **Globals** — no global `dark:` classes that apply to both games; theming is explicit per-route, not system-preference driven
+- [ ] **Tests** — update `Shell.test.tsx` and `GameBoard.test.tsx` to assert theme class presence; no snapshot regressions
 
 ## Phase 3 — Connections
 - [ ] Design `ConnectionsPuzzle` and `ConnectionsState` types
 - [ ] Define `puzzles-connections.json` schema and seed with first real puzzle
-- [ ] Build `useConnectionsState` hook
+- [ ] Build `useConnectionsState` hook + `connectionsReducer`
 - [ ] Build `GroupGrid`, `WordCard`, `CategoryReveal` components
 - [ ] Wire `/connections/page.tsx`
 - [ ] Connections persistence slice
+- [ ] Connections puzzle validator script (`scripts/validate-connections.mjs`)
 
 ## Phase 4 — Polish
-- [ ] Game picker home page (`/`) with cards per game
-- [ ] Operator tooling: simple JSON editor or validation script for Connections puzzles
-- [ ] Wordle answer pool curation (filtered subset of `words-el.json` by length)
+- [ ] Wordle length variants (3–8): generate `words-N.json` + `answers-N.json`, add `/wordle/[length]` dynamic route, add variant picker
+- [ ] Home page “played today” status badge per game (read from `useGameStore`)
 - [ ] E2E tests (Playwright) for at least one happy-path per game
-- [ ] Visual rebrand (decouple from NYT aesthetic) — introduce Tailwind theme config at this point
+- [ ] Visual rebrand — introduce Tailwind theme config; decouple from NYT aesthetic
+- [ ] Spelling Bee puzzle quality filter (enforce ≥2 vowels, ≥2 consonants, centre = vowel, ≥1 pangram)
+- [ ] Per-puzzle leaderboard (Supabase backend, device UUID, `POST /api/scores`)
 
 ## Constraints (never violate)
 - Game logic stays pure functions — zero React imports in `src/games/*/lib/`

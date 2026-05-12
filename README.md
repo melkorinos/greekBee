@@ -7,7 +7,7 @@ A multi-game browser platform for Greek (and English) word games, built with **N
 | Game | Route | Status | Description |
 |------|-------|--------|-------------|
 | 🍯 Spelling Bee | `/spelling-bee` | Live | 7-letter honeycomb — find words containing the center letter |
-| 🟩 Wordle GR | `/wordle` | Planned | Guess a hidden Greek word in 6 attempts — 6 length variants (3–8 letters) |
+| 🟩 Wordle GR | `/wordle` | Live | Guess a hidden 5-letter Greek word in 6 attempts |
 | 🔗 Connections | `/connections` | Planned | Group 16 curated words into 4 categories of 4 |
 
 All games share a common shell (hamburger navigation menu), a unified persistence layer, and a consistent design foundation. Each game's logic, state, and data are fully isolated.
@@ -47,6 +47,14 @@ npm run lint       # ESLint
 ```bash
 # Parse a Hunspell .dic file into a words-el.json word list
 npm run parse-dict -- --lang=el
+
+# One-time: normalise the full words-el.json dictionary
+# (strips accents, lowercases, ς→σ, deduplicates; backs up original as words-el.raw.json)
+node scripts/normalize-el-dict.mjs
+
+# Filter normalised dictionary to a target word length for Wordle
+# (output: src/data/wordle/words-N.json)
+node scripts/normalize-wordlist.mjs --length=5
 
 # Generate a single puzzle manually
 npm run generate-puzzle -- --lang=el --center=α --outer=π,ο,λ,ε,μ,σ --date=2026-03-26
@@ -189,6 +197,12 @@ Test files in `src/test/`:
 | File | Covers |
 |------|--------|
 | `gameLogic.test.ts` | `isPangram`, `scoreWord`, `maxScore`, `calculateRank`, `validateWord` |
-| `gameReducer.test.ts` | All 7 reducer actions (`ADD_LETTER`, `DELETE_LETTER`, `CLEAR_INPUT`, `SUBMIT_WORD`, `SHUFFLE_LETTERS`, `NEW_GAME`, `RESTORE_STATE`) |
+| `gameReducer.test.ts` | All 7 Spelling Bee reducer actions |
 | `greekLogic.test.ts` | Greek-specific normalisation, pangram detection, data layer |
 | `GameBoard.test.tsx` | Rendering, keyboard input, word submission, button interactions |
+| `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`, migration from legacy key |
+| `Shell.test.tsx` | Hamburger open/close, navigation links, keyboard dismiss |
+| `persistence.test.ts` | `usePersistence` + `loadPersistedState` delegation to `useGameStore` |
+| `evaluateGuess.test.ts` | Two-pass algorithm — exact, present, absent, duplicate-letter edge cases |
+| `wordleReducer.test.ts` | `ADD_LETTER`, `DELETE_LETTER`, `SUBMIT_GUESS` (win/loss/invalid), `RESTORE_STATE` |
+| `wordleLogic.test.ts` | `scoreWordle`, `buildLetterStateMap` priority rules |

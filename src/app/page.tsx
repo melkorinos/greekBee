@@ -16,9 +16,9 @@ const GAMES = [
     id: "wordle",
     emoji: "🟩",
     title: "Wordle GR",
-    description: "Μάντεψε τη λέξη σε 6 προσπάθειες — 6 μήκη διαθέσιμα.",
+    description: "Μάντεψε τη λέξη σε 6 προσπάθειες — 5 γράμματα.",
     href: "/wordle",
-    available: false,
+    available: true,
   },
   {
     id: "connections",

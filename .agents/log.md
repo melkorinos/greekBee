@@ -58,6 +58,66 @@ Executed all three steps of Phase 1 in order. `npm run test` (72/72) and `npm ru
 ### Definition of done — verified ✅
 - [x] `npm run test` — 72/72 pass
 - [x] `npm run build` — no type errors, all 5 routes compile
+
+---
+
+## 2026-05-12 — Session 3: Phase 2 — Wordle GR + Dictionary Normalisation
+
+### What happened
+Built Wordle GR (5-letter) end-to-end in one session. All 129 tests pass, build clean.
+
+### Word list preparation
+- Created `scripts/normalize-wordlist.mjs` — reads `words-el.json`, filters to target length, writes `src/data/wordle/words-N.json`
+- Generated `src/data/wordle/words-5.json` — 9,568 unique 5-letter lowercase accent-free words
+- Created `scripts/normalize-el-dict.mjs` — one-time script that normalises the full dictionary
+- Ran normalization: 826,268 raw words → 811,614 unique normalised words in new `words-el.json`
+- Original backed up as `words-el.raw.json` (never modified)
+- `normalize-wordlist.mjs` updated to skip normalize step (source is already clean)
+
+### Types — `src/games/wordle/types.ts`
+- `WordlePuzzle`, `WordleLength`, `TileState`, `GuessResult`, `WordleStatus`, `WordleState`, `LetterState`, `LetterStateMap`, `WORDLE_SCORES`, `WordlePersistedSession`, `WordlePersistedSlice`
+
+### Pure logic — `src/games/wordle/lib/`
+- `evaluateGuess.ts` — two-pass algorithm (exact matches first, then present using frequency map; handles duplicates correctly)
+- `scoring.ts` — `scoreWordle(guessCount, won)`: 1→6pts … 6→1pt, loss→0
+- `letterState.ts` — `buildLetterStateMap` aggregates best known letter state for keyboard colouring
+- `index.ts` barrel
+
+### Hooks — `src/games/wordle/hooks/`
+- `wordleReducer.ts` — pure reducer: `ADD_LETTER`, `DELETE_LETTER`, `SUBMIT_GUESS`, `NEW_GAME`, `RESTORE_STATE`, `CLEAR_MESSAGE`; `makeInitialWordleState` factory
+- `useWordleState.ts` — React hook: wires reducer + persistence, derives `letterStates` + `score`
+- `index.ts` barrel
+
+### Data loader — `src/data/wordle/index.ts`
+- `getTodaysWordlePuzzle(date, length)` — deterministic daily answer (epoch-day offset mod list length)
+- `getValidWords(length)` — returns full word list for guess validation
+- `getTodayDateString()` — ISO date from server clock
+
+### Components — `src/components/wordle/`
+- `Tile.tsx` — single letter cell with TileState-driven colour classes
+- `GuessGrid.tsx` — 6×5 grid: submitted rows + live input row + empty rows
+- `Keyboard.tsx` — Greek soft keyboard with letter-state colouring; `btn-enter` and `btn-delete` testids
+- `WordleBoard.tsx` — assembles grid + keyboard + feedback; handles physical keyboard events; auto-clears transient messages
+- `index.ts` barrel
+
+### Route — `src/app/wordle/page.tsx`
+- Server component: loads today's puzzle and valid word list, renders `<WordleBoard>`
+- Marked `force-dynamic` for fresh date per request
+
+### CSS — `src/app/globals.css`
+- Added `@keyframes flip` + `.animate-flip` for tile reveal animation
+
+### Home page — `src/app/page.tsx`
+- Wordle card changed from `available: false` ("Σύντομα") to `available: true` and live
+
+### Tests — 27 new tests (129 total)
+- `src/test/evaluateGuess.test.ts` — 7 tests: exact, absent, present, mixed, duplicate-letter edge cases
+- `src/test/wordleReducer.test.ts` — 11 tests: ADD_LETTER caps, DELETE_LETTER, SUBMIT_GUESS (short/invalid/valid/win/6-loss), RESTORE_STATE
+- `src/test/wordleLogic.test.ts` — 9 tests: scoreWordle (all 4 cases), buildLetterStateMap (correct beats present beats absent, unknown)
+
+### Definition of done — verified ✅
+- [x] `npm run test` — 129/129 pass
+- [x] `npm run build` — clean, `/wordle` compiles as Dynamic (server-rendered)
 - [x] Spelling Bee at `/spelling-bee`, game picker at `/`
 - [x] Hamburger menu in Shell on every screen
 - [x] `/wordle` and `/connections` render stubs
