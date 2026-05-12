@@ -1,44 +1,70 @@
-// page.tsx — server component entry point.
-// Loads the puzzle on the server based on ?lang= and optional ?puzzle= / ?random= params.
-// ?lang=el                   → random Greek puzzle (default)
-// ?puzzle=2026-03-26-el      → specific puzzle by ID
-// ?random=1&exclude=some-id  → random puzzle (skips the excluded ID)
+// app/page.tsx — game picker home page.
+// Minimal cards for each game; will be polished in Phase 4.
 
-import { getPuzzleById, getRandomPuzzle } from "@/data";
+import Link from "next/link";
 
-import { GameBoard } from "@/components/GameBoard";
-import { HowToPlayModal } from "@/components/HowToPlayModal";
-import { NewPuzzleButton } from "@/components/NewPuzzleButton";
-import type { Language } from "@/types";
+const GAMES = [
+  {
+    id: "spelling-bee",
+    emoji: "🍯",
+    title: "Spelling Bee",
+    description: "Βρες λέξεις με τα 7 γράμματα της κηρήθρας.",
+    href: "/spelling-bee",
+    available: true,
+  },
+  {
+    id: "wordle",
+    emoji: "🟩",
+    title: "Wordle GR",
+    description: "Μάντεψε τη λέξη σε 6 προσπάθειες — 6 μήκη διαθέσιμα.",
+    href: "/wordle",
+    available: false,
+  },
+  {
+    id: "connections",
+    emoji: "🔗",
+    title: "Connections",
+    description: "Ομαδοποίησε 16 λέξεις σε 4 κατηγορίες των 4.",
+    href: "/connections",
+    available: false,
+  },
+] as const;
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ lang?: string; puzzle?: string; random?: string; exclude?: string }>;
-}) {
-  const { lang, puzzle: puzzleId, random, exclude } = await searchParams;
-
-  const language: Language = "el";
-
-  // Load puzzle: specific ID → random (always — excluding current if provided)
-  const puzzle =
-    puzzleId ? (getPuzzleById(puzzleId, language) ?? getRandomPuzzle(language))
-    :           getRandomPuzzle(language, exclude);
-
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-start bg-zinc-50 font-sans min-h-screen">
-      <header className="w-full border-b border-stone-200 bg-white px-4 py-3">
-        <div className="flex items-center justify-between max-w-sm mx-auto">
-          <h1 className="text-xl font-bold tracking-tight text-stone-800">🍯 Spelling Bee</h1>
-          <div className="flex items-center gap-2">
-            <NewPuzzleButton puzzleId={puzzle.id} language={language} />
-            <HowToPlayModal />
-          </div>
-        </div>
-      </header>
-      <main className="flex flex-1 w-full flex-col items-center bg-white">
-        <GameBoard puzzle={puzzle} />
-      </main>
+    <div className="flex flex-col items-center justify-start min-h-screen bg-zinc-50 px-4 py-12">
+      <h1 className="text-3xl font-bold text-stone-800 mb-2">Παιχνίδια Λέξεων</h1>
+      <p className="text-stone-500 text-sm mb-10">Επίλεξε παιχνίδι για να ξεκινήσεις</p>
+
+      <ul className="w-full max-w-sm space-y-4">
+        {GAMES.map((game) => (
+          <li key={game.id}>
+            {game.available ? (
+              <Link
+                href={game.href}
+                className="flex items-start gap-4 p-5 rounded-2xl bg-white border border-stone-200 shadow-sm hover:shadow-md hover:border-stone-300 transition-all"
+              >
+                <span className="text-3xl mt-0.5">{game.emoji}</span>
+                <div>
+                  <p className="font-semibold text-stone-800">{game.title}</p>
+                  <p className="text-sm text-stone-500 mt-0.5">{game.description}</p>
+                </div>
+              </Link>
+            ) : (
+              <div className="flex items-start gap-4 p-5 rounded-2xl bg-white border border-stone-200 opacity-50 cursor-not-allowed select-none">
+                <span className="text-3xl mt-0.5">{game.emoji}</span>
+                <div>
+                  <p className="font-semibold text-stone-800">
+                    {game.title}{" "}
+                    <span className="text-xs font-normal text-stone-400 ml-1">Σύντομα</span>
+                  </p>
+                  <p className="text-sm text-stone-500 mt-0.5">{game.description}</p>
+                </div>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

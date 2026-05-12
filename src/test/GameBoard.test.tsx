@@ -4,8 +4,8 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-import { GameBoard } from "@/components/GameBoard";
-import type { Puzzle } from "@/types";
+import { GameBoard } from "@/components/spelling-bee/GameBoard";
+import type { Puzzle } from "@/games/spelling-bee/types";
 import userEvent from "@testing-library/user-event";
 
 // ── Test fixture ───────────────────────────────────────────────────────────────

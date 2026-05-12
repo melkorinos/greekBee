@@ -1,11 +1,11 @@
 // Unit tests for the game reducer — fast, no React, no DOM.
 // Tests every action type directly through the reducer's interface.
 
-import type { GameState, Puzzle } from "@/types";
-import { buildInitialState, gameReducer } from "@/hooks/gameReducer";
+import type { GameState, Puzzle } from "@/games/spelling-bee/types";
+import { buildInitialState, gameReducer } from "@/games/spelling-bee/hooks/gameReducer";
 import { describe, expect, it } from "vitest";
 
-import { maxScore } from "@/lib/scoring";
+import { maxScore } from "@/games/spelling-bee/lib/scoring";
 
 // ── Shared test fixture ────────────────────────────────────────────────────────
 

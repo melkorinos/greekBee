@@ -1,7 +1,32 @@
-# 🍯 Spelling Bee (Greek)
+# � Greek Word Games Platform
 
-A browser-based word game inspired by the NYT Spelling Bee, built for Greek language play.
-Built with **Next.js 16 · TypeScript · Tailwind CSS · Vitest**.
+A multi-game browser platform for Greek (and English) word games, built with **Next.js 15 · TypeScript · Tailwind CSS · Vitest**.
+
+## Games
+
+| Game | Route | Status | Description |
+|------|-------|--------|-------------|
+| 🍯 Spelling Bee | `/spelling-bee` | Live | 7-letter honeycomb — find words containing the center letter |
+| 🟩 Wordle GR | `/wordle` | Planned | Guess a hidden Greek word in 6 attempts — 6 length variants (3–8 letters) |
+| 🔗 Connections | `/connections` | Planned | Group 16 curated words into 4 categories of 4 |
+
+All games share a common shell (hamburger navigation menu), a unified persistence layer, and a consistent design foundation. Each game's logic, state, and data are fully isolated.
+
+---
+
+## Project Agent
+
+This project is managed with a dedicated AI coding agent. Agent files live in `.agents/`:
+
+| File | Purpose |
+|------|---------|
+| `.agents/soul.md` | Agent identity, beliefs, and hard constraints |
+| `.agents/memory.md` | All architecture decisions and context across sessions |
+| `.agents/goals.md` | Phased roadmap (Phase 1–4) with checkboxes |
+| `.agents/log.md` | Per-session changelog |
+| `.agents/reflections.md` | Post-session risks, tensions, and open questions |
+
+To start an implementation session, use the prompt at `.github/prompts/implement-platform.prompt.md` by typing `/implement-platform` in the Copilot Chat panel.
 
 ---
 
@@ -97,17 +122,36 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
 
 ```
 src/
-  app/          Next.js App Router — server entry, layout
-  components/   React UI components (display only, no game logic)
-  hooks/        useGameState (React) + gameReducer (pure) + usePersistence
-  lib/          Pure game logic: validation, scoring, ranking, normalisation
-  data/         Puzzle JSON files + data access layer
-  types/        Shared TypeScript interfaces
-  test/         Vitest + React Testing Library test suite
-scripts/        Puzzle generation CLI scripts (Node/tsx)
+  app/              Next.js App Router — shell layout, game picker, per-game routes
+  components/
+    shared/         Cross-game UI primitives (Shell, HamburgerMenu, FeedbackMessage, Modal)
+    spelling-bee/   Spelling Bee-specific components
+    wordle/         Wordle-specific components (planned)
+    connections/    Connections-specific components (planned)
+  games/            Pure logic — one folder per game, zero React imports
+    spelling-bee/
+      lib/          validation, scoring, ranking, pangram, normalize
+      hooks/        useSpellingBeeState, gameReducer
+      types.ts
+    wordle/         (planned)
+    connections/    (planned)
+  hooks/
+    useGameStore.ts Unified localStorage envelope — the only code that touches localStorage
+  data/
+    spelling-bee/   puzzles-el.json, words-el.json
+    wordle/         puzzles-wordle-el.json (planned)
+    connections/    puzzles-connections.json (hand-curated, planned)
+  types/            Shared types: Language, GameId, PersistenceEnvelope
+scripts/
+  spelling-bee/     Puzzle generation CLI (moved from scripts/)
+  wordle/           Answer pool generator (planned)
 ```
 
-**Key design principle:** game logic (`src/lib/`, `src/hooks/gameReducer.ts`) is completely decoupled from React. Every function in `src/lib/` is a pure function with no framework dependency — testable with plain Vitest, no DOM required.
+**Key design principles:**
+- Game logic (`src/games/*/lib/`) is pure functions with no React dependency — testable with plain Vitest, no DOM required
+- Each game reads/writes only its own slice of `localStorage` via `useGameStore` — cross-game leakage is structurally impossible
+- A component graduates to `shared/` only when two games genuinely need it — no speculative extraction
+- No magic hex values or inline styles — a future visual rebrand requires only a Tailwind theme config change
 
 ---
 

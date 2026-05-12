@@ -1,48 +1,52 @@
-// usePersistence — saves and restores game state in localStorage.
-// Kept as a separate hook so it can be tested or swapped out independently.
+// usePersistence — saves and restores Spelling Bee game state.
+// Delegates all localStorage access to useGameStore so the game never
+// touches localStorage directly and cross-game isolation is enforced.
 
 "use client";
 
-import type { GameState, Puzzle } from "@/types";
+import type { GameState, Puzzle } from "@/games/spelling-bee/types";
+import { clearSlice, migrateFromLegacyKeys, readSlice, writeSlice } from "./useGameStore";
 
 import { useEffect } from "react";
 
-/** The key used to store game state in localStorage */
-const STORAGE_KEY = "spelling-bee:state";
+// Shape of the data we persist for Spelling Bee
+interface SpellingBeeSnapshot {
+  puzzleId: string;
+  foundWords: string[];
+  score: number;
+  currentRank: string;
+  startedAt: number;
+}
 
 /**
- * Saves the current game state to localStorage whenever it changes.
- * Only persists the fields needed to resume a session (not transient UI state).
+ * Saves the current game state to the "spelling-bee" store slice whenever it changes.
+ * Only persists fields needed to resume — skips lastSubmission (transient UI).
  */
 export function usePersistence(state: GameState): void {
   useEffect(() => {
-    try {
-      // Only persist the fields required to resume — skip lastSubmission (transient UI)
-      const snapshot = {
-        puzzleId: state.puzzle.id,
-        foundWords: state.foundWords,
-        score: state.score,
-        currentRank: state.currentRank,
-        startedAt: state.startedAt,
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-    } catch {
-      // localStorage can be unavailable (private browsing, storage full)
-      // Silently ignore — game still works, just won't persist
-    }
+    const snapshot: SpellingBeeSnapshot = {
+      puzzleId: state.puzzle.id,
+      foundWords: state.foundWords,
+      score: state.score,
+      currentRank: state.currentRank,
+      startedAt: state.startedAt,
+    };
+    writeSlice("spelling-bee", snapshot);
   }, [state.foundWords, state.score, state.currentRank]);
 }
 
 /**
  * Attempts to load a previously saved session for the given puzzle.
+ * Runs the one-time legacy key migration on first call.
  * Returns null if nothing is saved, the puzzle has changed, or the data is corrupt.
  */
 export function loadPersistedState(puzzle: Puzzle): Partial<GameState> | null {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
+    // Migrate old "spelling-bee:state" key to the unified envelope if it exists
+    migrateFromLegacyKeys();
 
-    const snapshot = JSON.parse(raw);
+    const snapshot = readSlice<SpellingBeeSnapshot>("spelling-bee");
+    if (!snapshot) return null;
 
     // If the saved state belongs to a different puzzle, discard it
     if (snapshot.puzzleId !== puzzle.id) return null;
@@ -50,7 +54,7 @@ export function loadPersistedState(puzzle: Puzzle): Partial<GameState> | null {
     return {
       foundWords: snapshot.foundWords ?? [],
       score: snapshot.score ?? 0,
-      currentRank: snapshot.currentRank ?? "Beginner",
+      currentRank: (snapshot.currentRank as GameState["currentRank"]) ?? "Beginner",
       startedAt: snapshot.startedAt ?? Date.now(),
     };
   } catch {
@@ -60,13 +64,10 @@ export function loadPersistedState(puzzle: Puzzle): Partial<GameState> | null {
 }
 
 /**
- * Clears any saved game state from localStorage.
+ * Clears the Spelling Bee slice from the unified store.
  * Called when starting a new game so stale data doesn't bleed into the next session.
  */
 export function clearPersistedState(): void {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // Ignore — same rationale as above
-  }
+  clearSlice("spelling-bee");
 }
+

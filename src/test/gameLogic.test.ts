@@ -2,12 +2,12 @@
 // These run fast and cover the core rules of the game.
 
 import { describe, expect, it } from "vitest";
-import { maxScore, scoreWord } from "@/lib/scoring";
+import { maxScore, scoreWord } from "@/games/spelling-bee/lib/scoring";
 
-import type { Puzzle } from "@/types";
-import { calculateRank } from "@/lib/ranking";
-import { isPangram } from "@/lib/pangram";
-import { validateWord } from "@/lib/validation";
+import type { Puzzle } from "@/games/spelling-bee/types";
+import { calculateRank } from "@/games/spelling-bee/lib/ranking";
+import { isPangram } from "@/games/spelling-bee/lib/pangram";
+import { validateWord } from "@/games/spelling-bee/lib/validation";
 
 // ── Shared test fixture ────────────────────────────────────────────────────────
 
