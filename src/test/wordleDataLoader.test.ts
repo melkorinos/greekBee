@@ -2,12 +2,12 @@
 // Verifies: daily answer comes from the curated pool, valid-guess list is the
 // full word list, determinism, and the answer pool / word list relationship.
 
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  getTodaysWordlePuzzle,
-  getValidWords,
   getAnswerPool,
   getTodayDateString,
+  getTodaysWordlePuzzle,
+  getValidWords,
 } from "@/data/wordle";
 
 describe("getTodaysWordlePuzzle", () => {
