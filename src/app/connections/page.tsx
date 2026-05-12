@@ -1,8 +1,8 @@
 // connections/page.tsx — Connections game page.
 
 import { ConnectionsBoard }           from "./ConnectionsBoard";
-import { getTodaysConnectionsPuzzle } from "@/data/connections";
 import { HowToPlayModal }             from "@/components/shared/HowToPlayModal";
+import { getTodaysConnectionsPuzzle } from "@/data/connections";
 
 function getTodayString(): string {
   return new Date().toISOString().slice(0, 10);
