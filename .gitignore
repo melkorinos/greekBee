@@ -43,7 +43,7 @@ next-env.d.ts
 # word list source files — do NOT bundle with the app
 # words-el.json is committed (pre-normalised canonical list, ~30 MB)
 # words-el.raw.json and generated per-length lists stay out of git
+# answers-5.json and words-5.json are committed (Vercel needs them at build time)
 src/data/words-en.json
 src/data/words-el.raw.json
-src/data/wordle/words-*.json
 src/data/*.dic
