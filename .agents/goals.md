@@ -85,8 +85,7 @@ Key locked ADRs → see `memory.md`.
 - [ ] E2E tests (Playwright) for at least one happy-path per game
 - [ ] Visual rebrand — introduce Tailwind theme config; decouple from NYT aesthetic
 - [ ] Spelling Bee puzzle quality filter (enforce ≥2 vowels, ≥2 consonants, centre = vowel, ≥1 pangram)
-- [ ] Per-puzzle leaderboard (Supabase backend, device UUID, `POST /api/scores`)
-
+- [ ] Per-puzzle leaderboard (Supabase backend, device UUID, `POST /api/scores`)- [ ] **Spelling Bee archive page** — list the 7 most recent daily puzzles with their dates and a "Play" link; let returning players catch up on days they missed; read directly from `puzzles-el.json` date index
 ## Constraints (never violate)
 - Game logic stays pure functions — zero React imports in `src/games/*/lib/`
 - Each game only reads/writes its own `useGameStore` slice

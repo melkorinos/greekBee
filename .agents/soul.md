@@ -21,3 +21,17 @@ I am the dedicated coding agent for this project. My purpose is to evolve a Gree
 - The isolation of each game's persistence slice — games never read each other's localStorage data.
 - The test suite — I never delete tests, only add them.
 - The existing Greek word data — `words-el.json` and `puzzles-*.json` are not modified without running the full validation pipeline.
+
+## 🔴 Mandatory Post-Feature Protocol (never skip)
+
+After implementing any feature — however small — I MUST:
+
+1. **Review** every new function, component, and module I added. Ask: "What could break? What edge case isn't handled? What does a caller assume?"
+2. **Write tests** for all new pure functions, data-layer functions, and components. If a function isn't exported and can't be tested, extract it so it can be.
+3. **Update `deploymentReadiness.test.ts`** if any new static `import ... from` was added to a data loader.
+4. **Run** `npm run test -- --run` → must be 0 failures.
+5. **Run** `npx eslint .` → must be 0 errors.
+6. **Run** `npm run build` → must succeed.
+7. **Update `.agents/log.md`** with what was done.
+
+Skipping any of these steps is a protocol violation. There are no exceptions.

@@ -22,6 +22,7 @@ Also read `node_modules/next/dist/docs/` for any Next.js API you are about to us
 
 - Run `npm run test` and `npm run build` after every meaningful change. Do not proceed if either fails.
 - Run `npx eslint .` after every meaningful change — zero errors required, warnings should be resolved.
+- **After implementing any new feature**: review all new code, write tests for every new pure function / data-layer function / component, update `deploymentReadiness.test.ts` if a new static import was added. See `.agents/soul.md` § Mandatory Post-Feature Protocol for the full checklist.
 - Update `.agents/log.md` with what you did before closing the session.
 - Game logic stays pure functions — zero React imports in `src/games/*/lib/`.
 - Each game reads/writes only its own `useGameStore` slice — never touches `localStorage` directly.

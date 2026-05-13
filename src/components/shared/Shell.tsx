@@ -96,10 +96,10 @@ export function Shell({ children }: ShellProps) {
           />
           {/* Drawer panel */}
           <nav
-            className="fixed top-0 right-0 z-50 h-full w-64 bg-white shadow-xl flex flex-col pt-16 pb-8 px-4"
+            className="fixed top-0 right-0 z-50 h-full w-64 bg-zinc-900 border-l border-zinc-700 shadow-xl flex flex-col pt-16 pb-8 px-4"
             aria-label="Game navigation"
           >
-            <p className="text-xs font-semibold text-stone-400 uppercase tracking-widest mb-4 px-2">
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-4 px-2">
               Games
             </p>
             <ul className="space-y-1">
@@ -108,7 +108,7 @@ export function Shell({ children }: ShellProps) {
                   <Link
                     href={game.href}
                     onClick={() => setDrawerOpen(false)}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-stone-700 font-medium hover:bg-stone-100 active:bg-stone-200 transition-colors"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-200 font-medium hover:bg-zinc-700 active:bg-zinc-600 transition-colors"
                   >
                     {game.label}
                   </Link>

@@ -5,6 +5,7 @@ import type { GameState, Puzzle } from "../types";
 
 import { calculateRank } from "../lib/ranking";
 import { maxScore } from "../lib/scoring";
+import { normalizeLetters } from "../lib/normalize";
 import { validateWord } from "../lib/validation";
 
 // ─── Action Types ─────────────────────────────────────────────────────────────
@@ -67,7 +68,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
 
     case "SUBMIT_WORD": {
-      const word = state.currentInput.toLowerCase();
+      // Normalise: strip accents + final sigma ς→σ so stored words are always
+      // accent-free, regardless of the input source.
+      const word = normalizeLetters(state.currentInput);
       const result = validateWord(word, state.puzzle, state.foundWords);
 
       // Always clear input and record the submission for UI feedback

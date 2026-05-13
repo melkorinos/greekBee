@@ -13,7 +13,7 @@ const WORDLE_RULES = [
   "Κάθε προσπάθεια πρέπει να είναι έγκυρη 5γράμματη ελληνική λέξη.",
   "🟩 **Πράσινο** = σωστό γράμμα στη σωστή θέση.",
   "🟨 **Κίτρινο** = σωστό γράμμα, λάθος θέση.",
-  "■ **Γκρι** = το γράμμα δεν υπάρχει στη λέξη.",
+  "⬛ **Γκρι** = το γράμμα δεν υπάρχει στη λέξη.",
   "Χρησιμοποίησε το πληκτρολόγιο ή πληκτρολόγιο της οθόνης για να γράψεις γράμματα.",
   "Νέα λέξη κάθε μέρα!",
 ];
@@ -30,14 +30,11 @@ export default function WordlePage() {
           <h1 className="text-2xl font-bold tracking-tight text-stone-100">
             🟩 Wordle GR
           </h1>
-          <p className="text-sm text-stone-400">
-            {today} · 5 γράμματα · {validWords.length.toLocaleString()} λέξεις
-          </p>
         </div>
         <HowToPlayModal
           title="Πώς να παίξεις — Wordle GR"
           items={WORDLE_RULES}
-          bulletIcon="🟩"
+          bulletIcon="▸"
           lightTrigger
         />
       </div>

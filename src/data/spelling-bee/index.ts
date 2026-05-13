@@ -1,9 +1,13 @@
 // Spelling Bee puzzle data access layer.
 // Loads puzzle definitions from the local JSON file.
+// Also exposes buildCustomPuzzle() for the dynamic /spelling-bee/[center]/[outer] route.
 
 import type { Language } from "@/types";
 import type { Puzzle } from "@/games/spelling-bee/types";
+import { computeValidWords } from "@/games/spelling-bee/lib/computeValidWords";
+import { normalizeLetters } from "@/games/spelling-bee/lib/normalize";
 import greekPuzzles from "./puzzles-el.json";
+import wordListEl from "../words-el.json";
 
 // Cast the imported JSON to the typed Puzzle array.
 // TypeScript will warn us if the JSON shape ever drifts from the Puzzle interface.
@@ -64,4 +68,45 @@ export function getNextPuzzle(current: Puzzle): Puzzle {
   const idx = list.findIndex((p) => p.id === current.id);
   const nextIdx = idx >= 0 ? (idx + 1) % list.length : 0;
   return list[nextIdx];
+}
+
+/**
+ * Builds a fully playable Puzzle from an arbitrary 7-letter combination by
+ * computing the valid word list on the fly from the full word list.
+ *
+ * The puzzle ID is derived from the normalised letters only (not the date) so
+ * that the same URL always maps to the same localStorage persistence key —
+ * progress persists across refreshes for as long as the player keeps using the
+ * same URL.
+ *
+ * The `date` field is set to today so the UI displays something sensible, but
+ * it plays no role in word-validity logic.
+ */
+export function buildCustomPuzzle(
+  centerLetter: string,
+  outerLetters: string[],
+  language: Language = "el"
+): Puzzle {
+  const center = normalizeLetters(centerLetter);
+  const outer = outerLetters.map(normalizeLetters);
+
+  // Stable canonical ID regardless of outer-letter order in the URL
+  const sortedOuter = [...outer].sort().join("");
+  const id = `custom-${center}-${sortedOuter}`;
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const wordList: string[] =
+    language === "el" ? (wordListEl as string[]) : [];
+
+  const validWords = computeValidWords(center, outer, wordList);
+
+  return {
+    id,
+    language,
+    centerLetter: center,
+    outerLetters: outer,
+    validWords,
+    date: today,
+  };
 }

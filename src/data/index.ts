@@ -8,4 +8,5 @@ export {
   getPuzzleById,
   getRandomPuzzle,
   getNextPuzzle,
+  buildCustomPuzzle,
 } from "./spelling-bee/index";

@@ -65,8 +65,9 @@ const STATICALLY_IMPORTED_DATA_FILES = [
   "src/data/wordle/words-5.json",
   // Connections
   "src/data/connections/puzzles-connections.json",
-  // Spelling Bee
+  // Spelling Bee — curated puzzles + full word list (used by buildCustomPuzzle)
   "src/data/spelling-bee/puzzles-el.json",
+  "src/data/words-el.json",
 ];
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
