@@ -84,30 +84,33 @@ src/
 
 ---
 
-## 🧪 Test Coverage Map (21 files, 257 tests)
+## 🧪 Test Coverage Map (23 files, 289 tests)
 
-| File | What it covers |
-|------|---------------|
-| `evaluateGuess.test.ts` | Wordle tile-state algorithm (duplicates, correct/present/absent) |
-| `wordleLogic.test.ts` | Wordle guess validation, scoring |
-| `wordleReducer.test.ts` | All Wordle reducer actions |
-| `wordleDataLoader.test.ts` | Daily answer selection, determinism, pool membership |
-| `wordleTheme.test.tsx` | Tile + Keyboard dark-theme classes |
-| `gameLogic.test.ts` | SB: isPangram, scoreWord, maxScore, calculateRank, validateWord |
-| `gameReducer.test.ts` | All Spelling Bee reducer actions |
-| `GameBoard.test.tsx` | SB board — keyboard, hex clicks, submit, feedback |
-| `greekLogic.test.ts` | Greek Unicode integration for SB logic |
-| `spellingBeeDataLoader.test.ts` | getPuzzleForDate, getPuzzleById, getRandomPuzzle, getNextPuzzle |
-| `computeValidWords.test.ts` | computeValidWords — filters, normalization, edge cases |
-| `customPuzzle.test.tsx` | buildCustomPuzzle shape + ShareButton clipboard states |
-| `parseCustomUrl.test.ts` | URL param validation: valid, invalid center/outer, uniqueness |
-| `normalize.test.ts` | normalizeLetters: case, accent stripping, final sigma, idempotency |
-| `noAccents.test.ts` | **No-accent contract** across all surfaces: 1,008 curated puzzle letter fields, buildCustomPuzzle output, computeValidWords output, parseCustomUrl output + URL path, gameReducer stored words, data loader returns |
-| `connectionsReducer.test.ts` | All Connections reducer actions |
-| `connectionsGroupGrid.test.tsx` | GroupGrid component — render, selection, solved state |
-| `connectionsDataLoader.test.ts` | getTodaysConnectionsPuzzle, puzzle shape contract |
-| `persistence.test.ts` | loadPersistedState, clearPersistedState, legacy migration |
-| `useGameStore.test.ts` | readSlice, writeSlice, clearSlice — cross-game isolation |
-| `Shell.test.tsx` | Hamburger open/close, drawer, Escape, backdrop |
-| `deploymentReadiness.test.ts` | All statically imported data files exist + not gitignored |
+> **How to use this as an agent**: before writing a new test, grep the `describe` column for the function/component name. If it appears, read that file's describe block to check if the specific case is already covered. Only write new tests for gaps.
+
+| File | `describe` blocks (= what is tested) |
+|------|---------------------------------------|
+| `evaluateGuess.test.ts` | `evaluateGuess` — all-correct, all-absent, present, mixed, duplicate answer letters, duplicate guess letters, length |
+| `wordleLogic.test.ts` | `isValidGuess`, `getTodaysWordlePuzzle` determinism |
+| `wordleReducer.test.ts` | `wordleReducer — ADD_LETTER`, `DELETE_LETTER`, `SUBMIT_GUESS` (short/invalid/valid/win/lose) |
+| `wordleDataLoader.test.ts` | `getTodaysWordlePuzzle`, `getAnswerPool`, `getValidWords`, `getTodayDateString` |
+| `wordleTheme.test.tsx` | `Tile dark theme classes`, `Keyboard dark theme classes` |
+| `gameLogic.test.ts` | `isPangram`, `scoreWord`, `maxScore`, `calculateRank`, `validateWord` |
+| `gameReducer.test.ts` | `buildInitialState`, `ADD_LETTER`, `DELETE_LETTER`, `CLEAR_INPUT`, `SUBMIT_WORD — valid`, `SUBMIT_WORD — invalid`, `SHUFFLE_LETTERS`, `NEW_GAME`, `RESTORE_STATE` |
+| `GameBoard.test.tsx` | `GameBoard rendering`, `Keyboard input`, `Hex clicks`, `Submit word`, `Feedback messages` |
+| `greekLogic.test.ts` | `isPangram (Greek)`, `scoreWord (Greek)`, `validateWord (Greek)`, `getPuzzleForDate integration` |
+| `spellingBeeDataLoader.test.ts` | `getPuzzleForDate`, `getPuzzleById`, `getRandomPuzzle`, `getNextPuzzle` |
+| `spellingBeeRouting.test.ts` | `canonicalPath format`, `redirect round-trip — getTodaysPuzzle`, `getPuzzleForDate`, `getPuzzleById`, `getRandomPuzzle`, `all curated puzzles — redirect round-trip` (all 1,008) |
+| `computeValidWords.test.ts` | `computeValidWords` — inclusion, too-short exclusion, missing center, invalid letters, accent normalisation, empty list |
+| `customPuzzle.test.tsx` | `buildCustomPuzzle` — shape, accent normalisation, stable ID, word filtering, impossible combo; `ShareButton` — render, copy, success state, error state |
+| `parseCustomUrl.test.ts` | `parseCustomUrl` — valid inputs, invalid center (empty/multi/digit/space), invalid outer (short/long/digit/empty), uniqueness (center in outer, outer duplicates), return shape |
+| `normalize.test.ts` | `normalizeLetters` — case folding, accent stripping, final sigma ς→σ, combined inputs, edge cases |
+| `noAccents.test.ts` | `hasAccent helper`; `puzzles-el.json` letter fields; `buildCustomPuzzle` output; `computeValidWords` output; `parseCustomUrl` output + URL path; `gameReducer SUBMIT_WORD` stored words; data loader spot-checks |
+| `connectionsReducer.test.ts` | `SELECT_WORD`, `SUBMIT_GUESS — correct`, `SUBMIT_GUESS — wrong`, `SUBMIT_GUESS — one away`, `SHUFFLE`, `game over (loss)`, `win condition` |
+| `connectionsGroupGrid.test.tsx` | `GroupGrid` — render, solved groups, selection state, onSelect callback, disabled state |
+| `connectionsDataLoader.test.ts` | `allConnectionsPuzzles` shape contract, `getTodaysConnectionsPuzzle` — date match, fallback, uniqueness, shape |
+| `persistence.test.ts` | `loadPersistedState` — null, wrong puzzle, restore, safe defaults; `clearPersistedState`; legacy key migration |
+| `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`, `migrateFromLegacyKeys` — cross-game isolation throughout |
+| `Shell.test.tsx` | `Shell rendering`, `Hamburger drawer` — open/close/Escape/backdrop, nav links, theme classes |
+| `deploymentReadiness.test.ts` | All statically imported data files: exist on disk + not gitignored |
 
