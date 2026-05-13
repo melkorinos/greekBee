@@ -3,14 +3,13 @@
 // useConnectionsState — React hook managing Connections game state.
 // Handles persistence via useGameStore; never touches localStorage directly.
 
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
-
 import type {
   ConnectionsPersistedState,
   ConnectionsPuzzle,
   ConnectionsState,
 } from "../types";
 import { readSlice, writeSlice } from "@/hooks/useGameStore";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import { connectionsReducer } from "./connectionsReducer";
 

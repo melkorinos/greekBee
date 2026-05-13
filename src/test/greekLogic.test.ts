@@ -2,11 +2,11 @@
 // with Greek Unicode letters without any code changes.
 
 import { describe, expect, it } from "vitest";
-import { getPuzzleForDate } from "@/data/spelling-bee";
-import { scoreWord } from "@/games/spelling-bee/lib/scoring";
 
 import type { Puzzle } from "@/games/spelling-bee/types";
+import { getPuzzleForDate } from "@/data/spelling-bee";
 import { isPangram } from "@/games/spelling-bee/lib/pangram";
+import { scoreWord } from "@/games/spelling-bee/lib/scoring";
 import { validateWord } from "@/games/spelling-bee/lib/validation";
 
 // ── Greek test puzzle (mirrors puzzles-el.json) ────────────────────────────────

@@ -32,7 +32,7 @@ Key locked ADRs → see `memory.md`.
 - Game logic stays pure functions — zero React imports in `src/games/*/lib/`
 - Each game only reads/writes its own `useGameStore` slice
 - No component graduates to `shared/` speculatively — only when two games need it
-- Tests must pass after every meaningful change
+- `npm run test -- --run`, `npm run build`, and `npx eslint .` must all pass (0 errors) after every meaningful change
 - No inline styles — Tailwind utility classes only
 - Do not install new dependencies without explicit approval
 

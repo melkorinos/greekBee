@@ -2,13 +2,13 @@
 // Verifies slice isolation, read/write/clear semantics, and the legacy key migration.
 // No React — plain Vitest + jsdom (localStorage is available via setup.ts).
 
-import { describe, expect, it } from "vitest";
 import {
   clearSlice,
   migrateFromLegacyKeys,
   readSlice,
   writeSlice,
 } from "@/hooks/useGameStore";
+import { describe, expect, it } from "vitest";
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
