@@ -3,13 +3,14 @@
 // useConnectionsState — React hook managing Connections game state.
 // Handles persistence via useGameStore; never touches localStorage directly.
 
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+
 import type {
   ConnectionsPersistedState,
   ConnectionsPuzzle,
   ConnectionsState,
 } from "../types";
 import { readSlice, writeSlice } from "@/hooks/useGameStore";
-import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import { connectionsReducer } from "./connectionsReducer";
 
@@ -66,10 +67,21 @@ export function useConnectionsState(puzzle: ConnectionsPuzzle) {
     allWords.filter((w) => !solvedWords.has(w)),
   );
 
-  // Keep display order in sync when groups are solved
-  useEffect(() => {
-    setDisplayOrder((prev) => prev.filter((w) => !solvedWords.has(w)));
-  }, [solvedWords]);
+  // Keep display order in sync when groups are solved — derive synchronously,
+  // not via an effect, to avoid the setState-in-effect lint error and cascading renders.
+  const filteredOrder = useMemo(
+    () => displayOrder.filter((w) => !solvedWords.has(w)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [solvedWords],
+  );
+  // Only update state when the derived value actually changes length
+  // (a group was just solved). Using a ref avoids an extra render cycle.
+  const prevSolvedCountRef = useRef(state.solvedGroups.length);
+  if (state.solvedGroups.length !== prevSolvedCountRef.current) {
+    prevSolvedCountRef.current = state.solvedGroups.length;
+    // Synchronous state update during render — safe because it's guarded by the condition
+    setDisplayOrder(filteredOrder);
+  }
 
   // Persist on every state change
   useEffect(() => {

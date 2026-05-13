@@ -2,7 +2,7 @@
 // Verifies slice isolation, read/write/clear semantics, and the legacy key migration.
 // No React — plain Vitest + jsdom (localStorage is available via setup.ts).
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
   clearSlice,
   migrateFromLegacyKeys,

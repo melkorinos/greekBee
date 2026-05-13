@@ -13,7 +13,7 @@ export default async function SpellingBeePage({
 }: {
   searchParams: Promise<{ lang?: string; puzzle?: string; random?: string; exclude?: string }>;
 }) {
-  const { puzzle: puzzleId, random, exclude } = await searchParams;
+  const { puzzle: puzzleId, exclude } = await searchParams;
 
   const language: Language = "el";
 

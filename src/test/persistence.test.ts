@@ -4,7 +4,7 @@
 // Tests the migration path from the old "spelling-bee:state" key.
 
 import { clearPersistedState, loadPersistedState } from "@/hooks/usePersistence";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { readSlice, writeSlice } from "@/hooks/useGameStore";
 
 import type { Puzzle } from "@/games/spelling-bee/types";

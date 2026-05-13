@@ -32,7 +32,7 @@ export function usePersistence(state: GameState): void {
       startedAt: state.startedAt,
     };
     writeSlice("spelling-bee", snapshot);
-  }, [state.foundWords, state.score, state.currentRank]);
+  }, [state.puzzle.id, state.foundWords, state.score, state.currentRank, state.startedAt]);
 }
 
 /**

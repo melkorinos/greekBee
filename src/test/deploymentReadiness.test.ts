@@ -8,9 +8,10 @@
 //      is NOT matched by any .gitignore pattern
 //   3. Assert that the files physically exist on disk (catches "file deleted but import left")
 
-import { existsSync, readFileSync } from "fs";
-import { resolve } from "path";
 import { describe, expect, it } from "vitest";
+import { existsSync, readFileSync } from "fs";
+
+import { resolve } from "path";
 
 const ROOT = resolve(__dirname, "../../");
 

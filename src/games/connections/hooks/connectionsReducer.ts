@@ -9,16 +9,6 @@ import type {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Shuffle an array (Fisher-Yates). Returns a new array. */
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
 /** Check if a sorted word array matches a group's words exactly. */
 function matchesGroup(selection: string[], group: ConnectionGroup): boolean {
   const sel = [...selection].sort();
