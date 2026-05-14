@@ -3,7 +3,7 @@
 // GameBoard — the top-level client component that composes all game UI pieces.
 // Receives the initial puzzle as a prop (loaded server-side in page.tsx).
 
-import { useCallback, useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 import { FeedbackMessage } from "./FeedbackMessage";
 import { FoundWordsList } from "./FoundWordsList";
@@ -35,8 +35,12 @@ export function GameBoard({ puzzle }: GameBoardProps) {
   } = useGameState(puzzle);
 
   // ── Keyboard support ───────────────────────────────────────────────────────
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
+  // Stable ref pattern: the listener is registered exactly once (empty deps)
+  // and always invokes the latest handler captured by useLayoutEffect.
+  // This prevents rapid keystrokes being dropped during listener teardown/re-registration.
+  const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  useLayoutEffect(() => {
+    keyHandlerRef.current = (e: KeyboardEvent) => {
       if (e.key === "Enter") {
         submitWord();
       } else if (e.key === "Backspace") {
@@ -44,14 +48,14 @@ export function GameBoard({ puzzle }: GameBoardProps) {
       } else if (/^\p{L}$/u.test(e.key)) {
         handleKeyboardLetter(e.key);
       }
-    },
-    [handleKeyboardLetter, deleteLetter, submitWord],
-  );
+    };
+  });
 
   useEffect(() => {
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
+    const listener = (e: KeyboardEvent) => keyHandlerRef.current(e);
+    window.addEventListener("keydown", listener);
+    return () => window.removeEventListener("keydown", listener);
+  }, []); // registered once — ref keeps handler current
 
 
   // ── Class constants ──────────────────────────────────────────────────────────

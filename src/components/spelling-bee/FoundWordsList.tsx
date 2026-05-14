@@ -5,6 +5,7 @@
 
 import type { Puzzle } from "@/games/spelling-bee/types";
 import { isPangram } from "@/games/spelling-bee/lib/pangram";
+import { useMemo } from "react";
 
 interface FoundWordsListProps {
   words: string[];
@@ -23,8 +24,9 @@ const styles = {
 };
 
 export function FoundWordsList({ words, puzzle }: FoundWordsListProps) {
-  // Sort alphabetically for easy scanning
-  const sorted = [...words].sort();
+  // Sort alphabetically for easy scanning — memoised to avoid re-sorting on every
+  // ADD_LETTER render (GameBoard re-renders on each keystroke).
+  const sorted = useMemo(() => [...words].sort(), [words]);
 
   return (
     <div data-testid="found-words-list" className={styles.container}>

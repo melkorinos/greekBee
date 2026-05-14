@@ -24,7 +24,11 @@ export function wordleReducer(state: WordleState, action: WordleAction): WordleS
 
     case "ADD_LETTER": {
       if (state.status !== "playing") return state;
-      if (state.currentInput.length >= state.puzzle.length) return state;
+      if (state.currentInput.length >= state.puzzle.length) {
+        // Word is already at max length — give the player a visible signal
+        // instead of silently dropping the keystroke.
+        return { ...state, lastMessage: "Μέγιστο μήκος λέξης" };
+      }
       return {
         ...state,
         currentInput: state.currentInput + action.letter,

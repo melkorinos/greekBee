@@ -10,9 +10,10 @@
 // ?random=1&exclude=<id> → redirect to a random puzzle's letter URL (used by NewPuzzleButton)
 // ?puzzle=<id>           → redirect to that specific puzzle's letter URL
 
-import { redirect } from "next/navigation";
 import { getPuzzleById, getRandomPuzzle, getTodaysPuzzle } from "@/data";
+
 import type { Language } from "@/types";
+import { redirect } from "next/navigation";
 
 export default async function SpellingBeePage({
   searchParams,
@@ -29,5 +30,11 @@ export default async function SpellingBeePage({
 
   // Redirect to the canonical letter URL — this becomes the address bar URL
   // and is the shareable link that works on any future date.
-  redirect(`/spelling-bee/${puzzle.centerLetter}/${puzzle.outerLetters.join("")}`);
+  // Letters must be percent-encoded: raw Unicode in an HTTP Location header is
+  // rejected by Node.js with ERR_INVALID_CHAR.
+  redirect(
+    `/spelling-bee/${encodeURIComponent(puzzle.centerLetter)}/${
+      encodeURIComponent(puzzle.outerLetters.join(""))
+    }`,
+  );
 }

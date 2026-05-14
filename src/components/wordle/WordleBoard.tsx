@@ -3,11 +3,12 @@
 // Top-level Wordle board — assembles GuessGrid + Keyboard + feedback message.
 // Wires physical keyboard events.
 
+import { useEffect, useLayoutEffect, useRef } from "react";
+
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { GuessGrid } from "./GuessGrid";
 import { Keyboard } from "./Keyboard";
 import type { WordlePuzzle } from "@/games/wordle/types";
-import { useEffect } from "react";
 import { useWordleState } from "@/games/wordle/hooks/useWordleState";
 
 // Greek letter regex (covers the Greek alphabet range)
@@ -42,16 +43,23 @@ export function WordleBoard({ puzzle, validWords }: WordleBoardProps) {
   } = useWordleState(puzzle, validWords);
 
   // ── Physical keyboard handler ──────────────────────────────────────────────
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
+  // Use a stable ref so the listener is registered exactly once (empty deps),
+  // eliminating the window between teardown and re-registration that caused
+  // rapid keystrokes to be silently dropped.
+  const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  useLayoutEffect(() => {
+    keyHandlerRef.current = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "Enter")     return submitGuess();
       if (e.key === "Backspace") return deleteLetter();
       if (GREEK_LETTER.test(e.key)) addLetter(normaliseChar(e.key));
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [addLetter, deleteLetter, submitGuess]);
+  });
+  useEffect(() => {
+    const listener = (e: KeyboardEvent) => keyHandlerRef.current(e);
+    window.addEventListener("keydown", listener);
+    return () => window.removeEventListener("keydown", listener);
+  }, []); // registered once — ref keeps the handler current
 
   // Auto-clear transient messages
   useEffect(() => {

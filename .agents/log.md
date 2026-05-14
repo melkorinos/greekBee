@@ -4,6 +4,54 @@
 
 ---
 
+## 2026-05-14 — Session 10: ERR_INVALID_CHAR Location Header Fix + Tests ✅
+
+**Outcome:** 299 tests (↑ from 289). Build + ESLint clean.
+
+### Bug fixed — `ERR_INVALID_CHAR` on "New Puzzle" / redirect (`500` on Vercel)
+
+The `redirect()` calls in both spelling-bee route handlers were passing raw Greek Unicode directly into the HTTP `Location` header:
+```ts
+redirect(`/spelling-bee/${puzzle.centerLetter}/${puzzle.outerLetters.join("")}`);
+```
+Node.js rejects raw non-ASCII bytes in response headers with `ERR_INVALID_CHAR`, producing a 500. Fixed by wrapping letter segments in `encodeURIComponent()` in both files:
+- `src/app/spelling-bee/page.tsx` — daily / random / by-ID redirect
+- `src/app/spelling-bee/[center]/[outer]/page.tsx` — canonical-accent redirect
+
+Next.js's dynamic route handler automatically `decodeURIComponent`s the params before passing them to the page, so the game receives the correct plain Greek letters unchanged.
+
+### New tests (10 new tests)
+- `src/test/spellingBeeRouting.test.ts` — new `describe("encoded redirect path — ASCII-safe Location header")` block: center encoded ASCII-only, outer encoded ASCII-only, decode round-trip, parseCustomUrl round-trip, all 1,008 puzzles produce ASCII-safe paths
+- `src/test/wordleReducer.test.ts` — 2 regression tests for the silent-drop fix: at-cap shows `lastMessage`, message clears on next valid letter after delete
+
+---
+
+## 2026-05-14 — Session 9: Rapid-keystroke Input Bug Fixes ✅
+
+**Outcome:** 289 tests (unchanged). Build + ESLint clean. Three input-reliability bugs fixed.
+
+### Bugs fixed
+
+**Bug 1 — `wordleReducer.ts` `ADD_LETTER` silent drop (High)**
+- `src/games/wordle/hooks/wordleReducer.ts` — when `currentInput.length >= puzzle.length`, the reducer previously returned `state` unchanged with no message. Players typing past the 5-letter cap received zero feedback and the keystrokes were silently discarded — directly causing the "last 2 letters not pressed" symptom.
+- Fix: return `{ ...state, lastMessage: "Μέγιστο μήκος λέξης" }` so the player sees a visible signal.
+
+**Bug 2 — Fragile `useEffect`-with-deps keyboard listener (Medium)**
+- `src/components/wordle/WordleBoard.tsx` and `src/components/spelling-bee/GameBoard.tsx` both registered `window.keydown` listeners inside a `useEffect` whose dep-array included action callbacks. Any change in those deps (e.g. `validSet` reference change, React Strict Mode double-invoke) caused the listener to be torn down and re-registered, creating a gap window during which keystrokes were dropped.
+- Fix: stable ref pattern — `keyHandlerRef` holds the current handler, updated synchronously via `useLayoutEffect()` (no deps). The `window.addEventListener` `useEffect` uses empty deps `[]` and is registered exactly once for the component lifetime.
+
+**Bug 3 — `FoundWordsList` sort on every render (Low)**
+- `src/components/spelling-bee/FoundWordsList.tsx` — `[...words].sort()` ran on every `ADD_LETTER` render, adding unnecessary main-thread pressure during fast typing.
+- Fix: `useMemo(() => [...words].sort(), [words])`.
+
+### Files changed
+- `src/games/wordle/hooks/wordleReducer.ts`
+- `src/components/wordle/WordleBoard.tsx`
+- `src/components/spelling-bee/GameBoard.tsx`
+- `src/components/spelling-bee/FoundWordsList.tsx`
+
+---
+
 ## 2026-05-13 — Session 8: No-Accent Invariant + URL Hardening ✅
 
 **Outcome:** 277 tests (↑ from 257). No-accent contract enforced end-to-end. Canonical URL redirect added. Build + ESLint clean.

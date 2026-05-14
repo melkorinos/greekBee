@@ -13,13 +13,13 @@
 
 import { notFound, redirect } from "next/navigation";
 
-import { buildCustomPuzzle } from "@/data";
-import { parseCustomUrl } from "@/games/spelling-bee/lib/parseCustomUrl";
 import { GameBoard } from "@/components/spelling-bee/GameBoard";
 import { HowToPlayModal } from "@/components/spelling-bee/HowToPlayModal";
+import type { Language } from "@/types";
 import { NewPuzzleButton } from "@/components/spelling-bee/NewPuzzleButton";
 import { ShareButton } from "@/components/spelling-bee/ShareButton";
-import type { Language } from "@/types";
+import { buildCustomPuzzle } from "@/data";
+import { parseCustomUrl } from "@/games/spelling-bee/lib/parseCustomUrl";
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -42,7 +42,12 @@ export default async function CustomSpellingBeePage({
     decodeURIComponent(rawCenter) !== canonicalCenter ||
     decodeURIComponent(rawOuter)  !== canonicalOuter
   ) {
-    redirect(`/spelling-bee/${canonicalCenter}/${canonicalOuter}`);
+    // Encode so the Location header contains only ASCII-safe percent-encoded bytes.
+    redirect(
+      `/spelling-bee/${encodeURIComponent(canonicalCenter)}/${
+        encodeURIComponent(canonicalOuter)
+      }`,
+    );
   }
 
   const language: Language = "el";

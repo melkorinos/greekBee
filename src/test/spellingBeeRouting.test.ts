@@ -30,6 +30,15 @@ function canonicalPath(puzzle: Puzzle): string {
 }
 
 /**
+ * Builds the encoded redirect path exactly as the page does after the
+ * ERR_INVALID_CHAR fix — letters are percent-encoded so the Location header
+ * contains only ASCII-safe bytes.
+ */
+function encodedRedirectPath(puzzle: Puzzle): string {
+  return `/spelling-bee/${encodeURIComponent(puzzle.centerLetter)}/${encodeURIComponent(puzzle.outerLetters.join(""))}`;
+}
+
+/**
  * Asserts that the canonical path for a puzzle round-trips through
  * parseCustomUrl successfully — i.e. the redirect URL will not 404.
  */
@@ -46,6 +55,111 @@ function expectValidRedirect(puzzle: Puzzle, label: string) {
     `Redirect target "${path}" (${label}) would 404 — parseCustomUrl returned null`
   ).not.toBeNull();
 }
+
+// ── Encoded redirect path — ASCII-safe Location header ──────────────────────
+// Regression for ERR_INVALID_CHAR: raw Greek Unicode in the Location header
+// is rejected by Node.js. The page must percent-encode letter segments.
+
+describe("encoded redirect path — ASCII-safe Location header", () => {
+  it("encodeURIComponent of center letter contains no raw non-ASCII bytes", () => {
+    const p = getPuzzleForDate("2026-03-25");
+    const encoded = encodeURIComponent(p.centerLetter);
+    // All characters in an encoded segment must be ASCII
+    expect([...encoded].every((ch) => ch.charCodeAt(0) < 128)).toBe(true);
+  });
+
+  it("encodeURIComponent of outer letters contains no raw non-ASCII bytes", () => {
+    const p = getPuzzleForDate("2026-03-25");
+    const encoded = encodeURIComponent(p.outerLetters.join(""));
+    expect([...encoded].every((ch) => ch.charCodeAt(0) < 128)).toBe(true);
+  });
+
+  it("encoded path decodes back to the original letters", () => {
+    const p = getPuzzleForDate("2026-03-25");
+    const path = encodedRedirectPath(p);
+    const parts = path.split("/"); // ['', 'spelling-bee', encodedCenter, encodedOuter]
+    expect(decodeURIComponent(parts[2])).toBe(p.centerLetter);
+    expect(decodeURIComponent(parts[3])).toBe(p.outerLetters.join(""));
+  });
+
+  it("encoded path still round-trips through parseCustomUrl", () => {
+    const p = getRandomPuzzle("el");
+    const path = encodedRedirectPath(p);
+    const parts = path.split("/");
+    // Next.js decodes params before passing to the page handler
+    const decoded_center = decodeURIComponent(parts[2]);
+    const decoded_outer  = decodeURIComponent(parts[3]);
+    const parsed = parseCustomUrl(decoded_center, decoded_outer);
+    expect(parsed).not.toBeNull();
+    expect(parsed!.center).toBe(p.centerLetter);
+    expect(parsed!.outer).toEqual(p.outerLetters);
+  });
+
+  it("all 1,008 curated puzzles produce ASCII-safe encoded redirect paths", () => {
+    const failures: string[] = [];
+    for (const puzzle of puzzlesEl as Puzzle[]) {
+      const path = encodedRedirectPath(puzzle);
+      const hasRawNonAscii = [...path].some((ch) => ch.charCodeAt(0) >= 128);
+      if (hasRawNonAscii) failures.push(puzzle.id);
+    }
+    expect(
+      failures,
+      `${failures.length} puzzle(s) produce non-ASCII Location header bytes:\n${failures.join("\n")}`
+    ).toHaveLength(0);
+  });
+});
+
+// ── Encoded redirect path — ASCII-safe Location header ───────────────────────
+// Regression for ERR_INVALID_CHAR: raw Greek Unicode in the Location header
+// is rejected by Node.js. The page must percent-encode letter segments.
+
+describe("encoded redirect path — ASCII-safe Location header", () => {
+  it("encodeURIComponent of center letter contains no raw non-ASCII bytes", () => {
+    const p = getPuzzleForDate("2026-03-25");
+    const encoded = encodeURIComponent(p.centerLetter);
+    expect([...encoded].every((ch) => ch.charCodeAt(0) < 128)).toBe(true);
+  });
+
+  it("encodeURIComponent of outer letters contains no raw non-ASCII bytes", () => {
+    const p = getPuzzleForDate("2026-03-25");
+    const encoded = encodeURIComponent(p.outerLetters.join(""));
+    expect([...encoded].every((ch) => ch.charCodeAt(0) < 128)).toBe(true);
+  });
+
+  it("encoded path decodes back to the original letters", () => {
+    const p = getPuzzleForDate("2026-03-25");
+    const path = encodedRedirectPath(p);
+    const parts = path.split("/"); // ['', 'spelling-bee', encodedCenter, encodedOuter]
+    expect(decodeURIComponent(parts[2])).toBe(p.centerLetter);
+    expect(decodeURIComponent(parts[3])).toBe(p.outerLetters.join(""));
+  });
+
+  it("encoded path still round-trips through parseCustomUrl", () => {
+    const p = getRandomPuzzle("el");
+    const path = encodedRedirectPath(p);
+    const parts = path.split("/");
+    // Next.js decodes params before passing to the page handler
+    const decodedCenter = decodeURIComponent(parts[2]);
+    const decodedOuter  = decodeURIComponent(parts[3]);
+    const parsed = parseCustomUrl(decodedCenter, decodedOuter);
+    expect(parsed).not.toBeNull();
+    expect(parsed!.center).toBe(p.centerLetter);
+    expect(parsed!.outer).toEqual(p.outerLetters);
+  });
+
+  it("all 1,008 curated puzzles produce ASCII-safe encoded redirect paths", () => {
+    const failures: string[] = [];
+    for (const puzzle of puzzlesEl as Puzzle[]) {
+      const path = encodedRedirectPath(puzzle);
+      const hasRawNonAscii = [...path].some((ch) => ch.charCodeAt(0) >= 128);
+      if (hasRawNonAscii) failures.push(puzzle.id);
+    }
+    expect(
+      failures,
+      `${failures.length} puzzle(s) produce non-ASCII Location header bytes:\n${failures.join("\n")}`
+    ).toHaveLength(0);
+  });
+});
 
 // ── Canonical path format ─────────────────────────────────────────────────────
 
