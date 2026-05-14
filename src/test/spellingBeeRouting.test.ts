@@ -19,20 +19,20 @@ import {
 } from "@/data/spelling-bee";
 
 import type { Puzzle } from "@/games/spelling-bee/types";
+import { greekToGreeklish } from "@/lib/greeklish";
 import { parseCustomUrl } from "@/games/spelling-bee/lib/parseCustomUrl";
 import puzzlesEl from "@/data/spelling-bee/puzzles-el.json";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-/** Builds the canonical redirect path exactly as the page does. */
+/** Builds the canonical greeklish redirect path exactly as the page does. */
 function canonicalPath(puzzle: Puzzle): string {
-  return `/spelling-bee/${puzzle.centerLetter}/${puzzle.outerLetters.join("")}`;
+  return `/spelling-bee/${greekToGreeklish(puzzle.centerLetter)}/${greekToGreeklish(puzzle.outerLetters.join(""))}`;
 }
 
 /**
- * Builds the encoded redirect path exactly as the page does after the
- * ERR_INVALID_CHAR fix — letters are percent-encoded so the Location header
- * contains only ASCII-safe bytes.
+ * Builds the encoded redirect path (kept for regression tests that verify the
+ * old percent-encoded Greek form — parseCustomUrl still accepts those).
  */
 function encodedRedirectPath(puzzle: Puzzle): string {
   return `/spelling-bee/${encodeURIComponent(puzzle.centerLetter)}/${encodeURIComponent(puzzle.outerLetters.join(""))}`;
@@ -56,86 +56,48 @@ function expectValidRedirect(puzzle: Puzzle, label: string) {
   ).not.toBeNull();
 }
 
-// ── Encoded redirect path — ASCII-safe Location header ──────────────────────
-// Regression for ERR_INVALID_CHAR: raw Greek Unicode in the Location header
-// is rejected by Node.js. The page must percent-encode letter segments.
+// ── Greeklish canonical path — ASCII-only, no percent-encoding needed ──────────
+// The new canonical URL format uses greeklish (plain ASCII letters) so shared
+// links are clean and there is no ERR_INVALID_CHAR risk in Location headers.
 
-describe("encoded redirect path — ASCII-safe Location header", () => {
-  it("encodeURIComponent of center letter contains no raw non-ASCII bytes", () => {
+describe("greeklish canonical path — ASCII-only", () => {
+  it("canonical path contains only ASCII characters", () => {
     const p = getPuzzleForDate("2026-03-25");
-    const encoded = encodeURIComponent(p.centerLetter);
-    // All characters in an encoded segment must be ASCII
-    expect([...encoded].every((ch) => ch.charCodeAt(0) < 128)).toBe(true);
+    const path = canonicalPath(p);
+    expect([...path].every((ch) => ch.charCodeAt(0) < 128)).toBe(true);
   });
 
-  it("encodeURIComponent of outer letters contains no raw non-ASCII bytes", () => {
-    const p = getPuzzleForDate("2026-03-25");
-    const encoded = encodeURIComponent(p.outerLetters.join(""));
-    expect([...encoded].every((ch) => ch.charCodeAt(0) < 128)).toBe(true);
-  });
-
-  it("encoded path decodes back to the original letters", () => {
-    const p = getPuzzleForDate("2026-03-25");
-    const path = encodedRedirectPath(p);
-    const parts = path.split("/"); // ['', 'spelling-bee', encodedCenter, encodedOuter]
-    expect(decodeURIComponent(parts[2])).toBe(p.centerLetter);
-    expect(decodeURIComponent(parts[3])).toBe(p.outerLetters.join(""));
-  });
-
-  it("encoded path still round-trips through parseCustomUrl", () => {
+  it("canonical path round-trips through parseCustomUrl", () => {
     const p = getRandomPuzzle("el");
-    const path = encodedRedirectPath(p);
+    const path = canonicalPath(p);
     const parts = path.split("/");
-    // Next.js decodes params before passing to the page handler
-    const decoded_center = decodeURIComponent(parts[2]);
-    const decoded_outer  = decodeURIComponent(parts[3]);
-    const parsed = parseCustomUrl(decoded_center, decoded_outer);
+    const parsed = parseCustomUrl(parts[2], parts[3]);
     expect(parsed).not.toBeNull();
     expect(parsed!.center).toBe(p.centerLetter);
     expect(parsed!.outer).toEqual(p.outerLetters);
   });
 
-  it("all 1,008 curated puzzles produce ASCII-safe encoded redirect paths", () => {
+  it("all 1,008 curated puzzles produce ASCII-only canonical paths", () => {
     const failures: string[] = [];
     for (const puzzle of puzzlesEl as Puzzle[]) {
-      const path = encodedRedirectPath(puzzle);
-      const hasRawNonAscii = [...path].some((ch) => ch.charCodeAt(0) >= 128);
-      if (hasRawNonAscii) failures.push(puzzle.id);
+      const path = canonicalPath(puzzle);
+      const hasNonAscii = [...path].some((ch) => ch.charCodeAt(0) >= 128);
+      if (hasNonAscii) failures.push(puzzle.id);
     }
     expect(
       failures,
-      `${failures.length} puzzle(s) produce non-ASCII Location header bytes:\n${failures.join("\n")}`
+      `${failures.length} puzzle(s) produce non-ASCII canonical paths:\n${failures.join("\n")}`,
     ).toHaveLength(0);
   });
 });
 
-// ── Encoded redirect path — ASCII-safe Location header ───────────────────────
-// Regression for ERR_INVALID_CHAR: raw Greek Unicode in the Location header
-// is rejected by Node.js. The page must percent-encode letter segments.
+// ── Backward-compat: old percent-encoded Greek URLs still parse correctly ──────
+// parseCustomUrl accepts both greeklish (new) and percent-decoded Greek (old).
+// This ensures old bookmarks and server-redirect paths continue to work.
 
-describe("encoded redirect path — ASCII-safe Location header", () => {
-  it("encodeURIComponent of center letter contains no raw non-ASCII bytes", () => {
+describe("backward-compat — old percent-encoded Greek URLs", () => {
+  it("percent-decoded Greek center + outer still parse correctly", () => {
     const p = getPuzzleForDate("2026-03-25");
-    const encoded = encodeURIComponent(p.centerLetter);
-    expect([...encoded].every((ch) => ch.charCodeAt(0) < 128)).toBe(true);
-  });
-
-  it("encodeURIComponent of outer letters contains no raw non-ASCII bytes", () => {
-    const p = getPuzzleForDate("2026-03-25");
-    const encoded = encodeURIComponent(p.outerLetters.join(""));
-    expect([...encoded].every((ch) => ch.charCodeAt(0) < 128)).toBe(true);
-  });
-
-  it("encoded path decodes back to the original letters", () => {
-    const p = getPuzzleForDate("2026-03-25");
-    const path = encodedRedirectPath(p);
-    const parts = path.split("/"); // ['', 'spelling-bee', encodedCenter, encodedOuter]
-    expect(decodeURIComponent(parts[2])).toBe(p.centerLetter);
-    expect(decodeURIComponent(parts[3])).toBe(p.outerLetters.join(""));
-  });
-
-  it("encoded path still round-trips through parseCustomUrl", () => {
-    const p = getRandomPuzzle("el");
     const path = encodedRedirectPath(p);
     const parts = path.split("/");
     // Next.js decodes params before passing to the page handler
@@ -147,16 +109,20 @@ describe("encoded redirect path — ASCII-safe Location header", () => {
     expect(parsed!.outer).toEqual(p.outerLetters);
   });
 
-  it("all 1,008 curated puzzles produce ASCII-safe encoded redirect paths", () => {
+  it("all 1,008 curated puzzles round-trip through the old encoded form", () => {
     const failures: string[] = [];
     for (const puzzle of puzzlesEl as Puzzle[]) {
       const path = encodedRedirectPath(puzzle);
-      const hasRawNonAscii = [...path].some((ch) => ch.charCodeAt(0) >= 128);
-      if (hasRawNonAscii) failures.push(puzzle.id);
+      const parts = path.split("/");
+      const parsed = parseCustomUrl(
+        decodeURIComponent(parts[2]),
+        decodeURIComponent(parts[3]),
+      );
+      if (!parsed) failures.push(puzzle.id);
     }
     expect(
       failures,
-      `${failures.length} puzzle(s) produce non-ASCII Location header bytes:\n${failures.join("\n")}`
+      `${failures.length} puzzle(s) fail backward-compat parse:\n${failures.join("\n")}`,
     ).toHaveLength(0);
   });
 });
@@ -181,14 +147,16 @@ describe("canonicalPath format", () => {
     expect(parts[3]).toHaveLength(6);
   });
 
-  it("path is accent-free", () => {
+  it("path contains only ASCII characters (greeklish — no percent-encoding needed)", () => {
     const p = getPuzzleForDate("2026-03-25");
     const path = canonicalPath(p);
-    const hasAccent = path.normalize("NFD").split("").some((ch) => {
-      const cp = ch.codePointAt(0)!;
-      return cp >= 0x0300 && cp <= 0x036f;
-    });
-    expect(hasAccent).toBe(false);
+    expect([...path].every((ch) => ch.charCodeAt(0) < 128)).toBe(true);
+  });
+
+  it("path contains only lowercase a-z letters, hyphens and slashes", () => {
+    const p = getPuzzleForDate("2026-03-25");
+    const path = canonicalPath(p);
+    expect(/^[a-z\-/]+$/.test(path)).toBe(true);
   });
 });
 

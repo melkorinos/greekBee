@@ -4,6 +4,53 @@
 
 ---
 
+## 2026-05-14 — Session 12: Letter Picker Modal + UI Polish ✅
+
+**Outcome:** 372 tests (↑ from 352). Build + ESLint clean.
+
+### New: shared LetterPickerModal (`src/components/shared/LetterPickerModal.tsx`)
+Full letter-picker modal for building custom Spelling Bee puzzles. All 24 Greek letters rendered in Wordle-keyboard layout. First tap = yellow center (locked); next 6 = dark outer; tap outer to deselect; 7-letter cap disables remaining tiles; Reset clears all; Random fills all 7 at once for review; Generate enabled only when all 7 chosen, calls `onConfirm(center, outer)`. Placed in `shared/` so future games (e.g. Wordle custom word) can reuse.
+
+### Updated: `NewPuzzleButton`
+Replaced `window.confirm` + `?random=1` redirect with `LetterPickerModal`. `onConfirm` converts letters via `greekToGreeklish()` and navigates to the greeklish URL. `puzzleId`/`language` props removed (no longer needed).
+
+### Updated: `ShareButton`
+Replaced Greek text label with icon-only round button (SVG share arrow) + hover tooltip. Shows ✓ checkmark SVG on success, × SVG on error.
+
+### Updated: Wordle `Keyboard.tsx`
+Enter key: `bg-emerald-600` + wider `px-4` to stand out from regular letter keys. Delete key: unchanged stone styling.
+
+### Tests (20 new)
+- `src/test/letterPickerModal.test.tsx` — 20 tests covering visibility, center/outer selection, deselect, 7-letter cap, reset, random, generate, close
+- `src/test/customPuzzle.test.tsx` — updated 3 ShareButton tests to match icon-only API (aria-label instead of text content)
+
+---
+
+## 2026-05-14 — Session 11: Greeklish URL Encoding ✅
+
+**Outcome:** 352 tests (↑ from 299). Build + ESLint clean.
+
+### Feature: greeklish custom puzzle URLs
+
+Greek percent-encoded URLs (`%CE%BA%CE%B1%CE%B5%CE%B9%CE%BF%CF%83`) are ugly when shared. Replaced with clean ASCII greeklish encoding (e.g. `/spelling-bee/k/aeiost`).
+
+**Design:** Bijective 1-to-1 Latin↔Greek mapping, no digraphs (digraphs cause ambiguous parses when τ+η collides with θ). The four non-obvious mappings: `q→θ`, `j→ξ`, `x→χ`, `c→ψ`. `v` and `y` are unmapped.
+
+**New files:**
+- `src/lib/greeklish.ts` — shared utility: `GREEKLISH_TO_GREEK`, `GREEK_TO_GREEKLISH`, `greekToGreeklish()`, `greeklishToGreek()`, `isGreeklish()`
+- `src/test/greeklish.test.ts` — 29 tests covering map integrity, spot-checks, round-trips, `isGreeklish`
+
+**Modified files:**
+- `src/games/spelling-bee/lib/parseCustomUrl.ts` — auto-detects greeklish (pure ASCII a-z) vs Greek input; converts greeklish to Greek internally before existing validation
+- `src/app/spelling-bee/[center]/[outer]/page.tsx` — canonical path now uses `greekToGreeklish()`, redirect targets greeklish form; no `encodeURIComponent` needed
+- `src/app/spelling-bee/page.tsx` — redirect uses `greekToGreeklish()` instead of `encodeURIComponent`
+- `src/test/parseCustomUrl.test.ts` — 9 new greeklish input tests
+- `src/test/spellingBeeRouting.test.ts` — replaced "encoded redirect path" blocks with "greeklish canonical path" + "backward-compat old percent-encoded Greek URLs" blocks
+
+**Backward compatibility:** Old bookmarks with percent-encoded Greek letters are silently accepted by `parseCustomUrl` (Greek path → normalise) and 301-redirected to greeklish canonical by the page handler.
+
+---
+
 ## 2026-05-14 — Session 10: ERR_INVALID_CHAR Location Header Fix + Tests ✅
 
 **Outcome:** 299 tests (↑ from 289). Build + ESLint clean.

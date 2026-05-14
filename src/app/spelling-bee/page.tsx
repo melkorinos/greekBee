@@ -7,12 +7,13 @@
 // Having the letters in the address bar also means the share button on the
 // custom-puzzle page can just copy window.location.href — no special logic needed.
 //
-// ?random=1&exclude=<id> → redirect to a random puzzle's letter URL (used by NewPuzzleButton)
+// ?random=1&exclude=<id> → redirect to a random puzzle's letter URL
 // ?puzzle=<id>           → redirect to that specific puzzle's letter URL
 
 import { getPuzzleById, getRandomPuzzle, getTodaysPuzzle } from "@/data";
 
 import type { Language } from "@/types";
+import { greekToGreeklish } from "@/lib/greeklish";
 import { redirect } from "next/navigation";
 
 export default async function SpellingBeePage({
@@ -28,13 +29,11 @@ export default async function SpellingBeePage({
     : random  ? getRandomPuzzle(language, exclude)
     :           getTodaysPuzzle(language);
 
-  // Redirect to the canonical letter URL — this becomes the address bar URL
-  // and is the shareable link that works on any future date.
-  // Letters must be percent-encoded: raw Unicode in an HTTP Location header is
-  // rejected by Node.js with ERR_INVALID_CHAR.
+  // Redirect to the greeklish canonical URL — plain ASCII, no percent-encoding needed.
+  // Greeklish avoids ERR_INVALID_CHAR in Location headers and produces clean shared links.
   redirect(
-    `/spelling-bee/${encodeURIComponent(puzzle.centerLetter)}/${
-      encodeURIComponent(puzzle.outerLetters.join(""))
+    `/spelling-bee/${greekToGreeklish(puzzle.centerLetter)}/${
+      greekToGreeklish(puzzle.outerLetters.join(""))
     }`,
   );
 }

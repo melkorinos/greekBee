@@ -112,9 +112,10 @@ describe("ShareButton", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders with the share label", () => {
+  it("renders the share button", () => {
     render(<ShareButton canonicalPath="/spelling-bee/α/βγδεζη" />);
     expect(screen.getByTestId("btn-share")).toBeInTheDocument();
+    // Idle tooltip text is rendered in the DOM (via the hover tooltip div)
     expect(screen.getByText("Κοινοποίηση")).toBeInTheDocument();
   });
 
@@ -130,22 +131,23 @@ describe("ShareButton", () => {
     expect(writeText).toHaveBeenCalledWith(expectedUrl);
   });
 
-  it("shows a success label after a successful copy", async () => {
+  it("shows a success tooltip after a successful copy", async () => {
     render(<ShareButton canonicalPath="/spelling-bee/α/βγδεζη" />);
     await act(async () => {
       fireEvent.click(screen.getByTestId("btn-share"));
     });
-    expect(screen.getByText("✓ Αντιγράφηκε!")).toBeInTheDocument();
+    // The button's aria-label and tooltip div both update to the success message
+    expect(screen.getByTestId("btn-share")).toHaveAttribute("aria-label", "Αντιγράφηκε!");
   });
 
-  it("shows an error label when clipboard write fails", async () => {
+  it("shows an error tooltip when clipboard write fails", async () => {
     writeText.mockRejectedValue(new Error("denied"));
     render(<ShareButton canonicalPath="/spelling-bee/α/βγδεζη" />);
     await act(async () => {
       fireEvent.click(screen.getByTestId("btn-share"));
     });
     await waitFor(() => {
-      expect(screen.getByText("Σφάλμα")).toBeInTheDocument();
+      expect(screen.getByTestId("btn-share")).toHaveAttribute("aria-label", "Σφάλμα");
     });
   });
 });

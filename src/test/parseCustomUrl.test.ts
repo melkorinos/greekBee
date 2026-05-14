@@ -4,6 +4,8 @@
 // games or break valid URLs for real players.
 
 import { describe, expect, it } from "vitest";
+
+import { greekToGreeklish } from "@/lib/greeklish";
 import { parseCustomUrl } from "@/games/spelling-bee/lib/parseCustomUrl";
 
 describe("parseCustomUrl", () => {
@@ -99,5 +101,60 @@ describe("parseCustomUrl", () => {
   it("center is a single character string on success", () => {
     const result = parseCustomUrl("α", "βγδεζη");
     expect(result?.center).toHaveLength(1);
+  });
+});
+
+// ── Greeklish input ───────────────────────────────────────────────────────────
+// The canonical URL format uses greeklish (plain ASCII) since Greek percent-
+// encoded letters look ugly when shared.  parseCustomUrl must accept greeklish
+// in addition to direct Greek input.
+
+describe("parseCustomUrl — greeklish input", () => {
+  it("accepts greeklish center and converts to Greek internally", () => {
+    const result = parseCustomUrl("k", "aeiost");
+    expect(result).not.toBeNull();
+    expect(result?.center).toBe("κ");
+  });
+
+  it("produces the correct outer letter array from greeklish", () => {
+    const result = parseCustomUrl("k", "aeiost");
+    expect(result?.outer).toEqual(["α", "ε", "ι", "ο", "σ", "τ"]);
+  });
+
+  it("handles all 4 awkward mappings: q→θ, j→ξ, x→χ, c→ψ", () => {
+    // center = θ (q), outer = ξ(j) χ(x) ψ(c) α(a) β(b) γ(g)
+    const result = parseCustomUrl("q", "jxcabg");
+    expect(result?.center).toBe("θ");
+    expect(result?.outer).toEqual(["ξ", "χ", "ψ", "α", "β", "γ"]);
+  });
+
+  it("greeklish center with Greek outer is accepted (mixed input)", () => {
+    // center greeklish 'k' → κ; outer is Greek βγδεζη
+    const result = parseCustomUrl("k", "βγδεζη");
+    expect(result?.center).toBe("κ");
+    expect(result?.outer).toEqual(["β", "γ", "δ", "ε", "ζ", "η"]);
+  });
+
+  it("returns null when greeklish outer has fewer than 6 letters", () => {
+    expect(parseCustomUrl("k", "aeio")).toBeNull();
+  });
+
+  it("returns null when greeklish outer has more than 6 letters", () => {
+    expect(parseCustomUrl("k", "aeiostn")).toBeNull();
+  });
+
+  it("returns null when greeklish center duplicates a greeklish outer letter", () => {
+    // 'a'→α appears in both center and outer
+    expect(parseCustomUrl("a", "abgdez")).toBeNull();
+  });
+
+  it("round-trips: Greek → greeklish → parseCustomUrl → same Greek letters", () => {
+    const center = "κ";
+    const outer  = ["α", "ε", "ι", "ο", "σ", "τ"];
+    const urlCenter = greekToGreeklish(center);
+    const urlOuter  = greekToGreeklish(outer.join(""));
+    const result = parseCustomUrl(urlCenter, urlOuter);
+    expect(result?.center).toBe(center);
+    expect(result?.outer).toEqual(outer);
   });
 });

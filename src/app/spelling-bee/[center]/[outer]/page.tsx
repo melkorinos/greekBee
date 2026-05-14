@@ -4,9 +4,13 @@
 // Spelling Bee game.  Valid words are computed on the server at request time
 // from the full Greek word list, so no operator pre-curation is needed.
 //
-// URL shape: /spelling-bee/α/βγδεζηθ
-//   [center] — exactly 1 Greek letter (the mandatory center letter)
-//   [outer]  — exactly 6 Greek letters (the outer ring, order doesn't matter)
+// URL shape (canonical): /spelling-bee/k/aeiost
+//   [center] — exactly 1 greeklish letter (the mandatory center letter)
+//   [outer]  — exactly 6 greeklish letters (the outer ring, order doesn't matter)
+//
+// Greeklish encoding: 1 Latin letter ↔ 1 Greek letter, bijective, no digraphs.
+// Greek percent-encoded URLs (e.g. %CE%BA) are also accepted and 301-redirected
+// to the greeklish canonical form so old bookmarks continue to work.
 //
 // The resulting Puzzle object is identical in shape to a curated one, so the
 // entire existing game stack (GameBoard, reducer, persistence) works unchanged.
@@ -19,6 +23,7 @@ import type { Language } from "@/types";
 import { NewPuzzleButton } from "@/components/spelling-bee/NewPuzzleButton";
 import { ShareButton } from "@/components/spelling-bee/ShareButton";
 import { buildCustomPuzzle } from "@/data";
+import { greekToGreeklish } from "@/lib/greeklish";
 import { parseCustomUrl } from "@/games/spelling-bee/lib/parseCustomUrl";
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -33,29 +38,24 @@ export default async function CustomSpellingBeePage({
   const parsed = parseCustomUrl(rawCenter, rawOuter);
   if (!parsed) notFound();
 
-  // Canonical URL uses the already-normalised (accent-free) letters.
-  // If the raw URL differs (e.g. player typed an accented letter like ά),
-  // redirect to the clean canonical form so bookmarks + shared links are consistent.
-  const canonicalOuter = parsed.outer.join("");
-  const canonicalCenter = parsed.center;
+  // Canonical URL uses greeklish (plain ASCII) — e.g. /spelling-bee/k/aeiost.
+  // Redirect if raw params are not already in greeklish canonical form
+  // (handles: old percent-encoded Greek URLs, accented letters, uppercase, etc.).
+  const canonicalCenter = greekToGreeklish(parsed.center);
+  const canonicalOuter  = greekToGreeklish(parsed.outer.join(""));
   if (
     decodeURIComponent(rawCenter) !== canonicalCenter ||
     decodeURIComponent(rawOuter)  !== canonicalOuter
   ) {
-    // Encode so the Location header contains only ASCII-safe percent-encoded bytes.
-    redirect(
-      `/spelling-bee/${encodeURIComponent(canonicalCenter)}/${
-        encodeURIComponent(canonicalOuter)
-      }`,
-    );
+    // Greeklish is pure ASCII — no encodeURIComponent needed.
+    redirect(`/spelling-bee/${canonicalCenter}/${canonicalOuter}`);
   }
 
   const language: Language = "el";
   const puzzle = buildCustomPuzzle(parsed.center, parsed.outer, language);
 
-  // The share URL is built from the normalised letters so it is always accent-free.
-  // Using an absolute URL requires knowing the origin; we use a path-only URL here
-  // and ShareButton will prepend window.location.origin on the client.
+  // The share URL is the greeklish canonical path — pure ASCII, human-readable.
+  // ShareButton will prepend window.location.origin on the client.
   const canonicalPath = `/spelling-bee/${canonicalCenter}/${canonicalOuter}`;
 
   // Warn the player if the letter combo yields very few valid words
@@ -68,7 +68,7 @@ export default async function CustomSpellingBeePage({
           <h1 className="text-xl font-bold tracking-tight text-stone-800">🍯 Spelling Bee</h1>
           <div className="flex items-center gap-2">
             <ShareButton canonicalPath={canonicalPath} />
-            <NewPuzzleButton puzzleId={puzzle.id} language={language} />
+            <NewPuzzleButton />
             <HowToPlayModal />
           </div>
         </div>

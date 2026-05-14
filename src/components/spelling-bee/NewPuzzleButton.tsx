@@ -1,32 +1,43 @@
 "use client";
 
-// NewPuzzleButton — navigates to a new random puzzle after a confirmation dialog.
+// NewPuzzleButton — opens the letter-picker modal so the player can build a
+// custom puzzle or pick a random one.
 
-interface NewPuzzleButtonProps {
-  puzzleId: string;
-  language: string;
-}
+import { useState } from "react";
+import { greekToGreeklish } from "@/lib/greeklish";
+import { LetterPickerModal } from "@/components/shared/LetterPickerModal";
 
-export function NewPuzzleButton({ puzzleId, language }: NewPuzzleButtonProps) {
-  function handleClick() {
-    const confirmed = window.confirm("Θέλεις σίγουρα νέο παζλ; Θα χάσεις την πρόοδό σου.");
-    if (confirmed) {
-      window.location.href = `/spelling-bee?lang=${language}&random=1&exclude=${puzzleId}`;
-    }
+export function NewPuzzleButton() {
+  const [modalOpen, setModalOpen] = useState(false);
+
+  function handleConfirm(center: string, outer: string[]) {
+    setModalOpen(false);
+    const c = greekToGreeklish(center);
+    const o = greekToGreeklish(outer.join(""));
+    window.location.href = `/spelling-bee/${c}/${o}`;
   }
 
   return (
-    <div className="relative group">
-      <button
-        onClick={handleClick}
-        aria-label="Νέο Παζλ"
-        className="flex items-center justify-center rounded-full border border-stone-300 text-stone-600 text-sm font-medium px-3 h-8 hover:bg-stone-100 active:bg-stone-200 transition-colors"
-      >
-        🎲
-      </button>
-      <div className="pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-stone-800 px-2.5 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-10">
-        Νέο Παζλ
+    <>
+      <div className="relative group">
+        <button
+          onClick={() => setModalOpen(true)}
+          aria-label="Νέο Παζλ"
+          data-testid="btn-new-puzzle"
+          className="flex items-center justify-center rounded-full border border-stone-300 text-stone-600 text-sm font-medium px-3 h-8 hover:bg-stone-100 active:bg-stone-200 transition-colors"
+        >
+          🎲
+        </button>
+        <div className="pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-stone-800 px-2.5 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-10">
+          Νέο Παζλ
+        </div>
       </div>
-    </div>
+
+      <LetterPickerModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onConfirm={handleConfirm}
+      />
+    </>
   );
 }

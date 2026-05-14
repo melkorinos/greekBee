@@ -47,15 +47,17 @@ export function Keyboard({
     ].join(" ");
   };
 
-  const actionClass = [
+  // Enter/Delete share a base class; Enter gets an accent colour to stand out.
+  const actionBase = [
     "flex items-center justify-center",
-    "h-14 px-3 rounded border",
-    "text-sm font-semibold cursor-pointer select-none",
-    "bg-stone-600 border-stone-500",
-    "text-stone-100",
+    "h-14 rounded border",
+    "font-semibold cursor-pointer select-none",
     "active:opacity-70 transition-colors",
     disabled ? "opacity-50 pointer-events-none" : "",
   ].join(" ");
+
+  const enterClass = `${actionBase} px-4 text-base bg-emerald-600 border-emerald-500 text-white`;
+  const deleteClass = `${actionBase} px-3 text-sm bg-stone-600 border-stone-500 text-stone-100`;
 
   return (
     <div className="flex flex-col items-center gap-1.5" aria-label="Keyboard">
@@ -63,7 +65,7 @@ export function Keyboard({
         <div key={ri} className="flex gap-1">
           {ri === ROWS.length - 1 && (
             <button
-              className={actionClass}
+              className={enterClass}
               onClick={onEnter}
               aria-label="Submit guess"
               data-testid="btn-enter"
@@ -84,7 +86,7 @@ export function Keyboard({
           ))}
           {ri === ROWS.length - 1 && (
             <button
-              className={actionClass}
+              className={deleteClass}
               onClick={onDelete}
               aria-label="Delete letter"
               data-testid="btn-delete"
