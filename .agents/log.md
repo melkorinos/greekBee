@@ -26,6 +26,24 @@ Updated test coverage map header from "23 files, 289 tests" to "25 files, 372 te
 
 ---
 
+## 2026-05-14 — Session 13: Random Puzzle Quality Rules ✅
+
+**Outcome:** 374 tests (↑ from 372). Build clean.
+
+### Feature: vowel-quality constraints on random letter selection
+
+Two rules now enforced wherever random 7-letter sets are generated:
+1. **Center must be a vowel** (α/ε/η/ι/ο/υ/ω) — mandatory letter drives valid-word count; a consonant center produces near-zero words
+2. **At least 1 additional vowel in the outer ring** (≥ 2 vowels total)
+
+Implemented in two places (kept in sync by comment):
+- `src/components/shared/LetterPickerModal.tsx` — `pickRandom7()` rewritten: shuffles vowels → picks center, then guarantees one extra vowel in outer + 5 random consonants/remaining
+- `scripts/batch-generate.ts` — added `VOWELS` set + `meetsQuality()` guard in the generation loop; non-quality combos are skipped before the expensive `findValidWords()` call
+
+New tests (2): `letterPickerModal.test.tsx` — "always picks a vowel as center" × 20 runs, "always picks ≥2 vowels total" × 20 runs.
+
+---
+
 ## 2026-05-14 — Session 12: Letter Picker Modal + UI Polish ✅
 
 **Outcome:** 372 tests (↑ from 352). Build + ESLint clean.

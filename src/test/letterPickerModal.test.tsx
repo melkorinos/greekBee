@@ -170,6 +170,38 @@ describe("LetterPickerModal — Random", () => {
       );
     expect(selected).toHaveLength(6);
   });
+
+  it("Random always picks a vowel as center letter", async () => {
+    const VOWELS = new Set(["α", "ε", "η", "ι", "ο", "υ", "ω"]);
+    const { user } = setup();
+    // Run multiple times to catch any fluke
+    for (let i = 0; i < 20; i++) {
+      await user.click(screen.getByTestId("letter-picker-reset"));
+      await user.click(screen.getByTestId("letter-picker-random"));
+      const centerTile = screen
+        .getAllByTestId(/^letter-tile-/)
+        .find((el) => el.getAttribute("aria-label")?.includes("κεντρικό"));
+      const centerLetter = centerTile!.getAttribute("data-testid")!.replace("letter-tile-", "");
+      expect(VOWELS.has(centerLetter), `Expected vowel center, got "${centerLetter}"`).toBe(true);
+    }
+  });
+
+  it("Random always picks at least 2 vowels in total", async () => {
+    const VOWELS = new Set(["α", "ε", "η", "ι", "ο", "υ", "ω"]);
+    const { user } = setup();
+    for (let i = 0; i < 20; i++) {
+      await user.click(screen.getByTestId("letter-picker-reset"));
+      await user.click(screen.getByTestId("letter-picker-random"));
+      const selectedTiles = screen
+        .getAllByTestId(/^letter-tile-/)
+        .filter((el) => el.getAttribute("aria-pressed") === "true");
+      const vowelCount = selectedTiles.filter((el) => {
+        const letter = el.getAttribute("data-testid")!.replace("letter-tile-", "");
+        return VOWELS.has(letter);
+      }).length;
+      expect(vowelCount, `Expected ≥2 vowels, got ${vowelCount}`).toBeGreaterThanOrEqual(2);
+    }
+  });
 });
 
 // ── Generate ──────────────────────────────────────────────────────────────────

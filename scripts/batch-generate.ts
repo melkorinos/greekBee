@@ -41,6 +41,20 @@ const LETTER_POOL: string[] = [
   "ρ", "σ", "τ", "υ", "φ", "χ", "ψ", "ω",
 ];
 
+// ── Quality rules ─────────────────────────────────────────────────────────────
+// Mirror of the rules in LetterPickerModal.tsx pickRandom7().
+// Keep these two in sync if the rules change.
+//
+//   1. Center must be a vowel — mandatory center letter drives valid-word count.
+//   2. At least 1 additional vowel in the outer ring (≥ 2 vowels total).
+const VOWELS = new Set(["α", "ε", "η", "ι", "ο", "υ", "ω"]);
+
+function meetsQuality(center: string, outer: string[]): boolean {
+  if (!VOWELS.has(center)) return false;
+  const outerVowels = outer.filter((l) => VOWELS.has(l));
+  return outerVowels.length >= 1;
+}
+
 // ── Normalisation ──────────────────────────────────────────────────────────────
 
 function normalize(text: string): string {
@@ -146,6 +160,7 @@ while (newPuzzles.length < TARGET) {
   const key = [center, ...outer].sort().join("");
 
   if (usedSets.has(key)) continue;
+  if (!meetsQuality(center, outer)) continue;
 
   const validWords = findValidWords(center, outer);
   if (validWords.length < MIN_WORDS) continue;
