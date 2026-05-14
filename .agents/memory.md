@@ -18,7 +18,7 @@ Three live games + custom puzzle URLs. **372 tests passing.**
 | **Routing** | `/spelling-bee`, `/wordle`, `/connections`, `/` game picker. Custom puzzle: `/spelling-bee/[center]/[outer]` |
 | **Persistence** | Single `wordgames:state` localStorage key; typed envelope. `useGameStore` is the ONLY code that touches localStorage |
 | **Types** | Root `src/types/index.ts` = `Language`, `GameId`, `PersistenceEnvelope` only. Game types live in `src/games/*/types.ts` |
-| **Theming** | Wordle = dark (`bg-zinc-900` unconditional on `<main>`). Spelling Bee + Shell = light. No `dark:` Tailwind classes anywhere |
+| **Theming** | Wordle + Shell header = dark (unconditional classes). Spelling Bee + picker = light. No `dark:` Tailwind classes anywhere |
 | **Game logic** | Pure functions in `src/games/*/lib/` — zero React imports |
 | **Shared components** | Earn their place: only graduate to `src/components/shared/` when 2 games genuinely need it |
 | **Connections** | No `language` field on `ConnectionsPuzzle` — it has no word-list dependency |
@@ -85,7 +85,7 @@ src/
 
 ---
 
-## 🧪 Test Coverage Map (23 files, 289 tests)
+## 🧪 Test Coverage Map (25 files, 372 tests)
 
 > **How to use this as an agent**: before writing a new test, grep the `describe` column for the function/component name. If it appears, read that file's describe block to check if the specific case is already covered. Only write new tests for gaps.
 

@@ -11,7 +11,7 @@ Ship a polished multi-game Greek word game platform where Spelling Bee, Wordle G
 |---|---|
 | 1 — Foundation | Folder restructure; Shell + routing; `useGameStore` unified persistence; types split |
 | 2 — Wordle GR | 5-letter Greek Wordle live; `evaluateGuess`; reducer + hook; deterministic daily answer; curated answer pool; 143 tests |
-| 2.5 — Theming | Wordle dark theme via unconditional classes on `<main>`; no `dark:` classes anywhere; Shell/SB/picker confirmed light; `FeedbackBanner` graduated to shared; 151 tests |
+| 2.5 — Theming | Wordle + Shell dark theme via unconditional classes; SB/picker light; no `dark:` Tailwind classes; `FeedbackBanner` graduated to shared; 151 tests |
 | 3 — Connections | Full game live; reducer (4 mistakes, one-away hint); validator script; 167 tests |
 
 Key locked ADRs → see `memory.md`.
@@ -57,10 +57,10 @@ Key locked ADRs → see `memory.md`.
 - [x] `words-el.json` committed to repo (pre-normalised, no-accent form); `words-el.raw.json` + `words-*.json` gitignored
 
 ## Phase 2.5 — Theming (Dark / Light per game)
-> **Decision:** Wordle is dark-themed. Spelling Bee and the Shell top bar are light-themed.
-> Each game owns its own background and foreground; the Shell header is always light.
+> **Decision:** Wordle and the Shell header are dark-themed. Spelling Bee and the picker are light-themed.
+> Each game owns its own background and foreground; the Shell header is unconditionally dark.
 
-- [x] **Shell header** — confirmed light (`bg-white`, `text-stone-800`); no dark: classes present; always-light is structurally enforced
+- [x] **Shell header** — dark theme (`bg-stone-900`, `text-stone-300`); no dark: classes; unconditional dark applied directly
 - [x] **Spelling Bee** — confirmed light theme; no dark: classes in any component; no changes needed
 - [x] **Wordle** — full dark theme: `bg-zinc-900 text-stone-100` on page root; all `dark:` classes removed from Tile, Keyboard, WordleBoard and replaced with unconditional dark equivalents
 - [x] **Game picker** (`/`) — confirmed light theme; no dark classes; no changes needed

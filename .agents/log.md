@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-05-14 — Session 13: Codebase Review & Stale-Doc / Duplicate-Code Fixes ✅
+
+**Outcome:** 372 tests (unchanged). Build + ESLint clean. No regressions.
+
+### Code fix — `WordleBoard.tsx` duplicate normalisation logic
+`WordleBoard.tsx` had a private `normaliseChar` function that was an exact duplicate of `normalizeLetters` in `src/games/spelling-bee/lib/normalize.ts`. Removed the duplicate and added a direct import, ensuring there is now a single normalisation path for keyboard input across both games.
+
+### Stale comment — `normalize.ts`
+Removed "when Wordle GR is added — it will need it too" (Wordle has been added for months). Replaced with a correct graduation note (trigger: third game).
+
+### Stale docs — Shell theming (memory.md, goals.md)
+The Shell was changed to dark (`bg-stone-900`) in a previous session but `memory.md` and `goals.md` still said "Shell = light / bg-white". Updated both to reflect the actual dark Shell header. (The Shell test was already correct.)
+
+### Stale docs — README.md
+- Connections status: "Planned" → "Live"
+- Architecture section fully rewritten to match the actual folder structure (all three games, `src/lib/greeklish.ts`, correct data files, correct hooks)
+
+### Stale docs — memory.md test count
+Updated test coverage map header from "23 files, 289 tests" to "25 files, 372 tests".
+
+---
+
 ## 2026-05-14 — Session 12: Letter Picker Modal + UI Polish ✅
 
 **Outcome:** 372 tests (↑ from 352). Build + ESLint clean.

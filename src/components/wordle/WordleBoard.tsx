@@ -10,18 +10,10 @@ import { GuessGrid } from "./GuessGrid";
 import { Keyboard } from "./Keyboard";
 import type { WordlePuzzle } from "@/games/wordle/types";
 import { useWordleState } from "@/games/wordle/hooks/useWordleState";
+import { normalizeLetters } from "@/games/spelling-bee/lib/normalize";
 
 // Greek letter regex (covers the Greek alphabet range)
 const GREEK_LETTER = /^[α-ωά-ώΑ-ΩΆ-Ώ]$/i;
-
-// Normalise a typed character to the lowercase, accent-free form we store
-function normaliseChar(ch: string): string {
-  return ch
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace("ς", "σ");
-}
 
 interface WordleBoardProps {
   puzzle:      WordlePuzzle;
@@ -52,7 +44,7 @@ export function WordleBoard({ puzzle, validWords }: WordleBoardProps) {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "Enter")     return submitGuess();
       if (e.key === "Backspace") return deleteLetter();
-      if (GREEK_LETTER.test(e.key)) addLetter(normaliseChar(e.key));
+      if (GREEK_LETTER.test(e.key)) addLetter(normalizeLetters(e.key));
     };
   });
   useEffect(() => {

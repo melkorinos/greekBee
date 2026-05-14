@@ -8,8 +8,8 @@
 // Also collapses Greek final sigma ς → σ since the puzzle letter set only
 // stores the base form.
 //
-// NOTE: This utility is a candidate for promotion to a shared cross-game
-// utility (src/lib/normalize.ts) when Wordle GR is added — it will need it too.
+// NOTE: Graduate to src/lib/normalize.ts when a third game needs it
+// (trigger: two games now use it — Spelling Bee + Wordle GR).
 
 /**
  * Normalises a string for puzzle letter comparison:

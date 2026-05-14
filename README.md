@@ -8,7 +8,7 @@ A multi-game browser platform for Greek (and English) word games, built with **N
 |------|-------|--------|-------------|
 | 🍯 Spelling Bee | `/spelling-bee` | Live | 7-letter honeycomb — find words containing the center letter |
 | 🟩 Wordle GR | `/wordle` | Live | Guess a hidden 5-letter Greek word in 6 attempts |
-| 🔗 Connections | `/connections` | Planned | Group 16 curated words into 4 categories of 4 |
+| 🔗 Connections | `/connections` | Live | Group 16 curated words into 4 categories of 4 |
 
 All games share a common shell (hamburger navigation menu), a unified persistence layer, and a consistent design foundation. Each game's logic, state, and data are fully isolated.
 
@@ -131,28 +131,38 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
 ```
 src/
   app/              Next.js App Router — shell layout, game picker, per-game routes
+    spelling-bee/   Daily puzzle + custom /[center]/[outer] dynamic route
+    wordle/         5-letter Greek Wordle
+    connections/    Group 16 words into 4 categories
   components/
-    shared/         Cross-game UI primitives (Shell, HamburgerMenu, FeedbackMessage, Modal)
-    spelling-bee/   Spelling Bee-specific components
-    wordle/         Wordle-specific components (planned)
-    connections/    Connections-specific components (planned)
+    shared/         Cross-game UI primitives (Shell, FeedbackBanner, HowToPlayModal, LetterPickerModal)
+    spelling-bee/   Spelling Bee-specific components (GameBoard, HoneycombGrid, ShareButton, …)
+    wordle/         Wordle-specific components (WordleBoard, GuessGrid, Tile, Keyboard)
+    connections/    Connections-specific components (GroupGrid, WordCard, CategoryReveal)
   games/            Pure logic — one folder per game, zero React imports
     spelling-bee/
-      lib/          validation, scoring, ranking, pangram, normalize
-      hooks/        useSpellingBeeState, gameReducer
+      lib/          validation, scoring, ranking, pangram, normalize, computeValidWords, parseCustomUrl
+      hooks/        useGameState, gameReducer
       types.ts
-    wordle/         (planned)
-    connections/    (planned)
+    wordle/
+      lib/          evaluateGuess, isValidGuess, letterState, scoring
+      hooks/        useWordleState, wordleReducer
+      types.ts
+    connections/
+      hooks/        useConnectionsState, connectionsReducer
+      types.ts
   hooks/
     useGameStore.ts Unified localStorage envelope — the only code that touches localStorage
+    usePersistence.ts Spelling Bee persistence (load/save/clear via useGameStore)
   data/
-    spelling-bee/   puzzles-el.json, words-el.json
-    wordle/         puzzles-wordle-el.json (planned)
-    connections/    puzzles-connections.json (hand-curated, planned)
+    spelling-bee/   puzzles-el.json (1008 daily puzzles), index.ts
+    wordle/         answers-5.json (~3.8k curated), words-5.json (~9.5k valid guesses), index.ts
+    connections/    puzzles-connections.json (hand-curated), index.ts
+    words-el.json   811k normalised Greek words (no accents, ς→σ)
+  lib/
+    greeklish.ts    Bijective Greek↔greeklish codec for clean ASCII custom URLs
   types/            Shared types: Language, GameId, PersistenceEnvelope
-scripts/
-  spelling-bee/     Puzzle generation CLI (moved from scripts/)
-  wordle/           Answer pool generator (planned)
+scripts/            Puzzle generation & curation CLIs (batch-generate, curate-answers, …)
 ```
 
 **Key design principles:**
