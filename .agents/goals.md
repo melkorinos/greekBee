@@ -23,7 +23,7 @@ Key locked ADRs → see `memory.md`.
 - [ ] Home page "played today" status badge per game (read from `useGameStore`)
 - [ ] E2E tests (Playwright) — at least one happy-path per game
 - [ ] Visual rebrand — introduce Tailwind theme config; decouple from NYT aesthetic
-- [ ] Spelling Bee puzzle quality filter (≥2 vowels, ≥2 consonants, centre = vowel, ≥1 pangram)
+- [x] Spelling Bee puzzle quality filter (≥2 vowels, ≥2 consonants, centre = vowel, ≥1 pangram) — `batch-generate.ts` enforces all four rules; `pickRandom7()` in `LetterPickerModal` enforces vowel/consonant rules; `puzzles-el.json` regenerated clean (1008 puzzles, ~33× attempt ratio)
 - [ ] Per-puzzle leaderboard (Supabase backend, device UUID, `POST /api/scores`)
 
 ---
@@ -84,7 +84,7 @@ Key locked ADRs → see `memory.md`.
 - [ ] Home page “played today” status badge per game (read from `useGameStore`)
 - [ ] E2E tests (Playwright) for at least one happy-path per game
 - [ ] Visual rebrand — introduce Tailwind theme config; decouple from NYT aesthetic
-- [ ] Spelling Bee puzzle quality filter (enforce ≥2 vowels, ≥2 consonants, centre = vowel, ≥1 pangram)
+- [x] Spelling Bee puzzle quality filter (enforce ≥2 vowels, ≥2 consonants, centre = vowel, ≥1 pangram) — done, see above
 - [ ] Per-puzzle leaderboard (Supabase backend, device UUID, `POST /api/scores`)- [ ] **Spelling Bee archive page** — list the 7 most recent daily puzzles with their dates and a "Play" link; let returning players catch up on days they missed; read directly from `puzzles-el.json` date index
 ## Constraints (never violate)
 - Game logic stays pure functions — zero React imports in `src/games/*/lib/`

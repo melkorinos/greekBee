@@ -6,10 +6,9 @@
  * to the appropriate puzzles-{lang}.json file.
  *
  * Usage:
- *   npm run generate-puzzle -- --lang=el --center=α --outer=π,ο,λ,ε,μ,σ --date=2026-03-26
+ *   npm run generate-puzzle -- --center=α --outer=π,ο,λ,ε,μ,σ --date=2026-03-26
  *
  * Options:
- *   --lang      Language code: en | el
  *   --center    The mandatory centre letter (single character)
  *   --outer     6 outer letters separated by commas
  *   --date      Puzzle date in YYYY-MM-DD format (defaults to today)
@@ -65,6 +64,14 @@ if (!fs.existsSync(wordListPath)) {
   console.error(`    Run "npm run parse-dict" first to generate it from a .dic file.`);
   process.exit(1);
 }
+
+// ── Quality rules (matching batch-generate.ts meetsQuality + hasPangram) ───────
+//   1. Center must be a vowel.
+//   2. At least 1 additional vowel in the outer ring (≥ 2 vowels total).
+//   3. At least 2 consonants in the outer ring.
+//   4. At least 1 pangram (a valid word using all 7 letters).
+// This script does NOT enforce these automatically — caller is responsible
+// for supplying a letter set that already meets them.
 
 // ── Letter normalisation ───────────────────────────────────────────────────────
 

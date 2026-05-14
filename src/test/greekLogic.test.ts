@@ -90,7 +90,10 @@ describe("getPuzzleForDate (Greek)", () => {
   it("loads the Greek puzzle for the correct date", () => {
     const loaded = getPuzzleForDate("2026-03-25", "el");
     expect(loaded.language).toBe("el");
-    expect(loaded.centerLetter).toBe("α");
+    expect(loaded.id).toBe("2026-03-25-el");
+    // Center is always a vowel per quality rules
+    const VOWELS = new Set(["α", "ε", "η", "ι", "ο", "υ", "ω"]);
+    expect(VOWELS.has(loaded.centerLetter), `Expected vowel center, got "${loaded.centerLetter}"`).toBe(true);
   });
 
   it("falls back to the latest puzzle when date is not found", () => {

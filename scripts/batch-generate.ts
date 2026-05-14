@@ -29,30 +29,66 @@ function getArg(name: string, fallback: string): string {
   return arg ? arg.slice(flag.length) : fallback;
 }
 
-const TARGET    = parseInt(getArg("target",    "500"), 10);
-const MIN_WORDS = parseInt(getArg("min-words", "50"),  10);
-const LANG      = getArg("lang", "el");
+const TARGET = parseInt(getArg("target", "500"), 10);
+const MIN_WORDS = parseInt(getArg("min-words", "50"), 10);
+const LANG = getArg("lang", "el");
+const START_DATE = getArg("start-date", ""); // override start date (YYYY-MM-DD)
 
 // ── Greek letter pool ──────────────────────────────────────────────────────────
 // All 24 Greek lowercase letters — random picks from the full alphabet.
 const LETTER_POOL: string[] = [
-  "α", "β", "γ", "δ", "ε", "ζ", "η", "θ",
-  "ι", "κ", "λ", "μ", "ν", "ξ", "ο", "π",
-  "ρ", "σ", "τ", "υ", "φ", "χ", "ψ", "ω",
+  "α",
+  "β",
+  "γ",
+  "δ",
+  "ε",
+  "ζ",
+  "η",
+  "θ",
+  "ι",
+  "κ",
+  "λ",
+  "μ",
+  "ν",
+  "ξ",
+  "ο",
+  "π",
+  "ρ",
+  "σ",
+  "τ",
+  "υ",
+  "φ",
+  "χ",
+  "ψ",
+  "ω",
 ];
 
 // ── Quality rules ─────────────────────────────────────────────────────────────
 // Mirror of the rules in LetterPickerModal.tsx pickRandom7().
 // Keep these two in sync if the rules change.
 //
-//   1. Center must be a vowel — mandatory center letter drives valid-word count.
+//   1. Center must be a vowel — drives valid-word count.
 //   2. At least 1 additional vowel in the outer ring (≥ 2 vowels total).
+//   3. At least 2 consonants in the outer ring — avoids all-vowel grids.
+//
+// Pangram rule (≥ 1 pangram) is checked separately after findValidWords.
 const VOWELS = new Set(["α", "ε", "η", "ι", "ο", "υ", "ω"]);
 
 function meetsQuality(center: string, outer: string[]): boolean {
   if (!VOWELS.has(center)) return false;
   const outerVowels = outer.filter((l) => VOWELS.has(l));
-  return outerVowels.length >= 1;
+  const outerConsonants = outer.filter((l) => !VOWELS.has(l));
+  return outerVowels.length >= 1 && outerConsonants.length >= 2;
+}
+
+/** Returns true when at least one of the valid words uses all 7 puzzle letters. */
+function hasPangram(
+  center: string,
+  outer: string[],
+  validWords: string[],
+): boolean {
+  const all = new Set([center, ...outer]);
+  return validWords.some((w) => [...all].every((l) => w.includes(l)));
 }
 
 // ── Normalisation ──────────────────────────────────────────────────────────────
@@ -61,14 +97,14 @@ function normalize(text: string): string {
   return text
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")  // strip diacritics / accents
-    .replace(/ς/g, "σ");              // final sigma → regular sigma
+    .replace(/[\u0300-\u036f]/g, "") // strip diacritics / accents
+    .replace(/ς/g, "σ"); // final sigma → regular sigma
 }
 
 // ── Paths ──────────────────────────────────────────────────────────────────────
 
 const wordListPath = path.resolve(`src/data/words-${LANG}.json`);
-const puzzlePath   = path.resolve(`src/data/puzzles-${LANG}.json`);
+const puzzlePath = path.resolve(`src/data/spelling-bee/puzzles-${LANG}.json`);
 
 if (!fs.existsSync(wordListPath)) {
   console.error(`❌  Word list not found: ${wordListPath}`);
@@ -83,8 +119,12 @@ const rawWords: string[] = JSON.parse(fs.readFileSync(wordListPath, "utf8"));
 process.stdout.write(`${rawWords.length.toLocaleString()} raw words\n`);
 
 process.stdout.write("Normalising & deduplicating… ");
-const normalizedWords = [...new Set(rawWords.map(normalize).filter((w) => w.length >= 4))];
-process.stdout.write(`${normalizedWords.length.toLocaleString()} unique normalised words\n`);
+const normalizedWords = [
+  ...new Set(rawWords.map(normalize).filter((w) => w.length >= 4)),
+];
+process.stdout.write(
+  `${normalizedWords.length.toLocaleString()} unique normalised words\n`,
+);
 
 // Build centre-letter index: letter → all normalised words containing it
 process.stdout.write("Building centre-letter index… ");
@@ -114,10 +154,11 @@ const existing: {
 
 // Track letter sets already used so we never duplicate a combination
 const usedSets = new Set(
-  existing.map((p) => [p.centerLetter, ...p.outerLetters].sort().join(""))
+  existing.map((p) => [p.centerLetter, ...p.outerLetters].sort().join("")),
 );
 
-const lastDate = existing[existing.length - 1]?.date ?? "2026-04-01";
+const lastDate =
+  START_DATE || existing[existing.length - 1]?.date || "2026-03-24";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -141,13 +182,15 @@ function pickDistinct<T>(pool: T[], n: number): T[] {
 function findValidWords(center: string, outer: string[]): string[] {
   const allowed = new Set([center, ...outer]);
   return (byCenter.get(center) ?? []).filter((w) =>
-    w.split("").every((ch) => allowed.has(ch))
+    w.split("").every((ch) => allowed.has(ch)),
   );
 }
 
 // ── Generate puzzles ───────────────────────────────────────────────────────────
 
-console.log(`Generating ${TARGET} new puzzles (min ${MIN_WORDS} words each)…\n`);
+console.log(
+  `Generating ${TARGET} new puzzles (min ${MIN_WORDS} words each)…\n`,
+);
 
 const newPuzzles: typeof existing = [];
 let attempts = 0;
@@ -164,16 +207,26 @@ while (newPuzzles.length < TARGET) {
 
   const validWords = findValidWords(center, outer);
   if (validWords.length < MIN_WORDS) continue;
+  if (!hasPangram(center, outer, validWords)) continue;
 
   usedSets.add(key);
   const date = addDays(lastDate, dayOffset++);
-  const id   = `${date}-${LANG}`;
+  const id = `${date}-${LANG}`;
 
-  newPuzzles.push({ id, language: LANG, date, centerLetter: center, outerLetters: outer, validWords });
+  newPuzzles.push({
+    id,
+    language: LANG,
+    date,
+    centerLetter: center,
+    outerLetters: outer,
+    validWords,
+  });
 
   if (newPuzzles.length % 50 === 0 || newPuzzles.length === TARGET) {
     const pct = ((newPuzzles.length / TARGET) * 100).toFixed(0);
-    console.log(`  ${newPuzzles.length}/${TARGET} (${pct}%)  — ${attempts} attempts so far`);
+    console.log(
+      `  ${newPuzzles.length}/${TARGET} (${pct}%)  — ${attempts} attempts so far`,
+    );
   }
 }
 
@@ -184,4 +237,6 @@ fs.writeFileSync(puzzlePath, JSON.stringify(all, null, 2), "utf8");
 
 console.log(`\n✓ ${newPuzzles.length} new puzzles added`);
 console.log(`✓ ${all.length} total puzzles → ${puzzlePath}`);
-console.log(`  (${attempts} attempts, ${(attempts / newPuzzles.length).toFixed(1)}x ratio)`);
+console.log(
+  `  (${attempts} attempts, ${(attempts / newPuzzles.length).toFixed(1)}x ratio)`,
+);

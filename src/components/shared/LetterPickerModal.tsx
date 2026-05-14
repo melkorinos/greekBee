@@ -11,7 +11,7 @@
 //  - Tapping a selected outer letter deselects it.
 //  - The center letter is LOCKED once chosen.  Press Reset to start over.
 //  - "Random" fills all 7 slots at once; same lock/deselect rules apply after.
-//    Random always picks a vowel as center and ensures ≥ 2 vowels total.
+//    Random always picks a vowel as center, ensures ≥ 2 vowels total, and ensures ≥ 2 consonants in the outer ring.
 //  - "Generate" is only active when all 7 slots are filled.
 
 import { useCallback, useState } from "react";
@@ -35,9 +35,10 @@ const CONSONANTS = ALL_LETTERS.filter((l) => !VOWELS.has(l));
  * Pick 7 unique random Greek letters that meet minimum quality rules:
  *   - Center letter is always a vowel (mandatory center = more valid words).
  *   - At least 1 additional vowel among the 6 outer letters (≥ 2 vowels total).
+ *   - At least 2 consonants among the 6 outer letters — avoids all-vowel grids.
  *
- * Implementation: pick center from vowels, then fill outer with a guaranteed
- * extra vowel + random letters from the rest, then shuffle the outer ring.
+ * Implementation: pick center from vowels, guarantee 1 extra vowel + 2 consonants
+ * in outer, fill remaining 3 slots randomly, then shuffle the outer ring.
  */
 function pickRandom7(): { center: string; outer: string[] } {
   // Shuffle helper
@@ -56,18 +57,19 @@ function pickRandom7(): { center: string; outer: string[] } {
 
   // 2. Remaining letters (all letters except center)
   const remaining = ALL_LETTERS.filter((l) => l !== center);
-  const remainingVowels     = remaining.filter((l) => VOWELS.has(l));
+  const remainingVowels     = remaining.filter((l) =>  VOWELS.has(l));
   const remainingConsonants = remaining.filter((l) => !VOWELS.has(l));
 
-  // 3. Guarantee at least 1 more vowel in the outer ring
-  const extraVowel = shuffle(remainingVowels)[0];
+  // 3. Guarantee at least 1 more vowel and at least 2 consonants in the outer ring
+  const [extraVowel, ...restVowels]         = shuffle(remainingVowels);
+  const [cons1, cons2, ...restConsonants]   = shuffle(remainingConsonants);
 
-  // 4. Fill the remaining 5 slots from consonants (and any leftover vowels)
-  const pool = shuffle([...remainingConsonants, ...remainingVowels.filter((l) => l !== extraVowel)]);
-  const filler = pool.slice(0, 5);
+  // 4. Fill the remaining 3 outer slots from the leftover pool
+  const pool   = shuffle([...restVowels, ...restConsonants]);
+  const filler = pool.slice(0, 3);
 
-  // 5. Shuffle the outer ring so the guaranteed vowel isn't always in slot 0
-  const outer = shuffle([extraVowel, ...filler]);
+  // 5. Shuffle the outer ring so the guaranteed letters aren't always in the same slots
+  const outer = shuffle([extraVowel, cons1, cons2, ...filler]);
 
   return { center, outer };
 }

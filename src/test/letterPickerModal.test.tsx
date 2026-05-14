@@ -202,6 +202,28 @@ describe("LetterPickerModal — Random", () => {
       expect(vowelCount, `Expected ≥2 vowels, got ${vowelCount}`).toBeGreaterThanOrEqual(2);
     }
   });
+
+  it("Random always picks at least 2 consonants in the outer ring", async () => {
+    const VOWELS = new Set(["α", "ε", "η", "ι", "ο", "υ", "ω"]);
+    const { user } = setup();
+    for (let i = 0; i < 20; i++) {
+      await user.click(screen.getByTestId("letter-picker-reset"));
+      await user.click(screen.getByTestId("letter-picker-random"));
+      // Outer tiles are aria-pressed="true" but NOT the center (aria-label contains "κεντρικό")
+      const outerTiles = screen
+        .getAllByTestId(/^letter-tile-/)
+        .filter(
+          (el) =>
+            el.getAttribute("aria-pressed") === "true" &&
+            !el.getAttribute("aria-label")?.includes("κεντρικό"),
+        );
+      const consonantCount = outerTiles.filter((el) => {
+        const letter = el.getAttribute("data-testid")!.replace("letter-tile-", "");
+        return !VOWELS.has(letter);
+      }).length;
+      expect(consonantCount, `Expected ≥2 consonants in outer, got ${consonantCount}`).toBeGreaterThanOrEqual(2);
+    }
+  });
 });
 
 // ── Generate ──────────────────────────────────────────────────────────────────

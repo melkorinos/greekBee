@@ -188,10 +188,7 @@ See Tech debt #1 below.
 | # | Area | Description |
 |---|------|-------------|
 | 1 | **Per-puzzle leaderboard** | No cross-player high scores exist. The design has been discussed: each player would get a device UUID + name stored locally; scores would be written to a backend (Supabase recommended) via `POST /api/scores`; the current puzzle leaderboard would be fetched via `GET /api/scores?puzzleId=xxx`. Requires a database and API layer — not yet built. |
-| 2 | **Puzzle quality filter** | `puzzles-el.json` was generated without vowel/consonant balance rules. The batch generator should enforce: ≥ 2 vowels in the 7 letters, ≥ 2 consonants, centre letter must be a vowel, ≥ 1 pangram. The current file should be deleted and regenerated once the generator is updated. |
-| 3 | **English puzzle data** | `puzzles-en.json` still exists on disk (gitignored) but the English language path has been fully removed from the app (`Language = "el"` only). The file and any associated scripts referencing `--lang=en` can be cleaned up. |
-| 4 | **`usePersistence` not saving `puzzleMaxScore`** | `RESTORE_STATE` merges `foundWords`, `score` and `currentRank` from localStorage but not `puzzleMaxScore`. Because `puzzleMaxScore` is recomputed in `buildInitialState` on every page load this is currently harmless — but if scoring ever changes between versions, a restored session could show a stale rank. |
-| 5 | **No E2E tests** | All tests are unit (pure logic) or component-level (RTL). No Playwright/Cypress test covers a full browser session, including localStorage rehydration and the random puzzle navigation flow. |
+| 2 | **No E2E tests** | All tests are unit (pure logic) or component-level (RTL). No Playwright/Cypress test covers a full browser session, including localStorage rehydration and the random puzzle navigation flow. |
 
 ---
 

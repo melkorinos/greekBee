@@ -76,18 +76,35 @@ src/
 
 ## 🛠 Known Tech Debt
 
-1. **`puzzles-el.json` validWords are pre-computed accented** — `getPuzzleIndex` still normalises them at load time. After re-running batch generator against `words-el.json`, that `.map(normalizeLetters)` call can be removed and file size shrinks significantly.
-2. **`usePersistence` does not save `puzzleMaxScore`** — recomputed from scratch on restore; minor perf issue.
-3. **English puzzle path dormant** — `puzzles-en.json` exists but nothing uses it.
-4. **No E2E tests** — no Playwright/Cypress.
-5. **Wordle length variants deferred** — architecture supports 3–8; word lists not yet generated.
-6. **Mobile physical keyboard gap** — `window.keydown` in Wordle works on desktop only; no test verifying mobile on-screen keyboard path.
+1. **No E2E tests** — no Playwright/Cypress.
+2. **Wordle length variants deferred** — architecture supports 3–8; word lists not yet generated.
+3. **Mobile physical keyboard gap** — `window.keydown` in Wordle works on desktop only; no test verifying mobile on-screen keyboard path.
 
 ---
 
 ## 🧪 Test Coverage Map (25 files, 372 tests)
 
 > **How to use this as an agent**: before writing a new test, grep the `describe` column for the function/component name. If it appears, read that file's describe block to check if the specific case is already covered. Only write new tests for gaps.
+
+| File | `describe` blocks (= what is tested) |
+|------|---------------------------------------|
+| `evaluateGuess.test.ts` | `evaluateGuess` — all-correct, all-absent, present, mixed, duplicate answer letters, duplicate guess letters, length |
+| `wordleLogic.test.ts` | `isValidGuess`, `getTodaysWordlePuzzle` determinism |
+| `wordleReducer.test.ts` | `ADD_LETTER`, `DELETE_LETTER`, `SUBMIT_GUESS` (win/loss/invalid), `RESTORE_STATE` |
+| `gameLogic.test.ts` | `isPangram`, `scoreWord`, `maxScore`, `calculateRank`, `validateWord` |
+| `gameReducer.test.ts` | All 7 Spelling Bee reducer actions including `RESTORE_STATE` preserving `puzzleMaxScore` |
+| `greekLogic.test.ts` | `isPangram (Greek)`, `scoreWord (Greek)`, `calculateRank`, `validateWord`, `getPuzzleForDate` (data-independent: asserts vowel center, not specific letter) |
+| `GameBoard.test.tsx` | Rendering, keyboard input, word submission, button interactions |
+| `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`, migration from legacy key |
+| `Shell.test.tsx` | Hamburger open/close, navigation links, keyboard dismiss |
+| `persistence.test.ts` | `usePersistence` + `loadPersistedState` delegation to `useGameStore` |
+| `wordleDataLoader.test.ts` | `getWordleWords`, `getTodaysWordlePuzzle`, `getWordleAnswers` |
+| `spellingBeeDataLoader.test.ts` | `getPuzzleIndex`, `getPuzzleForDate`, `getPuzzleById`, `getRandomPuzzle` |
+| `spellingBeeRouting.test.ts` | All 1008 canonical greeklish URLs parse without 404; center/outer round-trip |
+| `connectionsReducer.test.ts` | `TOGGLE_WORD`, `SUBMIT_SELECTION`, `RESTORE_STATE`, one-away hint |
+| `connectionsGroupGrid.test.tsx` | `GroupGrid` renders solved groups |
+| `connectionsDataLoader.test.ts` | `getConnectionsPuzzleForDate`, fallback |
+| `letterPickerModal.test.tsx` | Visibility, center/outer selection, deselect, 7-letter cap, Reset, Random (vowel center × 20, ≥2 vowels × 20, ≥2 outer consonants × 20), Generate |
 
 | File | `describe` blocks (= what is tested) |
 |------|---------------------------------------|

@@ -26,6 +26,36 @@ Updated test coverage map header from "23 files, 289 tests" to "25 files, 372 te
 
 ---
 
+## 2026-05-14 — Session 14: Puzzle Quality Filter + Clean Slate Regeneration ✅
+
+**Outcome:** 389 tests (↑ from 374). Build clean. `puzzles-el.json` replaced.
+
+### Deletions / cleanup
+- `src/data/puzzles-en.json` — deleted (English path permanently removed)
+- `scripts/generate-puzzle.ts` — removed `--lang=en` from usage docs; added quality-rules comment block
+
+### Quality rules now enforced in two places (kept in sync by comment)
+
+**`scripts/batch-generate.ts`**
+- `meetsQuality()` extended: now also requires ≥2 consonants in the outer ring
+- New `hasPangram()` helper: after `findValidWords()`, rejects any combo where no valid word uses all 7 letters
+- New `--start-date` CLI flag: allows a clean-slate start date to be specified
+- Path bug fixed: was reading/writing `src/data/puzzles-el.json`; corrected to `src/data/spelling-bee/puzzles-el.json`
+
+**`src/components/shared/LetterPickerModal.tsx` — `pickRandom7()`**
+- Now guarantees exactly 1 extra vowel **and** at least 2 consonants in the outer ring (picks them explicitly; fills remaining 3 slots from the leftover pool)
+- No pangram check here — word list is not available on the client
+
+### Data
+- `src/data/spelling-bee/puzzles-el.json` wiped and regenerated: 1008 puzzles, dates 2026-03-25 → 2028-12-26, all four quality rules met, ~33× attempt ratio
+
+### Tests
+- `letterPickerModal.test.tsx` — new test: "Random always picks at least 2 consonants in the outer ring" × 20 runs
+- `greekLogic.test.ts` — `getPuzzleForDate` test made data-independent (asserts vowel property of center rather than specific letter, since regeneration changes the center)
+- New test count: 389 / 389 passing
+
+---
+
 ## 2026-05-14 — Session 13: Random Puzzle Quality Rules ✅
 
 **Outcome:** 374 tests (↑ from 372). Build clean.
