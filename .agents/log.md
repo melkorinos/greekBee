@@ -91,7 +91,47 @@ Greek percent-encoded URLs (`%CE%BA%CE%B1%CE%B5%CE%B9%CE%BF%CF%83`) are ugly whe
 
 ---
 
-## 2026-05-14 — Session 10: ERR_INVALID_CHAR Location Header Fix + Tests ✅
+## 2026-05-14 — Session 11: Mobile UI Fixes + Tests ✅
+
+**Outcome:** 388 tests (↑14 from 374). Build + ESLint clean (0 errors).
+
+### Root cause (all three issues share one source)
+The Wordle keyboard row 2 — 9 keys × `min-w-[2.5rem]` (40px) + 8 × `gap-1` (4px) = **392 px** — overflowed the 360 px Pixel 6 layout viewport. This caused:
+1. A horizontal drag strip with a dark body-background sliver on the left (dark mode)
+2. The fixed modal backdrop spanning 392 px while `flex justify-center` placed the modal 16 px right of the visible viewport edge
+3. On iPhone Safari: the expanded layout viewport prevented the fixed backdrop from fully covering the game board beneath the modal
+
+### Fixes applied
+
+**`src/app/globals.css`** — added `overflow-x: hidden` on `html` and `body`  
+**`src/components/wordle/Keyboard.tsx`** — replaced `min-w-[2.5rem]` with `flex-1 min-w-0`; added `w-full` on each row and `px-2` on outer wrapper  
+**`src/components/shared/HowToPlayModal.tsx`** — added `overflow-hidden` to modal box + `overflow-y-auto max-h-[70dvh]` to rule list
+
+### New tests (14 new tests)
+- `src/test/wordleTheme.test.tsx` — new `describe("Keyboard responsive layout classes")` block (7 tests): outer wrapper `w-full`, no `min-w-[` on any letter key, all keys have `flex-1` and `min-w-0`, all row divs have `w-full`, Enter and Delete also have `flex-1 min-w-0`
+- `src/test/mobileLayout.test.tsx` (new file, 7 tests) — `describe("HowToPlayModal — overflow safety classes")`: modal box has `overflow-hidden`, rule list has `overflow-y-auto` and `max-h-[70dvh]`, modal retains `rounded-2xl`, backdrop uses `flex items-center justify-center`, modal has `w-full max-w-sm`, backdrop has `px-4`
+
+### Root cause (all three issues share one source)
+The Wordle keyboard row 2 — 9 keys × `min-w-[2.5rem]` (40px) + 8 × `gap-1` (4px) = **392 px** — overflowed the 360 px Pixel 6 layout viewport. This caused:
+1. A horizontal drag strip with a dark body-background sliver on the left (dark mode)
+2. The fixed modal backdrop spanning 392 px while `flex justify-center` placed the modal 16 px right of the visible viewport edge
+3. On iPhone Safari: the expanded layout viewport prevented the fixed backdrop from fully covering the game board beneath the modal
+
+### Fixes applied
+
+**`src/app/globals.css`** — added `overflow-x: hidden` on `html` and `body`
+- Locks the CSS layout viewport to the visual viewport width
+- Prevents the drag/black-line symptom immediately, regardless of any overflowing child
+- Fixes modal centering on Pixel 6 as a direct consequence
+
+**`src/components/wordle/Keyboard.tsx`** — removed `min-w-[2.5rem]`; added `flex-1 min-w-0`
+- Letter keys and action keys now share available width proportionally in each row
+- Row 2 (9 keys, the overflow culprit) scales to ≈32 px/key on a 360 px screen — readable and no overflow
+- Added `w-full` to each row div and `px-2` to the outer keyboard wrapper
+
+**`src/components/shared/HowToPlayModal.tsx`** — added `overflow-hidden` to modal box + `overflow-y-auto max-h-[70dvh]` to rule list
+- Clips any future content that might protrude on iOS Safari
+- Rule list becomes independently scrollable if it exceeds 70% of the dynamic viewport height (safe on both short and tall phones)
 
 **Outcome:** 299 tests (↑ from 289). Build + ESLint clean.
 

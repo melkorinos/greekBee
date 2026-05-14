@@ -38,7 +38,7 @@ export function Keyboard({
     const state = letterStates[letter] ?? "unknown";
     return [
       "flex items-center justify-center",
-      "h-14 min-w-[2.5rem] px-2 rounded border",
+      "h-14 flex-1 min-w-0 px-1 rounded border",
       "text-base font-semibold uppercase cursor-pointer",
       "select-none transition-colors duration-150",
       "active:opacity-70",
@@ -50,19 +50,19 @@ export function Keyboard({
   // Enter/Delete share a base class; Enter gets an accent colour to stand out.
   const actionBase = [
     "flex items-center justify-center",
-    "h-14 rounded border",
+    "h-14 flex-1 min-w-0 rounded border",
     "font-semibold cursor-pointer select-none",
     "active:opacity-70 transition-colors",
     disabled ? "opacity-50 pointer-events-none" : "",
   ].join(" ");
 
-  const enterClass = `${actionBase} px-4 text-base bg-emerald-600 border-emerald-500 text-white`;
-  const deleteClass = `${actionBase} px-3 text-sm bg-stone-600 border-stone-500 text-stone-100`;
+  const enterClass  = `${actionBase} px-1 text-base bg-emerald-600 border-emerald-500 text-white`;
+  const deleteClass = `${actionBase} px-1 text-sm  bg-stone-600  border-stone-500  text-stone-100`;
 
   return (
-    <div className="flex flex-col items-center gap-1.5" aria-label="Keyboard">
+    <div className="flex flex-col items-center gap-1.5 w-full px-2" aria-label="Keyboard">
       {ROWS.map((row, ri) => (
-        <div key={ri} className="flex gap-1">
+        <div key={ri} className="flex gap-1 w-full">
           {ri === ROWS.length - 1 && (
             <button
               className={enterClass}

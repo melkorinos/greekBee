@@ -25,6 +25,15 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Prevent horizontal scroll on all game pages.
+   Without this, wide elements (e.g. the Wordle keyboard) expand the
+   CSS layout-viewport, which shifts fixed-position modals to the right
+   and lets users drag the screen revealing a black strip on the left. */
+html,
+body {
+  overflow-x: hidden;
+}
+
 /* Wordle tile flip animation */
 @keyframes flip {
   0%   { transform: rotateX(0deg); }

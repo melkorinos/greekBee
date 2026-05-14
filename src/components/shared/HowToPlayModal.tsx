@@ -60,7 +60,7 @@ export function HowToPlayModal({
           onClick={() => setOpen(false)}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative"
+            className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -73,7 +73,7 @@ export function HowToPlayModal({
 
             <h2 className="text-lg font-bold text-stone-800 mb-3">{title}</h2>
 
-            <ul className="space-y-2 text-sm text-stone-700">
+            <ul className="space-y-2 text-sm text-stone-700 overflow-y-auto max-h-[70dvh]">
               {items.map((item, i) => (
                 <li key={i} className="flex gap-2">
                   <span className="mt-0.5 shrink-0">{bulletIcon}</span>
