@@ -10,10 +10,10 @@
 
 "use client";
 
+import { btnPrimaryCompact, inputCompactClass, labelClass, lbRowBase, lbRowPlayer, lbTdName, lbTdRank, lbTdScore } from "./styles";
 import { useEffect, useState } from "react";
 
 import Link from "next/link";
-import { inputCompactClass, labelClass, btnPrimaryCompact, lbRowBase, lbRowPlayer, lbTdRank, lbTdName, lbTdScore } from "./styles";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 
 interface LeaderboardModalProps {
@@ -35,6 +35,9 @@ export function LeaderboardModal({
 }: LeaderboardModalProps) {
   const [selectedDate, setSelectedDate] = useState(defaultPuzzleId);
   const [nameInput,    setNameInput]    = useState(displayName);
+
+  // Today's date — used to cap the date picker so future dates are not selectable.
+  const today = new Date().toISOString().split("T")[0];
 
   // Sync name input if parent updates displayName (e.g. first-time save).
   useEffect(() => { setNameInput(displayName); }, [displayName]);
@@ -130,6 +133,7 @@ export function LeaderboardModal({
           <input
             type="date"
             value={selectedDate}
+            max={today}
             onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
             className={`${inputCompactClass} flex-1 min-w-0`}
           />
@@ -160,7 +164,7 @@ export function LeaderboardModal({
               <p className="text-stone-400 text-sm mb-3">
                 Κανείς δεν έχει παίξει αυτή την ημέρα ακόμα.
               </p>
-              {!isViewingCurrentPuzzle && (
+              {!isViewingCurrentPuzzle && selectedDate <= today && (
                 <Link
                   href={`/spelling-bee?puzzle=${selectedDate}`}
                   className="text-stone-600 text-sm underline hover:text-stone-800"
@@ -222,7 +226,7 @@ export function LeaderboardModal({
         </div>
 
         {/* ── Footer: play-this-puzzle link ─────────────────────────────── */}
-        {!isViewingCurrentPuzzle && (
+        {!isViewingCurrentPuzzle && selectedDate <= today && (
           <div className="px-5 py-3 border-t border-stone-100 text-center">
             <Link
               href={`/spelling-bee?puzzle=${selectedDate}`}

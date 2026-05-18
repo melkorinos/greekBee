@@ -4,7 +4,29 @@
 
 ---
 
-## 2026-05-18 — Session 18: Leaderboard Bug Fixes + UI Polish ✅
+## 2026-05-18 — Session 19: Leaderboard Date Restriction + Display Name Fix ✅
+
+**Outcome:** 559 tests (35 files) · build clean.
+
+### Bug fixes
+- **Future dates selectable in leaderboard date picker** — Added `max={today}` to the `<input type="date">` in `LeaderboardModal`, capping the browser's native date picker at today. Also added a programmatic guard: the "Παίξε αυτό το παζλ" link now checks `selectedDate <= today` in addition to `!isViewingCurrentPuzzle`, so a future date (if somehow injected into state) never produces a play link.
+- **Display name resets to "Ανώνυμος" after save** — Root cause: the `scores` table had only INSERT + SELECT RLS policies; the upsert's UPDATE path (triggered on name change re-post) was silently blocked by Supabase RLS. Fix: added `CREATE POLICY "anon update"` to allow anonymous UPDATE on the `scores` table (SQL run manually in Supabase dashboard).
+
+### Modified files
+- `src/components/spelling-bee/LeaderboardModal.tsx` — `today` constant added; `max={today}` on date input; both play-link render conditions (`isViewingCurrentPuzzle` + footer) updated to include `selectedDate <= today`.
+
+### New test file
+- `src/test/leaderboardModal.test.tsx` (11 tests) — closed state, date picker `max` attribute, play link appears/absent for past/future dates, play link href, display name save + Enter key, save button disabled state.
+
+### Supabase SQL (run manually in dashboard)
+```sql
+CREATE POLICY "anon update" ON public.scores
+  FOR UPDATE TO anon
+  USING (true)
+  WITH CHECK (true);
+```
+
+---
 
 **Outcome:** 479 tests (33 files) · build clean.
 
