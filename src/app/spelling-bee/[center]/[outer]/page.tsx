@@ -15,6 +15,7 @@
 // The resulting Puzzle object is identical in shape to a curated one, so the
 // entire existing game stack (GameBoard, reducer, persistence) works unchanged.
 
+import { buildCustomPuzzle, getCuratedPuzzleByLetters } from "@/data";
 import { notFound, redirect } from "next/navigation";
 
 import { GameBoard } from "@/components/spelling-bee/GameBoard";
@@ -22,7 +23,6 @@ import { HowToPlayModal } from "@/components/spelling-bee/HowToPlayModal";
 import type { Language } from "@/types";
 import { NewPuzzleButton } from "@/components/spelling-bee/NewPuzzleButton";
 import { ShareButton } from "@/components/spelling-bee/ShareButton";
-import { buildCustomPuzzle } from "@/data";
 import { greekToGreeklish } from "@/lib/greeklish";
 import { parseCustomUrl } from "@/games/spelling-bee/lib/parseCustomUrl";
 
@@ -52,7 +52,12 @@ export default async function CustomSpellingBeePage({
   }
 
   const language: Language = "el";
-  const puzzle = buildCustomPuzzle(parsed.center, parsed.outer, language);
+  // Use the curated puzzle if the letters match a known daily puzzle.
+  // This preserves the real puzzle ID (e.g. "2026-05-18-el") so GameBoard
+  // can enable the leaderboard 🏆 button for daily puzzles.
+  const puzzle =
+    getCuratedPuzzleByLetters(parsed.center, parsed.outer, language) ??
+    buildCustomPuzzle(parsed.center, parsed.outer, language);
 
   // The share URL is the greeklish canonical path — pure ASCII, human-readable.
   // ShareButton will prepend window.location.origin on the client.

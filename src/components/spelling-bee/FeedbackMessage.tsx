@@ -3,17 +3,32 @@
 // FeedbackMessage — brief toast-style message shown after each word submission.
 // Auto-hides when the player types a new letter (lastSubmission resets via input change).
 
+import {
+  feedbackAlreadySuggestedClass,
+  feedbackErrorClass,
+  feedbackJustSuggestedClass,
+  feedbackPangramClass,
+  feedbackSuggestLinkClass,
+  feedbackValidClass,
+  feedbackValidContainer,
+} from "./styles";
+
 import type { ValidationStatus } from "@/games/spelling-bee/types";
 
 /** Human-readable messages for each validation outcome */
-const MESSAGES: Record<ValidationStatus, string> = {
+const MESSAGES: Record<ValidationStatus, string | ((word: string) => string)> = {
   valid:          "", // Handled separately (show the word + points)
   already_found:  "Already found!",
   too_short:      "Too short — 4 letters minimum",
   missing_center: "Must contain the centre letter",
   invalid_letter: "Not in letter list",
-  not_in_list:    "Not in word list",
+  not_in_list:    (word: string) => `${word.toUpperCase()} — not in word list`,
 };
+
+function getMessage(status: ValidationStatus, word: string): string {
+  const msg = MESSAGES[status];
+  return typeof msg === "function" ? msg(word) : msg;
+}
 
 interface FeedbackMessageProps {
   word:              string;
@@ -28,14 +43,6 @@ interface FeedbackMessageProps {
   justSuggested?:    boolean;
 }
 
-// ── Class constants ──────────────────────────────────────────────────────────
-const styles = {
-  validContainer:  "flex items-center gap-2 text-sm font-semibold",
-  pangramMessage:  "text-yellow-600 uppercase tracking-wide",
-  validMessage:    "text-green-600 uppercase tracking-wide",
-  errorMessage:    "text-sm font-medium text-red-500",
-};
-
 export function FeedbackMessage({
   word,
   status,
@@ -47,14 +54,13 @@ export function FeedbackMessage({
 }: FeedbackMessageProps) {
   if (status === "valid") {
     return (
-      <div data-testid="feedback-valid" className={styles.validContainer}>
+      <div data-testid="feedback-valid" className={feedbackValidContainer}>
         {isPangram ? (
-          // Pangram gets a special golden celebration message
-          <span data-testid="feedback-pangram" className={styles.pangramMessage}>
+          <span data-testid="feedback-pangram" className={feedbackPangramClass}>
             🎉 Pangram! +{points} pts
           </span>
         ) : (
-          <span data-testid="feedback-word-accepted" className={styles.validMessage}>
+          <span data-testid="feedback-word-accepted" className={feedbackValidClass}>
             {word} +{points} pt{points !== 1 ? "s" : ""}
           </span>
         )}
@@ -63,21 +69,21 @@ export function FeedbackMessage({
   }
 
   return (
-    <div data-testid={`feedback-error-${status}`} className={styles.errorMessage}>
-      {MESSAGES[status]}
+    <div data-testid={`feedback-error-${status}`} className={feedbackErrorClass}>
+      {getMessage(status, word)}
       {status === "not_in_list" && onSuggest && (
         <span className="ml-2">
           {justSuggested ? (
             <span
               data-testid="feedback-just-suggested"
-              className="text-xs text-green-600 font-medium"
+              className={feedbackJustSuggestedClass}
             >
               «{word.toUpperCase()}» υποβλήθηκε ✓
             </span>
           ) : alreadySuggested ? (
             <span
               data-testid="feedback-already-suggested"
-              className="text-xs text-stone-400"
+              className={feedbackAlreadySuggestedClass}
             >
               Ήδη υποβλήθηκε
             </span>
@@ -85,7 +91,7 @@ export function FeedbackMessage({
             <button
               onClick={onSuggest}
               data-testid="feedback-suggest-btn"
-              className="text-xs text-stone-500 underline underline-offset-2 hover:text-stone-800 transition-colors"
+              className={feedbackSuggestLinkClass}
             >
               Πρότεινέ την →
             </button>

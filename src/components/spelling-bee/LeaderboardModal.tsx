@@ -13,6 +13,7 @@
 import { useEffect, useState } from "react";
 
 import Link from "next/link";
+import { inputCompactClass, labelClass, btnPrimaryCompact, lbRowBase, lbRowPlayer, lbTdRank, lbTdName, lbTdScore } from "./styles";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 
 interface LeaderboardModalProps {
@@ -67,13 +68,6 @@ export function LeaderboardModal({
   const nameDirty = nameInput.trim() !== displayName && nameInput.trim() !== "";
   const isViewingCurrentPuzzle = selectedDate === defaultPuzzleId;
 
-  // ── Styles ─────────────────────────────────────────────────────────────────
-
-  const rowBase    = "border-t border-stone-50 text-sm";
-  const rowPlayer  = "bg-amber-50 font-semibold";
-  const tdRank     = "py-1.5 pr-2 text-stone-400 text-xs w-6 tabular-nums";
-  const tdName     = "py-1.5 text-stone-700";
-  const tdScore    = "py-1.5 text-right font-mono text-stone-800 pl-4";
 
   if (!isOpen) return null;
 
@@ -105,7 +99,7 @@ export function LeaderboardModal({
 
         {/* ── Display name ───────────────────────────────────────────────── */}
         <div className="px-5 py-3 border-b border-stone-100">
-          <label className="block text-xs font-medium text-stone-500 mb-1.5">
+          <label className={`${labelClass} mb-1.5`}>
             Το όνομά σου
           </label>
           <div className="flex gap-2">
@@ -116,12 +110,12 @@ export function LeaderboardModal({
               onKeyDown={(e) => e.key === "Enter" && nameDirty && handleSaveName()}
               placeholder="Ανώνυμος"
               maxLength={30}
-              className="flex-1 border border-stone-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400"
+              className={`flex-1 ${inputCompactClass}`}
             />
             <button
               onClick={handleSaveName}
               disabled={!nameDirty}
-              className="px-3 py-1.5 bg-stone-800 text-white text-sm rounded-lg disabled:opacity-40 hover:bg-stone-700 active:bg-stone-900 transition-colors"
+              className={btnPrimaryCompact}
             >
               {!nameDirty && displayName ? "✓" : "Αποθήκευση"}
             </button>
@@ -130,14 +124,14 @@ export function LeaderboardModal({
 
         {/* ── Date picker ────────────────────────────────────────────────── */}
         <div className="px-5 py-3 border-b border-stone-100 flex items-center gap-3">
-          <label className="text-xs font-medium text-stone-500 shrink-0">
+          <label className="text-xs font-medium text-stone-600 shrink-0">
             Ημερομηνία
           </label>
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
-            className="border border-stone-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 flex-1 min-w-0"
+            className={`${inputCompactClass} flex-1 min-w-0`}
           />
           <button
             onClick={() => void refresh()}
@@ -190,16 +184,16 @@ export function LeaderboardModal({
                 {top20.map((row) => (
                   <tr
                     key={row.rank}
-                    className={`${rowBase} ${row.isPlayer ? rowPlayer : ""}`}
+                    className={`${lbRowBase} ${row.isPlayer ? lbRowPlayer : ""}`}
                   >
-                    <td className={tdRank}>{row.rank}</td>
-                    <td className={tdName}>
+                    <td className={lbTdRank}>{row.rank}</td>
+                    <td className={lbTdName}>
                       {row.display_name}
                       {row.isPlayer && (
                         <span className="text-amber-500 ml-1 text-xs">(εσύ)</span>
                       )}
                     </td>
-                    <td className={tdScore}>{row.score}</td>
+                    <td className={lbTdScore}>{row.score}</td>
                   </tr>
                 ))}
               </tbody>
@@ -212,13 +206,13 @@ export function LeaderboardModal({
               <div className="border-t-2 border-dashed border-stone-200 my-3" />
               <table className="w-full">
                 <tbody>
-                  <tr className={`${rowBase} ${rowPlayer}`}>
-                    <td className={tdRank}>{playerRow.rank}</td>
-                    <td className={tdName}>
+                  <tr className={`${lbRowBase} ${lbRowPlayer}`}>
+                    <td className={lbTdRank}>{playerRow.rank}</td>
+                    <td className={lbTdName}>
                       {playerRow.display_name}
                       <span className="text-amber-500 ml-1 text-xs">(εσύ)</span>
                     </td>
-                    <td className={tdScore}>{playerRow.score}</td>
+                    <td className={lbTdScore}>{playerRow.score}</td>
                   </tr>
                 </tbody>
               </table>

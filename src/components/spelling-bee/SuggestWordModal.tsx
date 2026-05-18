@@ -6,6 +6,8 @@
 // onSuccess is called after a successful POST so the parent can mark the
 // word as already-suggested in localStorage and prevent re-submission.
 
+import { btnCancel, btnModalSubmit, inputClass, inputCompactClass, inputReadonlyClass, labelClass, labelOptionalClass } from "./styles";
+
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
 import { useState } from "react";
 
@@ -110,22 +112,22 @@ export function SuggestWordModal({
             <div className="space-y-3">
               {/* Word — read-only */}
               <div>
-                <label className="text-xs font-medium text-stone-600 block mb-1">
+                <label className={labelClass}>
                   Λέξη
                 </label>
                 <input
                   value={word.toUpperCase()}
                   readOnly
                   data-testid="suggest-modal-word"
-                  className="w-full px-3 py-2 rounded-xl border border-stone-200 bg-stone-50 text-stone-900 text-sm font-mono font-semibold select-none"
+                  className={inputReadonlyClass}
                 />
               </div>
 
               {/* Player name — optional */}
               <div>
-                <label className="text-xs font-medium text-stone-600 block mb-1">
+                <label className={labelClass}>
                   Όνομα{" "}
-                  <span className="font-normal text-stone-400">(προαιρετικό)</span>
+                  <span className={labelOptionalClass}>(προαιρετικό)</span>
                 </label>
                 <input
                   value={playerName}
@@ -133,15 +135,15 @@ export function SuggestWordModal({
                   placeholder="π.χ. Νίκος"
                   maxLength={50}
                   data-testid="suggest-modal-name"
-                  className="w-full px-3 py-2 rounded-xl border border-stone-200 text-stone-900 font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-stone-300 transition-shadow"
+                  className={inputClass}
                 />
               </div>
 
               {/* Note — optional */}
               <div>
-                <label className="text-xs font-medium text-stone-600 block mb-1">
+                <label className={labelClass}>
                   Σχόλιο{" "}
-                  <span className="font-normal text-stone-400">(προαιρετικό)</span>
+                  <span className={labelOptionalClass}>(προαιρετικό)</span>
                 </label>
                 <textarea
                   value={note}
@@ -150,7 +152,7 @@ export function SuggestWordModal({
                   maxLength={200}
                   rows={3}
                   data-testid="suggest-modal-note"
-                  className="w-full px-3 py-2 rounded-xl border border-stone-200 text-stone-900 font-semibold text-sm resize-none focus:outline-none focus:ring-2 focus:ring-stone-300 transition-shadow"
+                  className={`${inputClass} resize-none`}
                 />
               </div>
             </div>
@@ -165,7 +167,7 @@ export function SuggestWordModal({
               <button
                 onClick={handleClose}
                 data-testid="suggest-modal-cancel"
-                className="flex-1 py-2 rounded-xl border border-stone-300 text-stone-600 text-sm font-medium hover:bg-stone-50 active:bg-stone-100 transition-colors"
+                className={btnCancel}
               >
                 Ακύρωση
               </button>
@@ -173,7 +175,7 @@ export function SuggestWordModal({
                 onClick={handleSubmit}
                 disabled={status === "submitting"}
                 data-testid="suggest-modal-submit"
-                className="flex-1 py-2 rounded-xl bg-stone-800 text-white text-sm font-semibold hover:bg-stone-700 active:bg-stone-900 disabled:opacity-50 transition-colors"
+                className={btnModalSubmit}
               >
                 {status === "submitting" ? "…" : "Αποστολή"}
               </button>

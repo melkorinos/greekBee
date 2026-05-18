@@ -18,7 +18,7 @@ Three live games + custom puzzle URLs. **445 tests passing.**
 | **Routing** | `/spelling-bee`, `/wordle`, `/connections`, `/` game picker. Custom puzzle: `/spelling-bee/[center]/[outer]` |
 | **Persistence** | Single `wordgames:state` localStorage key; typed envelope. `useGameStore` is the ONLY code that touches localStorage |
 | **Types** | Root `src/types/index.ts` = `Language`, `GameId`, `PersistenceEnvelope` only. Game types live in `src/games/*/types.ts` |
-| **Theming** | Wordle + Shell header = dark (unconditional classes). Spelling Bee + picker = light. No `dark:` Tailwind classes anywhere |
+| **Theming** | Wordle + Shell header = dark (unconditional classes). Spelling Bee + picker = light. No `dark:` Tailwind classes anywhere. Shared form style tokens in `src/components/spelling-bee/styles.ts` (`labelClass`, `inputClass`, `inputCompactClass`, etc.) — use these for all modal inputs/labels. |
 | **Game logic** | Pure functions in `src/games/*/lib/` — zero React imports |
 | **Shared components** | Earn their place: only graduate to `src/components/shared/` when 2 games genuinely need it |
 | **Connections** | No `language` field on `ConnectionsPuzzle` — it has no word-list dependency |
@@ -82,6 +82,7 @@ src/
 1. **No E2E tests** — no Playwright/Cypress.
 2. **Wordle length variants deferred** — architecture supports 3–8; word lists not yet generated.
 3. **Mobile physical keyboard gap** — `window.keydown` in Wordle works on desktop only; no test verifying mobile on-screen keyboard path.
+4. **TD-001 — Partial style-token coverage in `FoundWordsList` / `ScoreBar`** — layout tokens (`container`, `heading`, `labelRow`, etc.) still live in local `const styles = {}` objects inside those two components while visual tokens moved to `styles.ts`. Either move all remaining keys into `styles.ts` (preferred), or document the local-layout / shared-visual split explicitly in `styles.ts`'s header so the rule is clear. Acceptance: no component in `src/components/spelling-bee/` has an undocumented local `const styles` object.
 
 ---
 

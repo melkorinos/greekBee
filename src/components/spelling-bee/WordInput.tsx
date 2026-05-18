@@ -5,6 +5,8 @@
 // When canSubmit is true (word >=4 letters), a green submit button appears
 // inline so players can submit without needing a separate button row.
 
+import { colorCenterLetter, colorInputPlaceholder, colorOuterLetter } from "./styles";
+
 interface WordInputProps {
   value:        string;
   centerLetter: string;
@@ -16,23 +18,20 @@ interface WordInputProps {
 
 // Class constants
 const styles = {
-  container:    "min-h-[2.5rem] flex items-center justify-center gap-0.5 text-3xl font-bold tracking-widest uppercase",
-  placeholder:  "text-stone-300",
-  centerLetter: "text-yellow-500",
-  outerLetter:  "text-stone-800",
+  container: "min-h-[2.5rem] flex items-center justify-center gap-0.5 text-3xl font-bold tracking-widest uppercase",
 };
 
 export function WordInput({ value, centerLetter, onSubmit, canSubmit = false }: WordInputProps) {
   return (
     <div data-testid="word-input" className={styles.container}>
       {value.length === 0 ? (
-        <span className={styles.placeholder}>-</span>
+        <span className={colorInputPlaceholder}>-</span>
       ) : (
         value.split("").map((ch, i) => (
           <span
             key={i}
             data-testid="word-input-letter"
-            className={ch === centerLetter ? styles.centerLetter : styles.outerLetter}
+            className={ch === centerLetter ? colorCenterLetter : colorOuterLetter}
           >
             {ch.toUpperCase()}
           </span>

@@ -5,10 +5,11 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  getCuratedPuzzleByLetters,
+  getNextPuzzle,
   getPuzzleById,
   getPuzzleForDate,
   getRandomPuzzle,
-  getNextPuzzle,
 } from "@/data/spelling-bee";
 
 // ── getPuzzleForDate ───────────────────────────────────────────────────────────
@@ -116,5 +117,36 @@ describe("getNextPuzzle", () => {
     // If last is truly the last, cycled should equal first
     // (only true if last is actually the last in the array — valid assumption given fallback logic)
     expect(cycled.id).toBe(first.id);
+  });
+});
+
+// ── getCuratedPuzzleByLetters ─────────────────────────────────────────────────
+
+describe("getCuratedPuzzleByLetters", () => {
+  // Use a known curated puzzle as a reference
+  const ref = getPuzzleForDate("2026-03-25");
+
+  it("returns the curated puzzle when letters match exactly", () => {
+    const found = getCuratedPuzzleByLetters(ref.centerLetter, ref.outerLetters);
+    expect(found).not.toBeNull();
+    expect(found!.id).toBe(ref.id);
+  });
+
+  it("returns the curated puzzle regardless of outer-letter order", () => {
+    const shuffled = [...ref.outerLetters].reverse();
+    const found = getCuratedPuzzleByLetters(ref.centerLetter, shuffled);
+    expect(found).not.toBeNull();
+    expect(found!.id).toBe(ref.id);
+  });
+
+  it("returns null for a letter combination not in the curated list", () => {
+    // Highly unlikely any curated puzzle uses these exact letters
+    const found = getCuratedPuzzleByLetters("ξ", ["ψ", "ζ", "θ", "φ", "β", "χ"]);
+    expect(found).toBeNull();
+  });
+
+  it("returned puzzle has a date-format id (not 'custom-...')", () => {
+    const found = getCuratedPuzzleByLetters(ref.centerLetter, ref.outerLetters);
+    expect(found!.id).toMatch(/^\d{4}-\d{2}-\d{2}/);
   });
 });

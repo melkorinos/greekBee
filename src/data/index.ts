@@ -9,4 +9,5 @@ export {
   getRandomPuzzle,
   getNextPuzzle,
   buildCustomPuzzle,
+  getCuratedPuzzleByLetters,
 } from "./spelling-bee/index";

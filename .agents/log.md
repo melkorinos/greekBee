@@ -4,6 +4,37 @@
 
 ---
 
+## 2026-05-18 — Session 18: Leaderboard Bug Fixes + UI Polish ✅
+
+**Outcome:** 479 tests (33 files) · build clean.
+
+### Bug fixes
+- **🏆 button never appeared** — root cause: `/spelling-bee/[center]/[outer]` page always called `buildCustomPuzzle`, which hardcodes `id = "custom-κ-..."`. Added `getCuratedPuzzleByLetters()` to the data layer; page now uses the real curated puzzle (with date-format id) when the letters match a daily puzzle — making `isDailyPuzzle = true` and revealing the button. Custom letter combos still fall back to `buildCustomPuzzle`.
+- **"Not in word list" message had no word** — `MESSAGES.not_in_list` changed from a string to a function `(word) => \`${word.toUpperCase()} — not in word list\``.
+
+### New shared style tokens
+- **`src/components/spelling-bee/styles.ts`** — `labelClass`, `labelOptionalClass`, `inputClass`, `inputReadonlyClass`, `inputCompactClass`. All modal inputs and labels now reference these instead of inline strings. Re-exported from the barrel `index.ts`.
+
+### UI fixes
+- `SuggestWordModal` — `Λέξη` label was `text-stone-500` (too light); now uses `labelClass` (`text-stone-600`) matching `Όνομα`.
+- `LeaderboardModal` — `Το όνομά σου` and `Ημερομηνία` inputs had no `text-stone-900 font-semibold`; now use `inputCompactClass`.
+
+### New / modified files
+- `src/data/spelling-bee/index.ts` — `getCuratedPuzzleByLetters()` added
+- `src/data/index.ts` — barrel export updated
+- `src/app/spelling-bee/[center]/[outer]/page.tsx` — uses `getCuratedPuzzleByLetters ?? buildCustomPuzzle`
+- `src/components/spelling-bee/styles.ts` — new shared token file
+- `src/components/spelling-bee/SuggestWordModal.tsx` — shared tokens, label colour fix
+- `src/components/spelling-bee/FeedbackMessage.tsx` — word included in not_in_list message
+- `src/components/spelling-bee/LeaderboardModal.tsx` — shared tokens, input colour fix
+- `src/components/spelling-bee/index.ts` — exports `styles.ts`
+
+### Tests
+- `spellingBeeDataLoader.test.ts` — 4 new tests for `getCuratedPuzzleByLetters`
+- `feedbackMessage.test.tsx` — updated `not_in_list` assertion to check word is included
+
+---
+
 ## 2026-05-18 — Session 17: Per-Puzzle Leaderboard ✅
 
 **Outcome:** 475 tests (33 files) · build clean.

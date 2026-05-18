@@ -5,8 +5,8 @@
 import type { Language } from "@/types";
 import type { Puzzle } from "@/games/spelling-bee/types";
 import { computeValidWords } from "@/games/spelling-bee/lib/computeValidWords";
-import { normalizeLetters } from "@/games/spelling-bee/lib/normalize";
 import greekPuzzles from "./puzzles-el.json";
+import { normalizeLetters } from "@/games/spelling-bee/lib/normalize";
 import wordListEl from "../words-el.json";
 
 // Cast the imported JSON to the typed Puzzle array.
@@ -68,6 +68,31 @@ export function getNextPuzzle(current: Puzzle): Puzzle {
   const idx = list.findIndex((p) => p.id === current.id);
   const nextIdx = idx >= 0 ? (idx + 1) % list.length : 0;
   return list[nextIdx];
+}
+
+/**
+ * Looks up a curated puzzle by its letter combination (center + outer set).
+ * Returns the curated puzzle if found, null otherwise.
+ * Used by the [center]/[outer] page to detect when a URL matches a daily puzzle
+ * so the real puzzle ID (e.g. "2026-05-18-el") reaches GameBoard instead of
+ * the synthetic "custom-..." ID — which enables the leaderboard.
+ */
+export function getCuratedPuzzleByLetters(
+  center: string,
+  outer: string[],
+  language: Language = "el"
+): Puzzle | null {
+  const normalizedCenter = normalizeLetters(center);
+  const normalizedOuter  = [...outer.map(normalizeLetters)].sort().join("");
+  return (
+    PUZZLES[language].find((p) => {
+      const pOuter = [...p.outerLetters.map(normalizeLetters)].sort().join("");
+      return (
+        normalizeLetters(p.centerLetter) === normalizedCenter &&
+        pOuter === normalizedOuter
+      );
+    }) ?? null
+  );
 }
 
 /**

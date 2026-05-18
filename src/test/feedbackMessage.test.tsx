@@ -52,9 +52,11 @@ describe("FeedbackMessage — error statuses", () => {
     expect(screen.getByTestId("feedback-error-missing_center")).toHaveTextContent("centre letter");
   });
 
-  it("shows not_in_list message", () => {
+  it("shows not_in_list message including the word uppercased", () => {
     renderFeedback({ word: "καλος", status: "not_in_list", points: 0, isPangram: false });
-    expect(screen.getByTestId("feedback-error-not_in_list")).toHaveTextContent("Not in word list");
+    const el = screen.getByTestId("feedback-error-not_in_list");
+    expect(el).toHaveTextContent("ΚΑΛΟΣ");
+    expect(el).toHaveTextContent("not in word list");
   });
 });
 

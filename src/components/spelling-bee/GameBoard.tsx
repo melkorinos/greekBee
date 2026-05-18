@@ -15,6 +15,7 @@ import type { Puzzle } from "@/games/spelling-bee/types";
 import { ScoreBar } from "./ScoreBar";
 import { SuggestWordModal } from "./SuggestWordModal";
 import { WordInput } from "./WordInput";
+import { btnSecondary } from "./styles";
 import { useGameState } from "@/games/spelling-bee/hooks/useGameState";
 
 interface GameBoardProps {
@@ -58,8 +59,11 @@ export function GameBoard({ puzzle }: GameBoardProps) {
     () => typeof window === "undefined" ? "" : getOrCreateDeviceId()
   );
 
-  // Only daily puzzles (YYYY-MM-DD) participate in the leaderboard.
-  const isDailyPuzzle = /^\d{4}-\d{2}-\d{2}$/.test(activePuzzle.id);
+  // Only daily puzzles (YYYY-MM-DD or YYYY-MM-DD-xx) participate in the leaderboard.
+  // Custom puzzles have IDs like "custom-α-βγδεζη" — those are excluded.
+  const isDailyPuzzle = /^\d{4}-\d{2}-\d{2}/.test(activePuzzle.id);
+  // The leaderboard API expects a plain YYYY-MM-DD key — use puzzle.date.
+  const leaderboardPuzzleId = activePuzzle.date;
 
   // Keep a ref so the score-submission effect always reads the latest name
   // without needing it as a dependency (avoids re-running on every name update).
@@ -78,14 +82,14 @@ export function GameBoard({ puzzle }: GameBoardProps) {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        puzzle_id:    activePuzzle.id,
+        puzzle_id:    leaderboardPuzzleId,
         device_id:    deviceId,
         display_name: displayNameRef.current || "Ανώνυμος",
         score,
       }),
     }).catch(() => {}); // silently swallow network errors
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [score, isDailyPuzzle, activePuzzle.id, deviceId]);
+  }, [score, isDailyPuzzle, leaderboardPuzzleId, deviceId]);
   function handleSuggest(word: string) {
     setSuggestWord(word);
     setJustSuggested(null); // clear any previous confirmation
@@ -110,7 +114,7 @@ export function GameBoard({ puzzle }: GameBoardProps) {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        puzzle_id:    activePuzzle.id,
+        puzzle_id:    leaderboardPuzzleId,
         device_id:    deviceId,
         display_name: name,
         score,
@@ -142,19 +146,12 @@ export function GameBoard({ puzzle }: GameBoardProps) {
   }, []); // registered once — ref keeps handler current
 
 
-  // ── Class constants ──────────────────────────────────────────────────────────
-  const styles = {
-    container:
-      "flex flex-col items-center gap-6 w-full max-w-sm mx-auto px-4 py-8",
-    buttonRow: "flex items-center gap-2 w-full justify-center",
-    buttonSecondary:
-      "px-4 py-2 rounded-full border border-stone-300 text-stone-700 text-sm font-medium hover:bg-stone-100 active:bg-stone-200 transition-colors",
-    buttonPrimary:
-      "px-8 py-2 rounded-full bg-stone-800 text-white text-sm font-semibold hover:bg-stone-700 active:bg-stone-900 transition-colors",
-  };
+  // ── Layout constants ────────────────────────────────────────────────────────
+  const containerClass = "flex flex-col items-center gap-6 w-full max-w-sm mx-auto px-4 py-8";
+  const buttonRowClass  = "flex items-center gap-2 w-full justify-center";
 
   return (
-    <div data-testid="game-board" className={styles.container}>
+    <div data-testid="game-board" className={containerClass}>
       {/* Score + rank */}
       <ScoreBar
         score={score}
@@ -199,18 +196,18 @@ export function GameBoard({ puzzle }: GameBoardProps) {
       />
 
       {/* Action buttons — secondary actions */}
-      <div className={styles.buttonRow}>
+      <div className={buttonRowClass}>
         <button
           data-testid="btn-delete"
           onClick={deleteLetter}
-          className={styles.buttonSecondary}
+          className={btnSecondary}
         >
           Διαγραφή
         </button>
         <button
           data-testid="btn-clear"
           onClick={clearInput}
-          className={styles.buttonSecondary}
+          className={btnSecondary}
           aria-label="Clear input"
         >
           Καθαρισμός
@@ -218,7 +215,7 @@ export function GameBoard({ puzzle }: GameBoardProps) {
         <button
           data-testid="btn-shuffle"
           onClick={shuffleLetters}
-          className={styles.buttonSecondary}
+          className={btnSecondary}
         >
           Ανακάτεμα
         </button>
@@ -226,7 +223,7 @@ export function GameBoard({ puzzle }: GameBoardProps) {
           <button
             data-testid="btn-leaderboard"
             onClick={() => setLeaderboardOpen(true)}
-            className={styles.buttonSecondary}
+            className={btnSecondary}
             aria-label="Πίνακας Σκορ"
           >
             🏆
@@ -241,7 +238,7 @@ export function GameBoard({ puzzle }: GameBoardProps) {
       {isDailyPuzzle && (
         <LeaderboardModal
           isOpen={leaderboardOpen}
-          defaultPuzzleId={activePuzzle.id}
+          defaultPuzzleId={leaderboardPuzzleId}
           deviceId={deviceId}
           displayName={displayName}
           onSaveName={handleSaveName}

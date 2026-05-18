@@ -3,6 +3,8 @@
 // FoundWordsList — scrollable list of all words the player has found.
 // Pangrams are highlighted in yellow since they're a special achievement.
 
+import { foundWordClass, foundWordPangramClass } from "./styles";
+
 import type { Puzzle } from "@/games/spelling-bee/types";
 import { isPangram } from "@/games/spelling-bee/lib/pangram";
 import { useMemo } from "react";
@@ -12,15 +14,12 @@ interface FoundWordsListProps {
   puzzle: Puzzle;
 }
 
-// ── Class constants ──────────────────────────────────────────────────────────
 const styles = {
-  container:    "w-full space-y-2",
-  heading:      "text-sm font-semibold text-stone-500 tracking-wide",
-  count:        "text-stone-800 font-bold",
-  empty:        "text-sm text-stone-400 italic",
-  list:         "flex flex-wrap gap-2 max-h-40 overflow-y-auto",
-  wordNormal:   "px-2 py-0.5 rounded bg-stone-100 text-stone-700 text-sm uppercase",
-  wordPangram:  "px-2 py-0.5 rounded bg-yellow-300 text-stone-800 text-sm font-semibold uppercase",
+  container: "w-full space-y-2",
+  heading:   "text-sm font-semibold text-stone-500 tracking-wide",
+  count:     "text-stone-800 font-bold",
+  empty:     "text-sm text-stone-400 italic",
+  list:      "flex flex-wrap gap-2 max-h-40 overflow-y-auto",
 };
 
 export function FoundWordsList({ words, puzzle }: FoundWordsListProps) {
@@ -43,7 +42,7 @@ export function FoundWordsList({ words, puzzle }: FoundWordsListProps) {
             <li
               key={word}
               data-testid={isPangram(word, puzzle) ? "found-word-pangram" : "found-word"}
-              className={isPangram(word, puzzle) ? styles.wordPangram : styles.wordNormal}
+              className={isPangram(word, puzzle) ? foundWordPangramClass : foundWordClass}
             >
               {word}
             </li>
