@@ -117,7 +117,7 @@ export function SuggestWordModal({
                   value={word.toUpperCase()}
                   readOnly
                   data-testid="suggest-modal-word"
-                  className="w-full px-3 py-2 rounded-xl border border-stone-200 bg-stone-50 text-stone-400 text-sm font-mono select-none"
+                  className="w-full px-3 py-2 rounded-xl border border-stone-200 bg-stone-50 text-stone-900 text-sm font-mono font-semibold select-none"
                 />
               </div>
 
