@@ -4,6 +4,7 @@
 
 import {
   clearSlice,
+  getOrCreateDeviceId,
   migrateFromLegacyKeys,
   readSlice,
   writeSlice,
@@ -137,5 +138,46 @@ describe("migrateFromLegacyKeys", () => {
     localStorage.setItem("spelling-bee:state", "not-valid-json{{");
     expect(() => migrateFromLegacyKeys()).not.toThrow();
     expect(localStorage.getItem("spelling-bee:state")).toBeNull();
+  });
+});
+
+// ── getOrCreateDeviceId ────────────────────────────────────────────────────────
+
+describe("getOrCreateDeviceId", () => {
+  it("returns a non-empty string", () => {
+    expect(getOrCreateDeviceId()).not.toBe("");
+  });
+
+  it("returns a valid UUID v4 format", () => {
+    const id = getOrCreateDeviceId();
+    expect(id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+  });
+
+  it("returns the same value on subsequent calls (stable identity)", () => {
+    const first  = getOrCreateDeviceId();
+    const second = getOrCreateDeviceId();
+    expect(first).toBe(second);
+  });
+
+  it("persists the id in the wordgames:state envelope under deviceId", () => {
+    const id = getOrCreateDeviceId();
+    const raw = localStorage.getItem("wordgames:state");
+    const envelope = JSON.parse(raw!);
+    expect(envelope.deviceId).toBe(id);
+  });
+
+  it("does not overwrite an existing deviceId", () => {
+    // Pre-seed a known id (simulates a returning user)
+    const existing = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+    localStorage.setItem("wordgames:state", JSON.stringify({ deviceId: existing }));
+    expect(getOrCreateDeviceId()).toBe(existing);
+  });
+
+  it("generating a new id does not wipe other slices", () => {
+    writeSlice("spelling-bee", { score: 42 });
+    getOrCreateDeviceId();
+    expect(readSlice("spelling-bee")).toEqual({ score: 42 });
   });
 });

@@ -1,10 +1,51 @@
 # Agent Log — Greek Word Games Platform
 
-> Entries newest-first. Only the two most recent sessions are kept in full. Older sessions are summarised.
+> Entries newest-first. Full detail for the two most recent sessions; older sessions summarised one-liner per session.
 
 ---
 
 ## 2026-05-18 — Session 16: Supabase Integration — Word Suggestions ✅
+
+**Outcome:** 439 tests (31 files) · build + ESLint clean (0 errors).
+
+- `src/lib/supabase.ts` — singleton `getSupabaseClient()` + `Database` interface + `WordSuggestionInsert` type (anon key, browser-safe).
+- `getOrCreateDeviceId()` added to `useGameStore.ts` — UUID v4, persisted under `deviceId` in `wordgames:state`. Shared identity for suggestions + future leaderboard.
+- `PersistenceEnvelope` extended with `"deviceId"?: string`.
+- `POST /api/suggest-word` — `console.log` stub replaced with real Supabase insert into `word_suggestions`; validates `word` + `deviceId`.
+- `SuggestWordModal` — includes `deviceId` in POST body.
+- `.env.local.example` committed; documents `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- ESLint fix: `GameBoard.tsx` `useEffect`→`setState` replaced with lazy `useState` initializer.
+- **Tests (9 new):** `getOrCreateDeviceId` (6 cases in `useGameStore.test.ts`), `deviceId` in POST body (`suggestWordModal.test.tsx`), `getSupabaseClient` error paths — new `supabase.test.ts` (3 cases).
+
+**Human tasks remaining:** create Supabase project, run CREATE TABLE SQL, fill `.env.local`, add env vars to Vercel.
+
+---
+
+## 2026-05-15 — Session 15: Word-Suggestion Flow, UI Polish & Test Gap Fill ✅
+
+**Outcome:** 430 tests · build + ESLint clean.
+
+- Landing page rewritten with `GAMES` array + `GameEntry` interface; help icon as modal sibling (no button-in-anchor). WIP badges for Wordle + Connections.
+- `SuggestWordModal` — name + note fields; POST to `/api/suggest-word`; localStorage dedup via `suggestions.ts`; button becomes greyed "Ήδη υποβλήθηκε" after success.
+- Inline submit button in `WordInput` (≥4 letters → green ⏎ circle); standalone submit row removed.
+- New files: `route.ts` stub, `suggestions.ts`, `SuggestWordModal.tsx`, 4 test files (40 tests).
+
+---
+
+## Earlier sessions (summarised)
+
+| Session | Date | Outcome |
+|---------|------|---------|
+| 14 | 2026-05-14 | Puzzle quality filter (≥2 vowels, ≥2 consonants, centre=vowel, ≥1 pangram). `puzzles-el.json` regenerated (1008 puzzles). 389 tests. |
+| 13 | 2026-05-14 | Codebase review: removed duplicate `normaliseChar` in `WordleBoard`, fixed stale docs in `memory.md`/`goals.md`/`README`. 372 tests. |
+| 13b | 2026-05-14 | Random puzzle quality rules: centre=vowel, ≥2 vowels total enforced in `pickRandom7()` + `batch-generate.ts`. 374 tests. |
+| 12 | 2026-05-14 | `LetterPickerModal` shared component; `NewPuzzleButton` wired to it; `ShareButton` icon-only; Wordle Enter key styled. 372 tests. |
+| 11 | 2026-05-14 | Greeklish URL encoding (`src/lib/greeklish.ts`); bijective codec; backward-compat redirect for old percent-encoded URLs. 352 tests. |
+| 10 | 2026-05-14 | Mobile layout fixes: `overflow-x:hidden`, `Keyboard` flex-1, `HowToPlayModal` scroll-safe. 299 tests. |
+| 9 | 2026-05-14 | Rapid-keystroke bugs: Wordle cap message, stable keydown ref pattern, `FoundWordsList` memoised sort. 289 tests. |
+| 8 | 2026-05-13 | No-accent invariant enforced end-to-end; canonical URL redirect; `noAccents.test.ts` (20 tests). 277 tests. |
+| 7 | 2026-05-13 | Test gap fill (58 new tests); `parseCustomUrl` extracted; `deploymentReadiness` updated. 257 tests. |
+| 1–6 | 2026-05-12 | Phases 1–3 complete: folder restructure, Shell + routing, `useGameStore`, Wordle GR, theming, Connections. |
 
 **Outcome:** 430 tests across 30 files. Build + ESLint clean (0 errors). No regressions.
 

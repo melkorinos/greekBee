@@ -3,9 +3,9 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 
 import { SuggestWordModal } from "@/components/spelling-bee/SuggestWordModal";
+import userEvent from "@testing-library/user-event";
 
 // ── fetch mock ────────────────────────────────────────────────────────────────
 
@@ -104,6 +104,9 @@ describe("SuggestWordModal — submission", () => {
     expect(body.word).toBe("καλος");
     expect(body.playerName).toBe("Νίκος");
     expect(body.note).toBe("σημαίνει καλός");
+    // device identity must always be present
+    expect(typeof body.deviceId).toBe("string");
+    expect(body.deviceId.length).toBeGreaterThan(0);
   });
 
   it("shows success state after a successful POST", async () => {
