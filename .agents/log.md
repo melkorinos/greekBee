@@ -4,6 +4,45 @@
 
 ---
 
+## 2026-05-18 — Session 17: Per-Puzzle Leaderboard ✅
+
+**Outcome:** 475 tests (33 files) · build clean.
+
+### What was built
+- **`src/app/api/scores/route.ts`** — `POST` upserts a score (date-format puzzle IDs only, validated server-side); `GET ?puzzleId=&deviceId=` returns top 20 rows + optional pinned player row. Supabase RLS: anon INSERT + anon SELECT. Unique constraint `(device_id, puzzle_id)` with `GREATEST` upsert semantics.
+- **`src/hooks/useLeaderboard.ts`** — polling hook (5-min interval + `visibilitychange` re-fetch). `enabled` flag pauses polling when modal is closed. Returns `{ data, isLoading, error, refresh }`.
+- **`src/components/spelling-bee/LeaderboardModal.tsx`** — bottom-sheet modal: date picker (browse any past daily), top-20 table, pinned player row outside top 20, inline display-name editor, "Παίξε αυτό το παζλ" link for past dates.
+
+### Modified files
+- `src/types/index.ts` — `displayName?: string` added to `PersistenceEnvelope`.
+- `src/lib/supabase.ts` — `scores` table added to `Database` type.
+- `src/hooks/useGameStore.ts` — `getDisplayName()` + `setDisplayName()` helpers.
+- `src/components/spelling-bee/GameBoard.tsx` — silent score upsert on every score increase (`lastPostedScoreRef` prevents regressive posts), 🏆 button (daily puzzles only), `LeaderboardModal` wired in, `handleSaveName` re-posts on name change.
+- `src/components/spelling-bee/index.ts` — `LeaderboardModal` exported.
+
+### Tests (30 new, 3 new files)
+- `src/test/scoresRoute.test.ts` (13) — POST validation, POST happy path, GET validation, GET happy path (isPlayer flag, pinned playerRow, empty result, DB error).
+- `src/test/useLeaderboard.test.ts` (11) — initial fetch, error state, enabled flag, polling with fake timers, visibilitychange re-fetch, manual refresh.
+- `src/test/useGameStore.test.ts` (+8) — `getDisplayName` / `setDisplayName` round-trips, trim, persistence, slice isolation.
+
+### Supabase SQL (run manually in dashboard)
+```sql
+CREATE TABLE public.scores (
+  id           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  puzzle_id    text NOT NULL,
+  device_id    text NOT NULL,
+  display_name text NOT NULL DEFAULT 'Ανώνυμος',
+  score        integer NOT NULL DEFAULT 0,
+  created_at   timestamptz DEFAULT now() NOT NULL,
+  CONSTRAINT scores_device_puzzle_unique UNIQUE (device_id, puzzle_id)
+);
+ALTER TABLE public.scores ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "anon insert" ON public.scores FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "anon select" ON public.scores FOR SELECT TO anon USING (true);
+```
+
+---
+
 ## 2026-05-18 — Session 16: Supabase Integration — Word Suggestions ✅
 
 **Outcome:** 445 tests (31 files) · build + ESLint clean (0 errors).

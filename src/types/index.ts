@@ -27,4 +27,6 @@ export interface PersistenceEnvelope {
   "suggestions"?:   unknown;
   /** Stable anonymous device identifier (UUID v4). Shared across all games. */
   "deviceId"?:      string;
+  /** Player's chosen display name for leaderboards. */
+  "displayName"?:   string;
 }

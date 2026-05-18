@@ -13,6 +13,25 @@ import { createClient } from "@supabase/supabase-js";
 export interface Database {
   public: {
     Tables: {
+      scores: {
+        Row: {
+          id:           string;
+          puzzle_id:    string;
+          device_id:    string;
+          display_name: string;
+          score:        number;
+          created_at:   string;
+        };
+        Insert: {
+          id?:           string;
+          puzzle_id:     string;
+          device_id:     string;
+          display_name?: string;
+          score:         number;
+          created_at?:   string;
+        };
+        Update: Partial<Database["public"]["Tables"]["scores"]["Insert"]>;
+      };
       word_suggestions: {
         Row: {
           id:          string;

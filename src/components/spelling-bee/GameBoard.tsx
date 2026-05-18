@@ -3,12 +3,14 @@
 // GameBoard — the top-level client component that composes all game UI pieces.
 // Receives the initial puzzle as a prop (loaded server-side in page.tsx).
 
+import { getDisplayName, getOrCreateDeviceId, setDisplayName as saveDisplayName } from "@/hooks/useGameStore";
 import { getSuggestedWords, markSuggested } from "@/hooks/suggestions";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { FeedbackMessage } from "./FeedbackMessage";
 import { FoundWordsList } from "./FoundWordsList";
 import { HoneycombGrid } from "./HoneycombGrid";
+import { LeaderboardModal } from "./LeaderboardModal";
 import type { Puzzle } from "@/games/spelling-bee/types";
 import { ScoreBar } from "./ScoreBar";
 import { SuggestWordModal } from "./SuggestWordModal";
@@ -47,7 +49,43 @@ export function GameBoard({ puzzle }: GameBoardProps) {
   // justSuggested: word just submitted this session (show confirmation, not "Ήδη").
   // Cleared when the player types a new letter (suggestWord becomes null after success).
   const [justSuggested, setJustSuggested] = useState<string | null>(null);
+  // ── Leaderboard ───────────────────────────────────────────────────────────
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [displayName, setDisplayNameState] = useState<string>(
+    () => typeof window === "undefined" ? "" : getDisplayName()
+  );
+  const [deviceId] = useState<string>(
+    () => typeof window === "undefined" ? "" : getOrCreateDeviceId()
+  );
 
+  // Only daily puzzles (YYYY-MM-DD) participate in the leaderboard.
+  const isDailyPuzzle = /^\d{4}-\d{2}-\d{2}$/.test(activePuzzle.id);
+
+  // Keep a ref so the score-submission effect always reads the latest name
+  // without needing it as a dependency (avoids re-running on every name update).
+  const displayNameRef = useRef(displayName);
+  useEffect(() => { displayNameRef.current = displayName; }, [displayName]);
+
+  // Track the last score we successfully posted so we only ever send higher values.
+  const lastPostedScoreRef = useRef(0);
+
+  // Silent upsert on every new word found — fires only when score strictly increases.
+  useEffect(() => {
+    if (!isDailyPuzzle || !deviceId) return;
+    if (score <= 0 || score <= lastPostedScoreRef.current) return;
+    lastPostedScoreRef.current = score;
+    fetch("/api/scores", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        puzzle_id:    activePuzzle.id,
+        device_id:    deviceId,
+        display_name: displayNameRef.current || "Ανώνυμος",
+        score,
+      }),
+    }).catch(() => {}); // silently swallow network errors
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [score, isDailyPuzzle, activePuzzle.id, deviceId]);
   function handleSuggest(word: string) {
     setSuggestWord(word);
     setJustSuggested(null); // clear any previous confirmation
@@ -60,6 +98,24 @@ export function GameBoard({ puzzle }: GameBoardProps) {
       setJustSuggested(suggestWord.toLowerCase());
     }
     setSuggestWord(null);
+  }
+
+  // Called by LeaderboardModal when the player saves a new display name.
+  // Updates localStorage, local state, and re-posts the current score with the new name.
+  function handleSaveName(name: string) {
+    saveDisplayName(name);
+    setDisplayNameState(name);
+    if (!isDailyPuzzle || !deviceId || score <= 0) return;
+    fetch("/api/scores", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        puzzle_id:    activePuzzle.id,
+        device_id:    deviceId,
+        display_name: name,
+        score,
+      }),
+    }).catch(() => {});
   }
 
   // ── Keyboard support ───────────────────────────────────────────────────────
@@ -166,10 +222,32 @@ export function GameBoard({ puzzle }: GameBoardProps) {
         >
           Ανακάτεμα
         </button>
+        {isDailyPuzzle && (
+          <button
+            data-testid="btn-leaderboard"
+            onClick={() => setLeaderboardOpen(true)}
+            className={styles.buttonSecondary}
+            aria-label="Πίνακας Σκορ"
+          >
+            🏆
+          </button>
+        )}
       </div>
 
       {/* Found words list */}
       <FoundWordsList words={foundWords} puzzle={activePuzzle} />
+
+      {/* Leaderboard bottom-sheet — only for daily puzzles */}
+      {isDailyPuzzle && (
+        <LeaderboardModal
+          isOpen={leaderboardOpen}
+          defaultPuzzleId={activePuzzle.id}
+          deviceId={deviceId}
+          displayName={displayName}
+          onSaveName={handleSaveName}
+          onClose={() => setLeaderboardOpen(false)}
+        />
+      )}
     </div>
   );
 }

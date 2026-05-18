@@ -4,9 +4,11 @@
 
 import {
   clearSlice,
+  getDisplayName,
   getOrCreateDeviceId,
   migrateFromLegacyKeys,
   readSlice,
+  setDisplayName,
   writeSlice,
 } from "@/hooks/useGameStore";
 import { describe, expect, it } from "vitest";
@@ -179,5 +181,44 @@ describe("getOrCreateDeviceId", () => {
     writeSlice("spelling-bee", { score: 42 });
     getOrCreateDeviceId();
     expect(readSlice("spelling-bee")).toEqual({ score: 42 });
+  });
+});
+
+// ── getDisplayName / setDisplayName ───────────────────────────────────────────
+
+describe("getDisplayName", () => {
+  it("returns empty string when nothing has been saved", () => {
+    expect(getDisplayName()).toBe("");
+  });
+
+  it("returns the name after setDisplayName has been called", () => {
+    setDisplayName("Νίκος");
+    expect(getDisplayName()).toBe("Νίκος");
+  });
+
+  it("trims whitespace when saving", () => {
+    setDisplayName("  Μαρία  ");
+    expect(getDisplayName()).toBe("Μαρία");
+  });
+});
+
+describe("setDisplayName", () => {
+  it("persists the name under displayName in the envelope", () => {
+    setDisplayName("Αλέξης");
+    const raw = localStorage.getItem("wordgames:state");
+    const envelope = JSON.parse(raw!);
+    expect(envelope.displayName).toBe("Αλέξης");
+  });
+
+  it("does not overwrite other slices when saving a name", () => {
+    writeSlice("spelling-bee", { score: 7 });
+    setDisplayName("Κώστας");
+    expect(readSlice("spelling-bee")).toEqual({ score: 7 });
+  });
+
+  it("overwrites a previously saved name", () => {
+    setDisplayName("Πρώτο");
+    setDisplayName("Δεύτερο");
+    expect(getDisplayName()).toBe("Δεύτερο");
   });
 });

@@ -8,3 +8,4 @@ export { FeedbackMessage } from "./FeedbackMessage";
 export { GameBoard } from "./GameBoard";
 export { HowToPlayModal } from "./HowToPlayModal";
 export { NewPuzzleButton } from "./NewPuzzleButton";
+export { LeaderboardModal } from "./LeaderboardModal";

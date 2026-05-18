@@ -76,6 +76,23 @@ export function getOrCreateDeviceId(): string {
   return id;
 }
 
+/**
+ * Returns the player's saved display name, or empty string if not set.
+ * Always returns empty string on the server.
+ */
+export function getDisplayName(): string {
+  if (typeof window === "undefined") return "";
+  return readEnvelope()["displayName"] ?? "";
+}
+
+/**
+ * Persists the player's display name in the unified localStorage envelope.
+ */
+export function setDisplayName(name: string): void {
+  const envelope = readEnvelope();
+  writeEnvelope({ ...envelope, displayName: name.trim() });
+}
+
 // ── One-time migration ────────────────────────────────────────────────────────
 // If the old "spelling-bee:state" key exists (from before the unified store),
 // migrate it into the new envelope and delete the old key.
