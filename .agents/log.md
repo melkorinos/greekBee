@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-05-15 — Session 15: Word-Suggestion Flow, UI Polish & Test Gap Fill ✅
+
+**Outcome:** 430 tests across 30 files. Build + ESLint clean. No regressions.
+
+### Features shipped
+- **Landing page help icons** — `page.tsx` fully rewritten with a `GAMES` array and `GameEntry` interface. Each card is now a flex row: `<Link>` covers the main content, `<HowToPlayModal>` sits as a sibling in the right column. Eliminates invalid button-in-anchor HTML. WIP badge (🚧 amber pill) added for Wordle and Connections.
+- **Tooltip text** — `HowToPlayModal` tooltip changed from "Πώς να παίξεις" → "Κανόνες" (one word, no overflow).
+- **Word suggestion flow** — When a submitted word returns `not_in_list`, `FeedbackMessage` now shows a "Πρότεινέ την →" button. Clicking it opens `SuggestWordModal` (name + note fields, word read-only). On success the modal closes and the word is recorded in localStorage via `suggestions.ts` so the button changes to a greyed "Ήδη υποβλήθηκε" span. `POST /api/suggest-word` stub endpoint logs to stdout and returns `{ ok: true }`.
+- **Inline submit button** — Standalone submit-button row removed from `GameBoard`. `WordInput` now accepts `onSubmit`/`canSubmit` props and renders an inline green ⏎ circle when `canSubmit=true` (≥4 letters typed). Button invisible otherwise.
+
+### New files
+| File | Purpose |
+|------|---------|
+| `src/app/api/suggest-word/route.ts` | POST stub, logs `{ word, playerName, note, timestamp }` |
+| `src/hooks/suggestions.ts` | localStorage dedup: `getSuggestedWords`, `markSuggested`, `isSuggested` |
+| `src/components/spelling-bee/SuggestWordModal.tsx` | Suggestion modal (idle/submitting/success/error states) |
+| `src/test/feedbackMessage.test.tsx` | 12 tests — all statuses + suggest button variants |
+| `src/test/suggestWordModal.test.tsx` | 11 tests — visibility, form, POST, success/error states |
+| `src/test/suggestions.test.ts` | 10 tests — CRUD + normalisation + dedup + SSR guard |
+| `src/test/wordInput.test.tsx` | 7 tests — placeholder, tile rendering, inline submit logic |
+
+### Notable fixes during implementation
+- `GameBoard.tsx` had a stray unclosed `<div>` after the submit-row removal — caught by failing tests, fixed immediately.
+- `WordInput.tsx` had CRLF + Unicode corruption that blocked `replace_string_in_file`; fixed via `Set-Content -Encoding UTF8` PowerShell overwrite.
+
+---
+
 ## 2026-05-14 — Session 13: Codebase Review & Stale-Doc / Duplicate-Code Fixes ✅
 
 **Outcome:** 372 tests (unchanged). Build + ESLint clean. No regressions.

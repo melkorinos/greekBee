@@ -9,9 +9,9 @@ export type Language = "el";
 // ─── Platform ────────────────────────────────────────────────────────────────
 
 /** All games hosted on this platform. */
-export type GameId = "spelling-bee" | "wordle" | "connections";
+export type GameId = "spelling-bee" | "wordle" | "connections" | "suggestions";
 
-// ─── Persistence ─────────────────────────────────────────────────────────────
+// ── Persistence ───────────────────────────────────────────────────────────────
 
 /**
  * Top-level localStorage envelope.
@@ -20,7 +20,9 @@ export type GameId = "spelling-bee" | "wordle" | "connections";
  * Slice types are intentionally loose here (unknown) and narrowed per-game.
  */
 export interface PersistenceEnvelope {
-  "spelling-bee"?: unknown;
-  "wordle"?: unknown;
-  "connections"?: unknown;
+  "spelling-bee"?:  unknown;
+  "wordle"?:        unknown;
+  "connections"?:   unknown;
+  /** Words already suggested by this device — string[] of normalised words. */
+  "suggestions"?:   unknown;
 }

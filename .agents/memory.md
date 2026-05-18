@@ -82,53 +82,40 @@ src/
 
 ---
 
-## 🧪 Test Coverage Map (25 files, 372 tests)
+## 🧪 Test Coverage Map (30 files, 430 tests)
 
 > **How to use this as an agent**: before writing a new test, grep the `describe` column for the function/component name. If it appears, read that file's describe block to check if the specific case is already covered. Only write new tests for gaps.
 
 | File | `describe` blocks (= what is tested) |
 |------|---------------------------------------|
-| `evaluateGuess.test.ts` | `evaluateGuess` — all-correct, all-absent, present, mixed, duplicate answer letters, duplicate guess letters, length |
+| `evaluateGuess.test.ts` | `evaluateGuess` — all-correct, all-absent, present, mixed, duplicate answer/guess letters, length |
 | `wordleLogic.test.ts` | `isValidGuess`, `getTodaysWordlePuzzle` determinism |
-| `wordleReducer.test.ts` | `ADD_LETTER`, `DELETE_LETTER`, `SUBMIT_GUESS` (win/loss/invalid), `RESTORE_STATE` |
-| `gameLogic.test.ts` | `isPangram`, `scoreWord`, `maxScore`, `calculateRank`, `validateWord` |
-| `gameReducer.test.ts` | All 7 Spelling Bee reducer actions including `RESTORE_STATE` preserving `puzzleMaxScore` |
-| `greekLogic.test.ts` | `isPangram (Greek)`, `scoreWord (Greek)`, `calculateRank`, `validateWord`, `getPuzzleForDate` (data-independent: asserts vowel center, not specific letter) |
-| `GameBoard.test.tsx` | Rendering, keyboard input, word submission, button interactions |
-| `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`, migration from legacy key |
-| `Shell.test.tsx` | Hamburger open/close, navigation links, keyboard dismiss |
-| `persistence.test.ts` | `usePersistence` + `loadPersistedState` delegation to `useGameStore` |
-| `wordleDataLoader.test.ts` | `getWordleWords`, `getTodaysWordlePuzzle`, `getWordleAnswers` |
-| `spellingBeeDataLoader.test.ts` | `getPuzzleIndex`, `getPuzzleForDate`, `getPuzzleById`, `getRandomPuzzle` |
-| `spellingBeeRouting.test.ts` | All 1008 canonical greeklish URLs parse without 404; center/outer round-trip |
-| `connectionsReducer.test.ts` | `TOGGLE_WORD`, `SUBMIT_SELECTION`, `RESTORE_STATE`, one-away hint |
-| `connectionsGroupGrid.test.tsx` | `GroupGrid` renders solved groups |
-| `connectionsDataLoader.test.ts` | `getConnectionsPuzzleForDate`, fallback |
-| `letterPickerModal.test.tsx` | Visibility, center/outer selection, deselect, 7-letter cap, Reset, Random (vowel center × 20, ≥2 vowels × 20, ≥2 outer consonants × 20), Generate |
-
-| File | `describe` blocks (= what is tested) |
-|------|---------------------------------------|
-| `evaluateGuess.test.ts` | `evaluateGuess` — all-correct, all-absent, present, mixed, duplicate answer letters, duplicate guess letters, length |
-| `wordleLogic.test.ts` | `isValidGuess`, `getTodaysWordlePuzzle` determinism |
-| `wordleReducer.test.ts` | `wordleReducer — ADD_LETTER`, `DELETE_LETTER`, `SUBMIT_GUESS` (short/invalid/valid/win/lose) |
+| `wordleReducer.test.ts` | `ADD_LETTER`, `DELETE_LETTER`, `SUBMIT_GUESS` (short/invalid/valid/win/lose), `RESTORE_STATE` |
 | `wordleDataLoader.test.ts` | `getTodaysWordlePuzzle`, `getAnswerPool`, `getValidWords`, `getTodayDateString` |
-| `wordleTheme.test.tsx` | `Tile dark theme classes`, `Keyboard dark theme classes` |
+| `wordleTheme.test.tsx` | Tile dark theme classes, Keyboard dark theme classes |
 | `gameLogic.test.ts` | `isPangram`, `scoreWord`, `maxScore`, `calculateRank`, `validateWord` |
-| `gameReducer.test.ts` | `buildInitialState`, `ADD_LETTER`, `DELETE_LETTER`, `CLEAR_INPUT`, `SUBMIT_WORD — valid`, `SUBMIT_WORD — invalid`, `SHUFFLE_LETTERS`, `NEW_GAME`, `RESTORE_STATE` |
-| `GameBoard.test.tsx` | `GameBoard rendering`, `Keyboard input`, `Hex clicks`, `Submit word`, `Feedback messages` |
-| `greekLogic.test.ts` | `isPangram (Greek)`, `scoreWord (Greek)`, `validateWord (Greek)`, `getPuzzleForDate integration` |
+| `gameReducer.test.ts` | `buildInitialState`, `ADD_LETTER`, `DELETE_LETTER`, `CLEAR_INPUT`, `SUBMIT_WORD` (valid/invalid), `SHUFFLE_LETTERS`, `NEW_GAME`, `RESTORE_STATE` |
+| `GameBoard.test.tsx` | Rendering (inline submit absent/present at 3/4 letters), keyboard input, hex clicks, word submission, feedback messages, button interactions |
+| `greekLogic.test.ts` | `isPangram (Greek)`, `scoreWord (Greek)`, `validateWord (Greek)`, `getPuzzleForDate` (data-independent) |
+| `greeklish.test.ts` | `greekToGreeklish`, `greeklishToGreek` bijective codec |
 | `spellingBeeDataLoader.test.ts` | `getPuzzleForDate`, `getPuzzleById`, `getRandomPuzzle`, `getNextPuzzle` |
-| `spellingBeeRouting.test.ts` | `canonicalPath format`, `redirect round-trip — getTodaysPuzzle`, `getPuzzleForDate`, `getPuzzleById`, `getRandomPuzzle`, `all curated puzzles — redirect round-trip` (all 1,008) |
-| `computeValidWords.test.ts` | `computeValidWords` — inclusion, too-short exclusion, missing center, invalid letters, accent normalisation, empty list |
-| `customPuzzle.test.tsx` | `buildCustomPuzzle` — shape, accent normalisation, stable ID, word filtering, impossible combo; `ShareButton` — render, copy, success state, error state |
-| `parseCustomUrl.test.ts` | `parseCustomUrl` — valid inputs, invalid center (empty/multi/digit/space), invalid outer (short/long/digit/empty), uniqueness (center in outer, outer duplicates), return shape |
-| `normalize.test.ts` | `normalizeLetters` — case folding, accent stripping, final sigma ς→σ, combined inputs, edge cases |
-| `noAccents.test.ts` | `hasAccent helper`; `puzzles-el.json` letter fields; `buildCustomPuzzle` output; `computeValidWords` output; `parseCustomUrl` output + URL path; `gameReducer SUBMIT_WORD` stored words; data loader spot-checks |
-| `connectionsReducer.test.ts` | `SELECT_WORD`, `SUBMIT_GUESS — correct`, `SUBMIT_GUESS — wrong`, `SUBMIT_GUESS — one away`, `SHUFFLE`, `game over (loss)`, `win condition` |
-| `connectionsGroupGrid.test.tsx` | `GroupGrid` — render, solved groups, selection state, onSelect callback, disabled state |
-| `connectionsDataLoader.test.ts` | `allConnectionsPuzzles` shape contract, `getTodaysConnectionsPuzzle` — date match, fallback, uniqueness, shape |
-| `persistence.test.ts` | `loadPersistedState` — null, wrong puzzle, restore, safe defaults; `clearPersistedState`; legacy key migration |
-| `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`, `migrateFromLegacyKeys` — cross-game isolation throughout |
-| `Shell.test.tsx` | `Shell rendering`, `Hamburger drawer` — open/close/Escape/backdrop, nav links, theme classes |
+| `spellingBeeRouting.test.ts` | Canonical URL format; redirect round-trip for all 1,008 curated puzzles |
+| `computeValidWords.test.ts` | `computeValidWords` — inclusion, too-short, missing center, invalid letters, accent normalisation |
+| `customPuzzle.test.tsx` | `buildCustomPuzzle` shape/normalisation/ID/filtering; `ShareButton` render/copy/success/error |
+| `parseCustomUrl.test.ts` | `parseCustomUrl` — valid, invalid center, invalid outer, uniqueness checks |
+| `normalize.test.ts` | `normalizeLetters` — case, accent stripping, ς→σ, edge cases |
+| `noAccents.test.ts` | Accent-free invariant across puzzles, `buildCustomPuzzle`, `computeValidWords`, `parseCustomUrl`, reducer |
+| `connectionsReducer.test.ts` | `SELECT_WORD`, `SUBMIT_GUESS` (correct/wrong/one-away), `SHUFFLE`, game over, win |
+| `connectionsGroupGrid.test.tsx` | `GroupGrid` — render, solved groups, selection, onSelect, disabled |
+| `connectionsDataLoader.test.ts` | `getTodaysConnectionsPuzzle` — date match, fallback, uniqueness, shape |
+| `persistence.test.ts` | `loadPersistedState` — null/wrong puzzle/restore/defaults; `clearPersistedState`; legacy migration |
+| `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`, `migrateFromLegacyKeys`, cross-game isolation |
+| `Shell.test.tsx` | Rendering, hamburger drawer open/close/Escape/backdrop, nav links, theme classes |
+| `letterPickerModal.test.tsx` | Visibility, center/outer selection, deselect, 7-letter cap, Reset, Random (vowel center ×20, ≥2 vowels ×20, ≥2 outer consonants ×20), Generate |
+| `mobileLayout.test.tsx` | Mobile viewport rendering checks |
+| `feedbackMessage.test.tsx` | Valid/pangram display, all error statuses, suggest button for `not_in_list`, `alreadySuggested` state, no suggest for other statuses |
+| `suggestWordModal.test.tsx` | Visibility, word field read-only, close (✕/Cancel/backdrop), POST payload, success state, `onSuccess` called, error state, `onSuccess` not called on failure |
+| `suggestions.test.ts` | `getSuggestedWords`, `markSuggested` (add/normalise/idempotent/trim), `isSuggested` (false/true/case-insensitive) |
+| `wordInput.test.tsx` | Placeholder, letter display, centre-letter highlighting, inline submit absent when `canSubmit=false` or no `onSubmit`, present and callable when both provided |
 | `deploymentReadiness.test.ts` | All statically imported data files: exist on disk + not gitignored |
 

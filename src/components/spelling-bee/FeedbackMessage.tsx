@@ -16,10 +16,14 @@ const MESSAGES: Record<ValidationStatus, string> = {
 };
 
 interface FeedbackMessageProps {
-  word: string;
-  status: ValidationStatus;
-  points: number;
-  isPangram: boolean;
+  word:              string;
+  status:            ValidationStatus;
+  points:            number;
+  isPangram:         boolean;
+  /** Called when the player clicks "Πρότεινέ την →" — only supplied for not_in_list */
+  onSuggest?:        () => void;
+  /** When true, shows "Ήδη υποβλήθηκε" instead of the suggest link */
+  alreadySuggested?: boolean;
 }
 
 // ── Class constants ──────────────────────────────────────────────────────────
@@ -35,6 +39,8 @@ export function FeedbackMessage({
   status,
   points,
   isPangram,
+  onSuggest,
+  alreadySuggested = false,
 }: FeedbackMessageProps) {
   if (status === "valid") {
     return (
@@ -56,6 +62,26 @@ export function FeedbackMessage({
   return (
     <div data-testid={`feedback-error-${status}`} className={styles.errorMessage}>
       {MESSAGES[status]}
+      {status === "not_in_list" && onSuggest && (
+        <span className="ml-2">
+          {alreadySuggested ? (
+            <span
+              data-testid="feedback-already-suggested"
+              className="text-xs text-stone-400"
+            >
+              Ήδη υποβλήθηκε
+            </span>
+          ) : (
+            <button
+              onClick={onSuggest}
+              data-testid="feedback-suggest-btn"
+              className="text-xs text-stone-500 underline underline-offset-2 hover:text-stone-800 transition-colors"
+            >
+              Πρότεινέ την →
+            </button>
+          )}
+        </span>
+      )}
     </div>
   );
 }

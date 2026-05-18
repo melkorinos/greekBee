@@ -49,7 +49,7 @@ export function HowToPlayModal({
           ?
         </button>
         <div className="pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-stone-800 px-2.5 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-10">
-          Πώς να παίξεις
+          Κανόνες
         </div>
       </div>
 

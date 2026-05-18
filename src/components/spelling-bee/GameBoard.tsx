@@ -3,14 +3,16 @@
 // GameBoard — the top-level client component that composes all game UI pieces.
 // Receives the initial puzzle as a prop (loaded server-side in page.tsx).
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { FeedbackMessage } from "./FeedbackMessage";
 import { FoundWordsList } from "./FoundWordsList";
 import { HoneycombGrid } from "./HoneycombGrid";
 import type { Puzzle } from "@/games/spelling-bee/types";
 import { ScoreBar } from "./ScoreBar";
+import { SuggestWordModal } from "./SuggestWordModal";
 import { WordInput } from "./WordInput";
+import { getSuggestedWords, markSuggested } from "@/hooks/suggestions";
 import { useGameState } from "@/games/spelling-bee/hooks/useGameState";
 
 interface GameBoardProps {
@@ -33,6 +35,29 @@ export function GameBoard({ puzzle }: GameBoardProps) {
     shuffleLetters,
     handleKeyboardLetter,
   } = useGameState(puzzle);
+
+  // ── Word suggestion ────────────────────────────────────────────────────────
+  // suggestWord: the word currently being proposed (null = modal closed)
+  const [suggestWord,    setSuggestWord]    = useState<string | null>(null);
+  // suggestedWords: Set of words already suggested by this device (from localStorage)
+  const [suggestedWords, setSuggestedWords] = useState<Set<string>>(new Set());
+
+  // Hydrate suggested-words set from localStorage after mount (client-only)
+  useEffect(() => {
+    setSuggestedWords(new Set(getSuggestedWords()));
+  }, []);
+
+  function handleSuggest(word: string) {
+    setSuggestWord(word);
+  }
+
+  function handleSuggestSuccess() {
+    if (suggestWord) {
+      markSuggested(suggestWord);
+      setSuggestedWords((prev) => new Set([...prev, suggestWord.toLowerCase()]));
+    }
+    setSuggestWord(null);
+  }
 
   // ── Keyboard support ───────────────────────────────────────────────────────
   // Stable ref pattern: the listener is registered exactly once (empty deps)
@@ -78,10 +103,12 @@ export function GameBoard({ puzzle }: GameBoardProps) {
         currentRank={currentRank}
       />
 
-      {/* Current word input display */}
+      {/* Current word input display + inline submit button when word ≥4 letters */}
       <WordInput
         value={currentInput}
         centerLetter={activePuzzle.centerLetter}
+        onSubmit={submitWord}
+        canSubmit={currentInput.length >= 4}
       />
 
       {/* Feedback from the last submission — disappears on next input */}
@@ -91,8 +118,18 @@ export function GameBoard({ puzzle }: GameBoardProps) {
           status={lastSubmission.result.status}
           points={lastSubmission.result.points}
           isPangram={lastSubmission.result.isPangram}
+          onSuggest={() => handleSuggest(lastSubmission.word)}
+          alreadySuggested={suggestedWords.has(lastSubmission.word.toLowerCase())}
         />
       )}
+
+      {/* Word suggestion modal — opened when player clicks “Πρότεινέ την” */}
+      <SuggestWordModal
+        word={suggestWord ?? ""}
+        isOpen={suggestWord !== null}
+        onClose={() => setSuggestWord(null)}
+        onSuccess={handleSuggestSuccess}
+      />
 
       {/* The 7-hex honeycomb grid */}
       <HoneycombGrid
@@ -101,7 +138,7 @@ export function GameBoard({ puzzle }: GameBoardProps) {
         onLetterClick={addLetter}
       />
 
-      {/* Action buttons — row 1: secondary actions */}
+      {/* Action buttons — secondary actions */}
       <div className={styles.buttonRow}>
         <button
           data-testid="btn-delete"
@@ -124,17 +161,6 @@ export function GameBoard({ puzzle }: GameBoardProps) {
           className={styles.buttonSecondary}
         >
           Ανακάτεμα
-        </button>
-      </div>
-
-      {/* Action buttons — row 2: submit */}
-      <div className={styles.buttonRow}>
-        <button
-          data-testid="btn-enter"
-          onClick={submitWord}
-          className={styles.buttonPrimary}
-        >
-          Καταχώρηση
         </button>
       </div>
 

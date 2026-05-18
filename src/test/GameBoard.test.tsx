@@ -36,10 +36,20 @@ describe("GameBoard rendering", () => {
     expect(screen.getByTestId("game-board")).toBeInTheDocument();
   });
 
-  it("renders Delete, Shuffle and Enter buttons", () => {
+  it("renders Delete, Shuffle buttons (no submit button when input is empty)", () => {
     setup();
     expect(screen.getByTestId("btn-delete")).toBeInTheDocument();
     expect(screen.getByTestId("btn-shuffle")).toBeInTheDocument();
+    expect(screen.queryByTestId("btn-enter")).toBeNull();
+  });
+
+  it("shows the inline submit button once the input reaches 4 letters", async () => {
+    const { user } = setup();
+    // Type 3 letters — button should still be absent
+    await user.keyboard("pai");
+    expect(screen.queryByTestId("btn-enter")).toBeNull();
+    // Type the 4th letter — button should appear
+    await user.keyboard("n");
     expect(screen.getByTestId("btn-enter")).toBeInTheDocument();
   });
 
