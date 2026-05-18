@@ -44,15 +44,20 @@ export function GameBoard({ puzzle }: GameBoardProps) {
   const [suggestedWords, setSuggestedWords] = useState<Set<string>>(
     () => typeof window === "undefined" ? new Set() : new Set(getSuggestedWords())
   );
+  // justSuggested: word just submitted this session (show confirmation, not "Ήδη").
+  // Cleared when the player types a new letter (suggestWord becomes null after success).
+  const [justSuggested, setJustSuggested] = useState<string | null>(null);
 
   function handleSuggest(word: string) {
     setSuggestWord(word);
+    setJustSuggested(null); // clear any previous confirmation
   }
 
   function handleSuggestSuccess() {
     if (suggestWord) {
       markSuggested(suggestWord);
       setSuggestedWords((prev) => new Set([...prev, suggestWord.toLowerCase()]));
+      setJustSuggested(suggestWord.toLowerCase());
     }
     setSuggestWord(null);
   }
@@ -118,6 +123,7 @@ export function GameBoard({ puzzle }: GameBoardProps) {
           isPangram={lastSubmission.result.isPangram}
           onSuggest={() => handleSuggest(lastSubmission.word)}
           alreadySuggested={suggestedWords.has(lastSubmission.word.toLowerCase())}
+          justSuggested={justSuggested === lastSubmission.word.toLowerCase()}
         />
       )}
 
@@ -133,7 +139,7 @@ export function GameBoard({ puzzle }: GameBoardProps) {
       <HoneycombGrid
         centerLetter={activePuzzle.centerLetter}
         outerLetters={activePuzzle.outerLetters}
-        onLetterClick={addLetter}
+        onLetterClick={(l) => { setJustSuggested(null); addLetter(l); }}
       />
 
       {/* Action buttons — secondary actions */}

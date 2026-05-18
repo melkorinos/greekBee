@@ -4,9 +4,9 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 
 import { FeedbackMessage } from "@/components/spelling-bee/FeedbackMessage";
+import userEvent from "@testing-library/user-event";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -88,6 +88,30 @@ describe("FeedbackMessage — suggest link (not_in_list only)", () => {
     });
     expect(screen.queryByTestId("feedback-suggest-btn")).toBeNull();
     expect(screen.getByTestId("feedback-already-suggested")).toHaveTextContent("Ήδη υποβλήθηκε");
+  });
+
+  it("shows confirmation message when justSuggested is true", () => {
+    renderFeedback({
+      word: "καλος", status: "not_in_list", points: 0, isPangram: false,
+      onSuggest: vi.fn(),
+      justSuggested: true,
+    });
+    expect(screen.queryByTestId("feedback-suggest-btn")).toBeNull();
+    expect(screen.queryByTestId("feedback-already-suggested")).toBeNull();
+    const msg = screen.getByTestId("feedback-just-suggested");
+    expect(msg).toHaveTextContent("ΚΑΛΟΣ");
+    expect(msg).toHaveTextContent("υποβλήθηκε");
+  });
+
+  it("justSuggested takes priority over alreadySuggested", () => {
+    renderFeedback({
+      word: "καλος", status: "not_in_list", points: 0, isPangram: false,
+      onSuggest: vi.fn(),
+      alreadySuggested: true,
+      justSuggested: true,
+    });
+    expect(screen.getByTestId("feedback-just-suggested")).toBeInTheDocument();
+    expect(screen.queryByTestId("feedback-already-suggested")).toBeNull();
   });
 
   it("does NOT show suggest button for not_in_list when onSuggest is absent", () => {

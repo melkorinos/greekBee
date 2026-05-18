@@ -24,6 +24,8 @@ interface FeedbackMessageProps {
   onSuggest?:        () => void;
   /** When true, shows "Ήδη υποβλήθηκε" instead of the suggest link */
   alreadySuggested?: boolean;
+  /** When true, shows "«ΛΕΞΗ» υποβλήθηκε ✓" — takes priority over alreadySuggested */
+  justSuggested?:    boolean;
 }
 
 // ── Class constants ──────────────────────────────────────────────────────────
@@ -41,6 +43,7 @@ export function FeedbackMessage({
   isPangram,
   onSuggest,
   alreadySuggested = false,
+  justSuggested    = false,
 }: FeedbackMessageProps) {
   if (status === "valid") {
     return (
@@ -64,7 +67,14 @@ export function FeedbackMessage({
       {MESSAGES[status]}
       {status === "not_in_list" && onSuggest && (
         <span className="ml-2">
-          {alreadySuggested ? (
+          {justSuggested ? (
+            <span
+              data-testid="feedback-just-suggested"
+              className="text-xs text-green-600 font-medium"
+            >
+              «{word.toUpperCase()}» υποβλήθηκε ✓
+            </span>
+          ) : alreadySuggested ? (
             <span
               data-testid="feedback-already-suggested"
               className="text-xs text-stone-400"

@@ -24,7 +24,8 @@ Key locked ADRs → see `memory.md`.
 - [ ] E2E tests (Playwright) — at least one happy-path per game
 - [ ] Visual rebrand — introduce Tailwind theme config; decouple from NYT aesthetic
 - [x] Spelling Bee puzzle quality filter (≥2 vowels, ≥2 consonants, centre = vowel, ≥1 pangram) — `batch-generate.ts` enforces all four rules; `pickRandom7()` in `LetterPickerModal` enforces vowel/consonant rules; `puzzles-el.json` regenerated clean (1008 puzzles, ~33× attempt ratio)
-- [ ] Per-puzzle leaderboard (Supabase backend, device UUID, `POST /api/scores`)
+- [x] Supabase integration — `word_suggestions` table live; `getOrCreateDeviceId()` shared identity; insert-only RLS; suggestion flow end-to-end working on Vercel
+- [ ] **Per-puzzle leaderboard** ← NEXT SESSION — same Supabase project; `scores` table (`device_id`, `display_name`, `score`, `puzzle_id`, `created_at`); `POST /api/scores`; `GET /api/scores?puzzleId=xxx`; display on Spelling Bee game over
 
 ---
 

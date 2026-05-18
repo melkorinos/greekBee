@@ -1,8 +1,8 @@
 // Component tests for GameBoard — tests real user interactions using RTL.
 // Verifies that clicking hexes, typing, submitting and error messages all work.
 
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 
 import { GameBoard } from "@/components/spelling-bee/GameBoard";
 import type { Puzzle } from "@/games/spelling-bee/types";
@@ -155,5 +155,54 @@ describe("Button interactions", () => {
     await user.keyboard("anti"); // use a different word than other tests
     await user.click(screen.getByTestId("btn-enter"));
     expect(screen.getByTestId("found-words-count")).toHaveTextContent("1");
+  });
+});
+
+// ── Word suggestion flow ───────────────────────────────────────────────────────
+
+describe("Word suggestion flow", () => {
+  function mockFetch(ok: boolean) {
+    return vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok,
+      json: async () => ({ ok }),
+    } as Response);
+  }
+
+  it("shows the suggest button after a not_in_list submission", async () => {
+    const { user } = setup();
+    await user.keyboard("panda{Enter}"); // not in validWords
+    expect(screen.getByTestId("feedback-suggest-btn")).toBeInTheDocument();
+  });
+
+  it("opens the suggest modal when the suggest button is clicked", async () => {
+    const { user } = setup();
+    await user.keyboard("panda{Enter}");
+    await user.click(screen.getByTestId("feedback-suggest-btn"));
+    expect(screen.getByTestId("suggest-modal")).toBeInTheDocument();
+  });
+
+  it("shows confirmation feedback after a successful suggestion", async () => {
+    mockFetch(true);
+    const { user } = setup();
+    await user.keyboard("panda{Enter}");
+    await user.click(screen.getByTestId("feedback-suggest-btn"));
+    await user.click(screen.getByTestId("suggest-modal-submit"));
+    // modal closes immediately on success; feedback area shows confirmation
+    await waitFor(() =>
+      expect(screen.getByTestId("feedback-just-suggested")).toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("feedback-just-suggested")).toHaveTextContent("PANDA");
+  });
+
+  it("shows 'Ήδη υποβλήθηκε' for a word already suggested in a previous session", async () => {
+    // Pre-seed localStorage as if the word was suggested before
+    const { writeSlice, readSlice } = await import("@/hooks/useGameStore");
+    const existing = readSlice<string[]>("suggestions") ?? [];
+    writeSlice("suggestions", [...existing, "panda"]);
+
+    const { user } = setup();
+    await user.keyboard("panda{Enter}");
+    expect(screen.getByTestId("feedback-already-suggested")).toBeInTheDocument();
+    expect(screen.queryByTestId("feedback-suggest-btn")).toBeNull();
   });
 });

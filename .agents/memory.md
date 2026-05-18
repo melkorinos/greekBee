@@ -1,7 +1,7 @@
 # Agent Memory — Greek Word Games Platform
 
 ## ⚡ Current State (2026-05-18)
-Three live games + custom puzzle URLs. **430 tests passing.**
+Three live games + custom puzzle URLs. **445 tests passing.**
 
 | Game | Route | Status |
 |------|-------|--------|
@@ -27,7 +27,8 @@ Three live games + custom puzzle URLs. **430 tests passing.**
 | **ShareButton `canonicalPath`** | Server builds the share path from normalised letters; client prepends `window.location.origin`. Accent-free by construction. |
 | **Custom URL canonical redirect** | If raw URL params differ from their normalised form, server 301-redirects before rendering. Players always land on the clean URL. |
 | **Greeklish URL encoding** | Custom puzzle URLs use greeklish (bijective 1-to-1 Latin↔Greek, no digraphs): `a→α b→β g→γ d→δ e→ε z→ζ h→η q→θ i→ι k→κ l→λ m→μ n→ν j→ξ o→ο p→π r→ρ s→σ t→τ u→υ f→φ x→χ c→ψ w→ω`. URLs are pure ASCII (no percent-encoding needed). Old percent-encoded Greek URLs are still accepted and redirect to greeklish canonical. Utility lives in `src/lib/greeklish.ts`. |
-| **Supabase** | Hosted Postgres (anon key, insert-only RLS). Singleton client in `src/lib/supabase.ts`. `getOrCreateDeviceId()` in `useGameStore.ts` generates a stable UUID per browser stored in the `wordgames:state` envelope under `deviceId`. Same device identity will be reused for the leaderboard. |
+| **Supabase** | Hosted Postgres (anon key, insert-only RLS). Singleton client in `src/lib/supabase.ts`. `getOrCreateDeviceId()` in `useGameStore.ts` generates a stable UUID per browser stored in the `wordgames:state` envelope under `deviceId`. Same device identity will be reused for the leaderboard. Use `eyJhbGci...` JWT as anon key, not `sb_publishable_...`. |
+| **Next session priority** | Per-puzzle leaderboard: `POST /api/scores` + `GET /api/scores?puzzleId=xxx`; `scores` table in same Supabase project; `device_id` + `display_name` + `score` + `puzzle_id`; read from `useGameStore` deviceId. |
 
 ---
 

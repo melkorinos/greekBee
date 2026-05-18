@@ -6,18 +6,19 @@
 
 ## 2026-05-18 — Session 16: Supabase Integration — Word Suggestions ✅
 
-**Outcome:** 439 tests (31 files) · build + ESLint clean (0 errors).
+**Outcome:** 445 tests (31 files) · build + ESLint clean (0 errors).
 
 - `src/lib/supabase.ts` — singleton `getSupabaseClient()` + `Database` interface + `WordSuggestionInsert` type (anon key, browser-safe).
 - `getOrCreateDeviceId()` added to `useGameStore.ts` — UUID v4, persisted under `deviceId` in `wordgames:state`. Shared identity for suggestions + future leaderboard.
 - `PersistenceEnvelope` extended with `"deviceId"?: string`.
 - `POST /api/suggest-word` — `console.log` stub replaced with real Supabase insert into `word_suggestions`; validates `word` + `deviceId`.
-- `SuggestWordModal` — includes `deviceId` in POST body.
+- `SuggestWordModal` — includes `deviceId` in POST body; input/textarea text darkened (`text-stone-900 font-semibold`).
 - `.env.local.example` committed; documents `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 - ESLint fix: `GameBoard.tsx` `useEffect`→`setState` replaced with lazy `useState` initializer.
-- **Tests (9 new):** `getOrCreateDeviceId` (6 cases in `useGameStore.test.ts`), `deviceId` in POST body (`suggestWordModal.test.tsx`), `getSupabaseClient` error paths — new `supabase.test.ts` (3 cases).
-
-**Human tasks remaining:** create Supabase project, run CREATE TABLE SQL, fill `.env.local`, add env vars to Vercel.
+- **Feedback message 3-state logic**: `justSuggested` (green «ΛΕΞΗ» υποβλήθηκε ✓) → `alreadySuggested` (grey Ήδη υποβλήθηκε) → suggest button. `justSuggested` clears on next letter typed.
+- **Tests (14 new):** `getOrCreateDeviceId` (6), `deviceId` in POST body (1), `getSupabaseClient` error paths (3), `FeedbackMessage` `justSuggested` states (2), `GameBoard` suggestion flow integration (4 — suggest btn, modal open, confirmation feedback, already-suggested from localStorage).
+- **Moderation workflow:** Supabase Table Editor → `word_suggestions` → edit `status` cell directly (`pending`/`accepted`/`rejected`).
+- **Supabase anon key note:** use the `eyJhbGci...` JWT, not the `sb_publishable_...` key.
 
 ---
 
