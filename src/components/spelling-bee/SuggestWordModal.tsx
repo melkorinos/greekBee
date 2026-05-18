@@ -2,10 +2,11 @@
 
 // SuggestWordModal — lets the player propose a rejected word for review.
 // Opened from FeedbackMessage when a word returns "not_in_list".
-// Submits to POST /api/suggest-word (stubbed until Supabase is wired).
+// Submits to POST /api/suggest-word (wired to Supabase word_suggestions table).
 // onSuccess is called after a successful POST so the parent can mark the
 // word as already-suggested in localStorage and prevent re-submission.
 
+import { getOrCreateDeviceId } from "@/hooks/useGameStore";
 import { useState } from "react";
 
 interface SuggestWordModalProps {
@@ -39,6 +40,7 @@ export function SuggestWordModal({
           word:       word.toLowerCase(),
           playerName: playerName.trim() || undefined,
           note:       note.trim()       || undefined,
+          deviceId:   getOrCreateDeviceId(),
         }),
       });
       if (!res.ok) throw new Error("server error");

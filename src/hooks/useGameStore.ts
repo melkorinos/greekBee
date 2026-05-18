@@ -58,6 +58,24 @@ export function clearSlice(gameId: GameId): void {
   writeEnvelope(updated);
 }
 
+// ── Device identity ─────────────────────────────────────────────────────────
+// A stable anonymous UUID stored in the unified envelope.
+// Shared by all features that need a consistent per-device identity
+// (word suggestions, future leaderboard).
+
+/**
+ * Returns this device's UUID, creating and persisting one on first call.
+ * Always returns an empty string on the server (localStorage unavailable).
+ */
+export function getOrCreateDeviceId(): string {
+  if (typeof window === "undefined") return "";
+  const envelope = readEnvelope();
+  if (envelope["deviceId"]) return envelope["deviceId"]!;
+  const id = crypto.randomUUID();
+  writeEnvelope({ ...envelope, deviceId: id });
+  return id;
+}
+
 // ── One-time migration ────────────────────────────────────────────────────────
 // If the old "spelling-bee:state" key exists (from before the unified store),
 // migrate it into the new envelope and delete the old key.

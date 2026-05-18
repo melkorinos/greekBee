@@ -25,4 +25,6 @@ export interface PersistenceEnvelope {
   "connections"?:   unknown;
   /** Words already suggested by this device — string[] of normalised words. */
   "suggestions"?:   unknown;
+  /** Stable anonymous device identifier (UUID v4). Shared across all games. */
+  "deviceId"?:      string;
 }

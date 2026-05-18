@@ -1,14 +1,12 @@
-// POST /api/suggest-word — stub endpoint for word suggestions.
+// POST /api/suggest-word — inserts a word suggestion into Supabase.
 //
 // Receives a word the player believes should be in the valid-word list,
-// along with an optional player name and note.
+// along with an optional player name, note, and the device's anonymous UUID.
 //
-// TODO: when the Supabase backend is set up for the leaderboard, wire this to
-// insert a row into the `word_suggestions` table instead of console.log.
-//
-// Payload: { word: string, playerName?: string, note?: string }
+// Payload: { word: string, playerName?: string, note?: string, deviceId: string }
 
 import { NextRequest, NextResponse } from "next/server";
+import { WordSuggestionInsert, getSupabaseClient } from "@/lib/supabase";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,21 +14,32 @@ export async function POST(request: NextRequest) {
       word:        string;
       playerName?: string;
       note?:       string;
+      deviceId:    string;
     };
 
-    const { word, playerName, note } = body;
+    const { word, playerName, note, deviceId } = body;
 
     if (!word || typeof word !== "string") {
       return NextResponse.json({ ok: false, error: "Missing word" }, { status: 400 });
     }
+    if (!deviceId || typeof deviceId !== "string") {
+      return NextResponse.json({ ok: false, error: "Missing deviceId" }, { status: 400 });
+    }
 
-    // Stub: log to server output until the real backend is wired.
-    console.log("[word-suggestion]", {
-      word:       word.trim(),
-      playerName: playerName?.trim() || "(anonymous)",
-      note:       note?.trim()       || "(no note)",
-      timestamp:  new Date().toISOString(),
-    });
+    const supabase = getSupabaseClient();
+    const row: WordSuggestionInsert = {
+      word:        word.trim().toLowerCase(),
+      player_name: playerName?.trim() || null,
+      note:        note?.trim()       || null,
+      device_id:   deviceId,
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase.from("word_suggestions") as any).insert(row);
+
+    if (error) {
+      console.error("[word-suggestion] Supabase insert error:", (error as { message: string }).message);
+      return NextResponse.json({ ok: false, error: "DB error" }, { status: 500 });
+    }
 
     return NextResponse.json({ ok: true });
   } catch {

@@ -4,6 +4,48 @@
 
 ---
 
+## 2026-05-18 — Session 16: Supabase Integration — Word Suggestions ✅
+
+**Outcome:** 430 tests across 30 files. Build + ESLint clean (0 errors). No regressions.
+
+### Features shipped
+- **Supabase client** — `src/lib/supabase.ts`: singleton `getSupabaseClient()` (anon key, browser-safe). Exports `Database` interface and `WordSuggestionInsert` type for typed inserts. Client is untyped at the `createClient` level to avoid `GenericSchema` compatibility brittleness; insert payloads are typed at the call site.
+- **`getOrCreateDeviceId()`** — added to `src/hooks/useGameStore.ts`. Generates a UUID v4 on first call using `crypto.randomUUID()` and persists it under `deviceId` in the `wordgames:state` envelope. SSR-safe. Shared identity column for suggestions now; leaderboard later.
+- **`deviceId` in `PersistenceEnvelope`** — `src/types/index.ts` extended with `"deviceId"?: string`.
+- **`POST /api/suggest-word` wired** — replaced `console.log` stub with a real Supabase insert into `word_suggestions`. Validates `word` and `deviceId` before inserting. Logs DB errors server-side; returns `{ ok: false, error: "DB error" }` on failure.
+- **`SuggestWordModal`** — now imports `getOrCreateDeviceId` and includes `deviceId` in the POST body.
+- **`.env.local.example`** — committed; documents `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- **ESLint fix** — `GameBoard.tsx` pre-existing error (`react-hooks/set-state-in-effect`) fixed by replacing `useEffect(() => setSuggestedWords(...), [])` with a `useState` lazy initializer (SSR-safe, no effect needed).
+
+### New files
+| File | Purpose |
+|------|---------|
+| `src/lib/supabase.ts` | Singleton Supabase client + `Database` type + `WordSuggestionInsert` |
+| `.env.local.example` | Documents required env vars for local dev and Vercel |
+
+### Human tasks remaining (not yet done)
+1. Create Supabase project at supabase.com → note Project URL + anon key.
+2. Run this SQL once in Supabase Studio → SQL Editor:
+```sql
+create table word_suggestions (
+  id          uuid primary key default gen_random_uuid(),
+  word        text        not null,
+  player_name text,
+  note        text,
+  device_id   text        not null,
+  status      text        not null default 'pending'
+                check (status in ('pending','accepted','rejected')),
+  created_at  timestamptz not null default now()
+);
+alter table word_suggestions enable row level security;
+create policy "insert only" on word_suggestions
+  for insert to anon with check (true);
+```
+3. Copy `.env.local.example` → `.env.local` and fill in real values (local dev).
+4. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to Vercel dashboard → Environment Variables.
+
+---
+
 ## 2026-05-15 — Session 15: Word-Suggestion Flow, UI Polish & Test Gap Fill ✅
 
 **Outcome:** 430 tests across 30 files. Build + ESLint clean. No regressions.

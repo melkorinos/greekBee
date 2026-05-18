@@ -3,6 +3,7 @@
 // GameBoard — the top-level client component that composes all game UI pieces.
 // Receives the initial puzzle as a prop (loaded server-side in page.tsx).
 
+import { getSuggestedWords, markSuggested } from "@/hooks/suggestions";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { FeedbackMessage } from "./FeedbackMessage";
@@ -12,7 +13,6 @@ import type { Puzzle } from "@/games/spelling-bee/types";
 import { ScoreBar } from "./ScoreBar";
 import { SuggestWordModal } from "./SuggestWordModal";
 import { WordInput } from "./WordInput";
-import { getSuggestedWords, markSuggested } from "@/hooks/suggestions";
 import { useGameState } from "@/games/spelling-bee/hooks/useGameState";
 
 interface GameBoardProps {
@@ -39,13 +39,11 @@ export function GameBoard({ puzzle }: GameBoardProps) {
   // ── Word suggestion ────────────────────────────────────────────────────────
   // suggestWord: the word currently being proposed (null = modal closed)
   const [suggestWord,    setSuggestWord]    = useState<string | null>(null);
-  // suggestedWords: Set of words already suggested by this device (from localStorage)
-  const [suggestedWords, setSuggestedWords] = useState<Set<string>>(new Set());
-
-  // Hydrate suggested-words set from localStorage after mount (client-only)
-  useEffect(() => {
-    setSuggestedWords(new Set(getSuggestedWords()));
-  }, []);
+  // suggestedWords: Set of words already suggested by this device (from localStorage).
+  // Lazy initializer reads localStorage once on mount — SSR-safe via window check.
+  const [suggestedWords, setSuggestedWords] = useState<Set<string>>(
+    () => typeof window === "undefined" ? new Set() : new Set(getSuggestedWords())
+  );
 
   function handleSuggest(word: string) {
     setSuggestWord(word);
