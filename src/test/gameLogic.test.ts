@@ -1,8 +1,8 @@
 // Unit tests for pure game logic — no React, no DOM.
 // These run fast and cover the core rules of the game.
 
+import { MAX_SCORE_CAP, maxScore, scoreWord } from "@/games/spelling-bee/lib/scoring";
 import { describe, expect, it } from "vitest";
-import { maxScore, scoreWord } from "@/games/spelling-bee/lib/scoring";
 
 import type { Puzzle } from "@/games/spelling-bee/types";
 import { calculateRank } from "@/games/spelling-bee/lib/ranking";
@@ -55,10 +55,27 @@ describe("scoreWord", () => {
 });
 
 describe("maxScore", () => {
-  it("returns 80% of the raw word-score total", () => {
+  it("returns 80% of the raw word-score total for small puzzles", () => {
     // raw: anti(1) + paid(1) + paint(5) + painted(14) + panted(6) + patina(6) = 33
-    // capped at 80%: ceil(33 * 0.8) = 27
+    // capped at 80%: ceil(33 * 0.8) = 27 — well below the 500-pt hard cap
     expect(maxScore(puzzle)).toBe(27);
+  });
+
+  it("never exceeds MAX_SCORE_CAP (500) regardless of word count", () => {
+    // Build a puzzle whose 80%-of-raw would be > 500
+    // 100 × 10-letter words each score 10 pts → raw = 1000, 80% = 800 > 500
+    const bigWords = Array.from({ length: 100 }, (_, i) =>
+      "abcdefghi" + String.fromCharCode(97 + (i % 26))
+    );
+    const bigPuzzle: Puzzle = {
+      ...puzzle,
+      validWords: bigWords,
+    };
+    expect(maxScore(bigPuzzle)).toBe(MAX_SCORE_CAP);
+  });
+
+  it("MAX_SCORE_CAP is 500", () => {
+    expect(MAX_SCORE_CAP).toBe(500);
   });
 });
 

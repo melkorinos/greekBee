@@ -26,13 +26,20 @@ export function scoreWord(word: string, puzzle: Puzzle): number {
  * (sum of scores for every valid word).
  * Used to convert a raw score into a rank percentage.
  *
- * Capped at 80% of the raw total so rank thresholds feel reachable —
- * a player doesn't need to find every obscure word to reach the top rank.
+ * Two adjustments keep the ceiling player-friendly:
+ *  1. Only 80% of the raw total counts — reaching every obscure word is not required.
+ *  2. Hard cap of 500 pts — prevents puzzles with very large word lists from
+ *     producing leaderboard scores in the thousands.
+ *
+ * Tech debt TD-002: replace the hard cap with a smarter word-count percentile so
+ * puzzles feel equally challenging regardless of dictionary coverage.
  */
+export const MAX_SCORE_CAP = 500;
+
 export function maxScore(puzzle: Puzzle): number {
   const raw = puzzle.validWords.reduce(
     (total, word) => total + scoreWord(word, puzzle),
     0
   );
-  return Math.ceil(raw * 0.8);
+  return Math.min(Math.ceil(raw * 0.8), MAX_SCORE_CAP);
 }

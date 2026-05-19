@@ -82,7 +82,9 @@ src/
 1. **No E2E tests** — no Playwright/Cypress.
 2. **Wordle length variants deferred** — architecture supports 3–8; word lists not yet generated.
 3. **Mobile physical keyboard gap** — `window.keydown` in Wordle works on desktop only; no test verifying mobile on-screen keyboard path.
-4. **TD-001 — Partial style-token coverage in `FoundWordsList` / `ScoreBar`** — layout tokens (`container`, `heading`, `labelRow`, etc.) still live in local `const styles = {}` objects inside those two components while visual tokens moved to `styles.ts`. Either move all remaining keys into `styles.ts` (preferred), or document the local-layout / shared-visual split explicitly in `styles.ts`'s header so the rule is clear. Acceptance: no component in `src/components/spelling-bee/` has an undocumented local `const styles` object.
+4. **TD-001 — Partial style-token coverage in `FoundWordsList` / `ScoreBar`** — layout tokens still live in local `const styles = {}` objects. Move all to `styles.ts` or document the split. Acceptance: no undocumented local `const styles` in `src/components/spelling-bee/`.
+5. **TD-002 — Spelling Bee max-score cap is a blunt instrument** — `maxScore()` hard-caps at 500 pts (`MAX_SCORE_CAP`). Better: use a word-count percentile so all puzzles feel equally challenging regardless of raw dictionary coverage.
+6. **TD-003 — Wordle answer pool quality** — `answers-5.json` still includes obscure/archaic Greek words. Should be filtered against a high-frequency lemma list so daily answers are always common words.
 
 ---
 
