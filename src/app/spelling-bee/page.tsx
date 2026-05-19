@@ -10,7 +10,7 @@
 // ?random=1&exclude=<id> → redirect to a random puzzle's letter URL
 // ?puzzle=<id>           → redirect to that specific puzzle's letter URL
 
-import { getPuzzleById, getRandomPuzzle, getTodaysPuzzle } from "@/data";
+import { getPuzzleForDate, getRandomPuzzle, getTodaysPuzzle } from "@/data";
 
 import type { Language } from "@/types";
 import { greekToGreeklish } from "@/lib/greeklish";
@@ -25,7 +25,7 @@ export default async function SpellingBeePage({
   const language: Language = "el";
 
   const puzzle =
-    puzzleId ? (getPuzzleById(puzzleId, language) ?? getTodaysPuzzle(language))
+    puzzleId ? getPuzzleForDate(puzzleId, language)
     : random  ? getRandomPuzzle(language, exclude)
     :           getTodaysPuzzle(language);
 

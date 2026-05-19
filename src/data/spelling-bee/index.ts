@@ -96,6 +96,22 @@ export function getCuratedPuzzleByLetters(
 }
 
 /**
+ * Returns the most recent `n` puzzle dates (YYYY-MM-DD), up to and including
+ * today, sorted newest-first.
+ *
+ * Used by the leaderboard to build the rolling 7-day strip instead of a
+ * free-form date picker.
+ */
+export function getRecentPuzzleDates(n: number, language: Language = "el"): string[] {
+  const today = new Date().toISOString().split("T")[0];
+  const past = PUZZLES[language].filter((p) => p.date <= today);
+  return past
+    .slice(-n)
+    .map((p) => p.date)
+    .reverse(); // newest-first: [today, yesterday, …]
+}
+
+/**
  * Builds a fully playable Puzzle from an arbitrary 7-letter combination by
  * computing the valid word list on the fly from the full word list.
  *

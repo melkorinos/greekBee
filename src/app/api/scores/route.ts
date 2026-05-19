@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = getSupabaseClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase.from("scores") as any).upsert(
     {
       puzzle_id,
@@ -49,6 +50,15 @@ export async function POST(req: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  // Fire-and-forget cleanup: delete scores older than 7 days to keep the
+  // leaderboard to a rolling window.  Never block the response for housekeeping.
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  const cutoffStr = cutoff.toISOString().split("T")[0];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  void (supabase.from("scores") as any).delete().lt("puzzle_id", cutoffStr);
+
   return NextResponse.json({ ok: true });
 }
 
@@ -65,6 +75,7 @@ export async function GET(req: NextRequest) {
   const supabase = getSupabaseClient();
 
   // Fetch top 20 rows — strip device_id before returning to client.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: rows, error } = await (supabase.from("scores") as any)
     .select("device_id, display_name, score")
     .eq("puzzle_id", puzzleId)
@@ -97,6 +108,7 @@ export async function GET(req: NextRequest) {
 
   if (!playerInTop20 && deviceId) {
     // Fetch the player's own row.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: playerData } = await (supabase.from("scores") as any)
       .select("display_name, score")
       .eq("puzzle_id", puzzleId)
@@ -105,6 +117,7 @@ export async function GET(req: NextRequest) {
 
     if (playerData) {
       // Count how many players have a strictly higher score → rank = count + 1.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { count } = await (supabase.from("scores") as any)
         .select("*", { count: "exact", head: true })
         .eq("puzzle_id", puzzleId)

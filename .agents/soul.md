@@ -29,9 +29,9 @@ After implementing any feature — however small — I MUST:
 1. **Review** every new function, component, and module I added. Ask: "What could break? What edge case isn't handled? What does a caller assume?"
 2. **Write tests** for all new pure functions, data-layer functions, and components. If a function isn't exported and can't be tested, extract it so it can be.
 3. **Update `deploymentReadiness.test.ts`** if any new static `import ... from` was added to a data loader.
-4. **Run** `npm run test -- --run` → must be 0 failures.
+4. **Run** `npm run test -- --run` → must be 0 failures. **PowerShell only — use `Select-Object -Last N`, never `tail`.**
 5. **Run** `npx eslint .` → must be 0 errors.
 6. **Run** `npm run build` → must succeed.
-7. **Update `.agents/log.md`** with what was done.
+7. **Update `.agents/log.md`** with what was done. **Keep `log.md` under 250 lines** — condense the older-sessions table before adding a new entry if needed.
 
 Skipping any of these steps is a protocol violation. There are no exceptions.

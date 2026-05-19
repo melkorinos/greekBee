@@ -20,9 +20,11 @@ import { useGameState } from "@/games/spelling-bee/hooks/useGameState";
 
 interface GameBoardProps {
   puzzle: Puzzle;
+  /** Last 7 daily puzzle dates (newest-first), computed server-side. */
+  recentPuzzleDates?: string[];
 }
 
-export function GameBoard({ puzzle }: GameBoardProps) {
+export function GameBoard({ puzzle, recentPuzzleDates = [] }: GameBoardProps) {
   const {
     puzzle: activePuzzle,
     currentInput,
@@ -239,6 +241,7 @@ export function GameBoard({ puzzle }: GameBoardProps) {
         <LeaderboardModal
           isOpen={leaderboardOpen}
           defaultPuzzleId={leaderboardPuzzleId}
+          recentDates={recentPuzzleDates}
           deviceId={deviceId}
           displayName={displayName}
           onSaveName={handleSaveName}

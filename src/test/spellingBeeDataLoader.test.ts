@@ -10,6 +10,7 @@ import {
   getPuzzleById,
   getPuzzleForDate,
   getRandomPuzzle,
+  getRecentPuzzleDates,
 } from "@/data/spelling-bee";
 
 // ── getPuzzleForDate ───────────────────────────────────────────────────────────
@@ -148,5 +149,70 @@ describe("getCuratedPuzzleByLetters", () => {
   it("returned puzzle has a date-format id (not 'custom-...')", () => {
     const found = getCuratedPuzzleByLetters(ref.centerLetter, ref.outerLetters);
     expect(found!.id).toMatch(/^\d{4}-\d{2}-\d{2}/);
+  });
+});
+
+// ── Routing regression: leaderboard "play past puzzle" link ───────────────────
+// The leaderboard sends ?puzzle=YYYY-MM-DD (a date string, not a full puzzle ID).
+// getPuzzleById would return null (IDs have the -el suffix), causing a silent
+// fallback to today's puzzle. getPuzzleForDate must be used instead.
+
+describe("getPuzzleForDate — leaderboard routing regression", () => {
+  it("returns the correct puzzle when given a plain date string (as sent by leaderboard)", () => {
+    // This is the exact value the leaderboard passes as ?puzzle=
+    const dateOnly = "2026-03-25";
+    const p = getPuzzleForDate(dateOnly);
+    // Must return the matching puzzle, NOT a fallback
+    expect(p.date).toBe(dateOnly);
+    expect(p.id).toBe("2026-03-25-el");
+  });
+
+  it("getPuzzleById returns null for a plain date string (confirms why getPuzzleForDate is required)", () => {
+    const dateOnly = "2026-03-25";
+    const p = getPuzzleById(dateOnly, "el");
+    // IDs have '-el' suffix; plain date finds nothing
+    expect(p).toBeNull();
+  });
+});
+
+// ── getRecentPuzzleDates ──────────────────────────────────────────────────────
+
+describe("getRecentPuzzleDates", () => {
+  it("returns exactly n dates", () => {
+    const dates = getRecentPuzzleDates(7);
+    expect(dates).toHaveLength(7);
+  });
+
+  it("returns dates sorted newest-first", () => {
+    const dates = getRecentPuzzleDates(7);
+    for (let i = 0; i < dates.length - 1; i++) {
+      expect(dates[i] > dates[i + 1]).toBe(true);
+    }
+  });
+
+  it("first date is today or in the past (not in the future)", () => {
+    const today = new Date().toISOString().split("T")[0];
+    const dates = getRecentPuzzleDates(7);
+    expect(dates[0] <= today).toBe(true);
+  });
+
+  it("all returned dates are valid YYYY-MM-DD strings", () => {
+    const dates = getRecentPuzzleDates(7);
+    dates.forEach((d) => expect(d).toMatch(/^\d{4}-\d{2}-\d{2}$/));
+  });
+
+  it("all returned dates correspond to real puzzles in the data", () => {
+    const dates = getRecentPuzzleDates(7);
+    dates.forEach((d) => {
+      const p = getPuzzleForDate(d);
+      expect(p.date).toBe(d);
+    });
+  });
+
+  it("works with n=1 (returns only today's date)", () => {
+    const today = new Date().toISOString().split("T")[0];
+    const dates = getRecentPuzzleDates(1);
+    expect(dates).toHaveLength(1);
+    expect(dates[0]).toBe(today);
   });
 });

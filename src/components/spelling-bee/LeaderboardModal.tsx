@@ -1,11 +1,12 @@
 // LeaderboardModal — bottom-sheet leaderboard for daily Spelling Bee puzzles.
 //
 // Features:
-//   - Date picker to browse any day's leaderboard (defaults to current puzzle date)
+//   - Rolling 7-day strip (pill buttons) to browse recent leaderboards;
+//     defaults to today's puzzle; no calendar widget
 //   - Top 20 rows sorted by score; player's own row is highlighted
 //   - If the player is outside the top 20, their row is pinned below a dashed separator
 //   - Inline display-name editor (persisted to localStorage via onSaveName)
-//   - "Παίξε αυτό το παζλ" link to jump to any past puzzle
+//   - "Παίξε αυτό το παζλ" link to jump to any past day's puzzle
 //   - Auto-polls every 5 min via useLeaderboard (only while modal is open)
 
 "use client";
@@ -16,9 +17,22 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 
+// ── Day-label helpers ─────────────────────────────────────────────────────────
+
+const GREEK_DAYS = ["Κυρ", "Δευ", "Τρι", "Τετ", "Πεμ", "Παρ", "Σαβ"] as const;
+
+/** Returns e.g. "Δευ 18" for a YYYY-MM-DD date string. */
+function formatDayLabel(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  return `${GREEK_DAYS[d.getDay()]} ${d.getDate()}`;
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
 interface LeaderboardModalProps {
   isOpen:          boolean;
-  defaultPuzzleId: string; // the current daily puzzle's date string e.g. "2026-05-18"
+  defaultPuzzleId: string;   // current daily puzzle date e.g. "2026-05-18"
+  recentDates:     string[]; // last 7 puzzle dates, newest-first (from data layer)
   deviceId:        string;
   displayName:     string;
   onSaveName:      (name: string) => void;
@@ -28,6 +42,7 @@ interface LeaderboardModalProps {
 export function LeaderboardModal({
   isOpen,
   defaultPuzzleId,
+  recentDates,
   deviceId,
   displayName,
   onSaveName,
@@ -36,7 +51,7 @@ export function LeaderboardModal({
   const [selectedDate, setSelectedDate] = useState(defaultPuzzleId);
   const [nameInput,    setNameInput]    = useState(displayName);
 
-  // Today's date — used to cap the date picker so future dates are not selectable.
+  // Today's date — used to determine which pill shows "Σήμερα".
   const today = new Date().toISOString().split("T")[0];
 
   // Sync name input if parent updates displayName (e.g. first-time save).
@@ -125,24 +140,40 @@ export function LeaderboardModal({
           </div>
         </div>
 
-        {/* ── Date picker ────────────────────────────────────────────────── */}
-        <div className="px-5 py-3 border-b border-stone-100 flex items-center gap-3">
-          <label className="text-xs font-medium text-stone-600 shrink-0">
-            Ημερομηνία
-          </label>
-          <input
-            type="date"
-            value={selectedDate}
-            max={today}
-            onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
-            className={`${inputCompactClass} flex-1 min-w-0`}
-          />
+        {/* ── Day strip ──────────────────────────────────────────────── */}
+        <div className="px-4 py-3 border-b border-stone-100">
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            {recentDates.map((date) => {
+              const isSelected = date === selectedDate;
+              const isToday    = date === today;
+              return (
+                <button
+                  key={date}
+                  onClick={() => setSelectedDate(date)}
+                  aria-pressed={isSelected}
+                  aria-label={date}
+                  className={`shrink-0 flex flex-col items-center px-2.5 py-1.5 rounded-lg transition-colors ${
+                    isSelected
+                      ? "bg-amber-400 text-amber-900"
+                      : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                  }`}
+                >
+                  <span className="text-[0.6rem] font-semibold leading-tight">
+                    {isToday ? "Σήμερα" : GREEK_DAYS[new Date(date + "T00:00:00").getDay()]}
+                  </span>
+                  <span className="text-sm font-bold leading-tight">
+                    {new Date(date + "T00:00:00").getDate()}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
           <button
             onClick={() => void refresh()}
-            className="text-xs text-stone-400 hover:text-stone-700 transition-colors shrink-0"
+            className="mt-1.5 text-xs text-stone-400 hover:text-stone-700 transition-colors"
             aria-label="Ανανέωση"
           >
-            ↻
+            ↻ Ανανέωση
           </button>
         </div>
 

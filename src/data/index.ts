@@ -10,4 +10,5 @@ export {
   getNextPuzzle,
   buildCustomPuzzle,
   getCuratedPuzzleByLetters,
+  getRecentPuzzleDates,
 } from "./spelling-bee/index";

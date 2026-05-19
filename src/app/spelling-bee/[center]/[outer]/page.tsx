@@ -15,7 +15,7 @@
 // The resulting Puzzle object is identical in shape to a curated one, so the
 // entire existing game stack (GameBoard, reducer, persistence) works unchanged.
 
-import { buildCustomPuzzle, getCuratedPuzzleByLetters } from "@/data";
+import { buildCustomPuzzle, getCuratedPuzzleByLetters, getRecentPuzzleDates } from "@/data";
 import { notFound, redirect } from "next/navigation";
 
 import { GameBoard } from "@/components/spelling-bee/GameBoard";
@@ -59,6 +59,10 @@ export default async function CustomSpellingBeePage({
     getCuratedPuzzleByLetters(parsed.center, parsed.outer, language) ??
     buildCustomPuzzle(parsed.center, parsed.outer, language);
 
+  // Last 7 daily puzzle dates (newest-first) — passed to GameBoard so the
+  // leaderboard can render the rolling day-strip without a client-side import.
+  const recentPuzzleDates = getRecentPuzzleDates(7, language);
+
   // The share URL is the greeklish canonical path — pure ASCII, human-readable.
   // ShareButton will prepend window.location.origin on the client.
   const canonicalPath = `/spelling-bee/${canonicalCenter}/${canonicalOuter}`;
@@ -86,7 +90,7 @@ export default async function CustomSpellingBeePage({
         </div>
       )}
       <div className="flex flex-1 w-full flex-col items-center bg-white">
-        <GameBoard puzzle={puzzle} />
+        <GameBoard puzzle={puzzle} recentPuzzleDates={recentPuzzleDates} />
       </div>
     </div>
   );

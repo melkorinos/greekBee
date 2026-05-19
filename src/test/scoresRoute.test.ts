@@ -20,10 +20,12 @@ function makeChain(result: ChainResult) {
   chain.eq     = ret;
   chain.order  = ret;
   chain.gt     = ret;
+  chain.delete = ret;
   // Terminal methods — return a resolved Promise
   chain.limit  = () => Promise.resolve(result);
   chain.single = () => Promise.resolve(result);
   chain.upsert = () => Promise.resolve(result);
+  chain.lt     = () => Promise.resolve(result); // used by fire-and-forget cleanup
   // Make the chain itself awaitable — handles cases where the last chained
   // method returns `chain` (e.g. `.gt()`), and the caller does `await chain`.
   chain.then   = (resolve: (v: ChainResult) => void) => resolve(result);
@@ -108,7 +110,7 @@ describe("POST /api/scores — validation", () => {
 
 describe("POST /api/scores — happy path", () => {
   it("returns { ok: true } when upsert succeeds", async () => {
-    enqueue({ error: null });
+    enqueue({ error: null }, { error: null }); // upsert + fire-and-forget cleanup
     const res = await POST(makePostReq({
       puzzle_id:    "2026-05-18",
       device_id:    "device-abc",
@@ -121,7 +123,7 @@ describe("POST /api/scores — happy path", () => {
   });
 
   it("succeeds with no display_name (falls back to default)", async () => {
-    enqueue({ error: null });
+    enqueue({ error: null }, { error: null }); // upsert + fire-and-forget cleanup
     const res = await POST(makePostReq({ puzzle_id: "2026-05-18", device_id: "d1", score: 5 }));
     expect(res.status).toBe(200);
   });
