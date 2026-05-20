@@ -1,0 +1,135 @@
+// useScoreSubmission.test.ts — unit tests for the Spelling Bee score-posting hook.
+//
+// fetch is mocked per-test via vi.spyOn.
+
+import { act, renderHook } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { useScoreSubmission } from "@/hooks/useScoreSubmission";
+
+afterEach(() => vi.restoreAllMocks());
+
+function mockFetch() {
+  return vi.spyOn(globalThis, "fetch").mockResolvedValue({
+    ok: true,
+    json: async () => ({ ok: true }),
+  } as Response);
+}
+
+const BASE = {
+  puzzleId:    "2026-05-20",
+  deviceId:    "device-abc",
+  displayName: "Άννα",
+  enabled:     true,
+};
+
+describe("useScoreSubmission — submit()", () => {
+  it("POSTs to /api/scores with correct fields", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission(BASE));
+
+    await act(async () => { result.current.submit(10); });
+
+    expect(spy).toHaveBeenCalledOnce();
+    const [url, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/scores");
+    const body = JSON.parse(init.body as string);
+    expect(body.puzzle_id).toBe("2026-05-20");
+    expect(body.device_id).toBe("device-abc");
+    expect(body.display_name).toBe("Άννα");
+    expect(body.score).toBe(10);
+  });
+
+  it("does not POST when enabled is false", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission({ ...BASE, enabled: false }));
+
+    await act(async () => { result.current.submit(10); });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("does not POST when deviceId is empty", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission({ ...BASE, deviceId: "" }));
+
+    await act(async () => { result.current.submit(10); });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("does not POST when score is 0", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission(BASE));
+
+    await act(async () => { result.current.submit(0); });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("does not POST when score does not increase", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission(BASE));
+
+    await act(async () => { result.current.submit(10); });
+    await act(async () => { result.current.submit(10); }); // same score
+    await act(async () => { result.current.submit(5); });  // lower score
+
+    expect(spy).toHaveBeenCalledOnce(); // only the first call
+  });
+
+  it("POSTs again when score strictly increases", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission(BASE));
+
+    await act(async () => { result.current.submit(10); });
+    await act(async () => { result.current.submit(15); });
+
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
+  it("falls back to 'Ανώνυμος' when displayName is empty", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission({ ...BASE, displayName: "" }));
+
+    await act(async () => { result.current.submit(10); });
+
+    const [, init] = spy.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.display_name).toBe("Ανώνυμος");
+  });
+});
+
+describe("useScoreSubmission — submitWithName()", () => {
+  it("POSTs with the provided name, bypassing the increase guard", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission(BASE));
+
+    // Don't call submit first — submitWithName should always fire
+    await act(async () => { result.current.submitWithName(10, "Νέος"); });
+
+    expect(spy).toHaveBeenCalledOnce();
+    const [, init] = spy.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.display_name).toBe("Νέος");
+    expect(body.score).toBe(10);
+  });
+
+  it("does not POST when score is 0", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission(BASE));
+
+    await act(async () => { result.current.submitWithName(0, "Νέος"); });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("does not POST when enabled is false", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission({ ...BASE, enabled: false }));
+
+    await act(async () => { result.current.submitWithName(10, "Νέος"); });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+});

@@ -86,6 +86,12 @@ export function useGameState(initialPuzzle: Puzzle) {
     [allowedLetters]
   );
 
+  /** Permanently lock the game — reveals missed words, no further input accepted */
+  const giveUp = useCallback(
+    () => dispatch({ type: "GIVE_UP" }),
+    []
+  );
+
   /** Load a completely new puzzle, resetting all progress */
   const newGame = useCallback(
     (puzzle: Puzzle) => {
@@ -113,6 +119,6 @@ export function useGameState(initialPuzzle: Puzzle) {
     submitWord,
     shuffleLetters,
     handleKeyboardLetter,
-    newGame,
-  };
+    newGame,    giveUp,
+    givenUp: state.givenUp ?? false,  };
 }

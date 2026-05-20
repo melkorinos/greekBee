@@ -26,10 +26,24 @@ export interface LeaderboardResponse {
 
 const EMPTY: LeaderboardResponse = { top20: [], playerRow: null };
 
+/**
+ * Builds the fetch URL for the Spelling Bee leaderboard (default).
+ * Pass a custom `buildUrl` to point the hook at a different endpoint
+ * (e.g. Wordle: `/api/wordle-scores?date=`).
+ */
+export type LeaderboardUrlBuilder = (puzzleId: string, deviceId: string) => string;
+
+const defaultBuildUrl: LeaderboardUrlBuilder = (puzzleId, deviceId) => {
+  const params = new URLSearchParams({ puzzleId });
+  if (deviceId) params.set("deviceId", deviceId);
+  return `/api/scores?${params.toString()}`;
+};
+
 export function useLeaderboard(
-  puzzleId: string,
-  deviceId: string,
-  enabled:  boolean = true
+  puzzleId:  string,
+  deviceId:  string,
+  enabled:   boolean = true,
+  buildUrl:  LeaderboardUrlBuilder = defaultBuildUrl
 ) {
   const [data,      setData]      = useState<LeaderboardResponse>(EMPTY);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,9 +56,7 @@ export function useLeaderboard(
     setIsLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({ puzzleId });
-      if (deviceId) params.set("deviceId", deviceId);
-      const res = await fetch(`/api/scores?${params.toString()}`);
+      const res = await fetch(buildUrl(puzzleId, deviceId));
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = (await res.json()) as LeaderboardResponse;
       setData(json);
@@ -53,7 +65,7 @@ export function useLeaderboard(
     } finally {
       setIsLoading(false);
     }
-  }, [puzzleId, deviceId]);
+  }, [puzzleId, deviceId, buildUrl]);
 
   useEffect(() => {
     if (!enabled || !puzzleId) {

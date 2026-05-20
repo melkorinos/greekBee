@@ -13,6 +13,7 @@ import { GuessGrid } from "./GuessGrid";
 import { Keyboard } from "./Keyboard";
 import { WordleLeaderboardModal } from "./WordleLeaderboardModal";
 import { normalizeLetters } from "@/games/spelling-bee/lib/normalize";
+import { useWordleScoreSubmission } from "@/hooks/useWordleScoreSubmission";
 import { useWordleState } from "@/games/wordle/hooks/useWordleState";
 
 // Greek letter regex (covers the Greek alphabet range)
@@ -157,26 +158,15 @@ export function WordleBoard({ puzzles, wordLists, today }: WordleBoardProps) {
     // (fire-and-forget — not critical)
   }
 
+  // Score submission -- all posting logic lives in the hook.
+  const { submit: postWordleScore } = useWordleScoreSubmission({ today, deviceId });
+
   // Score submission: called by each LengthPanel when its game ends
   const handleGameEnd = useCallback(
     (length: WordleLength, attempts: number, won: boolean) => {
-      const attemptsToSubmit = won ? attempts : 7; // failed = 7
-      if (!deviceId) return;
-      const sl = readSlice<WordleIdentitySlice>("wordle-identity");
-      const name = sl?.displayName ?? "";
-      void fetch("/api/wordle-scores", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          puzzle_date:  today,
-          word_length:  length,
-          device_id:    deviceId,
-          display_name: name || "Ανώνυμος",
-          attempts:     attemptsToSubmit,
-        }),
-      });
+      postWordleScore(length, attempts, won);
     },
-    [deviceId, today]
+    [postWordleScore]
   );
 
   // Length switcher — wraps around

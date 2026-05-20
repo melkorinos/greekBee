@@ -50,6 +50,10 @@ export const btnPrimary =
 export const btnPrimaryCompact =
   "px-3 py-1.5 bg-stone-800 text-white text-sm rounded-lg hover:bg-stone-700 active:bg-stone-900 transition-colors disabled:opacity-40";
 
+/** Give-up button — small, destructive tone, shown inline next to word count */
+export const btnGiveUp =
+  "text-xs font-medium text-red-500 border border-red-200 rounded-full px-3 py-1 hover:bg-red-50 active:bg-red-100 transition-colors";
+
 /** Cancel / secondary modal button */
 export const btnCancel =
   "flex-1 py-2 rounded-xl border border-stone-300 text-stone-600 text-sm font-medium hover:bg-stone-50 active:bg-stone-100 transition-colors";

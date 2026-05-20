@@ -54,6 +54,7 @@ describe("loadPersistedState", () => {
       score: 7,
       currentRank: "Moving Up",
       startedAt,
+      givenUp: false,
     });
   });
 

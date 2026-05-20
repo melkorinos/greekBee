@@ -257,3 +257,43 @@ describe("RESTORE_STATE", () => {
     expect(s.puzzleMaxScore).toBe(initial.puzzleMaxScore);
   });
 });
+
+// ── GIVE_UP ────────────────────────────────────────────────────────────────────
+
+describe("GIVE_UP", () => {
+  it("sets givenUp to true", () => {
+    const s = gameReducer(freshState(), { type: "GIVE_UP" });
+    expect(s.givenUp).toBe(true);
+  });
+
+  it("clears currentInput when giving up", () => {
+    let s = gameReducer(freshState(), { type: "ADD_LETTER", letter: "p" });
+    s = gameReducer(s, { type: "ADD_LETTER", letter: "a" });
+    s = gameReducer(s, { type: "GIVE_UP" });
+    expect(s.currentInput).toBe("");
+  });
+
+  it("preserves foundWords and score when giving up", () => {
+    let s = gameReducer(freshState(), { type: "ADD_LETTER", letter: "a" });
+    s = gameReducer(s, { type: "ADD_LETTER", letter: "n" });
+    s = gameReducer(s, { type: "ADD_LETTER", letter: "t" });
+    s = gameReducer(s, { type: "ADD_LETTER", letter: "i" });
+    s = gameReducer(s, { type: "SUBMIT_WORD" });
+    const scoreBeforeGiveUp = s.score;
+    s = gameReducer(s, { type: "GIVE_UP" });
+    expect(s.foundWords).toContain("anti");
+    expect(s.score).toBe(scoreBeforeGiveUp);
+  });
+
+  it("givenUp is false on fresh state", () => {
+    expect(freshState().givenUp).toBeFalsy();
+  });
+
+  it("RESTORE_STATE can restore givenUp: true", () => {
+    const s = gameReducer(freshState(), {
+      type: "RESTORE_STATE",
+      saved: { givenUp: true },
+    });
+    expect(s.givenUp).toBe(true);
+  });
+});

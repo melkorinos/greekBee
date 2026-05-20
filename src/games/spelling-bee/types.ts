@@ -83,4 +83,6 @@ export interface GameState {
   startedAt: number;
   /** Result of the most recent word submission — used to drive UI feedback messages */
   lastSubmission: { word: string; result: ValidationResult } | null;
+  /** True when the player has chosen to give up — locks the game permanently */
+  givenUp?: boolean;
 }

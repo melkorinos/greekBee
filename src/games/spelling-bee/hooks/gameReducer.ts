@@ -16,6 +16,7 @@ export type GameAction =
   | { type: "CLEAR_INPUT" }                  // Player clears the whole input
   | { type: "SUBMIT_WORD" }                  // Player hits Enter / Submit
   | { type: "SHUFFLE_LETTERS" }              // Randomise the outer ring display order
+  | { type: "GIVE_UP" }                      // Player gives up — locks the game permanently
   | { type: "NEW_GAME"; puzzle: Puzzle }     // Load a fresh puzzle
   | { type: "RESTORE_STATE"; saved: Partial<GameState> }; // Rehydrate from localStorage (client-only)
 
@@ -94,6 +95,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         foundWords: [...state.foundWords, word],
         score: newScore,
         currentRank: newRank,
+      };
+    }
+
+    case "GIVE_UP": {
+      // Permanently lock the game — clear input and mark as given up.
+      // Once givenUp is true no further word submissions are accepted (UI hides the board).
+      return {
+        ...state,
+        currentInput: "",
+        givenUp: true,
       };
     }
 

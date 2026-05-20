@@ -16,9 +16,10 @@ import {
   lbTdRank,
   lbTdScore,
 } from "@/components/spelling-bee/styles";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import Link from "next/link";
+import type { LeaderboardUrlBuilder } from "@/hooks/useLeaderboard";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 
 // Re-use Spelling Bee style tokens — identical visual language
@@ -72,39 +73,23 @@ export function WordleLeaderboardModal({
     if (isOpen) setSelectedDate(today);
   }, [isOpen, today]);
 
-  // useLeaderboard hits /api/scores by default — we override with /api/wordle-scores
-  // by passing a puzzleId-like string; but the hook calls /api/scores?puzzleId=...
-  // We need a dedicated fetch here since the Wordle endpoint uses ?date= not ?puzzleId=.
-  const [data,      setData]      = useState<{ top20: ReturnType<typeof useLeaderboard>["data"]["top20"]; playerRow: ReturnType<typeof useLeaderboard>["data"]["playerRow"] }>({ top20: [], playerRow: null });
-  const [isLoading, setIsLoading] = useState(false);
-  const [error,     setError]     = useState<string | null>(null);
+  // URL builder for the Wordle leaderboard endpoint.
+  // Wordle uses ?date= not ?puzzleId= so we cannot use the default builder.
+  const buildUrl: LeaderboardUrlBuilder = useMemo(
+    () => (date, deviceId) => {
+      const params = new URLSearchParams({ date });
+      if (deviceId) params.set("deviceId", deviceId);
+      return `/api/wordle-scores?${params.toString()}`;
+    },
+    []
+  );
 
-  useEffect(() => {
-    if (!isOpen || !selectedDate) return;
-    let cancelled = false;
-    setIsLoading(true);
-    setError(null);
-    const params = new URLSearchParams({ date: selectedDate });
-    if (deviceId) params.set("deviceId", deviceId);
-    fetch(`/api/wordle-scores?${params.toString()}`)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json() as Promise<typeof data>;
-      })
-      .then((json) => { if (!cancelled) setData(json); })
-      .catch((e: unknown) => { if (!cancelled) setError(e instanceof Error ? e.message : "Σφάλμα"); })
-      .finally(() => { if (!cancelled) setIsLoading(false); });
-    return () => { cancelled = true; };
-  }, [isOpen, selectedDate, deviceId]);
-
-  // Auto-refresh every 5 min while open
-  useEffect(() => {
-    if (!isOpen) return;
-    const id = setInterval(() => {
-      setSelectedDate((d) => d); // trigger re-fetch by identity
-    }, 5 * 60 * 1000);
-    return () => clearInterval(id);
-  }, [isOpen]);
+  const { data, isLoading, error, refresh } = useLeaderboard(
+    selectedDate,
+    deviceId,
+    isOpen,    // pause polling when modal is closed
+    buildUrl
+  );
 
   function handleSaveName() {
     const trimmed = nameInput.trim();
@@ -205,7 +190,7 @@ export function WordleLeaderboardModal({
             })}
           </div>
           <button
-            onClick={() => setSelectedDate((d) => d)}
+            onClick={() => void refresh()}
             className="mt-1.5 text-xs text-stone-400 hover:text-stone-700 transition-colors"
             aria-label="Ανανέωση"
           >

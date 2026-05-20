@@ -206,3 +206,66 @@ describe("Word suggestion flow", () => {
     expect(screen.queryByTestId("feedback-suggest-btn")).toBeNull();
   });
 });
+
+// ── Give-up ───────────────────────────────────────────────────────────────────
+
+describe("Give-up flow", () => {
+  it("shows give-up button in found-words heading for daily puzzle", () => {
+    render(<GameBoard puzzle={{ ...puzzle, id: "2026-05-20-el", date: "2026-05-20" }} />);
+    expect(screen.getByTestId("btn-give-up")).toBeInTheDocument();
+  });
+
+  it("does NOT show give-up button for custom puzzles", () => {
+    render(<GameBoard puzzle={{ ...puzzle, id: "custom-a-pinteδ", date: "2026-05-20" }} />);
+    expect(screen.queryByTestId("btn-give-up")).toBeNull();
+  });
+
+  it("clicking give-up shows confirmation row", async () => {
+    const user = userEvent.setup();
+    render(<GameBoard puzzle={{ ...puzzle, id: "2026-05-20-el", date: "2026-05-20" }} />);
+    await user.click(screen.getByTestId("btn-give-up"));
+    expect(screen.getByTestId("btn-give-up-confirm")).toBeInTheDocument();
+    expect(screen.getByTestId("btn-give-up-cancel")).toBeInTheDocument();
+  });
+
+  it("cancelling give-up hides confirmation and restores give-up button", async () => {
+    const user = userEvent.setup();
+    render(<GameBoard puzzle={{ ...puzzle, id: "2026-05-20-el", date: "2026-05-20" }} />);
+    await user.click(screen.getByTestId("btn-give-up"));
+    await user.click(screen.getByTestId("btn-give-up-cancel"));
+    expect(screen.getByTestId("btn-give-up")).toBeInTheDocument();
+    expect(screen.queryByTestId("btn-give-up-confirm")).toBeNull();
+  });
+
+  it("confirming give-up shows the game-over banner and missed-words list", async () => {
+    const user = userEvent.setup();
+    render(<GameBoard puzzle={{ ...puzzle, id: "2026-05-20-el", date: "2026-05-20" }} />);
+    await user.click(screen.getByTestId("btn-give-up"));
+    await user.click(screen.getByTestId("btn-give-up-confirm"));
+    await waitFor(() => expect(screen.getByTestId("give-up-banner")).toBeInTheDocument());
+    expect(screen.getByTestId("missed-words-list")).toBeInTheDocument();
+  });
+
+  it("hides the honeycomb and action buttons after confirming give-up", async () => {
+    const user = userEvent.setup();
+    render(<GameBoard puzzle={{ ...puzzle, id: "2026-05-20-el", date: "2026-05-20" }} />);
+    await user.click(screen.getByTestId("btn-give-up"));
+    await user.click(screen.getByTestId("btn-give-up-confirm"));
+    await waitFor(() => expect(screen.getByTestId("give-up-banner")).toBeInTheDocument());
+    expect(screen.queryByTestId("btn-delete")).toBeNull();
+    expect(screen.queryByTestId("btn-shuffle")).toBeNull();
+  });
+
+  it("missed-words list excludes already-found words", async () => {
+    const user = userEvent.setup();
+    render(<GameBoard puzzle={{ ...puzzle, id: "2026-05-20-el", date: "2026-05-20" }} />);
+    // Find a word first
+    await user.keyboard("anti{Enter}");
+    await user.click(screen.getByTestId("btn-give-up"));
+    await user.click(screen.getByTestId("btn-give-up-confirm"));
+    await waitFor(() => expect(screen.getByTestId("missed-words-list")).toBeInTheDocument());
+    // "anti" should not appear in missed list
+    const missedList = screen.getByTestId("missed-words-list");
+    expect(missedList).not.toHaveTextContent("anti");
+  });
+});

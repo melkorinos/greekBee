@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseClient } from "@/lib/supabase";
+import { isISODate } from "@/games/spelling-bee/lib";
 
 // ── POST ──────────────────────────────────────────────────────────────────────
 
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
   // Only allow date-scoped puzzle IDs (YYYY-MM-DD) — no custom puzzles on the leaderboard.
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(puzzle_id)) {
+  if (!isISODate(puzzle_id)) {
     return NextResponse.json({ error: "Invalid puzzle_id format" }, { status: 400 });
   }
 

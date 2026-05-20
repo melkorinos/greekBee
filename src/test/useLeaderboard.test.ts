@@ -215,4 +215,36 @@ describe("useLeaderboard — manual refresh", () => {
   });
 });
 
+// ── custom buildUrl ────────────────────────────────────────────────────────────
+
+describe("useLeaderboard — custom buildUrl", () => {
+  it("calls the custom URL builder instead of the default /api/scores", async () => {
+    const spy = mockFetch(SAMPLE_RESPONSE);
+    const buildUrl = (puzzleId: string, deviceId: string) =>
+      `/api/wordle-scores?date=${puzzleId}&deviceId=${deviceId}`;
+
+    renderHook(() => useLeaderboard("2026-05-18", "device-x", true, buildUrl));
+
+    await waitFor(() => expect(spy).toHaveBeenCalledOnce());
+    const [url] = spy.mock.calls[0] as [string];
+    expect(url).toBe("/api/wordle-scores?date=2026-05-18&deviceId=device-x");
+    expect(url).not.toContain("/api/scores");
+  });
+
+  it("passes puzzleId and deviceId to the custom builder", async () => {
+    const spy = mockFetch(EMPTY_RESPONSE);
+    const captured: string[] = [];
+    const buildUrl = (puzzleId: string, deviceId: string) => {
+      captured.push(puzzleId, deviceId);
+      return `/api/custom?date=${puzzleId}`;
+    };
+
+    renderHook(() => useLeaderboard("2026-05-20", "device-abc", true, buildUrl));
+
+    await waitFor(() => expect(spy).toHaveBeenCalledOnce());
+    expect(captured[0]).toBe("2026-05-20");
+    expect(captured[1]).toBe("device-abc");
+  });
+});
+
 

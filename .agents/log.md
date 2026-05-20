@@ -5,6 +5,41 @@
 
 ---
 
+## 2026-05-20 — Session 24: Architecture — Candidate 5 ✅
+
+**Outcome:** 627 tests (39 files) · build clean · ESLint error pre-existing.
+
+### Candidate 5 — `isDailyPuzzle` single source of truth
+Created `src/games/spelling-bee/lib/puzzle.ts` with two pure functions:
+
+- `isDailyPuzzle(puzzle)` — returns true when the puzzle ID starts with `YYYY-MM-DD`
+- `isISODate(value)` — returns true when a raw string is a strict `YYYY-MM-DD` date
+
+Replaced **4 separate inline regexes** across:
+- `GameBoard.tsx` → `isDailyPuzzle(activePuzzle)`
+- `src/app/api/scores/route.ts` → `isISODate(puzzle_id)`
+- `src/app/api/wordle-scores/route.ts` → `isISODate(puzzle_date)` and `isISODate(date)`
+
+Both functions exported from the lib barrel (`src/games/spelling-bee/lib/index.ts`).
+
+### Tests (+10 → 627)
+- `puzzle.test.ts` — new file, 10 tests (5 for `isDailyPuzzle`, 5 for `isISODate`)
+
+---
+
+## 2026-05-20 — Session 23: Architecture — Candidates 1 + 3 ✅
+
+**Outcome:** 617 tests (38 files) · build clean. Score-submission seam extracted to `useScoreSubmission` + `useWordleScoreSubmission`. `useLeaderboard` gained `buildUrl` param; `WordleLeaderboardModal` now uses the hook (gains polling + visibility-refresh).
+
+
+
+## 2026-05-20 — Session 22: Spelling Bee Give-Up Feature ✅
+
+**Outcome:** 605 tests (37 files) · build clean.
+Hard give-up for daily Spelling Bee. "Παραίτηση" button → inline confirm → game locked → missed words revealed alphabetically (pangrams in gold). `givenUp` persisted across refresh.
+
+
+
 ## 2026-05-19 — Session 21: Spelling Bee Score Cap ✅
 
 **Outcome:** 570 tests (35 files) · build clean · 0 ESLint errors.
@@ -13,21 +48,8 @@
 Puzzles with large word lists (e.g. 200+ valid words) produced `maxScore` values of 1000–1600 pts, making the leaderboard unreadable and rank thresholds feel absurd.
 
 ### Fix
-Added a hard cap of 500 pts to `maxScore()` in `src/games/spelling-bee/lib/scoring.ts`:
-```
-Math.min(Math.ceil(raw * 0.8), MAX_SCORE_CAP)   // MAX_SCORE_CAP = 500
-```
-`MAX_SCORE_CAP` is exported so tests and future code can reference it by name. All rank thresholds remain percentages of `maxScore`, so they automatically scale down.
+Added a hard cap of 500 pts to `maxScore()` in `src/games/spelling-bee/lib/scoring.ts`.
 
-### Tests (+2 net → 570)
-`gameLogic.test.ts` — added 2 tests:
-- `"never exceeds MAX_SCORE_CAP (500) regardless of word count"` — 100 × 10-letter words → raw 1000, 80% = 800, capped to 500 ✓
-- `"MAX_SCORE_CAP is 500"` — constant value lock
-
-### Tech debt added
-- **TD-002** — `maxScore` cap is blunt; replace with word-frequency percentile so all puzzles feel equally hard.
-- **TD-003** — Wordle `answers-5.json` includes obscure words; filter against high-frequency lemma list.
-Both entries added to `README.md` and `.agents/memory.md`.
 
 ---
 

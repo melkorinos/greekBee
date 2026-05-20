@@ -16,6 +16,7 @@ interface SpellingBeeSnapshot {
   score: number;
   currentRank: string;
   startedAt: number;
+  givenUp?: boolean;
 }
 
 /**
@@ -30,9 +31,10 @@ export function usePersistence(state: GameState): void {
       score: state.score,
       currentRank: state.currentRank,
       startedAt: state.startedAt,
+      givenUp: state.givenUp,
     };
     writeSlice("spelling-bee", snapshot);
-  }, [state.puzzle.id, state.foundWords, state.score, state.currentRank, state.startedAt]);
+  }, [state.puzzle.id, state.foundWords, state.score, state.currentRank, state.startedAt, state.givenUp]);
 }
 
 /**
@@ -56,6 +58,7 @@ export function loadPersistedState(puzzle: Puzzle): Partial<GameState> | null {
       score: snapshot.score ?? 0,
       currentRank: (snapshot.currentRank as GameState["currentRank"]) ?? "Beginner",
       startedAt: snapshot.startedAt ?? Date.now(),
+      givenUp: snapshot.givenUp ?? false,
     };
   } catch {
     // Corrupt data — start fresh

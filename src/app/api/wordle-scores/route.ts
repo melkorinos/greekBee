@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseClient } from "@/lib/supabase";
+import { isISODate } from "@/games/spelling-bee/lib";
 
 const WORDLE_LENGTHS = [4, 5, 6, 7, 8] as const;
 const PENALTY        = 7; // attempts assigned to unplayed lengths
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
   if (!puzzle_date || !device_id || typeof attempts !== "number") {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(puzzle_date)) {
+  if (!isISODate(puzzle_date)) {
     return NextResponse.json({ error: "Invalid puzzle_date format" }, { status: 400 });
   }
   if (!WORDLE_LENGTHS.includes(word_length as (typeof WORDLE_LENGTHS)[number])) {
@@ -95,7 +96,7 @@ export async function GET(req: NextRequest) {
   const date     = req.nextUrl.searchParams.get("date") ?? "";
   const deviceId = req.nextUrl.searchParams.get("deviceId") ?? "";
 
-  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  if (!date || !isISODate(date)) {
     return NextResponse.json({ error: "date is required (YYYY-MM-DD)" }, { status: 400 });
   }
 
