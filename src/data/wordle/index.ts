@@ -1,23 +1,28 @@
 // Wordle GR — data loader (runs server-side via Next.js App Router).
 // Picks today's answer deterministically by date so every user gets the same word.
 //
-// Two separate lists:
-//   answers-5.json — curated ~3.8k everyday words; used for the daily answer
-//   words-5.json   — full 9.5k valid-guess list; used for guess validation
+// One list per length (words-N.json) is used for both the answer pool and
+// valid-guess validation.  No separate curated list — word quality will be
+// addressed later (see tech debt #3).
 
 import type { WordleLength, WordlePuzzle } from "@/games/wordle/types";
 
-import answers5 from "./answers-5.json";
-import words5   from "./words-5.json";
+import words4 from "./words-4.json";
+import words5 from "./words-5.json";
+import words6 from "./words-6.json";
+import words7 from "./words-7.json";
+import words8 from "./words-8.json";
 
-/** Answer pools, keyed by word length — only common everyday words */
-const ANSWER_POOLS: Partial<Record<WordleLength, string[]>> = {
-  5: answers5 as string[],
-};
+export const WORDLE_LENGTHS: WordleLength[] = [4, 5, 6, 7, 8];
 
-/** Full valid-guess lists, keyed by word length */
-const WORD_LISTS: Partial<Record<WordleLength, string[]>> = {
+/** Single word list per length — same list drives answers AND valid guesses */
+const WORD_LISTS: Record<WordleLength, string[]> = {
+  3: [],               // unsupported — kept for type completeness
+  4: words4 as string[],
   5: words5 as string[],
+  6: words6 as string[],
+  7: words7 as string[],
+  8: words8 as string[],
 };
 
 /**
@@ -39,11 +44,11 @@ function dateToIndex(dateStr: string, listLength: number): number {
  */
 export function getTodaysWordlePuzzle(
   date: string,
-  length: WordleLength = 5
+  length: WordleLength = 4
 ): WordlePuzzle {
-  const pool = ANSWER_POOLS[length];
+  const pool = WORD_LISTS[length];
   if (!pool || pool.length === 0) {
-    throw new Error(`No answer pool available for length ${length}`);
+    throw new Error(`No word list available for length ${length}`);
   }
 
   const idx    = dateToIndex(date, pool.length);
@@ -58,18 +63,17 @@ export function getTodaysWordlePuzzle(
 }
 
 /**
- * Returns the curated answer pool for a given length.
- * This is a subset of the full word list — everyday words only.
+ * Returns all 5 daily puzzles (lengths 4–8) for a given date.
  */
-export function getAnswerPool(length: WordleLength = 5): string[] {
-  return ANSWER_POOLS[length] ?? [];
+export function getAllTodaysWordlePuzzles(date: string): WordlePuzzle[] {
+  return WORDLE_LENGTHS.map((l) => getTodaysWordlePuzzle(date, l));
 }
 
 /**
- * Returns the full valid-words list for a given length.
- * Used for guess validation on the client — wider than the answer pool.
+ * Returns the word list for a given length — used for both answer selection
+ * and client-side guess validation.
  */
-export function getValidWords(length: WordleLength = 5): string[] {
+export function getValidWords(length: WordleLength = 4): string[] {
   return WORD_LISTS[length] ?? [];
 }
 

@@ -9,6 +9,10 @@ interface TileProps {
   state:   TileState;
   /** Animate the tile flip in (after guess submission) */
   animate?: boolean;
+  /** Tailwind size classes, e.g. "w-14 h-14" — set by GuessGrid based on word length */
+  sizeClass?: string;
+  /** Tailwind text size class — set by GuessGrid based on word length */
+  textClass?: string;
 }
 
 const STATE_CLASSES: Record<TileState, string> = {
@@ -19,13 +23,21 @@ const STATE_CLASSES: Record<TileState, string> = {
   pending: "bg-transparent border-stone-500 text-stone-100",
 };
 
-export function Tile({ letter = "", state, animate = false }: TileProps) {
+export function Tile({
+  letter = "",
+  state,
+  animate = false,
+  sizeClass = "w-14 h-14",
+  textClass = "text-2xl",
+}: TileProps) {
   return (
     <div
       className={[
         "flex items-center justify-center",
-        "w-14 h-14 border-2 rounded",
-        "text-2xl font-bold uppercase select-none",
+        sizeClass,
+        "border-2 rounded",
+        textClass,
+        "font-bold uppercase select-none",
         "transition-all duration-300",
         animate ? "animate-flip" : "",
         STATE_CLASSES[state],

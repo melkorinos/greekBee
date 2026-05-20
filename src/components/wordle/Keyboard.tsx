@@ -60,7 +60,7 @@ export function Keyboard({
   const deleteClass = `${actionBase} px-1 text-sm  bg-stone-600  border-stone-500  text-stone-100`;
 
   return (
-    <div className="flex flex-col items-center gap-1.5 w-full px-2" aria-label="Keyboard">
+    <div className="flex flex-col items-center gap-1.5 w-full max-w-sm px-2" aria-label="Keyboard">
       {ROWS.map((row, ri) => (
         <div key={ri} className="flex gap-1 w-full">
           {ri === ROWS.length - 1 && (

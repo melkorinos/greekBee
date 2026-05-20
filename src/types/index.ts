@@ -9,7 +9,7 @@ export type Language = "el";
 // ─── Platform ────────────────────────────────────────────────────────────────
 
 /** All games hosted on this platform. */
-export type GameId = "spelling-bee" | "wordle" | "connections" | "suggestions";
+export type GameId = "spelling-bee" | "wordle" | "wordle-identity" | "connections" | "suggestions";
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 
@@ -20,13 +20,14 @@ export type GameId = "spelling-bee" | "wordle" | "connections" | "suggestions";
  * Slice types are intentionally loose here (unknown) and narrowed per-game.
  */
 export interface PersistenceEnvelope {
-  "spelling-bee"?:  unknown;
-  "wordle"?:        unknown;
-  "connections"?:   unknown;
+  "spelling-bee"?:    unknown;
+  "wordle"?:          unknown;
+  "wordle-identity"?: unknown;
+  "connections"?:     unknown;
   /** Words already suggested by this device — string[] of normalised words. */
-  "suggestions"?:   unknown;
+  "suggestions"?:     unknown;
   /** Stable anonymous device identifier (UUID v4). Shared across all games. */
-  "deviceId"?:      string;
+  "deviceId"?:        string;
   /** Player's chosen display name for leaderboards. */
-  "displayName"?:   string;
+  "displayName"?:     string;
 }

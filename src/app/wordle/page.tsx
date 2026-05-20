@@ -1,27 +1,31 @@
 // Wordle GR — server component.
-// Loads today's puzzle and valid word list, then renders the client board.
+// Loads all 5 daily puzzles (lengths 4–8) and passes them to the client board.
+// The client manages which length is currently active.
 
-import { getTodayDateString, getTodaysWordlePuzzle, getValidWords } from "@/data/wordle";
+import { WORDLE_LENGTHS, getAllTodaysWordlePuzzles, getTodayDateString, getValidWords } from "@/data/wordle";
 
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
 import { WordleBoard } from "@/components/wordle/WordleBoard";
+import type { WordleLength } from "@/games/wordle/types";
 
 export const dynamic = "force-dynamic"; // Ensure fresh date on each request
 
 const WORDLE_RULES = [
   "Μάντεψε τη λέξη της ημέρας σε **6 προσπάθειες**.",
-  "Κάθε προσπάθεια πρέπει να είναι έγκυρη 5γράμματη ελληνική λέξη.",
+  "Χρησιμοποίησε τα **- / +** για να αλλάξεις μήκος λέξης (4–8 γράμματα).",
+  "Κάθε προσπάθεια πρέπει να είναι έγκυρη ελληνική λέξη του επιλεγμένου μήκους.",
   "🟩 **Πράσινο** = σωστό γράμμα στη σωστή θέση.",
   "🟨 **Κίτρινο** = σωστό γράμμα, λάθος θέση.",
   "⬛ **Γκρι** = το γράμμα δεν υπάρχει στη λέξη.",
-  "Χρησιμοποίησε το πληκτρολόγιο ή πληκτρολόγιο της οθόνης για να γράψεις γράμματα.",
-  "Νέα λέξη κάθε μέρα!",
+  "Νέα λέξη κάθε μέρα για κάθε μήκος!",
 ];
 
 export default function WordlePage() {
-  const today      = getTodayDateString();
-  const puzzle     = getTodaysWordlePuzzle(today, 5);
-  const validWords = getValidWords(5);
+  const today   = getTodayDateString();
+  const puzzles = getAllTodaysWordlePuzzles(today);
+  const wordLists = Object.fromEntries(
+    WORDLE_LENGTHS.map((l) => [l, getValidWords(l as WordleLength)])
+  ) as Record<WordleLength, string[]>;
 
   return (
     <main className="flex flex-col items-center gap-2 px-4 pt-4 bg-zinc-900 text-stone-100">
@@ -38,7 +42,7 @@ export default function WordlePage() {
           lightTrigger
         />
       </div>
-      <WordleBoard puzzle={puzzle} validWords={validWords} />
+      <WordleBoard puzzles={puzzles} wordLists={wordLists} today={today} />
     </main>
   );
 }

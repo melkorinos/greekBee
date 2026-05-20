@@ -1,14 +1,14 @@
 // Tests for the Wordle data loader.
-// Verifies: daily answer comes from the curated pool, valid-guess list is the
-// full word list, determinism, and the answer pool / word list relationship.
+// Verifies: daily answer is in the word list, determinism, and multi-length support.
 
-import { describe, expect, it } from "vitest";
 import {
-  getAnswerPool,
+  WORDLE_LENGTHS,
+  getAllTodaysWordlePuzzles,
   getTodayDateString,
   getTodaysWordlePuzzle,
   getValidWords,
 } from "@/data/wordle";
+import { describe, expect, it } from "vitest";
 
 describe("getTodaysWordlePuzzle", () => {
   it("returns a puzzle with the correct length", () => {
@@ -17,13 +17,7 @@ describe("getTodaysWordlePuzzle", () => {
     expect(p.length).toBe(5);
   });
 
-  it("answer is in the curated answer pool", () => {
-    const pool   = getAnswerPool(5);
-    const puzzle = getTodaysWordlePuzzle("2026-01-01", 5);
-    expect(pool).toContain(puzzle.answer);
-  });
-
-  it("answer is also in the full valid-words list", () => {
+  it("answer is in the valid-words list", () => {
     const words  = getValidWords(5);
     const puzzle = getTodaysWordlePuzzle("2026-01-01", 5);
     expect(words).toContain(puzzle.answer);
@@ -39,7 +33,6 @@ describe("getTodaysWordlePuzzle", () => {
   it("returns a different answer on a different date", () => {
     const a = getTodaysWordlePuzzle("2026-01-01", 5);
     const b = getTodaysWordlePuzzle("2026-01-02", 5);
-    // Adjacent days should differ (they're consecutive indices in a sorted list)
     expect(a.id).not.toBe(b.id);
   });
 
@@ -48,44 +41,50 @@ describe("getTodaysWordlePuzzle", () => {
     expect(p.id).toBe("2026-03-15-wordle-5");
     expect(p.date).toBe("2026-03-15");
   });
+
+  it("defaults to length 4", () => {
+    const p = getTodaysWordlePuzzle("2026-01-01");
+    expect(p.length).toBe(4);
+    expect(p.answer).toHaveLength(4);
+  });
 });
 
-describe("getAnswerPool", () => {
-  it("returns a non-empty array for length 5", () => {
-    expect(getAnswerPool(5).length).toBeGreaterThan(0);
+describe("getAllTodaysWordlePuzzles", () => {
+  it("returns 5 puzzles (lengths 4–8)", () => {
+    const puzzles = getAllTodaysWordlePuzzles("2026-01-01");
+    expect(puzzles).toHaveLength(5);
+    expect(puzzles.map((p) => p.length)).toEqual([4, 5, 6, 7, 8]);
   });
 
-  it("all words are exactly 5 characters", () => {
-    const pool = getAnswerPool(5);
-    expect(pool.every((w) => w.length === 5)).toBe(true);
-  });
-
-  it("all words are lowercase with no accents", () => {
-    const pool = getAnswerPool(5);
-    // If any accent remained, NFD would produce a longer string
-    expect(pool.every((w) => w === w.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))).toBe(true);
-  });
-
-  it("answer pool is a strict subset of the valid-words list", () => {
-    const pool      = new Set(getAnswerPool(5));
-    const validList = new Set(getValidWords(5));
-    for (const word of pool) {
-      expect(validList.has(word)).toBe(true);
+  it("each puzzle answer matches its declared length", () => {
+    const puzzles = getAllTodaysWordlePuzzles("2026-01-01");
+    for (const p of puzzles) {
+      expect(p.answer).toHaveLength(p.length);
     }
-  });
-
-  it("answer pool is smaller than the valid-words list", () => {
-    expect(getAnswerPool(5).length).toBeLessThan(getValidWords(5).length);
   });
 });
 
 describe("getValidWords", () => {
-  it("returns a non-empty array for length 5", () => {
-    expect(getValidWords(5).length).toBeGreaterThan(0);
+  it("returns non-empty arrays for all supported lengths", () => {
+    for (const len of WORDLE_LENGTHS) {
+      expect(getValidWords(len).length).toBeGreaterThan(0);
+    }
   });
 
-  it("valid-words list is larger than the answer pool", () => {
-    expect(getValidWords(5).length).toBeGreaterThan(getAnswerPool(5).length);
+  it("all words in each list match the declared length", () => {
+    for (const len of WORDLE_LENGTHS) {
+      const words = getValidWords(len);
+      expect(words.every((w) => w.length === len)).toBe(true);
+    }
+  });
+
+  it("all words are lowercase with no accents", () => {
+    for (const len of WORDLE_LENGTHS) {
+      const words = getValidWords(len);
+      expect(
+        words.every((w) => w === w.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))
+      ).toBe(true);
+    }
   });
 });
 
@@ -95,3 +94,4 @@ describe("getTodayDateString", () => {
     expect(d).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 });
+

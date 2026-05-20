@@ -6,7 +6,7 @@
 import type { WordleLength, WordlePuzzle } from "../types";
 import { makeInitialWordleState, wordleReducer } from "./wordleReducer";
 import { readSlice, writeSlice } from "@/hooks/useGameStore";
-import { useCallback, useEffect, useMemo, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
 import type { WordlePersistedSlice } from "../types";
 import { buildLetterStateMap } from "../lib/letterState";
@@ -35,7 +35,9 @@ export interface UseWordleStateReturn {
 
 export function useWordleState(
   puzzle: WordlePuzzle,
-  validWords: string[]
+  validWords: string[],
+  /** Called when the game ends (won or lost) with the number of attempts used */
+  onGameEnd?: (attempts: number, won: boolean) => void,
 ): UseWordleStateReturn {
   const validSet = useMemo(() => new Set(validWords), [validWords]);
 
@@ -45,7 +47,7 @@ export function useWordleState(
     makeInitialWordleState
   );
 
-  // ── Hydrate from persistence on mount ──────────────────────────────────────
+  // ── Hydrate from persistence on mount / puzzle change ─────────────────────
   useEffect(() => {
     const slice = readSlice<WordlePersistedSlice>("wordle");
     const session = slice?.[puzzle.length as WordleLength];
@@ -56,10 +58,13 @@ export function useWordleState(
         guesses: session.guesses,
         status:  session.status,
       });
+    } else {
+      // Different puzzle for this length — start fresh
+      dispatch({ type: "NEW_GAME", state: makeInitialWordleState(puzzle) });
     }
-  // Run once on mount — puzzle.id won't change within a session
+  // Re-run when the active puzzle changes (length switch or new day)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [puzzle.id]);
 
   // ── Persist whenever guesses or status change ──────────────────────────────
   useEffect(() => {
@@ -76,6 +81,15 @@ export function useWordleState(
     };
     writeSlice("wordle", updated);
   }, [state.guesses, state.status, puzzle.id, puzzle.length]);
+
+  // ── Fire onGameEnd once when status transitions away from "playing" ────────
+  const prevStatusRef = useRef(state.status);
+  useEffect(() => {
+    if (prevStatusRef.current === "playing" && state.status !== "playing") {
+      onGameEnd?.(state.guesses.length, state.status === "won");
+    }
+    prevStatusRef.current = state.status;
+  }, [state.status, state.guesses.length, onGameEnd]);
 
   // ── Derived values ─────────────────────────────────────────────────────────
   const letterStates = useMemo(

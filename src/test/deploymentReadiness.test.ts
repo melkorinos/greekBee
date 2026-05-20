@@ -60,9 +60,12 @@ function isIgnored(filePath: string, patterns: string[]): boolean {
 // src/data/**/index.ts. Add an entry here whenever you add a new static import.
 
 const STATICALLY_IMPORTED_DATA_FILES = [
-  // Wordle
-  "src/data/wordle/answers-5.json",
+  // Wordle — one list per length (answers + valid guesses, same file)
+  "src/data/wordle/words-4.json",
   "src/data/wordle/words-5.json",
+  "src/data/wordle/words-6.json",
+  "src/data/wordle/words-7.json",
+  "src/data/wordle/words-8.json",
   // Connections
   "src/data/connections/puzzles-connections.json",
   // Spelling Bee — curated puzzles + full word list (used by buildCustomPuzzle)
