@@ -1,12 +1,12 @@
 # Agent Memory — Greek Word Games Platform
 
-## ⚡ Current State (2026-05-18)
-Three live games + custom puzzle URLs. **445 tests passing.**
+## ⚡ Current State (2026-05-21)
+Three live games + custom puzzle URLs. **639 tests passing.**
 
 | Game | Route | Status |
 |------|-------|--------|
 | Spelling Bee | `/spelling-bee` + `/spelling-bee/[center]/[outer]` | Live — daily + custom URL |
-| Wordle GR | `/wordle` | Live — 5-letter Greek |
+| Wordle GR | `/wordle` | Live — 4–8 letter Greek, multi-length |
 | Connections | `/connections` | Live — hand-curated |
 
 ---
@@ -45,7 +45,7 @@ src/
   components/
     shared/          Shell, FeedbackBanner, HowToPlayModal
     spelling-bee/    GameBoard, HoneycombGrid, WordInput, ScoreBar, FeedbackMessage, FoundWordsList, ShareButton (`canonicalPath` prop), NewPuzzleButton
-    wordle/          WordleBoard, GuessGrid, Tile, Keyboard
+    wordle/          WordleBoard, WordleHeader (WordlePageClient), GuessGrid, Tile, Keyboard, WordleLeaderboardModal
     connections/     GroupGrid, WordCard, CategoryReveal
   games/
     spelling-bee/lib/  validation, scoring, ranking, pangram, normalize, computeValidWords, parseCustomUrl
@@ -55,7 +55,7 @@ src/
     connections/hooks/ connectionsReducer, useConnectionsState
   data/
     spelling-bee/    puzzles-el.json (1008 puzzles 2026-03-25→2028-12-26), index.ts
-    wordle/          answers-5.json, words-5.json, index.ts
+    wordle/          answers-{3..8}.json (curated), words-{3..8}.json (valid-guess lists), index.ts
     connections/     puzzles-connections.json, index.ts
     words-el.json    (811k words, normalised — statically imported by buildCustomPuzzle)
   hooks/             useGameStore.ts, usePersistence.ts
@@ -89,12 +89,14 @@ src/
 
 ---
 
-## 🧪 Test Coverage Map (30 files, 430 tests)
+## 🧪 Test Coverage Map (41 files, 639 tests)
 
 > **How to use this as an agent**: before writing a new test, grep the `describe` column for the function/component name. If it appears, read that file's describe block to check if the specific case is already covered. Only write new tests for gaps.
 
 | File | `describe` blocks (= what is tested) |
 |------|---------------------------------------|
+| `wordleGuessGrid.test.tsx` | `GuessGrid` — no inline submit, flex-1 aspect-square tiles per length, grid max-width per length (4→210px … 7→372px, 8 full), Keyboard w-full |
+| `wordleHeader.test.tsx` | `WordlePageClient` — title, 🏆 button, HowToPlay trigger, both in header row, scoring note in modal |
 | `evaluateGuess.test.ts` | `evaluateGuess` — all-correct, all-absent, present, mixed, duplicate answer/guess letters, length |
 | `wordleLogic.test.ts` | `isValidGuess`, `getTodaysWordlePuzzle` determinism |
 | `wordleReducer.test.ts` | `ADD_LETTER`, `DELETE_LETTER`, `SUBMIT_GUESS` (short/invalid/valid/win/lose), `RESTORE_STATE` |

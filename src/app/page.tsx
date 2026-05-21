@@ -7,8 +7,8 @@
 // Note: rule strings are also defined in each game’s own page.tsx.
 // Extract to src/data/gameRules.ts when a third consumer appears.
 
-import Link from "next/link";
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
+import Link from "next/link";
 
 interface GameEntry {
   id:          string;
@@ -48,7 +48,7 @@ const GAMES: GameEntry[] = [
     title:       "Wordle GR",
     description: "Μάντεψε τη λέξη σε 6 προσπάθειες — 5 γράμματα.",
     href:        "/wordle",
-    wip:         true,
+    wip:         false,
     rulesTitle:  "Πώς να παίξεις — Wordle GR",
     bulletIcon:  "▸",
     rules: [

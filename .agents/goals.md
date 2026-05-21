@@ -40,7 +40,7 @@ Priority order (work top-down):
 3. **Home page "played today" badge** — read `useGameStore` to show ✓ on each game card if played today.
 4. **Spelling Bee stats modal** — device-local all-time stats: games played, best rank, total words. Read from localStorage.
 5. **E2E test (Playwright)** — at least one Spelling Bee happy-path: load today's puzzle → type valid word → see it in found list.
-6. **Wordle length variants (3–8)** — generate `words-N.json` + `answers-N.json`, add `/wordle/[length]` route.
+6. ~~**Wordle length variants (3–8)**~~ ✅ — 4–8 live; `words-N.json` + `answers-N.json` generated; length switcher in UI.
 7. **Visual rebrand** — introduce Tailwind theme config; decouple from NYT aesthetic.
 
 ---

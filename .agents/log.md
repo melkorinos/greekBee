@@ -5,6 +5,63 @@
 
 ---
 
+## 2026-05-21 — Session 26: Wordle tile layout fixes + header polish ✅
+
+**Outcome:** 639 tests (41 files) · build clean · TSC clean.
+
+### Changes
+
+1. **Tile height stability** — `GuessGrid` tiles changed from `aspect-square` (height = width, shrinks as word count grows) to `flex-1 aspect-square` inside a per-length `max-width` container:
+   - Level 4 → `max-w-[210px]`, level 5 → `max-w-[264px]`, level 6 → `max-w-[318px]`, level 7 → `max-w-[372px]`, level 8 → `max-w-full`
+   - Formula: N×48 px + (N-1)×6 px gap. Tiles are naturally square at every level; keyboard unchanged.
+
+2. **Grid/keyboard alignment** — removed the inline ↵ submit button and its placeholder `div` from `GuessGrid`. Every grid row is now full-width, flush with the keyboard. Submission via on-screen ↵ key and physical keyboard still works.
+
+3. **Leaderboard 🏆 button** — moved from inside `WordleBoard` to a new `WordlePageClient` component (`src/components/wordle/WordleHeader.tsx`). Button now sits next to the `?` HowToPlay trigger in the page header. `WordleBoard` exposes `onOpenLeaderboardRef` prop (ref callback) so the header can fire the modal without lifting state.
+
+4. **Under-construction badge removed** — `wip: false` on Wordle entry in `src/app/page.tsx`.
+
+5. **Scoring note in rules** — added "🏆 Σκορ: 1 πόντος ανά προσπάθεια που έσωσες (max 6) × μήκος λέξης" to `WORDLE_RULES` in `WordleHeader.tsx`.
+
+6. **Unused `useState` import removed** from `WordleHeader.tsx`.
+
+### Tests (+10 → 639)
+- `wordleGuessGrid.test.tsx` +5: per-length `max-w-*` class assertions on the grid container
+- `wordleHeader.test.tsx` new (5 tests): title, 🏆 button, HowToPlay trigger, both in header row, scoring note visible after modal open
+
+### Docs
+- `memory.md`: current state (445 → 639 tests, Wordle status "5-letter" → "4–8 letter"), component list (added `WordleHeader`, `WordleLeaderboardModal`), test coverage map (30 files/430 → 41 files/639, new rows)
+- `goals.md`: "Wordle length variants" marked ✅ done
+- `log.md`: this entry
+
+---
+
+## 2026-05-21 — Session 25: Vercel Fluid CPU diagnosis & optimisation ✅
+
+**Outcome:** 627 tests (39 files) · build clean · all API routes now on Edge runtime.
+
+### Problem
+Vercel dashboard showed Fluid Active CPU at 21m 7s / 4h (pro-rated) over 5 active days — the biggest usage category. Three root causes identified:
+
+### Fixes applied
+
+1. **Module-level `validWordsCache` in `buildCustomPuzzle`** (`src/data/spelling-bee/index.ts`)
+   - `computeValidWords` scans 811 k words on every request for custom URL puzzles
+   - Added a `Map<string, string[]>` keyed on `custom-{center}-{sortedOuter}`
+   - Warm Fluid instances reuse the result; cold starts pay the cost once per letter combo
+
+2. **ISR `revalidate = 3600` on `[center]/[outer]` page** (`src/app/spelling-bee/[center]/[outer]/page.tsx`)
+   - Caches the full Server Component response at the CDN edge for 1 hour
+   - Fluid function only runs once per unique letter combo per hour instead of on every hit
+
+3. **Edge Runtime on all three API routes**
+   - `src/app/api/scores/route.ts` → `export const runtime = "edge"`
+   - `src/app/api/suggest-word/route.ts` → `export const runtime = "edge"`
+   - `src/app/api/wordle-scores/route.ts` → `export const runtime = "edge"`
+   - All routes are simple Supabase HTTP calls — Edge-compatible, billed as Edge CPU (separate free tier), not Fluid
+
+---
+
 ## 2026-05-20 — Session 24: Architecture — Candidate 5 ✅
 
 **Outcome:** 627 tests (39 files) · build clean · ESLint error pre-existing.

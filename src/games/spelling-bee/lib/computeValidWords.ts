@@ -3,6 +3,19 @@
 // so that players can construct arbitrary puzzle URLs without operator pre-curation.
 //
 // Pure function: no React, no side-effects, fully unit-testable.
+//
+// ── Performance contract ──────────────────────────────────────────────────────
+// Time complexity: O(n × L) where n = word-list length, L = max word length.
+// For words-el.json (811 k words, avg ~6 chars): ~50–200 ms on production hardware.
+//
+// This function MUST remain O(n) — do not add nested loops or additional full
+// list scans inside the filter.  A regression to O(n²) would multiply Vercel
+// Fluid CPU billing by ~811 k/avg-result-count (~thousands×).
+// The performance.test.ts "does not scale super-linearly" test guards this.
+//
+// The calling code (buildCustomPuzzle) wraps this in a module-level Map cache
+// so production requests for the same letter combo pay the cost at most once
+// per warm Fluid instance lifetime.
 
 import { normalizeLetters } from "./normalize";
 

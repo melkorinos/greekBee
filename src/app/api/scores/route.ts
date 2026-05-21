@@ -10,6 +10,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseClient } from "@/lib/supabase";
 import { isISODate } from "@/games/spelling-bee/lib";
 
+// Run on the Edge runtime — avoids Fluid (Node.js) CPU billing for this
+// simple DB-proxy route. Supabase JS v2 is fully Edge-compatible (uses fetch,
+// not native Node.js modules).
+//
+// Edge CPU is billed against a separate, more generous free tier
+// ("Edge Request CPU Duration") rather than "Fluid Active CPU", which is the
+// app's most constrained usage tier.
+export const runtime = "edge";
+
 // ── POST ──────────────────────────────────────────────────────────────────────
 
 interface ScorePayload {

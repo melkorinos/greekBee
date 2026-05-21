@@ -122,7 +122,28 @@ export function getRecentPuzzleDates(n: number, language: Language = "el"): stri
  *
  * The `date` field is set to today so the UI displays something sensible, but
  * it plays no role in word-validity logic.
+ *
+ * ── Performance note ────────────────────────────────────────────────────────
+ * `computeValidWords` linearly scans the full 811 k-word Greek dictionary
+ * (~50–200 ms on a cold Vercel Fluid instance).  That scan is billed as Fluid
+ * Active CPU, which is the app's most constrained usage tier.
+ *
+ * Two layers of caching protect against this:
+ *   1. Module-level `validWordsCache` Map (below): warm Fluid instances serving
+ *      the same letter combo pay zero CPU on repeat requests.
+ *   2. `export const revalidate = 3600` on the [center]/[outer] page: the full
+ *      Server Component HTML is cached at the Vercel CDN edge for 1 hour, so
+ *      the Fluid function is only invoked once per unique combo per hour.
  */
+
+// Module-level cache: keyed by `custom-{center}-{sortedOuter}` (canonical ID).
+// Declared at module scope so it survives across requests within the same Fluid
+// process lifetime.  Vercel Fluid is NOT serverless-per-request — warm instances
+// handle many requests before being recycled, making this pattern effective.
+// Do NOT use React.cache() or unstable_cache() here: this function is called
+// synchronously from a Server Component and those APIs return Promises.
+const validWordsCache = new Map<string, string[]>();
+
 export function buildCustomPuzzle(
   centerLetter: string,
   outerLetters: string[],
@@ -140,7 +161,16 @@ export function buildCustomPuzzle(
   const wordList: string[] =
     language === "el" ? (wordListEl as string[]) : [];
 
-  const validWords = computeValidWords(center, outer, wordList);
+  // Cache key = canonical puzzle ID (letters only, order-independent).
+  // The same key is used for localStorage persistence so the cache can never
+  // serve stale words for a given URL.
+  let validWords = validWordsCache.get(id);
+  if (!validWords) {
+    // Cold path: scan the full word list.  ~50–200 ms on production hardware.
+    // Subsequent calls for the same combo skip this entirely.
+    validWords = computeValidWords(center, outer, wordList);
+    validWordsCache.set(id, validWords);
+  }
 
   return {
     id,

@@ -8,15 +8,19 @@ import type { GuessResult, TileState } from "@/games/wordle/types";
 
 import { Tile } from "./Tile";
 
-// Responsive tile dimensions keyed by word length.
-// All values chosen so the widest grid (8 tiles + 7 gaps) fits within 320px
-// (the smallest common phone width in portrait orientation).
-const TILE_SIZES: Record<number, { tile: string; text: string }> = {
-  4: { tile: "w-16 h-16", text: "text-2xl" },
-  5: { tile: "w-14 h-14", text: "text-2xl" },
-  6: { tile: "w-12 h-12", text: "text-xl"  },
-  7: { tile: "w-10 h-10", text: "text-xl"  },
-  8: { tile: "w-9  h-9",  text: "text-lg"  },
+// Grid width is capped per word length so tiles stay naturally square (aspect-square).
+// Formula: N×48px tiles + (N-1)×6px gaps (gap-1.5). The keyboard stays full max-w-sm
+// width — the grid centres inside it, so no horizontal offset occurs.
+const TILE_TEXT = "text-base";
+
+// Max-width of the tile grid for each word length, computed as N*48 + (N-1)*6 px.
+// Level 8 exceeds max-w-sm so the container simply fills the keyboard width there.
+const GRID_MAX_WIDTH: Record<number, string> = {
+  4: "max-w-[210px]",
+  5: "max-w-[264px]",
+  6: "max-w-[318px]",
+  7: "max-w-[372px]",
+  8: "max-w-full",
 };
 
 interface GuessGridProps {
@@ -24,8 +28,6 @@ interface GuessGridProps {
   currentInput: string;
   wordLength:   number;
   maxGuesses?:  number;
-  /** Called when the inline submit button is clicked — only shown when the active row is full */
-  onSubmit?:    () => void;
 }
 
 export function GuessGrid({
@@ -33,11 +35,7 @@ export function GuessGrid({
   currentInput,
   wordLength,
   maxGuesses = 6,
-  onSubmit,
 }: GuessGridProps) {
-  const { tile: tileSize, text: textSize } =
-    TILE_SIZES[wordLength] ?? TILE_SIZES[5];
-
   const rows: Array<{ letters: string[]; states: TileState[] }> = [];
 
   // Submitted rows
@@ -70,40 +68,24 @@ export function GuessGrid({
     });
   }
 
-  // Show the inline submit button only when the active row is full
-  const showSubmit = onSubmit && currentInput.length === wordLength;
+  const gridMaxW = GRID_MAX_WIDTH[wordLength] ?? "max-w-full";
 
   return (
-    <div className="flex flex-col gap-1.5" role="grid" aria-label="Guess grid">
+    <div className={`flex flex-col gap-1.5 w-full mx-auto ${gridMaxW}`} role="grid" aria-label="Guess grid">
       {rows.map((row, ri) => (
-        <div key={ri} className="flex items-center gap-1.5">
-          {/* Tile row */}
-          <div className="flex gap-1.5" role="row">
+        <div key={ri} className="flex gap-1.5 w-full">
+          <div className="flex flex-1 gap-1.5" role="row">
             {row.letters.map((letter, ci) => (
               <Tile
                 key={ci}
                 letter={letter.toUpperCase()}
                 state={row.states[ci]}
                 animate={ri < guesses.length}
-                sizeClass={tileSize}
-                textClass={textSize}
+                sizeClass="flex-1 aspect-square min-w-0"
+                textClass={TILE_TEXT}
               />
             ))}
           </div>
-          {/* Inline submit button — only beside the active row when full */}
-          {ri === currentRowIdx && showSubmit ? (
-            <button
-              onClick={onSubmit}
-              aria-label="Submit guess"
-              data-testid="inline-submit"
-              className="ml-1 flex items-center justify-center w-9 h-9 rounded-full bg-green-500 hover:bg-green-400 active:opacity-70 text-white text-xl font-bold shrink-0 transition-colors"
-            >
-              ↵
-            </button>
-          ) : (
-            // Reserve the same space so the grid doesn't shift when button appears
-            <div className="ml-1 w-9 shrink-0" aria-hidden="true" />
-          )}
         </div>
       ))}
     </div>

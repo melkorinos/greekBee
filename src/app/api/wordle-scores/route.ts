@@ -14,6 +14,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseClient } from "@/lib/supabase";
 import { isISODate } from "@/games/spelling-bee/lib";
 
+// Run on the Edge runtime — avoids Fluid (Node.js) CPU billing.
+// All Supabase calls in this route use fetch under the hood, which is
+// available in the Edge runtime without any Node.js polyfills.
+// Edge CPU is billed against a separate free tier from Fluid Active CPU.
+export const runtime = "edge";
+
 const WORDLE_LENGTHS = [4, 5, 6, 7, 8] as const;
 const PENALTY        = 7; // attempts assigned to unplayed lengths
 

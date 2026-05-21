@@ -4,7 +4,7 @@
 // Manages the active word length (4–8) with a - N + switcher.
 // Wires physical keyboard events and leaderboard score submission.
 
-import type { WordleLength, WordlePuzzle } from "@/games/wordle/types";
+import type { WordleLength, WordlePersistedSlice, WordlePuzzle } from "@/games/wordle/types";
 import { readSlice, writeSlice } from "@/hooks/useGameStore";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -41,6 +41,8 @@ interface WordleBoardProps {
   puzzles:   WordlePuzzle[];                      // one per length 4–8, server-provided
   wordLists: Record<WordleLength, string[]>;
   today:     string;                              // YYYY-MM-DD
+  /** Ref callback so the page can inject a leaderboard-open trigger */
+  onOpenLeaderboardRef?: (fn: () => void) => void;
 }
 
 // ── Inner game panel — one per length ────────────────────────────────────────
@@ -48,12 +50,15 @@ interface WordleBoardProps {
 // so each instance maintains its own independent state.
 
 interface LengthPanelProps {
-  puzzle:      WordlePuzzle;
-  validWords:  string[];
-  isActive:    boolean;
-  deviceId:    string;
-  displayName: string;
-  onGameEnd:   (length: WordleLength, attempts: number, won: boolean) => void;
+  puzzle:        WordlePuzzle;
+  validWords:    string[];
+  isActive:      boolean;
+  deviceId:      string;
+  displayName:   string;
+  activeLength:  WordleLength;
+  onPrev:        () => void;
+  onNext:        () => void;
+  onGameEnd:     (length: WordleLength, attempts: number, won: boolean) => void;
 }
 
 function LengthPanel({
@@ -62,6 +67,9 @@ function LengthPanel({
   isActive,
   deviceId,
   displayName,
+  activeLength,
+  onPrev,
+  onNext,
   onGameEnd,
 }: LengthPanelProps) {
   const handleGameEnd = useCallback(
@@ -109,7 +117,8 @@ function LengthPanel({
   if (!isActive) return null;
 
   return (
-    <div className="flex flex-col items-center gap-4 py-4">
+    // w-full gives the flex column a definite width on wide screens.
+    <div className="flex flex-col items-center gap-4 py-4 w-full">
       <div className="h-8">
         <FeedbackBanner
           message={lastMessage}
@@ -117,31 +126,77 @@ function LengthPanel({
           theme="dark"
         />
       </div>
-      <GuessGrid
-        guesses={guesses}
-        currentInput={currentInput}
-        wordLength={puzzle.length}
-        maxGuesses={maxGuesses}
-        onSubmit={status === "playing" ? submitGuess : undefined}
-      />
-      <Keyboard
-        letterStates={letterStates}
-        onLetter={addLetter}
-        onDelete={deleteLetter}
-        onEnter={submitGuess}
-        disabled={status !== "playing"}
-      />
+
+      {/*
+        Single max-w-sm column: grid + switcher + keyboard all share the same
+        384 px bounding box so their left/right edges always line up on any
+        screen width. Without this common ancestor, the grid (w-fit) and the
+        keyboard (w-full max-w-sm) centre independently and appear offset on PC.
+      */}
+      <div className="w-full max-w-sm flex flex-col items-center gap-4 px-2">
+        {/* Grid fills the shared max-w-sm column via flex-1 tiles — no overflow possible */}
+        <GuessGrid
+          guesses={guesses}
+          currentInput={currentInput}
+          wordLength={puzzle.length}
+          maxGuesses={maxGuesses}
+        />
+
+        {/* Length switcher — lives between grid and keyboard so the player
+            can see the current level and change it without looking away from
+            where they are typing. */}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={onPrev}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-700 hover:bg-zinc-600 text-stone-100 text-lg font-bold transition-colors"
+            aria-label="Μικρότερο μήκος"
+          >
+            −
+          </button>
+          <span className="text-stone-100 font-bold text-lg w-6 text-center tabular-nums">
+            {activeLength}
+          </span>
+          <button
+            onClick={onNext}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-700 hover:bg-zinc-600 text-stone-100 text-lg font-bold transition-colors"
+            aria-label="Μεγαλύτερο μήκος"
+          >
+            +
+          </button>
+        </div>
+
+        {/* Keyboard — w-full fills the shared max-w-sm column exactly,
+            so its edges align with the grid rows above. */}
+        <Keyboard
+          letterStates={letterStates}
+          onLetter={addLetter}
+          onDelete={deleteLetter}
+          onEnter={submitGuess}
+          disabled={status !== "playing"}
+        />
+      </div>
     </div>
   );
 }
 
 // ── Main board ────────────────────────────────────────────────────────────────
 
-export function WordleBoard({ puzzles, wordLists, today }: WordleBoardProps) {
+export function WordleBoard({ puzzles, wordLists, today, onOpenLeaderboardRef }: WordleBoardProps) {
   const [activeLength,    setActiveLength]    = useState<WordleLength>(4);
   const [lbOpen,          setLbOpen]          = useState(false);
   const [deviceId,        setDeviceId]        = useState("");
   const [displayName,     setDisplayName]     = useState("");
+
+  // Expose the open function to the parent via ref callback
+  useEffect(() => {
+    onOpenLeaderboardRef?.(() => setLbOpen(true));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Track which lengths are finished (won or lost) so auto-advance can skip them.
+  // A ref is used alongside state to avoid stale-closure issues inside setTimeout.
+  const completedRef = useRef(new Set<WordleLength>());
+  const [, setCompletedLengths] = useState<Set<WordleLength>>(new Set());
 
   // Hydrate identity on mount
   useEffect(() => {
@@ -149,6 +204,24 @@ export function WordleBoard({ puzzles, wordLists, today }: WordleBoardProps) {
     const sl   = readSlice<WordleIdentitySlice>("wordle-identity");
     setDeviceId(id);
     setDisplayName(sl?.displayName ?? "");
+  }, []);
+
+  // Restore already-completed lengths from persistence so auto-advance skips them.
+  useEffect(() => {
+    const slice = readSlice<WordlePersistedSlice>("wordle");
+    if (!slice) return;
+    const done = new Set<WordleLength>();
+    for (const p of puzzles) {
+      const length = p.length as WordleLength;
+      const session = slice[length];
+      if (session && session.puzzleId === p.id && session.status !== "playing") {
+        done.add(length);
+      }
+    }
+    completedRef.current = done;
+    setCompletedLengths(new Set(done));
+  // Intentionally runs once on mount — puzzles is stable (server-provided)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleSaveName(name: string) {
@@ -161,10 +234,46 @@ export function WordleBoard({ puzzles, wordLists, today }: WordleBoardProps) {
   // Score submission -- all posting logic lives in the hook.
   const { submit: postWordleScore } = useWordleScoreSubmission({ today, deviceId });
 
-  // Score submission: called by each LengthPanel when its game ends
+  // Score submission + auto-advance: called by each LengthPanel when its game ends.
+  //
+  // Auto-advance design:
+  //   1. Mark this length as completed in the ref immediately (avoids stale closure
+  //      inside the timeout — using a ref means the timeout callback always reads
+  //      the latest Set, not the value at callback-creation time).
+  //   2. After 1.5 s, search forward (wrapping) for the first unfinished length.
+  //      "Skip already-completed" means the player goes straight to their next
+  //      unsolved word instead of revisiting finished rounds.
+  //   3. If everything is done (or this was the last round): open the leaderboard.
   const handleGameEnd = useCallback(
     (length: WordleLength, attempts: number, won: boolean) => {
       postWordleScore(length, attempts, won);
+
+      // Update the ref first so the timeout closure sees the fresh set.
+      const newCompleted = new Set([...completedRef.current, length]);
+      completedRef.current = newCompleted;
+      setCompletedLengths(new Set(newCompleted));
+
+      setTimeout(() => {
+        const completed = completedRef.current;
+        const currentIdx = LENGTHS.indexOf(length);
+        let next: WordleLength | null = null;
+
+        // Walk forward through LENGTHS (wrapping), pick first unfinished.
+        for (let i = 1; i < LENGTHS.length; i++) {
+          const candidate = LENGTHS[(currentIdx + i) % LENGTHS.length];
+          if (!completed.has(candidate)) {
+            next = candidate;
+            break;
+          }
+        }
+
+        if (next) {
+          setActiveLength(next);
+        } else {
+          // All lengths finished — surface the leaderboard.
+          setLbOpen(true);
+        }
+      }, 1500);
     },
     [postWordleScore]
   );
@@ -185,39 +294,6 @@ export function WordleBoard({ puzzles, wordLists, today }: WordleBoardProps) {
 
   return (
     <>
-      {/* ── Length switcher ──────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between w-full max-w-sm">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={prevLength}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-700 hover:bg-zinc-600 text-stone-100 text-lg font-bold transition-colors"
-            aria-label="Μικρότερο μήκος"
-          >
-            −
-          </button>
-          <span className="text-stone-100 font-bold text-lg w-6 text-center tabular-nums">
-            {activeLength}
-          </span>
-          <button
-            onClick={nextLength}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-700 hover:bg-zinc-600 text-stone-100 text-lg font-bold transition-colors"
-            aria-label="Μεγαλύτερο μήκος"
-          >
-            +
-          </button>
-        </div>
-
-        {/* Leaderboard button */}
-        <button
-          onClick={() => setLbOpen(true)}
-          className="text-stone-300 hover:text-stone-100 transition-colors text-xl"
-          aria-label="Πίνακας σκορ"
-          title="Πίνακας σκορ"
-        >
-          🏆
-        </button>
-      </div>
-
       {/* ── Length panels (all mounted, only active shown) ────────────────── */}
       {puzzles.map((puzzle) => (
         <LengthPanel
@@ -227,6 +303,9 @@ export function WordleBoard({ puzzles, wordLists, today }: WordleBoardProps) {
           isActive={puzzle.length === activeLength}
           deviceId={deviceId}
           displayName={displayName}
+          activeLength={activeLength}
+          onPrev={prevLength}
+          onNext={nextLength}
           onGameEnd={handleGameEnd}
         />
       ))}

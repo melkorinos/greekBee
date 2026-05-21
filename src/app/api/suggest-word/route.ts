@@ -8,6 +8,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { WordSuggestionInsert, getSupabaseClient } from "@/lib/supabase";
 
+// Run on the Edge runtime — avoids Fluid (Node.js) CPU billing.
+// This route is a thin Supabase insert with no Node.js-only dependencies.
+// Edge CPU is billed against a separate free tier from Fluid Active CPU.
+export const runtime = "edge";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as {

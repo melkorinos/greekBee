@@ -4,21 +4,10 @@
 
 import { WORDLE_LENGTHS, getAllTodaysWordlePuzzles, getTodayDateString, getValidWords } from "@/data/wordle";
 
-import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
-import { WordleBoard } from "@/components/wordle/WordleBoard";
 import type { WordleLength } from "@/games/wordle/types";
+import { WordlePageClient } from "@/components/wordle/WordleHeader";
 
 export const dynamic = "force-dynamic"; // Ensure fresh date on each request
-
-const WORDLE_RULES = [
-  "Μάντεψε τη λέξη της ημέρας σε **6 προσπάθειες**.",
-  "Χρησιμοποίησε τα **- / +** για να αλλάξεις μήκος λέξης (4–8 γράμματα).",
-  "Κάθε προσπάθεια πρέπει να είναι έγκυρη ελληνική λέξη του επιλεγμένου μήκους.",
-  "🟩 **Πράσινο** = σωστό γράμμα στη σωστή θέση.",
-  "🟨 **Κίτρινο** = σωστό γράμμα, λάθος θέση.",
-  "⬛ **Γκρι** = το γράμμα δεν υπάρχει στη λέξη.",
-  "Νέα λέξη κάθε μέρα για κάθε μήκος!",
-];
 
 export default function WordlePage() {
   const today   = getTodayDateString();
@@ -29,20 +18,7 @@ export default function WordlePage() {
 
   return (
     <main className="flex flex-col items-center gap-2 px-4 pt-4 bg-zinc-900 text-stone-100">
-      <div className="flex items-center justify-between w-full max-w-sm">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-stone-100">
-            🟩 Wordle GR
-          </h1>
-        </div>
-        <HowToPlayModal
-          title="Πώς να παίξεις — Wordle GR"
-          items={WORDLE_RULES}
-          bulletIcon="▸"
-          lightTrigger
-        />
-      </div>
-      <WordleBoard puzzles={puzzles} wordLists={wordLists} today={today} />
+      <WordlePageClient puzzles={puzzles} wordLists={wordLists} today={today} />
     </main>
   );
 }
