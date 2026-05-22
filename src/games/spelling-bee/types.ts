@@ -7,7 +7,7 @@ import type { Language } from "@/types";
 // ─── Puzzle ───────────────────────────────────────────────────────────────────
 
 /** A single daily Spelling Bee puzzle definition. */
-export interface Puzzle {
+export interface SpellingBeePuzzle {
   /** Unique identifier for the puzzle (e.g. "2024-03-25-el") */
   id: string;
   /** The language this puzzle belongs to */
@@ -68,7 +68,7 @@ export interface ValidationResult {
 /** The full game state managed by useReducer in the game hook */
 export interface GameState {
   /** The active puzzle being played */
-  puzzle: Puzzle;
+  puzzle: SpellingBeePuzzle;
   /** Letters the player has typed so far (not yet submitted) */
   currentInput: string;
   /** All words the player has successfully found, in submission order */

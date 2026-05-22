@@ -1,7 +1,7 @@
 // Word scoring — pure function, mirrors the NYT Spelling Bee scoring rules.
 // Scores are based on word length with a flat bonus for pangrams.
 
-import type { Puzzle } from "../types";
+import type { SpellingBeePuzzle } from "../types";
 import { isPangram } from "./pangram";
 
 /** Bonus points awarded on top of regular score for a pangram */
@@ -15,7 +15,7 @@ const PANGRAM_BONUS = 7;
  *  - 5+ letter words → 1 point per letter
  *  - Pangrams        → above score + 7 bonus points
  */
-export function scoreWord(word: string, puzzle: Puzzle): number {
+export function scoreWord(word: string, puzzle: SpellingBeePuzzle): number {
   const base = word.length === 4 ? 1 : word.length;
   const bonus = isPangram(word, puzzle) ? PANGRAM_BONUS : 0;
   return base + bonus;
@@ -36,7 +36,7 @@ export function scoreWord(word: string, puzzle: Puzzle): number {
  */
 export const MAX_SCORE_CAP = 500;
 
-export function maxScore(puzzle: Puzzle): number {
+export function maxScore(puzzle: SpellingBeePuzzle): number {
   const raw = puzzle.validWords.reduce(
     (total, word) => total + scoreWord(word, puzzle),
     0

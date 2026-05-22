@@ -1,7 +1,7 @@
 // Pure reducer for the Spelling Bee game.
 // No React imports — this file can be tested with plain Vitest unit tests.
 
-import type { GameState, Puzzle } from "../types";
+import type { GameState, SpellingBeePuzzle } from "../types";
 
 import { calculateRank } from "../lib/ranking";
 import { maxScore } from "../lib/scoring";
@@ -17,7 +17,7 @@ export type GameAction =
   | { type: "SUBMIT_WORD" }                  // Player hits Enter / Submit
   | { type: "SHUFFLE_LETTERS" }              // Randomise the outer ring display order
   | { type: "GIVE_UP" }                      // Player gives up — locks the game permanently
-  | { type: "NEW_GAME"; puzzle: Puzzle }     // Load a fresh puzzle
+  | { type: "NEW_GAME"; puzzle: SpellingBeePuzzle }     // Load a fresh puzzle
   | { type: "RESTORE_STATE"; saved: Partial<GameState> }; // Rehydrate from localStorage (client-only)
 
 // ─── Initial State Factory ────────────────────────────────────────────────────
@@ -26,7 +26,7 @@ export type GameAction =
  * Builds a clean initial GameState from a puzzle.
  * Call this when the app first loads or when NEW_GAME is dispatched.
  */
-export function buildInitialState(puzzle: Puzzle): GameState {
+export function buildInitialState(puzzle: SpellingBeePuzzle): GameState {
   return {
     puzzle,
     currentInput: "",

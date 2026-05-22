@@ -12,7 +12,7 @@ import { FoundWordsList } from "./FoundWordsList";
 import { HoneycombGrid } from "./HoneycombGrid";
 import { LeaderboardModal } from "./LeaderboardModal";
 import { MissedWordsList } from "./MissedWordsList";
-import type { Puzzle } from "@/games/spelling-bee/types";
+import type { SpellingBeePuzzle } from "@/games/spelling-bee/types";
 import { ScoreBar } from "./ScoreBar";
 import { SuggestWordModal } from "./SuggestWordModal";
 import { WordInput } from "./WordInput";
@@ -22,7 +22,7 @@ import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { isDailyPuzzle } from "@/games/spelling-bee/lib";
 
 interface GameBoardProps {
-  puzzle: Puzzle;
+  puzzle: SpellingBeePuzzle;
   /** Last 7 daily puzzle dates (newest-first), computed server-side. */
   recentPuzzleDates?: string[];
 }

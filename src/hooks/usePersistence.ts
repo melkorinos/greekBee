@@ -4,7 +4,7 @@
 
 "use client";
 
-import type { GameState, Puzzle } from "@/games/spelling-bee/types";
+import type { GameState, SpellingBeePuzzle } from "@/games/spelling-bee/types";
 import { clearSlice, migrateFromLegacyKeys, readSlice, writeSlice } from "./useGameStore";
 
 import { useEffect } from "react";
@@ -42,7 +42,7 @@ export function usePersistence(state: GameState): void {
  * Runs the one-time legacy key migration on first call.
  * Returns null if nothing is saved, the puzzle has changed, or the data is corrupt.
  */
-export function loadPersistedState(puzzle: Puzzle): Partial<GameState> | null {
+export function loadPersistedState(puzzle: SpellingBeePuzzle): Partial<GameState> | null {
   try {
     // Migrate old "spelling-bee:state" key to the unified envelope if it exists
     migrateFromLegacyKeys();

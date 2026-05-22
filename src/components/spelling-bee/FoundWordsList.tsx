@@ -6,13 +6,13 @@
 
 import { btnGiveUp, foundWordClass, foundWordPangramClass } from "./styles";
 
-import type { Puzzle } from "@/games/spelling-bee/types";
+import type { SpellingBeePuzzle } from "@/games/spelling-bee/types";
 import { isPangram } from "@/games/spelling-bee/lib/pangram";
 import { useMemo, useState } from "react";
 
 interface FoundWordsListProps {
   words: string[];
-  puzzle: Puzzle;
+  puzzle: SpellingBeePuzzle;
   /** Called when the player confirms they want to give up. Omit to hide the button. */
   onGiveUp?: () => void;
   /** When true the give-up button is hidden (game already ended). */

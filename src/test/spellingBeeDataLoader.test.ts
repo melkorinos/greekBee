@@ -5,7 +5,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
-  getCuratedPuzzleByLetters,
+  getPrebuiltPuzzleByLetters,
   getNextPuzzle,
   getPuzzleById,
   getPuzzleForDate,
@@ -121,33 +121,32 @@ describe("getNextPuzzle", () => {
   });
 });
 
-// ── getCuratedPuzzleByLetters ─────────────────────────────────────────────────
+// ── getPrebuiltPuzzleByLetters ────────────────────────────────────────────────
 
-describe("getCuratedPuzzleByLetters", () => {
-  // Use a known curated puzzle as a reference
+describe("getPrebuiltPuzzleByLetters", () => {
+  // Use a known pre-built puzzle as a reference
   const ref = getPuzzleForDate("2026-03-25");
 
-  it("returns the curated puzzle when letters match exactly", () => {
-    const found = getCuratedPuzzleByLetters(ref.centerLetter, ref.outerLetters);
+  it("returns the pre-built puzzle when letters match exactly", () => {
+    const found = getPrebuiltPuzzleByLetters(ref.centerLetter, ref.outerLetters);
     expect(found).not.toBeNull();
     expect(found!.id).toBe(ref.id);
   });
 
-  it("returns the curated puzzle regardless of outer-letter order", () => {
+  it("returns the pre-built puzzle regardless of outer-letter order", () => {
     const shuffled = [...ref.outerLetters].reverse();
-    const found = getCuratedPuzzleByLetters(ref.centerLetter, shuffled);
+    const found = getPrebuiltPuzzleByLetters(ref.centerLetter, shuffled);
     expect(found).not.toBeNull();
     expect(found!.id).toBe(ref.id);
   });
 
-  it("returns null for a letter combination not in the curated list", () => {
-    // Highly unlikely any curated puzzle uses these exact letters
-    const found = getCuratedPuzzleByLetters("ξ", ["ψ", "ζ", "θ", "φ", "β", "χ"]);
+  it("returns null for a letter combination not in the pre-built list", () => {
+    const found = getPrebuiltPuzzleByLetters("ξ", ["ψ", "ζ", "θ", "φ", "β", "χ"]);
     expect(found).toBeNull();
   });
 
   it("returned puzzle has a date-format id (not 'custom-...')", () => {
-    const found = getCuratedPuzzleByLetters(ref.centerLetter, ref.outerLetters);
+    const found = getPrebuiltPuzzleByLetters(ref.centerLetter, ref.outerLetters);
     expect(found!.id).toMatch(/^\d{4}-\d{2}-\d{2}/);
   });
 });

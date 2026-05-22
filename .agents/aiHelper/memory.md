@@ -17,7 +17,7 @@ Three live games + custom puzzle URLs. **639 tests passing.**
 |-------|----------|
 | **Routing** | `/spelling-bee`, `/wordle`, `/connections`, `/` game picker. Custom puzzle: `/spelling-bee/[center]/[outer]` |
 | **Persistence** | Single `wordgames:state` localStorage key; typed envelope. `useGameStore` is the ONLY code that touches localStorage |
-| **Types** | Root `src/types/index.ts` = `Language`, `GameId`, `PersistenceEnvelope` only. Game types live in `src/games/*/types.ts` |
+| **Types** | Root `src/types/index.ts` = `Language`, `GameId`, `PersistenceEnvelope` only. Game types live in `src/games/*/types.ts`. Spelling Bee puzzle type is `SpellingBeePuzzle` (renamed from `Puzzle` in Session 27). |
 | **Theming** | Wordle + Shell header = dark (unconditional classes). Spelling Bee + picker = light. No `dark:` Tailwind classes anywhere. Shared form style tokens in `src/components/spelling-bee/styles.ts` (`labelClass`, `inputClass`, `inputCompactClass`, etc.) — use these for all modal inputs/labels. |
 | **Game logic** | Pure functions in `src/games/*/lib/` — zero React imports |
 | **Shared components** | Earn their place: only graduate to `src/components/shared/` when 2 games genuinely need it |
@@ -70,7 +70,7 @@ src/
 | File | Committed | Notes |
 |------|-----------|-------|
 | `src/data/words-el.json` | ✅ | 811k normalised Greek words; used by `buildCustomPuzzle` |
-| `src/data/spelling-bee/puzzles-el.json` | ✅ | 1008 curated daily puzzles; still has pre-computed `validWords` (tech debt #1) |
+| `src/data/spelling-bee/puzzles-el.json` | ✅ | 1008 pre-built daily puzzles; still has pre-computed `validWords` (tech debt #1) |
 | `src/data/wordle/words-{4..8}.json` | ✅ | Per-length valid-word + answer pool (same list drives both); words-5.json has ~9,568 entries |
 | `src/data/words-el.raw.json` | ❌ gitignored | 826k original accented source |
 
@@ -107,7 +107,7 @@ src/
 | `greekLogic.test.ts` | `isPangram (Greek)`, `scoreWord (Greek)`, `validateWord (Greek)`, `getPuzzleForDate` (data-independent) |
 | `greeklish.test.ts` | `greekToGreeklish`, `greeklishToGreek` bijective codec |
 | `spellingBeeDataLoader.test.ts` | `getPuzzleForDate`, `getPuzzleById`, `getRandomPuzzle`, `getNextPuzzle` |
-| `spellingBeeRouting.test.ts` | Canonical URL format; redirect round-trip for all 1,008 curated puzzles |
+| `spellingBeeRouting.test.ts` | Canonical URL format; redirect round-trip for all 1,008 pre-built puzzles |
 | `computeValidWords.test.ts` | `computeValidWords` — inclusion, too-short, missing center, invalid letters, accent normalisation |
 | `customPuzzle.test.tsx` | `buildCustomPuzzle` shape/normalisation/ID/filtering; `ShareButton` render/copy/success/error |
 | `parseCustomUrl.test.ts` | `parseCustomUrl` — valid, invalid center, invalid outer, uniqueness checks |

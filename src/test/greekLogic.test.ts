@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { Puzzle } from "@/games/spelling-bee/types";
+import type { SpellingBeePuzzle } from "@/games/spelling-bee/types";
 import { getPuzzleForDate } from "@/data/spelling-bee";
 import { isPangram } from "@/games/spelling-bee/lib/pangram";
 import { scoreWord } from "@/games/spelling-bee/lib/scoring";
@@ -11,7 +11,7 @@ import { validateWord } from "@/games/spelling-bee/lib/validation";
 
 // ── Greek test puzzle (mirrors puzzles-el.json) ────────────────────────────────
 
-const puzzle: Puzzle = {
+const puzzle: SpellingBeePuzzle = {
   id: "2026-03-25-el",
   language: "el",
   date: "2026-03-25",

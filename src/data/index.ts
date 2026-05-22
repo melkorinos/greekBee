@@ -9,6 +9,6 @@ export {
   getRandomPuzzle,
   getNextPuzzle,
   buildCustomPuzzle,
-  getCuratedPuzzleByLetters,
+  getPrebuiltPuzzleByLetters,
   getRecentPuzzleDates,
 } from "./spelling-bee/index";

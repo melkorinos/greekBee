@@ -4,14 +4,14 @@
 
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { buildCustomPuzzle } from "@/data/spelling-bee/index";
-import type { Puzzle } from "@/games/spelling-bee/types";
+import type { SpellingBeePuzzle } from "@/games/spelling-bee/types";
 
 // ── buildCustomPuzzle ──────────────────────────────────────────────────────────
 
 describe("buildCustomPuzzle", () => {
   it("returns a Puzzle with the expected shape", () => {
     const puzzle = buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
-    expect(puzzle).toMatchObject<Partial<Puzzle>>({
+    expect(puzzle).toMatchObject<Partial<SpellingBeePuzzle>>({
       language: "el",
       centerLetter: "α",
       outerLetters: ["λ", "τ", "ι", "δ", "ε", "σ"],

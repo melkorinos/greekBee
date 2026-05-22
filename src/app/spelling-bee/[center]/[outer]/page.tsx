@@ -12,10 +12,10 @@
 // Greek percent-encoded URLs (e.g. %CE%BA) are also accepted and 301-redirected
 // to the greeklish canonical form so old bookmarks continue to work.
 //
-// The resulting Puzzle object is identical in shape to a curated one, so the
+// The resulting Puzzle object is identical in shape to a pre-built one, so the
 // entire existing game stack (GameBoard, reducer, persistence) works unchanged.
 
-import { buildCustomPuzzle, getCuratedPuzzleByLetters, getRecentPuzzleDates } from "@/data";
+import { buildCustomPuzzle, getPrebuiltPuzzleByLetters, getRecentPuzzleDates } from "@/data";
 import { notFound, redirect } from "next/navigation";
 
 import { GameBoard } from "@/components/spelling-bee/GameBoard";
@@ -31,7 +31,7 @@ import { parseCustomUrl } from "@/games/spelling-bee/lib/parseCustomUrl";
 //
 // Why this matters for cost:
 //   `computeValidWords` scans 811 k words (~50-200 ms of Fluid CPU) for every
-//   custom combo not in the curated list.  Without caching, every page visit
+//   custom combo not in the pre-built list.  Without caching, every page visit
 //   would trigger a fresh Fluid invocation and be billed accordingly.
 //   With revalidate=3600, the CDN serves cached HTML for repeat visitors;
 //   the Fluid function only runs for the *first* visitor in each hour window.
@@ -66,11 +66,11 @@ export default async function CustomSpellingBeePage({
   }
 
   const language: Language = "el";
-  // Use the curated puzzle if the letters match a known daily puzzle.
+  // Use the pre-built puzzle if the letters match a known daily puzzle.
   // This preserves the real puzzle ID (e.g. "2026-05-18-el") so GameBoard
   // can enable the leaderboard 🏆 button for daily puzzles.
   const puzzle =
-    getCuratedPuzzleByLetters(parsed.center, parsed.outer, language) ??
+    getPrebuiltPuzzleByLetters(parsed.center, parsed.outer, language) ??
     buildCustomPuzzle(parsed.center, parsed.outer, language);
 
   // Last 7 daily puzzle dates (newest-first) — passed to GameBoard so the

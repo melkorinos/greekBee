@@ -1,7 +1,7 @@
 // noAccents.test.ts — enforces the "zero Greek accents anywhere" contract.
 //
 // Greek accents must never appear in:
-//   • Puzzle letter fields (centerLetter, outerLetters) — in both curated and custom puzzles
+//   • Puzzle letter fields (centerLetter, outerLetters) — in both pre-built and custom puzzles
 //   • Words stored in game state (foundWords, lastSubmission.word)
 //   • Valid words returned by computeValidWords / buildCustomPuzzle
 //   • The canonical share URL path
@@ -16,7 +16,7 @@ import { buildCustomPuzzle } from "@/data/spelling-bee";
 import { computeValidWords } from "@/games/spelling-bee/lib/computeValidWords";
 import { parseCustomUrl } from "@/games/spelling-bee/lib/parseCustomUrl";
 import { buildInitialState, gameReducer } from "@/games/spelling-bee/hooks/gameReducer";
-import type { Puzzle } from "@/games/spelling-bee/types";
+import type { SpellingBeePuzzle } from "@/games/spelling-bee/types";
 import { getPuzzleForDate, getRandomPuzzle } from "@/data/spelling-bee";
 import puzzlesEl from "@/data/spelling-bee/puzzles-el.json";
 
@@ -64,7 +64,7 @@ describe("hasAccent helper", () => {
 // ── puzzles-el.json puzzle letters ────────────────────────────────────────────
 
 describe("puzzles-el.json — no accents in puzzle letter fields", () => {
-  const puzzles = puzzlesEl as Puzzle[];
+  const puzzles = puzzlesEl as SpellingBeePuzzle[];
 
   it("centerLetter is accent-free in every puzzle", () => {
     for (const p of puzzles) {
@@ -158,7 +158,7 @@ describe("parseCustomUrl — normalised output is accent-free", () => {
 // ── Game reducer — stored words are accent-free ───────────────────────────────
 
 describe("gameReducer SUBMIT_WORD — stored words are accent-free", () => {
-  const puzzle: Puzzle = {
+  const puzzle: SpellingBeePuzzle = {
     id: "test-noaccents",
     language: "el",
     date: "2026-01-01",

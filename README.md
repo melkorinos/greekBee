@@ -16,31 +16,31 @@ All games share a common shell (hamburger navigation menu), a unified persistenc
 
 ## Project Agent
 
-This project is managed with a dedicated AI coding agent using **Claude Code**. Agent files live in `.claude/aiHelper/`:
+This project is managed with a dedicated AI coding agent using **Claude Code**. Agent files live in `.agents/aiHelper/`:
 
 | File | Purpose |
 |------|---------|
-| `.claude/aiHelper/soul.md` | Agent identity, beliefs, and hard constraints |
-| `.claude/aiHelper/memory.md` | All architecture decisions and context across sessions |
-| `.claude/aiHelper/goals.md` | Phased roadmap (Phase 1–4) with checkboxes |
-| `.claude/aiHelper/log.md` | Per-session changelog |
-| `.claude/aiHelper/reflections.md` | Post-session risks, tensions, and open questions |
+| `.agents/aiHelper/soul.md` | Agent identity, beliefs, and hard constraints |
+| `.agents/aiHelper/memory.md` | All architecture decisions and context across sessions |
+| `.agents/aiHelper/goals.md` | Phased roadmap (Phase 1–4) with checkboxes |
+| `.agents/aiHelper/log.md` | Per-session changelog |
+| `.agents/aiHelper/reflections.md` | Post-session risks, tensions, and open questions |
 
 ### Claude Code workflow
 
-`CLAUDE.md` at the project root is auto-loaded by Claude Code on every session — it contains standing rules and instructs Claude to read the `.claude/aiHelper/` files automatically.
+`CLAUDE.md` at the project root is auto-loaded by Claude Code on every session — it contains standing rules and instructs Claude to read the `.agents/aiHelper/` files automatically.
 
 To start a full context session, type `/aihelper` in the Claude Code chat. Claude will read all agent files and confirm it is ready before taking your task.
 
 ### Available slash commands
 
-All commands live in `.claude/skills/`. Engineering skills are installed from [mattpocock/skills](https://github.com/mattpocock/skills) via `npx skills@latest add mattpocock/skills` — run the installer again to update them (it will recreate a `.agents/skills/` folder with junctions; delete it afterwards to keep everything under `.claude/`).
+All commands live in `.claude/skills/`. Engineering skills are installed from [mattpocock/skills](https://github.com/mattpocock/skills) via `npx skills@latest add mattpocock/skills` — run the installer again to update them. The installer keeps real files in `.agents/skills/` and creates junctions in `.claude/skills/` pointing there; do **not** delete `.agents/skills/` or the junctions will break.
 
 #### All slash commands (`.claude/skills/`)
 
 | Command | Purpose |
 |---------|---------|
-| `/aihelper` | Full context reload — reads all `.claude/aiHelper/` files, then waits for your task |
+| `/aihelper` | Full context reload — reads all `.agents/aiHelper/` files, then waits for your task |
 | `/improve-codebase-architecture` | Surface architectural seams and deepening opportunities |
 | `/grill-me` | Relentless Q&A to stress-test a plan or design decision |
 | `/grill-with-docs` | Like `/grill-me` but cross-checks against domain docs (CONTEXT.md, ADRs) and updates them inline |

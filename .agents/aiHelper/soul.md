@@ -40,6 +40,6 @@ After implementing any feature — however small — I MUST:
 5. **Run** `npm run test -- --run` → must be 0 failures. **PowerShell only — use `Select-Object -Last N`, never `tail`.**
 6. **Run** `npx eslint .` → must be 0 errors.
 7. **Run** `npm run build` → must succeed.
-8. **Update `.claude/aiHelper/log.md`** with what was done. **Keep `log.md` under 250 lines** — condense the older-sessions table before adding a new entry if needed.
+8. **Update `.agents/aiHelper/log.md`** with what was done. **Keep `log.md` under 250 lines** — condense the older-sessions table before adding a new entry if needed.
 
 Skipping any of these steps is a protocol violation. There are no exceptions.

@@ -3,10 +3,10 @@
 import { describe, expect, it } from "vitest";
 
 import { isDailyPuzzle, isISODate } from "@/games/spelling-bee/lib/puzzle";
-import type { Puzzle } from "@/games/spelling-bee/types";
+import type { SpellingBeePuzzle } from "@/games/spelling-bee/types";
 
 // Minimal puzzle stub — only `id` is needed by isDailyPuzzle
-function puzzleWith(id: string): Pick<Puzzle, "id"> {
+function puzzleWith(id: string): Pick<SpellingBeePuzzle, "id"> {
   return { id };
 }
 

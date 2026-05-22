@@ -5,6 +5,34 @@
 
 ---
 
+## 2026-05-22 — Session 27: Domain glossary + two type renames ✅
+
+**Outcome:** 639 tests (41 files) · same 2 pre-existing failures (supabase module, performance timing) · build not re-run (pure rename, no logic change).
+
+### Changes
+
+1. **`CONTEXT.md` created** — first-pass domain glossary at the repo root. Covers platform terms, all three games, flagged ambiguities, and an example dialogue. Key decisions captured:
+   - Wordle leaderboard metric = **Attempt Total** (not "Score") — lower is better
+   - Wordle per-length display metric = **In-game Points**
+   - Spelling Bee accepted submissions = **Valid Words** (not "Answers")
+   - **Guess** = unified platform concept (1 word in Wordle, 4 words in Connections)
+   - Wordle word list = **Word Pool** per length
+   - **Session** applies to all three games
+   - **Pre-built Puzzle** = batch-generated Spelling Bee daily puzzle (stored in `puzzles-el.json`)
+   - **Curated Puzzle** = hand-authored Connections puzzle (cannot be automated)
+   - **Normalised Word** = passed through `normalizeLetters()` — the platform-wide invariant
+
+2. **`Puzzle` → `SpellingBeePuzzle`** type rename (22 files). Removes ambiguity between the platform-level "Puzzle" concept and the Spelling Bee-specific TypeScript type.
+
+3. **`getCuratedPuzzleByLetters` → `getPrebuiltPuzzleByLetters`** rename. "Curated" now reserved for hand-authored Connections puzzles. Touches: `src/data/spelling-bee/index.ts`, `src/data/index.ts`, `src/app/spelling-bee/[center]/[outer]/page.tsx`, `src/test/spellingBeeDataLoader.test.ts`, `src/test/performance.test.ts`, plus comment-only updates in 5 other files and agent docs.
+
+### Docs
+- `memory.md`: type note updated (`Puzzle` → `SpellingBeePuzzle`), data file note updated (curated → pre-built)
+- `reflections.md`: Spelling Bee "curated" → "pre-built"
+- `log.md`: this entry
+
+---
+
 ## 2026-05-21 — Session 26: Wordle tile layout fixes + header polish ✅
 
 **Outcome:** 639 tests (41 files) · build clean · TSC clean.

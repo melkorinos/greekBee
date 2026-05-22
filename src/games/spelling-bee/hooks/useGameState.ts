@@ -7,7 +7,7 @@ import { buildInitialState, gameReducer } from "./gameReducer";
 import { clearPersistedState, loadPersistedState, usePersistence } from "@/hooks/usePersistence";
 import { useCallback, useEffect, useMemo, useReducer } from "react";
 
-import type { Puzzle } from "../types";
+import type { SpellingBeePuzzle } from "../types";
 import { normalizeLetters } from "../lib/normalize";
 
 /**
@@ -15,7 +15,7 @@ import { normalizeLetters } from "../lib/normalize";
  *
  * @param initialPuzzle - The puzzle to start with (loaded from data layer)
  */
-export function useGameState(initialPuzzle: Puzzle) {
+export function useGameState(initialPuzzle: SpellingBeePuzzle) {
   // Always start from a clean state — avoids SSR/client hydration mismatch.
   // localStorage is only available in the browser, so we never read it during SSR.
   const [state, dispatch] = useReducer(
@@ -94,7 +94,7 @@ export function useGameState(initialPuzzle: Puzzle) {
 
   /** Load a completely new puzzle, resetting all progress */
   const newGame = useCallback(
-    (puzzle: Puzzle) => {
+    (puzzle: SpellingBeePuzzle) => {
       // Wipe localStorage so the old session doesn't bleed into the new game
       clearPersistedState();
       dispatch({ type: "NEW_GAME", puzzle });

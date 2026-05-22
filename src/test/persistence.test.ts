@@ -7,11 +7,11 @@ import { clearPersistedState, loadPersistedState } from "@/hooks/usePersistence"
 import { describe, expect, it } from "vitest";
 import { readSlice, writeSlice } from "@/hooks/useGameStore";
 
-import type { Puzzle } from "@/games/spelling-bee/types";
+import type { SpellingBeePuzzle } from "@/games/spelling-bee/types";
 
 // ── Test fixture ──────────────────────────────────────────────────────────────
 
-const puzzle: Puzzle = {
+const puzzle: SpellingBeePuzzle = {
   id: "test-persist-puzzle",
   language: "el",
   date: "2026-01-01",

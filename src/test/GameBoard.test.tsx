@@ -5,12 +5,12 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 
 import { GameBoard } from "@/components/spelling-bee/GameBoard";
-import type { Puzzle } from "@/games/spelling-bee/types";
+import type { SpellingBeePuzzle } from "@/games/spelling-bee/types";
 import userEvent from "@testing-library/user-event";
 
 // ── Test fixture ───────────────────────────────────────────────────────────────
 
-const puzzle: Puzzle = {
+const puzzle: SpellingBeePuzzle = {
   id: "test-puzzle",
   language: "el",
   date: "2026-01-01",

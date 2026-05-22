@@ -12,7 +12,7 @@
 //      A ~200 ms scan × thousands of requests = the #1 cost driver.
 //      Mitigated by: module-level validWordsCache in buildCustomPuzzle.
 //
-//   2. getCuratedPuzzleByLetters — linear scan of the 1 008-puzzle curated list.
+//   2. getPrebuiltPuzzleByLetters — linear scan of the 1 008-puzzle pre-built list.
 //      Called on every [center]/[outer] page hit to detect daily puzzles.
 //      Acceptable at <1 ms, but tested here to catch accidental O(n²) regressions.
 //
@@ -25,7 +25,7 @@
 // All tests run against the real words-el.json so they reflect actual production
 // input size. Import cost is paid once per test-runner process (module cache).
 
-import { buildCustomPuzzle, getCuratedPuzzleByLetters } from "@/data/spelling-bee/index";
+import { buildCustomPuzzle, getPrebuiltPuzzleByLetters } from "@/data/spelling-bee/index";
 import { describe, expect, it } from "vitest";
 
 import { computeValidWords } from "@/games/spelling-bee/lib/computeValidWords";
@@ -106,13 +106,13 @@ describe("performance: buildCustomPuzzle module-level cache", () => {
   });
 });
 
-// ── getCuratedPuzzleByLetters — linear scan of curated list ──────────────────
+// ── getPrebuiltPuzzleByLetters — linear scan of pre-built list ──────────────────
 
-describe("performance: getCuratedPuzzleByLetters (curated puzzle scan)", () => {
+describe("performance: getPrebuiltPuzzleByLetters (pre-built puzzle scan)", () => {
   it(`finds a matching puzzle within ${CURATED_LOOKUP_BUDGET_MS} ms`, () => {
-    // Use a known curated combo (first puzzle in the file: 2026-03-25-el)
+    // Use a known pre-built combo (first puzzle in the file: 2026-03-25-el)
     const t0 = performance.now();
-    const result = getCuratedPuzzleByLetters("ι", ["ω", "ν", "π", "ε", "α", "φ"]);
+    const result = getPrebuiltPuzzleByLetters("ι", ["ω", "ν", "π", "ε", "α", "φ"]);
     const elapsed = performance.now() - t0;
 
     expect(result).not.toBeNull();
@@ -120,10 +120,10 @@ describe("performance: getCuratedPuzzleByLetters (curated puzzle scan)", () => {
     expect(elapsed).toBeLessThan(CURATED_LOOKUP_BUDGET_MS);
   });
 
-  it(`returns null for a non-curated combo within ${CURATED_LOOKUP_BUDGET_MS} ms`, () => {
+  it(`returns null for a non-pre-built combo within ${CURATED_LOOKUP_BUDGET_MS} ms`, () => {
     // Worst case: scans the entire list before returning null.
     const t0 = performance.now();
-    const result = getCuratedPuzzleByLetters("ζ", ["α", "β", "γ", "δ", "ε", "η"]);
+    const result = getPrebuiltPuzzleByLetters("ζ", ["α", "β", "γ", "δ", "ε", "η"]);
     const elapsed = performance.now() - t0;
 
     expect(result).toBeNull();

@@ -3,7 +3,7 @@
 // Also exposes buildCustomPuzzle() for the dynamic /spelling-bee/[center]/[outer] route.
 
 import type { Language } from "@/types";
-import type { Puzzle } from "@/games/spelling-bee/types";
+import type { SpellingBeePuzzle } from "@/games/spelling-bee/types";
 import { computeValidWords } from "@/games/spelling-bee/lib/computeValidWords";
 import greekPuzzles from "./puzzles-el.json";
 import { normalizeLetters } from "@/games/spelling-bee/lib/normalize";
@@ -11,15 +11,15 @@ import wordListEl from "../words-el.json";
 
 // Cast the imported JSON to the typed Puzzle array.
 // TypeScript will warn us if the JSON shape ever drifts from the Puzzle interface.
-const PUZZLES: Record<Language, Puzzle[]> = {
-  el: greekPuzzles as Puzzle[],
+const PUZZLES: Record<Language, SpellingBeePuzzle[]> = {
+  el: greekPuzzles as SpellingBeePuzzle[],
 };
 
 /**
  * Returns the puzzle for a given date and language.
  * Falls back to the most recent available puzzle if no match is found.
  */
-export function getPuzzleForDate(date: string, language: Language = "el"): Puzzle {
+export function getPuzzleForDate(date: string, language: Language = "el"): SpellingBeePuzzle {
   const puzzles = PUZZLES[language];
 
   if (puzzles.length === 0) {
@@ -35,7 +35,7 @@ export function getPuzzleForDate(date: string, language: Language = "el"): Puzzl
 /**
  * Returns today's puzzle using the current date in ISO format (YYYY-MM-DD).
  */
-export function getTodaysPuzzle(language: Language = "el"): Puzzle {
+export function getTodaysPuzzle(language: Language = "el"): SpellingBeePuzzle {
   const today = new Date().toISOString().split("T")[0];
   return getPuzzleForDate(today, language);
 }
@@ -43,7 +43,7 @@ export function getTodaysPuzzle(language: Language = "el"): Puzzle {
 /**
  * Returns a puzzle by its unique ID, or null if not found.
  */
-export function getPuzzleById(id: string, language: Language): Puzzle | null {
+export function getPuzzleById(id: string, language: Language): SpellingBeePuzzle | null {
   return PUZZLES[language].find((p) => p.id === id) ?? null;
 }
 
@@ -51,7 +51,7 @@ export function getPuzzleById(id: string, language: Language): Puzzle | null {
  * Returns a random puzzle for the given language, optionally excluding one by ID.
  * Used for the "Random Puzzle" feature.
  */
-export function getRandomPuzzle(language: Language, excludeId?: string): Puzzle {
+export function getRandomPuzzle(language: Language, excludeId?: string): SpellingBeePuzzle {
   const list = PUZZLES[language];
   const candidates = excludeId ? list.filter((p) => p.id !== excludeId) : list;
   const pool = candidates.length > 0 ? candidates : list;
@@ -63,7 +63,7 @@ export function getRandomPuzzle(language: Language, excludeId?: string): Puzzle 
  * Cycles back to the first puzzle when the last one is reached.
  * Used to build the "Next Puzzle" URL server-side.
  */
-export function getNextPuzzle(current: Puzzle): Puzzle {
+export function getNextPuzzle(current: SpellingBeePuzzle): SpellingBeePuzzle {
   const list = PUZZLES[current.language as Language];
   const idx = list.findIndex((p) => p.id === current.id);
   const nextIdx = idx >= 0 ? (idx + 1) % list.length : 0;
@@ -71,17 +71,17 @@ export function getNextPuzzle(current: Puzzle): Puzzle {
 }
 
 /**
- * Looks up a curated puzzle by its letter combination (center + outer set).
- * Returns the curated puzzle if found, null otherwise.
+ * Looks up a pre-built puzzle by its letter combination (center + outer set).
+ * Returns the pre-built puzzle if found, null otherwise.
  * Used by the [center]/[outer] page to detect when a URL matches a daily puzzle
  * so the real puzzle ID (e.g. "2026-05-18-el") reaches GameBoard instead of
  * the synthetic "custom-..." ID — which enables the leaderboard.
  */
-export function getCuratedPuzzleByLetters(
+export function getPrebuiltPuzzleByLetters(
   center: string,
   outer: string[],
   language: Language = "el"
-): Puzzle | null {
+): SpellingBeePuzzle | null {
   const normalizedCenter = normalizeLetters(center);
   const normalizedOuter  = [...outer.map(normalizeLetters)].sort().join("");
   return (
@@ -148,7 +148,7 @@ export function buildCustomPuzzle(
   centerLetter: string,
   outerLetters: string[],
   language: Language = "el"
-): Puzzle {
+): SpellingBeePuzzle {
   const center = normalizeLetters(centerLetter);
   const outer = outerLetters.map(normalizeLetters);
 

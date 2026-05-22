@@ -4,7 +4,7 @@
 import { MAX_SCORE_CAP, maxScore, scoreWord } from "@/games/spelling-bee/lib/scoring";
 import { describe, expect, it } from "vitest";
 
-import type { Puzzle } from "@/games/spelling-bee/types";
+import type { SpellingBeePuzzle } from "@/games/spelling-bee/types";
 import { calculateRank } from "@/games/spelling-bee/lib/ranking";
 import { isPangram } from "@/games/spelling-bee/lib/pangram";
 import { validateWord } from "@/games/spelling-bee/lib/validation";
@@ -12,7 +12,7 @@ import { validateWord } from "@/games/spelling-bee/lib/validation";
 // ── Shared test fixture ────────────────────────────────────────────────────────
 
 /** Minimal puzzle used across all logic tests */
-const puzzle: Puzzle = {
+const puzzle: SpellingBeePuzzle = {
   id: "test-puzzle",
   language: "el",
   date: "2026-01-01",
@@ -67,7 +67,7 @@ describe("maxScore", () => {
     const bigWords = Array.from({ length: 100 }, (_, i) =>
       "abcdefghi" + String.fromCharCode(97 + (i % 26))
     );
-    const bigPuzzle: Puzzle = {
+    const bigPuzzle: SpellingBeePuzzle = {
       ...puzzle,
       validWords: bigWords,
     };

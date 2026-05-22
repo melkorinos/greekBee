@@ -52,4 +52,4 @@ Priority order (work top-down):
 - `npm run test -- --run`, `npm run build`, `npx eslint .` must all pass (0 errors) after every change
 - No inline styles — Tailwind utility classes only
 - Do not install new dependencies without explicit approval
-- Keep `.claude/aiHelper/log.md` under 250 lines — condense older entries before adding new ones
+- Keep `.agents/aiHelper/log.md` under 250 lines — condense older entries before adding new ones
