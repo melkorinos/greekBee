@@ -3,7 +3,7 @@
 //
 // One list per length (words-N.json) is used for both the answer pool and
 // valid-guess validation.  No separate curated list — word quality will be
-// addressed later (see tech debt #3).
+// addressed later (see .claude/issue-tracker/issues/05-td003-wordle-answer-pool.md).
 
 import type { WordleLength, WordlePuzzle } from "@/games/wordle/types";
 

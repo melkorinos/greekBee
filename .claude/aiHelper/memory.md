@@ -78,13 +78,7 @@ src/
 
 ## 🛠 Known Tech Debt
 
-1. **No E2E tests** — no Playwright/Cypress.
-2. ~~**Wordle length variants**~~ ✅ — 4–8 live; `words-{4..8}.json` generated; length switcher in UI; single word list drives both answers and valid guesses.
-3. **Mobile physical keyboard gap** — `window.keydown` in Wordle works on desktop only; no test verifying mobile on-screen keyboard path.
-4. **TD-001 — Partial style-token coverage in `FoundWordsList` / `ScoreBar`** — layout tokens still live in local `const styles = {}` objects. Move all to `styles.ts` or document the split. Acceptance: no undocumented local `const styles` in `src/components/spelling-bee/`.
-5. **TD-002 — Spelling Bee max-score cap is a blunt instrument** — `maxScore()` hard-caps at 500 pts (`MAX_SCORE_CAP`). Better: use a word-count percentile so all puzzles feel equally challenging regardless of raw dictionary coverage.
-6. **TD-003 — Wordle answer pool quality** — `words-{4..8}.json` includes obscure/archaic Greek words because the same list drives both valid guesses and daily answers. Should curate separate `answers-{4..8}.json` files filtered against a high-frequency lemma list so daily answers are always common words.
-7. **TD-004 — Supabase not managed via Vercel Storage** — DB was provisioned on supabase.com directly. Vercel Storage → Supabase integration would auto-inject env vars and consolidate to one dashboard. Migration: create new project via Vercel Storage, re-run SQL from log, remove old manual env vars. Zero code changes needed.
+Tracked as individual issues in `.scratch/tech-debt/issues/` (7 open items). See that directory for status, acceptance criteria, and open questions per item.
 
 ---
 

@@ -31,8 +31,7 @@ export function scoreWord(word: string, puzzle: SpellingBeePuzzle): number {
  *  2. Hard cap of 500 pts — prevents puzzles with very large word lists from
  *     producing leaderboard scores in the thousands.
  *
- * Tech debt TD-002: replace the hard cap with a smarter word-count percentile so
- * puzzles feel equally challenging regardless of dictionary coverage.
+ * Tech debt: see .claude/issue-tracker/issues/04-td002-max-score-cap.md
  */
 export const MAX_SCORE_CAP = 500;
 

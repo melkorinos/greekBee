@@ -214,11 +214,7 @@ scripts/            Puzzle generation & curation CLIs (batch-generate, curate-an
 
 ## Tech debt
 
-| # | Area | Description |
-|---|------|-------------|
-| 1 | **Spelling Bee style tokens** | Layout tokens (`container`, `heading`, `labelRow`, etc.) still live in local `const styles = {}` objects inside `FoundWordsList` / `ScoreBar`. Move all remaining keys into `styles.ts` or document the local-layout / shared-visual split explicitly. |
-| 2 | **No E2E tests** | All tests are unit (pure logic) or component-level (RTL). No Playwright/Cypress test covers a full browser session, including localStorage rehydration and the random puzzle navigation flow. |
-| 3 | **Wordle answer pool quality** | All lengths (4–8) currently draw answers from the full normalised dictionary (`words-N.json`), which includes obscure / archaic Greek words. Future improvement: filter each pool against a high-frequency lemma list, or manually curate, so daily answers are always common recognisable words. |
+Tracked as individual issues in [`.claude/issue-tracker/issues/`](.claude/issue-tracker/issues/). Each file has a `Status:` line using the project triage vocabulary (`needs-triage`, `ready-for-agent`, `ready-for-human`).
 
 ---
 
