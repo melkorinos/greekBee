@@ -78,7 +78,7 @@ src/
 
 ## 🛠 Known Tech Debt
 
-Tracked as individual issues in `.scratch/tech-debt/issues/` (7 open items). See that directory for status, acceptance criteria, and open questions per item.
+Tracked as individual issues in `.claude/issue-tracker/issues/` (7 open items). See that directory for status, acceptance criteria, and open questions per item.
 
 ---
 
