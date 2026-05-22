@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx skills@latest add mattpocock/skills)",
+      "PowerShell(Get-ChildItem \"e:\\\\desktop\\\\bee\\\\greekBee\\\\.claude\\\\skills\" | ForEach-Object { \"$\\($_.Name\\) -> $\\($_.Target\\)\" })",
+      "PowerShell(Remove-Item -Path \"e:\\\\desktop\\\\bee\\\\greekBee\\\\.agents\\\\skills\" -Recurse -Force -Confirm:$false)",
+      "Bash(git -C \"e:/desktop/bee/greekBee\" ls-files --deleted)"
+    ]
+  }
+}

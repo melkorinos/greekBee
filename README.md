@@ -7,7 +7,7 @@ A multi-game browser platform for Greek (and English) word games, built with **N
 | Game | Route | Status | Description |
 |------|-------|--------|-------------|
 | 🍯 Spelling Bee | `/spelling-bee` | Live | 7-letter honeycomb — find words containing the center letter |
-| 🟩 Wordle GR | `/wordle` | Live | Guess a hidden 5-letter Greek word in 6 attempts |
+| 🟩 Wordle GR | `/wordle` | Live | Guess a hidden Greek word (4–8 letters) in 6 attempts — switch length in-game |
 | 🔗 Connections | `/connections` | Live | Group 16 curated words into 4 categories of 4 |
 
 All games share a common shell (hamburger navigation menu), a unified persistence layer, and a consistent design foundation. Each game's logic, state, and data are fully isolated.
@@ -16,17 +16,45 @@ All games share a common shell (hamburger navigation menu), a unified persistenc
 
 ## Project Agent
 
-This project is managed with a dedicated AI coding agent. Agent files live in `.agents/`:
+This project is managed with a dedicated AI coding agent using **Claude Code**. Agent files live in `.claude/aiHelper/`:
 
 | File | Purpose |
 |------|---------|
-| `.agents/soul.md` | Agent identity, beliefs, and hard constraints |
-| `.agents/memory.md` | All architecture decisions and context across sessions |
-| `.agents/goals.md` | Phased roadmap (Phase 1–4) with checkboxes |
-| `.agents/log.md` | Per-session changelog |
-| `.agents/reflections.md` | Post-session risks, tensions, and open questions |
+| `.claude/aiHelper/soul.md` | Agent identity, beliefs, and hard constraints |
+| `.claude/aiHelper/memory.md` | All architecture decisions and context across sessions |
+| `.claude/aiHelper/goals.md` | Phased roadmap (Phase 1–4) with checkboxes |
+| `.claude/aiHelper/log.md` | Per-session changelog |
+| `.claude/aiHelper/reflections.md` | Post-session risks, tensions, and open questions |
 
-To start an implementation session, use the prompt at `.github/prompts/implement-platform.prompt.md` by typing `/implement-platform` in the Copilot Chat panel.
+### Claude Code workflow
+
+`CLAUDE.md` at the project root is auto-loaded by Claude Code on every session — it contains standing rules and instructs Claude to read the `.claude/aiHelper/` files automatically.
+
+To start a full context session, type `/aihelper` in the Claude Code chat. Claude will read all agent files and confirm it is ready before taking your task.
+
+### Available slash commands
+
+All commands live in `.claude/skills/`. Engineering skills are installed from [mattpocock/skills](https://github.com/mattpocock/skills) via `npx skills@latest add mattpocock/skills` — run the installer again to update them (it will recreate a `.agents/skills/` folder with junctions; delete it afterwards to keep everything under `.claude/`).
+
+#### All slash commands (`.claude/skills/`)
+
+| Command | Purpose |
+|---------|---------|
+| `/aihelper` | Full context reload — reads all `.claude/aiHelper/` files, then waits for your task |
+| `/improve-codebase-architecture` | Surface architectural seams and deepening opportunities |
+| `/grill-me` | Relentless Q&A to stress-test a plan or design decision |
+| `/grill-with-docs` | Like `/grill-me` but cross-checks against domain docs (CONTEXT.md, ADRs) and updates them inline |
+| `/to-prd` | Synthesise current context into a structured PRD |
+| `/to-issues` | Break a plan or PRD into independently-grabbable vertical-slice issues on the issue tracker |
+| `/triage` | Move issues through a state machine (needs-triage → ready-for-agent / ready-for-human / wontfix) |
+| `/diagnose` | Disciplined debugging loop — reproduce → minimise → hypothesise → instrument → fix → regression-test |
+| `/tdd` | Test-driven development with red-green-refactor vertical slices |
+| `/prototype` | Build a throwaway prototype (terminal logic harness or multi-variant UI) to answer a design question |
+| `/zoom-out` | Map all relevant modules and callers when unfamiliar with an area of code |
+| `/handoff` | Compact the current conversation into a handoff document for the next agent session |
+| `/caveman` | Ultra-compressed token-saving mode — full technical accuracy, zero filler |
+| `/setup-matt-pocock-skills` | One-time setup: configure issue tracker, triage labels, and domain doc layout |
+| `/write-a-skill` | Create a new skill with proper structure and bundled reference files |
 
 ---
 
@@ -67,16 +95,18 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
 
 ## How the game works — step by step
 
-1. **Puzzle load** (`src/app/page.tsx` — server component)
-   - The server reads `?lang=`, `?puzzle=` and `?random=` query params.
-   - It calls `getPuzzleById` or `getRandomPuzzle` from `src/data/index.ts`.
+> This describes the **Spelling Bee** flow. Wordle and Connections follow the same shell/persistence patterns but have their own pure-logic modules under `src/games/`.
+
+1. **Puzzle load** (`src/app/spelling-bee/page.tsx` — server component)
+   - The server reads the `?puzzle=YYYY-MM-DD` query param (or uses today's date).
+   - It calls `getPuzzleForDate` from `src/data/spelling-bee/index.ts`.
    - The resolved `Puzzle` object is passed as a prop to `<GameBoard>`.
 
-2. **State initialisation** (`src/hooks/gameReducer.ts → buildInitialState`)
+2. **State initialisation** (`src/games/spelling-bee/hooks/gameReducer.ts → buildInitialState`)
    - A clean `GameState` is built: empty input, zero score, Beginner rank.
    - `puzzleMaxScore` is computed once here (see Scoring below) and stored in state so it never needs to be recalculated.
 
-3. **Client rehydration** (`src/hooks/useGameState.ts`)
+3. **Client rehydration** (`src/games/spelling-bee/hooks/useGameState.ts`)
    - After first render, `loadPersistedState` checks `localStorage` for a saved session matching the puzzle ID.
    - If found, a `RESTORE_STATE` action merges the saved fields (found words, score, rank) back into state.
 
@@ -85,18 +115,18 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
    - Physical keyboard events are handled by `handleKeyboardLetter` (normalises accented input → base letter, then filters against the puzzle's allowed set). This logic lives entirely in `useGameState` — `<GameBoard>` is a pure event dispatcher.
    - Backspace → `deleteLetter`, Enter → `submitWord`.
 
-5. **Word submission** (`src/hooks/gameReducer.ts → SUBMIT_WORD`)
-   - `validateWord` (pure, `src/lib/validation.ts`) runs 5 rules in order: length ≥ 4, letters in puzzle set, contains centre letter, in valid word list, not already found.
+5. **Word submission** (`src/games/spelling-bee/hooks/gameReducer.ts → SUBMIT_WORD`)
+   - `validateWord` (pure, `src/games/spelling-bee/lib/validation.ts`) runs 5 rules in order: length ≥ 4, letters in puzzle set, contains centre letter, in valid word list, not already found.
    - A puzzle index (letter sets + valid word set) is built once per puzzle ID and cached in a module-level Map — never rebuilt on subsequent submissions.
    - If valid: score is updated, rank is recalculated via `calculateRank`, word is added to `foundWords`.
 
-6. **Scoring** (`src/lib/scoring.ts`)
+6. **Scoring** (`src/games/spelling-bee/lib/scoring.ts`)
    - 4-letter word → 1 pt
    - 5+ letter word → 1 pt per letter
    - Pangram (uses all 7 letters) → above + 7 bonus pts
-   - `maxScore` = sum of all word scores × 0.8 (capped at 80% of the raw total so rank thresholds are reachable without finding every obscure word).
+   - `maxScore` = sum of all word scores, hard-capped at 500 pts (`MAX_SCORE_CAP`).
 
-7. **Rank calculation** (`src/lib/ranking.ts`)
+7. **Rank calculation** (`src/games/spelling-bee/lib/ranking.ts`)
    - Score is compared against thresholds as a % of `maxScore`:
 
    | Rank      | Threshold |
@@ -113,10 +143,10 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
    `rankProgress()` (pure function) derives the progress-bar fill, points-to-next and the full ladder for the UI — keeping all rank display logic out of React components.
 
 8. **Persistence** (`src/hooks/usePersistence.ts`)
-   - On every state change, `foundWords`, `score`, `currentRank` and `startedAt` are written to `localStorage` under key `spelling-bee:state`.
+   - On every state change, `foundWords`, `score`, `currentRank` and `startedAt` are written to the `wordgames:state` envelope in `localStorage` (via `useGameStore`).
    - State is tied to a `puzzleId` — switching puzzles automatically discards the old session.
 
-9. **UI composition** (`src/components/GameBoard.tsx`)
+9. **UI composition** (`src/components/spelling-bee/GameBoard.tsx`)
    - `<ScoreBar>` — rank label, progress bar, rank ladder popover (click the bars icon).
    - `<WordInput>` — live letter display, centre letter highlighted in yellow.
    - `<FeedbackMessage>` — toast after each submission.
@@ -132,7 +162,7 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
 src/
   app/              Next.js App Router — shell layout, game picker, per-game routes
     spelling-bee/   Daily puzzle + custom /[center]/[outer] dynamic route
-    wordle/         5-letter Greek Wordle
+    wordle/         4–8 letter Greek Wordle (multi-length)
     connections/    Group 16 words into 4 categories
   components/
     shared/         Cross-game UI primitives (Shell, FeedbackBanner, HowToPlayModal, LetterPickerModal)
