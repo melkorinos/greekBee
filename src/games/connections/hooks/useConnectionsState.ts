@@ -1,38 +1,21 @@
 "use client";
 
 // useConnectionsState — React hook managing Connections game state.
-// Handles persistence via useGameStore; never touches localStorage directly.
+// Handles persistence via useRoundPersistence; never touches localStorage directly.
 
 import type {
-  ConnectionsPersistedState,
+  ConnectionsRoundSnapshot,
   ConnectionsPuzzle,
   ConnectionsState,
 } from "../types";
-import { readSlice, writeSlice } from "@/hooks/useGameStore";
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { useCallback, useMemo, useReducer, useState } from "react";
 
 import { connectionsReducer } from "./connectionsReducer";
+import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 
 const MAX_MISTAKES = 4;
 
-function buildInitialState(
-  puzzle: ConnectionsPuzzle,
-  persisted: ConnectionsPersistedState | null,
-): ConnectionsState {
-  // If we have persisted state for today's puzzle, restore it
-  if (persisted && persisted.date === puzzle.date) {
-    return {
-      puzzle,
-      solvedGroups:      persisted.solvedGroups,
-      currentSelection:  [],
-      mistakesRemaining: persisted.mistakesRemaining,
-      status:            persisted.status,
-      lastFeedback:      null,
-      guessHistory:      persisted.guessHistory,
-    };
-  }
-
-  // Fresh state
+function buildInitialState(puzzle: ConnectionsPuzzle): ConnectionsState {
   return {
     puzzle,
     solvedGroups:      [],
@@ -45,15 +28,31 @@ function buildInitialState(
 }
 
 export function useConnectionsState(puzzle: ConnectionsPuzzle) {
-  const persisted = readSlice<ConnectionsPersistedState>("connections");
-
   const [state, dispatch] = useReducer(
     connectionsReducer,
-    null,
-    () => buildInitialState(puzzle, persisted),
+    puzzle,
+    buildInitialState,
   );
 
-  // Shuffle display order of unsolved words (purely visual — not game state)
+  // Memoize only the fields that need to be persisted.
+  // puzzle.date is the session key, not part of the snapshot.
+  const snapshot = useMemo<ConnectionsRoundSnapshot>(() => ({
+    solvedGroups:      state.solvedGroups,
+    mistakesRemaining: state.mistakesRemaining,
+    status:            state.status,
+    guessHistory:      state.guessHistory,
+  }), [state.solvedGroups, state.mistakesRemaining, state.status, state.guessHistory]);
+
+  useRoundPersistence<ConnectionsRoundSnapshot>(
+    "connections",
+    puzzle.date,
+    snapshot,
+    useCallback((saved) => dispatch({ type: "RESTORE_STATE", saved }), []),
+  );
+
+  // ── Display order of unsolved words (purely visual — not game state) ──────────
+  // shuffleOrder tracks the user's preferred word order across all words (including solved).
+  // displayOrder derives from it by filtering out solved words — no setState in effects.
   const allWords = useMemo(
     () => puzzle.groups.flatMap((g) => g.words),
     [puzzle],
@@ -62,50 +61,16 @@ export function useConnectionsState(puzzle: ConnectionsPuzzle) {
     () => new Set(state.solvedGroups.flatMap((g) => g.words)),
     [state.solvedGroups],
   );
-  const [displayOrder, setDisplayOrder] = useState<string[]>(() =>
-    allWords.filter((w) => !solvedWords.has(w)),
+
+  const [shuffleOrder, setShuffleOrder] = useState<string[]>(() => allWords);
+
+  const displayOrder = useMemo(
+    () => shuffleOrder.filter((w) => !solvedWords.has(w)),
+    [shuffleOrder, solvedWords],
   );
-
-  // Keep display order in sync when groups are solved — derive synchronously,
-  // not via an effect, to avoid the setState-in-effect lint error and cascading renders.
-  const filteredOrder = useMemo(
-    () => displayOrder.filter((w) => !solvedWords.has(w)),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [solvedWords],
-  );
-  // Only update state when the derived value actually changes length
-  // (a group was just solved). Using a ref avoids an extra render cycle.
-  const prevSolvedCountRef = useRef(state.solvedGroups.length);
-  if (state.solvedGroups.length !== prevSolvedCountRef.current) {
-    prevSolvedCountRef.current = state.solvedGroups.length;
-    // Synchronous state update during render — safe because it's guarded by the condition
-    setDisplayOrder(filteredOrder);
-  }
-
-  // Persist on every state change
-  useEffect(() => {
-    const toSave: ConnectionsPersistedState = {
-      date:              puzzle.date,
-      solvedGroups:      state.solvedGroups,
-      mistakesRemaining: state.mistakesRemaining,
-      status:            state.status,
-      guessHistory:      state.guessHistory,
-    };
-    writeSlice("connections", toSave);
-  }, [
-    puzzle.date,
-    state.solvedGroups,
-    state.mistakesRemaining,
-    state.status,
-    state.guessHistory,
-  ]);
-
-  const selectWord    = useCallback((word: string) => dispatch({ type: "SELECT_WORD", word }), []);
-  const submitGuess   = useCallback(() => dispatch({ type: "SUBMIT_GUESS" }), []);
-  const clearFeedback = useCallback(() => dispatch({ type: "CLEAR_FEEDBACK" }), []);
 
   const shuffleWords = useCallback(() => {
-    setDisplayOrder((prev) => {
+    setShuffleOrder((prev) => {
       const a = [...prev];
       for (let i = a.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -114,6 +79,10 @@ export function useConnectionsState(puzzle: ConnectionsPuzzle) {
       return a;
     });
   }, []);
+
+  const selectWord    = useCallback((word: string) => dispatch({ type: "SELECT_WORD", word }), []);
+  const submitGuess   = useCallback(() => dispatch({ type: "SUBMIT_GUESS" }), []);
+  const clearFeedback = useCallback(() => dispatch({ type: "CLEAR_FEEDBACK" }), []);
 
   return {
     ...state,

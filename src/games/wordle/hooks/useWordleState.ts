@@ -3,16 +3,23 @@
 // Wordle GR — React hook.
 // Wires the reducer to persistence and exposes a clean API to the UI.
 
-import type { WordleLength, WordlePuzzle } from "../types";
+import type { GuessResult, WordlePuzzle, WordleStatus } from "../types";
 import { makeInitialWordleState, wordleReducer } from "./wordleReducer";
-import { readSlice, writeSlice } from "@/hooks/useGameStore";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
-import type { WordlePersistedSlice } from "../types";
 import { buildLetterStateMap } from "../lib/letterState";
 import { scoreWordle } from "../lib/scoring";
+import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 
 const MAX_GUESSES = 6;
+
+// Fields persisted for a single Wordle session.
+// The puzzle ID (e.g. "2026-05-22-wordle-5") already encodes date + length,
+// so separate word-length sessions are stored as separate SessionStore entries.
+interface WordleRoundSnapshot {
+  guesses: GuessResult[];
+  status:  WordleStatus;
+}
 
 /**
  * All state and actions the Wordle UI needs.
@@ -47,42 +54,27 @@ export function useWordleState(
     makeInitialWordleState
   );
 
-  // ── Hydrate from persistence on mount / puzzle change ─────────────────────
-  useEffect(() => {
-    const slice = readSlice<WordlePersistedSlice>("wordle");
-    const session = slice?.[puzzle.length as WordleLength];
+  // Memoize only the fields that need to be persisted.
+  // puzzle.id is not included — it's the session key, not part of the snapshot.
+  const snapshot = useMemo<WordleRoundSnapshot>(() => ({
+    guesses: state.guesses,
+    status:  state.status,
+  }), [state.guesses, state.status]);
 
-    if (session && session.puzzleId === puzzle.id) {
-      dispatch({
-        type: "RESTORE_STATE",
-        guesses: session.guesses,
-        status:  session.status,
-      });
-    } else {
-      // Different puzzle for this length — start fresh
-      dispatch({ type: "NEW_GAME", state: makeInitialWordleState(puzzle) });
-    }
-  // Re-run when the active puzzle changes (length switch or new day)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [puzzle.id]);
+  useRoundPersistence<WordleRoundSnapshot>(
+    "wordle",
+    puzzle.id,
+    snapshot,
+    useCallback((saved) => dispatch({
+      type:    "RESTORE_STATE",
+      guesses: saved.guesses,
+      status:  saved.status,
+    }), []),
+    // Only persist once the player has made at least one guess
+    useCallback((snap) => snap.guesses.length > 0, []),
+  );
 
-  // ── Persist whenever guesses or status change ──────────────────────────────
-  useEffect(() => {
-    if (state.guesses.length === 0) return; // nothing to persist yet
-
-    const existing = readSlice<WordlePersistedSlice>("wordle") ?? {};
-    const updated: WordlePersistedSlice = {
-      ...existing,
-      [puzzle.length]: {
-        puzzleId: puzzle.id,
-        guesses:  state.guesses,
-        status:   state.status,
-      },
-    };
-    writeSlice("wordle", updated);
-  }, [state.guesses, state.status, puzzle.id, puzzle.length]);
-
-  // ── Fire onGameEnd once when status transitions away from "playing" ────────
+  // ── Fire onGameEnd once when status transitions away from "playing" ──────────
   const prevStatusRef = useRef(state.status);
   useEffect(() => {
     if (prevStatusRef.current === "playing" && state.status !== "playing") {
@@ -91,7 +83,7 @@ export function useWordleState(
     prevStatusRef.current = state.status;
   }, [state.status, state.guesses.length, onGameEnd]);
 
-  // ── Derived values ─────────────────────────────────────────────────────────
+  // ── Derived values ────────────────────────────────────────────────────────────
   const letterStates = useMemo(
     () => buildLetterStateMap(state.guesses),
     [state.guesses]
@@ -105,7 +97,7 @@ export function useWordleState(
     [state.guesses.length, state.status]
   );
 
-  // ── Actions ────────────────────────────────────────────────────────────────
+  // ── Actions ───────────────────────────────────────────────────────────────────
   const addLetter = useCallback(
     (letter: string) => dispatch({ type: "ADD_LETTER", letter }),
     []

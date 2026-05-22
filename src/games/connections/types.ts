@@ -39,21 +39,21 @@ export interface ConnectionsState {
   guessHistory:      string[][];
 }
 
-// ── Persistence ───────────────────────────────────────────────────────────────
-
-/** Only the durable parts of ConnectionsState are persisted. */
-export interface ConnectionsPersistedState {
-  date:              string;
-  solvedGroups:      ConnectionGroup[];
-  mistakesRemaining: number;
-  status:            ConnectionsStatus;
-  guessHistory:      string[][];
-}
-
 // ── Actions ───────────────────────────────────────────────────────────────────
 
 export type ConnectionsAction =
   | { type: "SELECT_WORD";    word: string }
   | { type: "SUBMIT_GUESS" }
   | { type: "SHUFFLE" }
-  | { type: "CLEAR_FEEDBACK" };
+  | { type: "CLEAR_FEEDBACK" }
+  | { type: "RESTORE_STATE"; saved: ConnectionsRoundSnapshot };
+
+// ── Persistence snapshot ──────────────────────────────────────────────────────
+
+/** Fields persisted for a single Connections round (written by useRoundPersistence). */
+export interface ConnectionsRoundSnapshot {
+  solvedGroups:      ConnectionGroup[];
+  mistakesRemaining: number;
+  status:            ConnectionsStatus;
+  guessHistory:      string[][];
+}

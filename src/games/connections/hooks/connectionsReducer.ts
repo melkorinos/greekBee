@@ -28,7 +28,11 @@ export function connectionsReducer(
   state: ConnectionsState,
   action: ConnectionsAction,
 ): ConnectionsState {
-  if (state.status !== "playing" && action.type !== "CLEAR_FEEDBACK") {
+  if (
+    state.status !== "playing" &&
+    action.type !== "CLEAR_FEEDBACK" &&
+    action.type !== "RESTORE_STATE"
+  ) {
     return state;
   }
 
@@ -120,6 +124,19 @@ export function connectionsReducer(
 
     case "CLEAR_FEEDBACK": {
       return { ...state, lastFeedback: null };
+    }
+
+    case "RESTORE_STATE": {
+      const { saved } = action;
+      return {
+        ...state,
+        solvedGroups:      saved.solvedGroups,
+        mistakesRemaining: saved.mistakesRemaining,
+        status:            saved.status,
+        guessHistory:      saved.guessHistory,
+        currentSelection:  [],
+        lastFeedback:      null,
+      };
     }
 
     default:

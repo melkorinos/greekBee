@@ -1,113 +1,177 @@
-// persistence.test.ts — integration tests for the Spelling Bee persistence layer.
-// Verifies that usePersistence correctly delegates to useGameStore and that
-// loadPersistedState restores only matching puzzle sessions.
-// Tests the migration path from the old "spelling-bee:state" key.
+// persistence.test.ts — integration tests for useRoundPersistence.
+// Verifies that the unified persistence hook correctly reads, writes, and clears
+// game round state in localStorage via the useGameStore envelope.
 
-import { clearPersistedState, loadPersistedState } from "@/hooks/usePersistence";
-import { describe, expect, it } from "vitest";
+import { act, renderHook } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { readSlice, writeSlice } from "@/hooks/useGameStore";
 
-import type { SpellingBeePuzzle } from "@/games/spelling-bee/types";
+import { useRoundPersistence } from "@/hooks/useRoundPersistence";
+import { useMemo } from "react";
 
-// ── Test fixture ──────────────────────────────────────────────────────────────
+// ── Fixture ───────────────────────────────────────────────────────────────────
 
-const puzzle: SpellingBeePuzzle = {
-  id: "test-persist-puzzle",
-  language: "el",
-  date: "2026-01-01",
-  centerLetter: "α",
-  outerLetters: ["π", "ο", "λ", "ε", "μ", "σ"],
-  validWords: ["αλφα", "αλμα"],
-};
+interface TestSnapshot {
+  score:      number;
+  foundWords: string[];
+}
 
-// ── loadPersistedState ────────────────────────────────────────────────────────
+const GAME_ID  = "spelling-bee" as const;
+const SESSION  = "test-puzzle-id";
+const SNAPSHOT: TestSnapshot = { score: 10, foundWords: ["αλφα"] };
 
-describe("loadPersistedState", () => {
-  it("returns null when no state has been saved", () => {
-    expect(loadPersistedState(puzzle)).toBeNull();
+// Helper: render the hook with a fixed snapshot
+function renderPersistence(
+  snapshot: TestSnapshot,
+  sessionKey = SESSION,
+  onRestore = vi.fn(),
+  shouldSave?: (s: TestSnapshot) => boolean,
+) {
+  return renderHook(
+    ({ snap, key, restore, save }) =>
+      useRoundPersistence(GAME_ID, key, snap, restore, save),
+    {
+      initialProps: {
+        snap:    snapshot,
+        key:     sessionKey,
+        restore: onRestore,
+        save:    shouldSave,
+      },
+    },
+  );
+}
+
+// ── Hydration ─────────────────────────────────────────────────────────────────
+
+describe("hydration", () => {
+  it("calls onRestore with the saved snapshot when sessionKey matches", () => {
+    writeSlice(GAME_ID, { [SESSION]: SNAPSHOT });
+    const onRestore = vi.fn();
+    renderPersistence(SNAPSHOT, SESSION, onRestore);
+    expect(onRestore).toHaveBeenCalledWith(SNAPSHOT);
   });
 
-  it("returns null when the saved puzzleId does not match", () => {
-    writeSlice("spelling-bee", {
-      puzzleId: "different-puzzle-id",
-      foundWords: ["αλφα"],
-      score: 1,
-      currentRank: "Beginner",
-      startedAt: Date.now(),
-    });
-    expect(loadPersistedState(puzzle)).toBeNull();
+  it("does not call onRestore when nothing is saved", () => {
+    const onRestore = vi.fn();
+    renderPersistence(SNAPSHOT, SESSION, onRestore);
+    expect(onRestore).not.toHaveBeenCalled();
   });
 
-  it("restores state when the puzzleId matches", () => {
-    const startedAt = Date.now();
-    writeSlice("spelling-bee", {
-      puzzleId: puzzle.id,
-      foundWords: ["αλφα", "αλμα"],
-      score: 7,
-      currentRank: "Moving Up",
-      startedAt,
-    });
-
-    const restored = loadPersistedState(puzzle);
-    expect(restored).toEqual({
-      foundWords: ["αλφα", "αλμα"],
-      score: 7,
-      currentRank: "Moving Up",
-      startedAt,
-      givenUp: false,
-    });
+  it("does not call onRestore when the stored session is under a different key", () => {
+    writeSlice(GAME_ID, { "other-puzzle-id": SNAPSHOT });
+    const onRestore = vi.fn();
+    renderPersistence(SNAPSHOT, SESSION, onRestore);
+    expect(onRestore).not.toHaveBeenCalled();
   });
 
-  it("provides safe defaults for missing fields", () => {
-    writeSlice("spelling-bee", { puzzleId: puzzle.id }); // minimal snapshot
-    const restored = loadPersistedState(puzzle);
-    expect(restored?.foundWords).toEqual([]);
-    expect(restored?.score).toBe(0);
-    expect(restored?.currentRank).toBe("Beginner");
-    expect(typeof restored?.startedAt).toBe("number");
+  it("does not call onRestore when the slice exists but is corrupt", () => {
+    // Force a non-SessionStore format by writing a string
+    (localStorage as Storage).setItem("wordgames:state", "{{broken json");
+    const onRestore = vi.fn();
+    renderPersistence(SNAPSHOT, SESSION, onRestore);
+    expect(onRestore).not.toHaveBeenCalled();
+  });
+
+  it("re-runs hydration when sessionKey changes", () => {
+    const savedA: TestSnapshot = { score: 5, foundWords: ["αλφα"] };
+    const savedB: TestSnapshot = { score: 9, foundWords: ["βητα"] };
+    writeSlice(GAME_ID, { "session-a": savedA, "session-b": savedB });
+
+    const onRestore = vi.fn();
+    const { rerender } = renderPersistence(savedA, "session-a", onRestore);
+    expect(onRestore).toHaveBeenLastCalledWith(savedA);
+
+    onRestore.mockClear();
+    rerender({ snap: savedB, key: "session-b", restore: onRestore, save: undefined });
+    expect(onRestore).toHaveBeenLastCalledWith(savedB);
   });
 });
 
-// ── clearPersistedState ───────────────────────────────────────────────────────
+// ── Saving ────────────────────────────────────────────────────────────────────
 
-describe("clearPersistedState", () => {
-  it("removes the spelling-bee slice from the envelope", () => {
-    writeSlice("spelling-bee", { puzzleId: puzzle.id, score: 5 });
-    clearPersistedState();
-    expect(readSlice("spelling-bee")).toBeNull();
+describe("saving", () => {
+  it("writes the snapshot to localStorage under the session key", () => {
+    renderPersistence(SNAPSHOT);
+    const store = readSlice<Record<string, TestSnapshot>>(GAME_ID);
+    expect(store?.[SESSION]).toEqual(SNAPSHOT);
   });
 
-  it("does not disturb other game slices when clearing spelling-bee", () => {
-    writeSlice("spelling-bee", { puzzleId: puzzle.id, score: 5 });
-    writeSlice("wordle", { streak: 3 });
-    clearPersistedState();
-    expect(readSlice("wordle")).toEqual({ streak: 3 });
+  it("merges with existing sessions instead of overwriting the slice", () => {
+    const otherSession: TestSnapshot = { score: 3, foundWords: ["βηταα"] };
+    writeSlice(GAME_ID, { "other-id": otherSession });
+
+    renderPersistence(SNAPSHOT, SESSION);
+
+    const store = readSlice<Record<string, TestSnapshot>>(GAME_ID);
+    expect(store?.["other-id"]).toEqual(otherSession);
+    expect(store?.[SESSION]).toEqual(SNAPSHOT);
+  });
+
+  it("skips the write when shouldSave returns false", () => {
+    renderPersistence(SNAPSHOT, SESSION, vi.fn(), () => false);
+    expect(readSlice(GAME_ID)).toBeNull();
+  });
+
+  it("writes when shouldSave returns true", () => {
+    renderPersistence(SNAPSHOT, SESSION, vi.fn(), (s) => s.score > 0);
+    const store = readSlice<Record<string, TestSnapshot>>(GAME_ID);
+    expect(store?.[SESSION]).toEqual(SNAPSHOT);
+  });
+
+  it("re-saves when the snapshot changes", () => {
+    const initial: TestSnapshot = { score: 1, foundWords: ["αλφα"] };
+    const updated: TestSnapshot = { score: 2, foundWords: ["αλφα", "βητα"] };
+
+    // Use a hook that re-memos the snapshot from props
+    const { rerender } = renderHook(
+      ({ score, words }: { score: number; words: string[] }) => {
+        const snap = useMemo<TestSnapshot>(
+          () => ({ score, foundWords: words }),
+          [score, words],
+        );
+        return useRoundPersistence(GAME_ID, SESSION, snap, vi.fn());
+      },
+      { initialProps: { score: initial.score, words: initial.foundWords } },
+    );
+
+    expect(readSlice<Record<string, TestSnapshot>>(GAME_ID)?.[SESSION]).toEqual(initial);
+
+    rerender({ score: updated.score, words: updated.foundWords });
+    expect(readSlice<Record<string, TestSnapshot>>(GAME_ID)?.[SESSION]).toEqual(updated);
   });
 });
 
-// ── legacy migration (via loadPersistedState) ─────────────────────────────────
+// ── clear() ───────────────────────────────────────────────────────────────────
 
-describe("legacy key migration triggered by loadPersistedState", () => {
-  it("migrates old spelling-bee:state key on first loadPersistedState call", () => {
-    const legacy = {
-      puzzleId: puzzle.id,
-      foundWords: ["αλφα"],
-      score: 1,
-      currentRank: "Beginner",
-      startedAt: 1000,
-    };
-    localStorage.setItem("spelling-bee:state", JSON.stringify(legacy));
+describe("clear()", () => {
+  it("removes only the current session from the slice", () => {
+    const other: TestSnapshot = { score: 3, foundWords: ["βηταα"] };
+    writeSlice(GAME_ID, { [SESSION]: SNAPSHOT, "other-id": other });
 
-    const restored = loadPersistedState(puzzle);
+    const { result } = renderPersistence(SNAPSHOT);
+    act(() => result.current());
 
-    // State was restored from the migrated data
-    expect(restored?.foundWords).toEqual(["αλφα"]);
-    expect(restored?.score).toBe(1);
+    const store = readSlice<Record<string, TestSnapshot>>(GAME_ID);
+    expect(store?.[SESSION]).toBeUndefined();
+    expect(store?.["other-id"]).toEqual(other);
+  });
 
-    // Old key was cleaned up
-    expect(localStorage.getItem("spelling-bee:state")).toBeNull();
+  it("removes the entire slice when it held only this session", () => {
+    writeSlice(GAME_ID, { [SESSION]: SNAPSHOT });
 
-    // New envelope has the data
-    expect(readSlice("spelling-bee")).toEqual(legacy);
+    const { result } = renderPersistence(SNAPSHOT);
+    act(() => result.current());
+
+    expect(readSlice(GAME_ID)).toBeNull();
+  });
+
+  it("does not disturb other game slices when clearing", () => {
+    writeSlice(GAME_ID, { [SESSION]: SNAPSHOT });
+    writeSlice("wordle", { "2026-05-22-wordle-5": { guesses: [], status: "playing" } });
+
+    const { result } = renderPersistence(SNAPSHOT);
+    act(() => result.current());
+
+    expect(readSlice("wordle")).not.toBeNull();
   });
 });

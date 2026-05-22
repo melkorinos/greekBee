@@ -74,14 +74,3 @@ export const WORDLE_SCORES: Record<number, number> = {
   6: 1,
 };
 
-// ─── Persistence slice ────────────────────────────────────────────────────────
-
-/** What we persist for a single Wordle length session */
-export interface WordlePersistedSession {
-  puzzleId: string;
-  guesses: GuessResult[];
-  status: WordleStatus;
-}
-
-/** The full Wordle persistence slice (one session per length) */
-export type WordlePersistedSlice = Partial<Record<WordleLength, WordlePersistedSession>>;

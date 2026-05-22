@@ -4,7 +4,7 @@
 // Manages the active word length (4–8) with a - N + switcher.
 // Wires physical keyboard events and leaderboard score submission.
 
-import type { WordleLength, WordlePersistedSlice, WordlePuzzle } from "@/games/wordle/types";
+import type { WordleLength, WordlePuzzle } from "@/games/wordle/types";
 import { readSlice, writeSlice } from "@/hooks/useGameStore";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -207,15 +207,15 @@ export function WordleBoard({ puzzles, wordLists, today, onOpenLeaderboardRef }:
   }, []);
 
   // Restore already-completed lengths from persistence so auto-advance skips them.
+  // The Wordle slice is a SessionMap keyed by puzzle ID (e.g. "2026-05-22-wordle-5").
   useEffect(() => {
-    const slice = readSlice<WordlePersistedSlice>("wordle");
-    if (!slice) return;
+    const store = readSlice<Record<string, { status: string }>>("wordle");
+    if (!store) return;
     const done = new Set<WordleLength>();
     for (const p of puzzles) {
-      const length = p.length as WordleLength;
-      const session = slice[length];
-      if (session && session.puzzleId === p.id && session.status !== "playing") {
-        done.add(length);
+      const session = store[p.id];
+      if (session && session.status !== "playing") {
+        done.add(p.length as WordleLength);
       }
     }
     completedRef.current = done;

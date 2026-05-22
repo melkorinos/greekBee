@@ -6,7 +6,7 @@ import "@testing-library/jest-dom";
 
 import { beforeEach } from "vitest";
 
-// Clear localStorage before every test so usePersistence never
+// Clear localStorage before every test so useRoundPersistence never
 // restores state from a previous test into a freshly mounted component.
 beforeEach(() => {
   localStorage.clear();
