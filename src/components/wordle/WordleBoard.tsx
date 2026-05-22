@@ -53,8 +53,6 @@ interface LengthPanelProps {
   puzzle:        WordlePuzzle;
   validWords:    string[];
   isActive:      boolean;
-  deviceId:      string;
-  displayName:   string;
   activeLength:  WordleLength;
   onPrev:        () => void;
   onNext:        () => void;
@@ -65,8 +63,6 @@ function LengthPanel({
   puzzle,
   validWords,
   isActive,
-  deviceId,
-  displayName,
   activeLength,
   onPrev,
   onNext,
@@ -232,7 +228,7 @@ export function WordleBoard({ puzzles, wordLists, today, onOpenLeaderboardRef }:
   }
 
   // Score submission -- all posting logic lives in the hook.
-  const { submit: postWordleScore } = useWordleScoreSubmission({ today, deviceId });
+  const { submit: postWordleScore } = useWordleScoreSubmission({ today, deviceId, displayName });
 
   // Score submission + auto-advance: called by each LengthPanel when its game ends.
   //
@@ -301,8 +297,6 @@ export function WordleBoard({ puzzles, wordLists, today, onOpenLeaderboardRef }:
           puzzle={puzzle}
           validWords={wordLists[puzzle.length as WordleLength]}
           isActive={puzzle.length === activeLength}
-          deviceId={deviceId}
-          displayName={displayName}
           activeLength={activeLength}
           onPrev={prevLength}
           onNext={nextLength}

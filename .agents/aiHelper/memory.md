@@ -1,7 +1,7 @@
 # Agent Memory — Greek Word Games Platform
 
-## ⚡ Current State (2026-05-21)
-Three live games + custom puzzle URLs. **639 tests passing.**
+## ⚡ Current State (2026-05-22)
+Three live games + custom puzzle URLs. **651 tests passing.**
 
 | Game | Route | Status |
 |------|-------|--------|
@@ -58,7 +58,7 @@ src/
     wordle/          words-{4..8}.json (answer pool + valid guesses, same list), index.ts
     connections/     puzzles-connections.json, index.ts
     words-el.json    (811k words, normalised — statically imported by buildCustomPuzzle)
-  hooks/             useGameStore.ts, usePersistence.ts
+  hooks/             useGameStore.ts, useRoundPersistence.ts
   types/             index.ts
   test/              41 test files — 639 tests
 ```
@@ -88,7 +88,7 @@ src/
 
 ---
 
-## 🧪 Test Coverage Map (41 files, 639 tests)
+## 🧪 Test Coverage Map (42 files, 651 tests)
 
 > **How to use this as an agent**: before writing a new test, grep the `describe` column for the function/component name. If it appears, read that file's describe block to check if the specific case is already covered. Only write new tests for gaps.
 
@@ -116,7 +116,8 @@ src/
 | `connectionsReducer.test.ts` | `SELECT_WORD`, `SUBMIT_GUESS` (correct/wrong/one-away), `SHUFFLE`, game over, win |
 | `connectionsGroupGrid.test.tsx` | `GroupGrid` — render, solved groups, selection, onSelect, disabled |
 | `connectionsDataLoader.test.ts` | `getTodaysConnectionsPuzzle` — date match, fallback, uniqueness, shape |
-| `persistence.test.ts` | `loadPersistedState` — null/wrong puzzle/restore/defaults; `clearPersistedState`; legacy migration |
+| `persistence.test.ts` | `useRoundPersistence` — hydration (5 cases), saving (5 cases incl. `shouldSave`), `clear()` (3 cases) |
+| `useWordleScoreSubmission.test.ts` | `useWordleScoreSubmission` — POST fields, deviceId guard, won/lost penalty, displayName fallback, ref stability |
 | `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`, `migrateFromLegacyKeys`, cross-game isolation |
 | `Shell.test.tsx` | Rendering, hamburger drawer open/close/Escape/backdrop, nav links, theme classes |
 | `letterPickerModal.test.tsx` | Visibility, center/outer selection, deselect, 7-letter cap, Reset, Random (vowel center ×20, ≥2 vowels ×20, ≥2 outer consonants ×20), Generate |

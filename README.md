@@ -142,9 +142,10 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
 
    `rankProgress()` (pure function) derives the progress-bar fill, points-to-next and the full ladder for the UI — keeping all rank display logic out of React components.
 
-8. **Persistence** (`src/hooks/usePersistence.ts`)
-   - On every state change, `foundWords`, `score`, `currentRank` and `startedAt` are written to the `wordgames:state` envelope in `localStorage` (via `useGameStore`).
-   - State is tied to a `puzzleId` — switching puzzles automatically discards the old session.
+8. **Persistence** (`src/hooks/useRoundPersistence.ts`)
+   - After first render, the hook hydrates from `localStorage` — if a saved session matches the current puzzle ID it dispatches `RESTORE_STATE` into the reducer.
+   - On every snapshot change, `foundWords`, `score`, `currentRank`, `startedAt`, and `givenUp` are written to the `wordgames:state` envelope under the game's slice (via `useGameStore`).
+   - State is tied to the session key (puzzle ID) — switching puzzles starts a fresh session automatically.
 
 9. **UI composition** (`src/components/spelling-bee/GameBoard.tsx`)
    - `<ScoreBar>` — rank label, progress bar, rank ladder popover (click the bars icon).
@@ -182,8 +183,8 @@ src/
       hooks/        useConnectionsState, connectionsReducer
       types.ts
   hooks/
-    useGameStore.ts Unified localStorage envelope — the only code that touches localStorage
-    usePersistence.ts Spelling Bee persistence (load/save/clear via useGameStore)
+    useGameStore.ts        Unified localStorage envelope — the only code that touches localStorage
+    useRoundPersistence.ts Generic session persistence hook used by all three games (hydrate/save/clear)
   data/
     spelling-bee/   puzzles-el.json (1008 daily puzzles), index.ts
     wordle/         words-4..8.json (per-length word lists from full dict), index.ts
@@ -238,7 +239,7 @@ Test files in `src/test/`:
 | `GameBoard.test.tsx` | Rendering, keyboard input, word submission, button interactions |
 | `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`, migration from legacy key |
 | `Shell.test.tsx` | Hamburger open/close, navigation links, keyboard dismiss |
-| `persistence.test.ts` | `usePersistence` + `loadPersistedState` delegation to `useGameStore` |
+| `persistence.test.ts` | `useRoundPersistence` — hydration, saving, `clear()`, session isolation, `shouldSave` guard |
 | `evaluateGuess.test.ts` | Two-pass algorithm — exact, present, absent, duplicate-letter edge cases |
 | `wordleReducer.test.ts` | `ADD_LETTER`, `DELETE_LETTER`, `SUBMIT_GUESS` (win/loss/invalid), `RESTORE_STATE` |
 | `wordleLogic.test.ts` | `scoreWordle`, `buildLetterStateMap` priority rules |

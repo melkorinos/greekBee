@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseClient } from "@/lib/supabase";
 import { isISODate } from "@/games/spelling-bee/lib";
+import { upsertAndClean } from "@/lib/supabasePost";
 
 // Run on the Edge runtime — avoids Fluid (Node.js) CPU billing.
 // All Supabase calls in this route use fetch under the hood, which is
@@ -56,9 +57,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "attempts must be 1–7" }, { status: 400 });
   }
 
-  const supabase = getSupabaseClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from("wordle_scores") as any).upsert(
+  const err = await upsertAndClean(
+    "wordle_scores",
+    "device_id,puzzle_date,word_length",
+    "puzzle_date",
     {
       puzzle_date,
       word_length,
@@ -66,20 +68,8 @@ export async function POST(req: NextRequest) {
       display_name: (display_name ?? "").trim() || "Ανώνυμος",
       attempts,
     },
-    { onConflict: "device_id,puzzle_date,word_length" }
   );
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  // Fire-and-forget: clean up rows older than 7 days.
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 7);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  void (supabase.from("wordle_scores") as any).delete().lt("puzzle_date", cutoffStr);
-
+  if (err) return NextResponse.json({ error: err }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
 

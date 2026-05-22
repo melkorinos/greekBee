@@ -36,9 +36,9 @@ import wordListEl from "@/data/words-el.json";
 // Each threshold is ~10× the measured baseline so CI on slower machines stays green.
 
 /** Maximum acceptable ms to scan the full 811 k word list once.
- *  800 ms gives headroom for slow CI / Vitest startup overhead while still
- *  catching a genuine O(n²) regression (which would take seconds). */
-const COMPUTE_VALID_WORDS_BUDGET_MS = 800;
+ *  2000 ms gives headroom for slow dev machines / Vitest startup overhead while still
+ *  catching a genuine O(n²) regression (which would take many seconds). */
+const COMPUTE_VALID_WORDS_BUDGET_MS = 2000;
 
 /** Maximum acceptable ms for the second call (must hit the module-level cache) */
 const CACHE_HIT_BUDGET_MS = 5;

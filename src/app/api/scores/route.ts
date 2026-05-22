@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseClient } from "@/lib/supabase";
 import { isISODate } from "@/games/spelling-bee/lib";
+import { upsertAndClean } from "@/lib/supabasePost";
 
 // Run on the Edge runtime — avoids Fluid (Node.js) CPU billing for this
 // simple DB-proxy route. Supabase JS v2 is fully Edge-compatible (uses fetch,
@@ -45,30 +46,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid puzzle_id format" }, { status: 400 });
   }
 
-  const supabase = getSupabaseClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from("scores") as any).upsert(
-    {
-      puzzle_id,
-      device_id,
-      display_name: (display_name ?? "").trim() || "Ανώνυμος",
-      score,
-    },
-    { onConflict: "device_id,puzzle_id" }
-  );
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  // Fire-and-forget cleanup: delete scores older than 7 days to keep the
-  // leaderboard to a rolling window.  Never block the response for housekeeping.
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 7);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  void (supabase.from("scores") as any).delete().lt("puzzle_id", cutoffStr);
-
+  const err = await upsertAndClean("scores", "device_id,puzzle_id", "puzzle_id", {
+    puzzle_id,
+    device_id,
+    display_name: (display_name ?? "").trim() || "Ανώνυμος",
+    score,
+  });
+  if (err) return NextResponse.json({ error: err }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
 

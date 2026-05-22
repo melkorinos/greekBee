@@ -4,26 +4,23 @@
 //
 // Hides:
 //   - failed-game → 7-attempts mapping
-//   - display-name read from the identity slice
+//   - display-name ref pattern to avoid stale closures
 //   - fetch URL + JSON field names
 //   - error silencing
 //   - no-op when deviceId is not yet known
 
 "use client";
 
-import { readSlice } from "@/hooks/useGameStore";
-import { useCallback } from "react";
-
-interface WordleIdentitySlice {
-  deviceId:    string;
-  displayName: string;
-}
+import { postScore } from "@/lib/postScore";
+import { useCallback, useEffect, useRef } from "react";
 
 interface UseWordleScoreSubmissionOptions {
   /** The game date (YYYY-MM-DD) — used as the leaderboard partition key. */
-  today:    string;
+  today:       string;
   /** Stable anonymous device identifier. Empty string = skip posting. */
-  deviceId: string;
+  deviceId:    string;
+  /** Current display name — may change when the player saves a new name. */
+  displayName: string;
 }
 
 /**
@@ -31,30 +28,28 @@ interface UseWordleScoreSubmissionOptions {
  *
  * Calling submit() will POST to /api/wordle-scores with:
  *   - attempts = `attempts` when won, 7 when lost (penalty)
- *   - display_name read live from the identity slice at call time
+ *   - display_name read via ref so it's always current without re-creating submit()
  */
 export function useWordleScoreSubmission({
   today,
   deviceId,
+  displayName,
 }: UseWordleScoreSubmissionOptions) {
+  const displayNameRef = useRef(displayName);
+  useEffect(() => { displayNameRef.current = displayName; }, [displayName]);
+
   const submit = useCallback(
     (length: number, attempts: number, won: boolean) => {
       if (!deviceId) return;
-      const attemptsToPost = won ? attempts : 7;
-      const sl   = readSlice<WordleIdentitySlice>("wordle-identity");
-      const name = sl?.displayName || "Ανώνυμος";
-      fetch("/api/wordle-scores", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          puzzle_date:  today,
-          word_length:  length,
-          device_id:    deviceId,
-          display_name: name,
-          attempts:     attemptsToPost,
-        }),
-      }).catch(() => {}); // silently swallow network errors
+      postScore("/api/wordle-scores", {
+        puzzle_date:  today,
+        word_length:  length,
+        device_id:    deviceId,
+        display_name: displayNameRef.current || "Ανώνυμος",
+        attempts:     won ? attempts : 7,
+      });
     },
+    // displayName intentionally excluded — read via ref to avoid churn.
     [today, deviceId]
   );
 

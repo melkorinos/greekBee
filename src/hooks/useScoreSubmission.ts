@@ -11,6 +11,7 @@
 
 "use client";
 
+import { postScore } from "@/lib/postScore";
 import { useCallback, useEffect, useRef } from "react";
 
 interface UseScoreSubmissionOptions {
@@ -49,20 +50,15 @@ export function useScoreSubmission({
       if (!enabled || !deviceId) return;
       if (score <= 0 || score <= lastPostedRef.current) return;
       lastPostedRef.current = score;
-      fetch("/api/scores", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          puzzle_id:    puzzleId,
-          device_id:    deviceId,
-          display_name: displayNameRef.current || "Ανώνυμος",
-          score,
-        }),
-      }).catch(() => {}); // silently swallow network errors
+      postScore("/api/scores", {
+        puzzle_id:    puzzleId,
+        device_id:    deviceId,
+        display_name: displayNameRef.current || "Ανώνυμος",
+        score,
+      });
     },
     // puzzleId and deviceId are stable across a session; enabled rarely changes.
     // displayName is intentionally excluded — read via ref to avoid churn.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [enabled, puzzleId, deviceId]
   );
 
@@ -74,16 +70,12 @@ export function useScoreSubmission({
   const submitWithName = useCallback(
     (score: number, name: string) => {
       if (!enabled || !deviceId || score <= 0) return;
-      fetch("/api/scores", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          puzzle_id:    puzzleId,
-          device_id:    deviceId,
-          display_name: name || "Ανώνυμος",
-          score,
-        }),
-      }).catch(() => {});
+      postScore("/api/scores", {
+        puzzle_id:    puzzleId,
+        device_id:    deviceId,
+        display_name: name || "Ανώνυμος",
+        score,
+      });
     },
     [enabled, puzzleId, deviceId]
   );
