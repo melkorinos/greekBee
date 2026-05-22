@@ -1,12 +1,12 @@
-// Spelling Bee puzzle data access layer.
+﻿// Spelling Bee puzzle data access layer.
 // Loads puzzle definitions from the local JSON file.
 // Also exposes buildCustomPuzzle() for the dynamic /spelling-bee/[center]/[outer] route.
 
 import type { Language } from "@/types";
-import type { SpellingBeePuzzle } from "@/games/spelling-bee/types";
-import { computeValidWords } from "@/games/spelling-bee/lib/computeValidWords";
+import type { SpellingBeePuzzle } from "@/games/leksokipos/types";
+import { computeValidWords } from "@/games/leksokipos/lib/computeValidWords";
 import greekPuzzles from "./puzzles-el.json";
-import { normalizeLetters } from "@/games/spelling-bee/lib/normalize";
+import { normalizeLetters } from "@/games/leksokipos/lib/normalize";
 import wordListEl from "../words-el.json";
 
 // Cast the imported JSON to the typed Puzzle array.

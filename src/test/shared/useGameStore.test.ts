@@ -1,4 +1,4 @@
-// useGameStore.test.ts — unit tests for the unified localStorage envelope.
+﻿// useGameStore.test.ts — unit tests for the unified localStorage envelope.
 // Verifies slice isolation, read/write/clear semantics, and the legacy key migration.
 // No React — plain Vitest + jsdom (localStorage is available via setup.ts).
 
@@ -6,7 +6,6 @@ import {
   clearSlice,
   getDisplayName,
   getOrCreateDeviceId,
-  migrateFromLegacyKeys,
   readSlice,
   setDisplayName,
   writeSlice,
@@ -26,17 +25,17 @@ function rawEnvelope() {
 
 describe("readSlice", () => {
   it("returns null when nothing has been written", () => {
-    expect(readSlice("spelling-bee")).toBeNull();
+    expect(readSlice("leksokipos")).toBeNull();
   });
 
   it("returns null for an untouched game even after another game is written", () => {
-    writeSlice("spelling-bee", { score: 10 });
-    expect(readSlice("wordle")).toBeNull();
+    writeSlice("leksokipos", { score: 10 });
+    expect(readSlice("leksiarxeio")).toBeNull();
   });
 
   it("returns the value that was written", () => {
-    writeSlice("spelling-bee", { score: 42, foundWords: ["αλφα"] });
-    expect(readSlice("spelling-bee")).toEqual({ score: 42, foundWords: ["αλφα"] });
+    writeSlice("leksokipos", { score: 42, foundWords: ["αλφα"] });
+    expect(readSlice("leksokipos")).toEqual({ score: 42, foundWords: ["αλφα"] });
   });
 });
 
@@ -44,30 +43,30 @@ describe("readSlice", () => {
 
 describe("writeSlice", () => {
   it("writes into the wordgames:state envelope", () => {
-    writeSlice("spelling-bee", { score: 5 });
+    writeSlice("leksokipos", { score: 5 });
     const env = rawEnvelope();
     expect(env).not.toBeNull();
-    expect(env["spelling-bee"]).toEqual({ score: 5 });
+    expect(env["leksokipos"]).toEqual({ score: 5 });
   });
 
   it("does not overwrite another game's slice when writing", () => {
-    writeSlice("spelling-bee", { score: 1 });
-    writeSlice("connections", { solved: true });
+    writeSlice("leksokipos", { score: 1 });
+    writeSlice("leksindeseis", { solved: true });
 
     const env = rawEnvelope();
     // Both slices present and independent
-    expect(env["spelling-bee"]).toEqual({ score: 1 });
-    expect(env["connections"]).toEqual({ solved: true });
+    expect(env["leksokipos"]).toEqual({ score: 1 });
+    expect(env["leksindeseis"]).toEqual({ solved: true });
   });
 
   it("overwrites only the target slice on a second write", () => {
-    writeSlice("spelling-bee", { score: 1 });
-    writeSlice("wordle",       { streak: 3 });
-    writeSlice("spelling-bee", { score: 99 }); // second write to spelling-bee
+    writeSlice("leksokipos", { score: 1 });
+    writeSlice("leksiarxeio",       { streak: 3 });
+    writeSlice("leksokipos", { score: 99 }); // second write to spelling-bee
 
     const env = rawEnvelope();
-    expect(env["spelling-bee"]).toEqual({ score: 99 }); // updated
-    expect(env["wordle"]).toEqual({ streak: 3 });        // untouched
+    expect(env["leksokipos"]).toEqual({ score: 99 }); // updated
+    expect(env["leksiarxeio"]).toEqual({ streak: 3 });        // untouched
   });
 });
 
@@ -75,73 +74,31 @@ describe("writeSlice", () => {
 
 describe("clearSlice", () => {
   it("removes only the target game slice", () => {
-    writeSlice("spelling-bee", { score: 10 });
-    writeSlice("wordle",       { streak: 2 });
+    writeSlice("leksokipos", { score: 10 });
+    writeSlice("leksiarxeio",       { streak: 2 });
 
-    clearSlice("spelling-bee");
+    clearSlice("leksokipos");
 
     const env = rawEnvelope();
-    expect(env["spelling-bee"]).toBeUndefined();
-    expect(env["wordle"]).toEqual({ streak: 2 }); // unaffected
+    expect(env["leksokipos"]).toBeUndefined();
+    expect(env["leksiarxeio"]).toEqual({ streak: 2 }); // unaffected
   });
 
   it("does nothing when the slice does not exist", () => {
-    writeSlice("wordle", { streak: 1 });
-    clearSlice("spelling-bee"); // not written — should not throw
+    writeSlice("leksiarxeio", { streak: 1 });
+    clearSlice("leksokipos"); // not written — should not throw
 
-    expect(readSlice("spelling-bee")).toBeNull();
-    expect(readSlice("wordle")).toEqual({ streak: 1 });
+    expect(readSlice("leksokipos")).toBeNull();
+    expect(readSlice("leksiarxeio")).toEqual({ streak: 1 });
   });
 
   it("readSlice returns null after clearSlice", () => {
-    writeSlice("connections", { done: true });
-    clearSlice("connections");
-    expect(readSlice("connections")).toBeNull();
+    writeSlice("leksindeseis", { done: true });
+    clearSlice("leksindeseis");
+    expect(readSlice("leksindeseis")).toBeNull();
   });
 });
 
-// ── migrateFromLegacyKeys ─────────────────────────────────────────────────────
-
-describe("migrateFromLegacyKeys", () => {
-  it("migrates spelling-bee:state into the wordgames:state envelope", () => {
-    const legacy = { puzzleId: "2026-01-01-el", score: 7, foundWords: ["αλφα"] };
-    localStorage.setItem("spelling-bee:state", JSON.stringify(legacy));
-
-    migrateFromLegacyKeys();
-
-    expect(readSlice("spelling-bee")).toEqual(legacy);
-    expect(localStorage.getItem("spelling-bee:state")).toBeNull(); // old key deleted
-  });
-
-  it("does not overwrite an existing spelling-bee slice during migration", () => {
-    const existing = { puzzleId: "new-puzzle", score: 99 };
-    writeSlice("spelling-bee", existing);
-
-    const legacy = { puzzleId: "old-puzzle", score: 1 };
-    localStorage.setItem("spelling-bee:state", JSON.stringify(legacy));
-
-    migrateFromLegacyKeys();
-
-    // Existing slice wins — legacy data is discarded
-    expect(readSlice("spelling-bee")).toEqual(existing);
-    // Old key is still cleaned up
-    expect(localStorage.getItem("spelling-bee:state")).toBeNull();
-  });
-
-  it("does nothing when no legacy key exists", () => {
-    writeSlice("wordle", { streak: 5 });
-    migrateFromLegacyKeys(); // should not throw or modify anything
-
-    expect(readSlice("wordle")).toEqual({ streak: 5 });
-    expect(readSlice("spelling-bee")).toBeNull();
-  });
-
-  it("cleans up corrupt legacy data without throwing", () => {
-    localStorage.setItem("spelling-bee:state", "not-valid-json{{");
-    expect(() => migrateFromLegacyKeys()).not.toThrow();
-    expect(localStorage.getItem("spelling-bee:state")).toBeNull();
-  });
-});
 
 // ── getOrCreateDeviceId ────────────────────────────────────────────────────────
 
@@ -178,9 +135,9 @@ describe("getOrCreateDeviceId", () => {
   });
 
   it("generating a new id does not wipe other slices", () => {
-    writeSlice("spelling-bee", { score: 42 });
+    writeSlice("leksokipos", { score: 42 });
     getOrCreateDeviceId();
-    expect(readSlice("spelling-bee")).toEqual({ score: 42 });
+    expect(readSlice("leksokipos")).toEqual({ score: 42 });
   });
 });
 
@@ -211,9 +168,9 @@ describe("setDisplayName", () => {
   });
 
   it("does not overwrite other slices when saving a name", () => {
-    writeSlice("spelling-bee", { score: 7 });
+    writeSlice("leksokipos", { score: 7 });
     setDisplayName("Κώστας");
-    expect(readSlice("spelling-bee")).toEqual({ score: 7 });
+    expect(readSlice("leksokipos")).toEqual({ score: 7 });
   });
 
   it("overwrites a previously saved name", () => {

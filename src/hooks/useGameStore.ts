@@ -93,25 +93,3 @@ export function setDisplayName(name: string): void {
   writeEnvelope({ ...envelope, displayName: name.trim() });
 }
 
-// ── One-time migration ────────────────────────────────────────────────────────
-// If the old "spelling-bee:state" key exists (from before the unified store),
-// migrate it into the new envelope and delete the old key.
-
-export function migrateFromLegacyKeys(): void {
-  try {
-    const legacyKey = "spelling-bee:state";
-    const legacy = localStorage.getItem(legacyKey);
-    if (!legacy) return;
-
-    const envelope = readEnvelope();
-    // Only migrate if there's no current spelling-bee slice yet
-    if (!envelope["spelling-bee"]) {
-      const parsed = JSON.parse(legacy);
-      writeEnvelope({ ...envelope, "spelling-bee": parsed });
-    }
-    localStorage.removeItem(legacyKey);
-  } catch {
-    // Corrupt legacy data — just delete it
-    try { localStorage.removeItem("spelling-bee:state"); } catch { /* ignore */ }
-  }
-}

@@ -1,0 +1,128 @@
+// /leksokipos/[center]/[outer] — custom puzzle route.
+//
+// Anyone can construct a URL with any 7 Greek letters and get a fully playable
+// Leksokipos game.  Valid words are computed on the server at request time
+// from the full Greek word list, so no operator pre-curation is needed.
+//
+// URL shape (canonical): /leksokipos/k/aeiost
+//   [center] — exactly 1 greeklish letter (the mandatory center letter)
+//   [outer]  — exactly 6 greeklish letters (the outer ring, order doesn't matter)
+//
+// Greeklish encoding: 1 Latin letter ↔ 1 Greek letter, bijective, no digraphs.
+// Greek percent-encoded URLs (e.g. %CE%BA) are also accepted and 301-redirected
+// to the greeklish canonical form so old bookmarks continue to work.
+//
+// The resulting Puzzle object is identical in shape to a pre-built one, so the
+// entire existing game stack (GameBoard, reducer, persistence) works unchanged.
+
+import { buildCustomPuzzle, getPrebuiltPuzzleByLetters, getRecentPuzzleDates } from "@/data";
+import { notFound, redirect } from "next/navigation";
+
+import { GameBoard } from "@/components/leksokipos/GameBoard";
+import { HowToPlayModal } from "@/components/leksokipos/HowToPlayModal";
+import type { Language } from "@/types";
+import { NewPuzzleButton } from "@/components/leksokipos/NewPuzzleButton";
+import { ShareButton } from "@/components/leksokipos/ShareButton";
+import { greekToGreeklish } from "@/lib/greeklish";
+import { parseCustomUrl } from "@/games/leksokipos/lib/parseCustomUrl";
+
+// Cache each unique letter-combo page for 1 hour.
+// The word list and puzzle data never change between deploys, so this is safe.
+//
+// Why this matters for cost:
+//   `computeValidWords` scans 811 k words (~50-200 ms of Fluid CPU) for every
+//   custom combo not in the pre-built list.  Without caching, every page visit
+//   would trigger a fresh Fluid invocation and be billed accordingly.
+//   With revalidate=3600, the CDN serves cached HTML for repeat visitors;
+//   the Fluid function only runs for the *first* visitor in each hour window.
+//
+// Note: revalidate on a dynamic route only takes effect for requests that reach
+// the server — the redirect() calls above return instantly and are unaffected.
+export const revalidate = 3600;
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+export default async function CustomSpellingBeePage({
+  params,
+}: {
+  params: Promise<{ center: string; outer: string }>;
+}) {
+  const { center: rawCenter, outer: rawOuter } = await params;
+
+  const parsed = parseCustomUrl(rawCenter, rawOuter);
+  if (!parsed) notFound();
+
+  // Canonical URL uses greeklish (plain ASCII) — e.g. /spelling-bee/k/aeiost.
+  // Redirect if raw params are not already in greeklish canonical form
+  // (handles: old percent-encoded Greek URLs, accented letters, uppercase, etc.).
+  const canonicalCenter = greekToGreeklish(parsed.center);
+  const canonicalOuter  = greekToGreeklish(parsed.outer.join(""));
+  if (
+    decodeURIComponent(rawCenter) !== canonicalCenter ||
+    decodeURIComponent(rawOuter)  !== canonicalOuter
+  ) {
+    // Greeklish is pure ASCII — no encodeURIComponent needed.
+    redirect(`/leksokipos/${canonicalCenter}/${canonicalOuter}`);
+  }
+
+  const language: Language = "el";
+  // Use the pre-built puzzle if the letters match a known daily puzzle.
+  // This preserves the real puzzle ID (e.g. "2026-05-18-el") so GameBoard
+  // can enable the leaderboard 🏆 button for daily puzzles.
+  const puzzle =
+    getPrebuiltPuzzleByLetters(parsed.center, parsed.outer, language) ??
+    buildCustomPuzzle(parsed.center, parsed.outer, language);
+
+  // Last 7 daily puzzle dates (newest-first) — passed to GameBoard so the
+  // leaderboard can render the rolling day-strip without a client-side import.
+  const recentPuzzleDates = getRecentPuzzleDates(7, language);
+
+  // The share URL is the greeklish canonical path — pure ASCII, human-readable.
+  // ShareButton will prepend window.location.origin on the client.
+  const canonicalPath = `/leksokipos/${canonicalCenter}/${canonicalOuter}`;
+
+  // Warn the player if the letter combo yields very few valid words
+  const tooFewWords = puzzle.validWords.length < 5;
+
+  return (
+    <div className="flex flex-col flex-1 items-center justify-start bg-zinc-50 font-sans min-h-screen">
+      <header className="w-full border-b border-stone-200 bg-white px-4 py-3">
+        <div className="flex items-center justify-between max-w-sm mx-auto">
+          <h1 className="text-xl font-bold tracking-tight text-stone-800">🌸 Leksokipos</h1>
+          <div className="flex items-center gap-2">
+            <ShareButton canonicalPath={canonicalPath} />
+            <NewPuzzleButton />
+            <HowToPlayModal />
+          </div>
+        </div>
+      </header>
+      {tooFewWords && (
+        <div className="w-full max-w-sm mx-auto mt-3 px-4">
+          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-center">
+            This letter combination has very few valid words. Try a different set!
+          </p>
+        </div>
+      )}
+      <div className="flex flex-1 w-full flex-col items-center bg-white">
+        <GameBoard puzzle={puzzle} recentPuzzleDates={recentPuzzleDates} />
+      </div>
+    </div>
+  );
+}
+
+// Generate a human-readable title for the browser tab
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ center: string; outer: string }>;
+}) {
+  const { center, outer } = await params;
+  const parsed = parseCustomUrl(center, outer);
+  if (!parsed) return { title: "Leksokipos" };
+
+  const letters = [parsed.center.toUpperCase(), ...parsed.outer.map((l) => l.toUpperCase())].join("");
+  return {
+    title: `Leksokipos — ${letters}`,
+    description: `Custom Leksokipos puzzle with center letter ${parsed.center.toUpperCase()} and outer letters ${parsed.outer.map((l) => l.toUpperCase()).join(", ")}`,
+  };
+}

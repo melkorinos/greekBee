@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Greek Word Games",
-  description: "A platform for Greek word games: Spelling Bee, Wordle GR, and Connections",
+  title: "Leksarxeia",
+  description: "Ελληνικά παιχνίδια λέξεων: Leksokipos, Leksiarxeio, Leksindeseis",
 };
 
 export default function RootLayout({

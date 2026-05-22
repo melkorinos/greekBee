@@ -25,31 +25,31 @@ interface GameEntry {
 
 const GAMES: GameEntry[] = [
   {
-    id:          "spelling-bee",
-    emoji:       "🍯",
-    title:       "Spelling Bee",
-    description: "Βρες λέξεις με τα 7 γράμματα της κηρήθρας.",
-    href:        "/spelling-bee",
+    id:          "leksokipos",
+    emoji:       "🌸",
+    title:       "Leksokipos",
+    description: "Βρες λέξεις με τα 7 γράμματα του κήπου.",
+    href:        "/leksokipos",
     wip:         false,
-    rulesTitle:  "Πώς να παίξεις — Spelling Bee",
-    bulletIcon:  "🐝",
+    rulesTitle:  "Πώς να παίξεις — Leksokipos",
+    bulletIcon:  "🌸",
     rules: [
       "Βρες όσες λέξεις μπορείς χρησιμοποιώντας τα 7 γράμματα.",
       "Κάθε λέξη πρέπει να περιέχει το **κεντρικό γράμμα**.",
       "Οι λέξεις πρέπει να έχουν τουλάχιστον **4 γράμματα**.",
       "Τα γράμματα μπορούν να χρησιμοποιηθούν **περισσότερες από μία φορά**.",
       "Μια λέξη που χρησιμοποιεί **και τα 7 γράμματα** κερδίζει επιπλέον bonus πόντους!",
-      "Ανέβα στην κατάταξη από Αρχάριος μέχρι Βασίλισσα! 👑",
+      "Ανέβα στην κατάταξη από Σπόρο μέχρι Άνθος! 🌸",
     ],
   },
   {
-    id:          "wordle",
+    id:          "leksiarxeio",
     emoji:       "🟩",
-    title:       "Wordle GR",
+    title:       "Leksiarxeio",
     description: "Μάντεψε τη λέξη σε 6 προσπάθειες — 5 γράμματα.",
-    href:        "/wordle",
+    href:        "/leksiarxeio",
     wip:         false,
-    rulesTitle:  "Πώς να παίξεις — Wordle GR",
+    rulesTitle:  "Πώς να παίξεις — Leksiarxeio",
     bulletIcon:  "▸",
     rules: [
       "Μάντεψε τη λέξη της ημέρας σε **6 προσπάθειες**.",
@@ -61,13 +61,13 @@ const GAMES: GameEntry[] = [
     ],
   },
   {
-    id:          "connections",
+    id:          "leksindeseis",
     emoji:       "🔗",
-    title:       "Connections",
+    title:       "Leksindeseis",
     description: "Ομαδοποίησε 16 λέξεις σε 4 κατηγορίες των 4.",
-    href:        "/connections",
+    href:        "/leksindeseis",
     wip:         true,
-    rulesTitle:  "Πώς να παίξεις — Connections",
+    rulesTitle:  "Πώς να παίξεις — Leksindeseis",
     bulletIcon:  "🔗",
     rules: [
       "Οι 16 λέξεις χωρίζονται σε **4 κατηγορίες των 4 λέξεων**.",
@@ -82,7 +82,7 @@ const GAMES: GameEntry[] = [
 export default function HomePage() {
   return (
     <div className="flex flex-col items-center justify-start min-h-screen bg-zinc-50 px-4 py-12">
-      <h1 className="text-3xl font-bold text-stone-800 mb-2">Παιχνίδια Λέξεων</h1>
+      <h1 className="text-3xl font-bold text-stone-800 mb-2">Leksarxeia</h1>
       <p className="text-stone-500 text-sm mb-10">Επίλεξε παιχνίδι για να ξεκινήσεις</p>
 
       <ul className="w-full max-w-sm space-y-4">

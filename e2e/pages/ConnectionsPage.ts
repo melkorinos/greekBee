@@ -4,10 +4,10 @@ export class ConnectionsPage {
   readonly heading;
 
   constructor(private page: Page) {
-    this.heading = page.getByRole("heading", { name: /Connections/i });
+    this.heading = page.getByRole("heading", { name: /Leksindeseis/i });
   }
 
   async goto() {
-    await this.page.goto("/connections");
+    await this.page.goto("/leksindeseis");
   }
 }

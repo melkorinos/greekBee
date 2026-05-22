@@ -1,13 +1,13 @@
 # Agent Memory — Greek Word Games Platform
 
 ## ⚡ Current State (2026-05-22)
-Three live games + custom puzzle URLs. **659 tests passing.**
+Three live games + custom puzzle URLs. **655 tests passing.**
 
 | Game | Route | Status |
 |------|-------|--------|
-| Spelling Bee | `/spelling-bee` + `/spelling-bee/[center]/[outer]` | Live — daily + custom URL |
-| Wordle GR | `/wordle` | Live — 4–8 letter Greek, multi-length |
-| Connections | `/connections` | Live — hand-curated |
+| Leksokipos | `/leksokipos` + `/leksokipos/[center]/[outer]` | Live — daily + custom URL |
+| Leksiarxeio | `/leksiarxeio` | Live — 4–8 letter Greek, multi-length |
+| Leksindeseis | `/leksindeseis` | Live — hand-curated |
 
 ---
 
@@ -15,7 +15,7 @@ Three live games + custom puzzle URLs. **659 tests passing.**
 
 | Topic | Decision |
 |-------|----------|
-| **Routing** | `/spelling-bee`, `/wordle`, `/connections`, `/` game picker. Custom puzzle: `/spelling-bee/[center]/[outer]` |
+| **Routing** | `/leksokipos`, `/leksiarxeio`, `/leksindeseis`, `/` game picker. Custom puzzle: `/leksokipos/[center]/[outer]` |
 | **Persistence** | Single `wordgames:state` localStorage key; typed envelope. `useGameStore` is the ONLY code that touches localStorage |
 | **Types** | Root `src/types/index.ts` = `Language`, `GameId`, `PersistenceEnvelope` only. Game types live in `src/games/*/types.ts`. Spelling Bee puzzle type is `SpellingBeePuzzle` (renamed from `Puzzle` in Session 27). |
 | **Theming** | Wordle + Shell header = dark (unconditional classes). Spelling Bee + picker = light. No `dark:` Tailwind classes anywhere. Shared form style tokens in `src/components/spelling-bee/styles.ts` (`labelClass`, `inputClass`, `inputCompactClass`, etc.) — use these for all modal inputs/labels. |
@@ -39,20 +39,20 @@ Three live games + custom puzzle URLs. **659 tests passing.**
 src/
   app/
     layout.tsx, page.tsx (picker)
-    spelling-bee/page.tsx, [center]/[outer]/page.tsx
-    wordle/page.tsx
-    connections/page.tsx, ConnectionsBoard.tsx
+    leksokipos/page.tsx, [center]/[outer]/page.tsx
+    leksiarxeio/page.tsx
+    leksindeseis/page.tsx, ConnectionsBoard.tsx
   components/
     shared/          Shell, FeedbackBanner, HowToPlayModal
-    spelling-bee/    GameBoard, HoneycombGrid, WordInput, ScoreBar, FeedbackMessage, FoundWordsList, ShareButton (`canonicalPath` prop), NewPuzzleButton
-    wordle/          WordleBoard, WordleHeader (WordlePageClient), GuessGrid, Tile, Keyboard, WordleLeaderboardModal
-    connections/     GroupGrid, WordCard, CategoryReveal
+    leksokipos/      GameBoard, HoneycombGrid, WordInput, ScoreBar, FeedbackMessage, FoundWordsList, ShareButton (`canonicalPath` prop), NewPuzzleButton
+    leksiarxeio/     WordleBoard, WordleHeader (WordlePageClient), GuessGrid, Tile, Keyboard, WordleLeaderboardModal
+    leksindeseis/    GroupGrid, WordCard, CategoryReveal
   games/
-    spelling-bee/lib/  validation, scoring, ranking, pangram, normalize, computeValidWords, parseCustomUrl
-    spelling-bee/hooks/  gameReducer, useGameState
-    wordle/lib/        evaluateGuess, isValidGuess
-    wordle/hooks/      wordleReducer, useWordleState
-    connections/hooks/ connectionsReducer, useConnectionsState
+    leksokipos/lib/  validation, scoring, ranking, pangram, normalize, computeValidWords, parseCustomUrl
+    leksokipos/hooks/  gameReducer, useGameState
+    leksiarxeio/lib/   evaluateGuess, isValidGuess
+    leksiarxeio/hooks/ wordleReducer, useWordleState
+    leksindeseis/hooks/ connectionsReducer, useConnectionsState
   data/
     spelling-bee/    puzzles-el.json (1008 puzzles 2026-03-25→2028-12-26), index.ts
     wordle/          words-{4..8}.json (answer pool + valid guesses, same list), index.ts

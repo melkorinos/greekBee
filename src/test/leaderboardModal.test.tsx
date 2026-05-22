@@ -1,4 +1,4 @@
-// leaderboardModal.test.tsx — unit tests for LeaderboardModal.
+﻿// leaderboardModal.test.tsx — unit tests for LeaderboardModal.
 //
 // Covers:
 //   1. 7-day pill strip renders with the correct pills.
@@ -11,7 +11,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
-import { LeaderboardModal } from "@/components/spelling-bee/LeaderboardModal";
+import { LeaderboardModal } from "@/components/leksokipos/LeaderboardModal";
 import userEvent from "@testing-library/user-event";
 
 // ── Mock useLeaderboard ───────────────────────────────────────────────────────
@@ -119,7 +119,7 @@ describe("LeaderboardModal — play link", () => {
     fireEvent.click(screen.getByRole("button", { name: past }));
     const links = await screen.findAllByText(/Παίξε αυτό το παζλ/);
     links.forEach((link) =>
-      expect(link.closest("a")).toHaveAttribute("href", `/spelling-bee?puzzle=${past}`)
+      expect(link.closest("a")).toHaveAttribute("href", `/leksokipos?puzzle=${past}`)
     );
   });
 });

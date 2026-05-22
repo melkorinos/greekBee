@@ -1,4 +1,4 @@
-// noAccents.test.ts — enforces the "zero Greek accents anywhere" contract.
+﻿// noAccents.test.ts — enforces the "zero Greek accents anywhere" contract.
 //
 // Greek accents must never appear in:
 //   • Puzzle letter fields (centerLetter, outerLetters) — in both pre-built and custom puzzles
@@ -13,10 +13,10 @@
 
 import { describe, expect, it } from "vitest";
 import { buildCustomPuzzle } from "@/data/spelling-bee";
-import { computeValidWords } from "@/games/spelling-bee/lib/computeValidWords";
-import { parseCustomUrl } from "@/games/spelling-bee/lib/parseCustomUrl";
-import { buildInitialState, gameReducer } from "@/games/spelling-bee/hooks/gameReducer";
-import type { SpellingBeePuzzle } from "@/games/spelling-bee/types";
+import { computeValidWords } from "@/games/leksokipos/lib/computeValidWords";
+import { parseCustomUrl } from "@/games/leksokipos/lib/parseCustomUrl";
+import { buildInitialState, gameReducer } from "@/games/leksokipos/hooks/gameReducer";
+import type { SpellingBeePuzzle } from "@/games/leksokipos/types";
 import { getPuzzleForDate, getRandomPuzzle } from "@/data/spelling-bee";
 import puzzlesEl from "@/data/spelling-bee/puzzles-el.json";
 

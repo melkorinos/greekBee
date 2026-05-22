@@ -1,11 +1,11 @@
-// feedbackMessage.test.tsx — unit tests for the FeedbackMessage component.
+﻿// feedbackMessage.test.tsx — unit tests for the FeedbackMessage component.
 // Covers valid/pangram display, all error statuses, and the suggest-word
 // inline link that appears only for not_in_list.
 
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-import { FeedbackMessage } from "@/components/spelling-bee/FeedbackMessage";
+import { FeedbackMessage } from "@/components/leksokipos/FeedbackMessage";
 import userEvent from "@testing-library/user-event";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────

@@ -1,10 +1,10 @@
-// normalize.test.ts — dedicated unit tests for the normalizeLetters utility.
+﻿// normalize.test.ts — dedicated unit tests for the normalizeLetters utility.
 // normalizeLetters is the foundation of all Greek letter comparison in this
 // project: it strips accents and normalises final sigma. Every game that
 // handles Greek text depends on it being correct.
 
 import { describe, expect, it } from "vitest";
-import { normalizeLetters } from "@/games/spelling-bee/lib/normalize";
+import { normalizeLetters } from "@/games/leksokipos/lib/normalize";
 
 describe("normalizeLetters", () => {
   // ── Case folding ────────────────────────────────────────────────────────────

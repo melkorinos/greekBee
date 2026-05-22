@@ -1,4 +1,4 @@
-// POST /api/connections-scores — upsert a player's score for a Connections puzzle
+﻿// POST /api/connections-scores — upsert a player's score for a Connections puzzle
 // GET  /api/connections-scores?date=YYYY-MM-DD&deviceId= — top 20 + pinned player row
 //
 // Score = mistakesRemaining (1–4) at the moment the player wins.
@@ -24,7 +24,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseClient } from "@/lib/supabase";
-import { isISODate } from "@/games/spelling-bee/lib";
+import { isISODate } from "@/games/leksokipos/lib";
 import { upsertAndClean } from "@/lib/supabasePost";
 
 export const runtime = "edge";

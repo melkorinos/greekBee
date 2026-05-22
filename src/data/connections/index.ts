@@ -1,7 +1,7 @@
-// Data loader for Connections puzzles.
+﻿// Data loader for Connections puzzles.
 // Finds today's puzzle by date; falls back to the most recent if no match.
 
-import type { ConnectionsPuzzle } from "@/games/connections/types";
+import type { ConnectionsPuzzle } from "@/games/leksindeseis/types";
 import puzzles from "./puzzles-connections.json";
 
 const ALL_PUZZLES = puzzles as ConnectionsPuzzle[];

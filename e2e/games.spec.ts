@@ -1,12 +1,12 @@
 import { expect, test } from "./fixtures";
 
 test.describe("all games load", () => {
-  test("Spelling Bee — redirects and renders honeycomb", async ({ spellingBee }) => {
+  test("Leksokipos — redirects and renders grid", async ({ spellingBee }) => {
     await spellingBee.goto();
     await expect(spellingBee.honeycomb).toBeVisible();
   });
 
-  test("Wordle GR — renders page heading", async ({ wordle }) => {
+  test("Leksiarxeio — renders page heading", async ({ wordle }) => {
     await wordle.goto();
     await expect(wordle.heading).toBeVisible();
   });

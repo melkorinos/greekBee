@@ -9,8 +9,8 @@ export class SpellingBeePage {
   }
 
   async goto() {
-    await this.page.goto("/spelling-bee");
-    // /spelling-bee always redirects to /spelling-bee/<center>/<outer> (greeklish ASCII)
-    await this.page.waitForURL(/\/spelling-bee\/.+\/.+/);
+    await this.page.goto("/leksokipos");
+    // /leksokipos always redirects to /leksokipos/<center>/<outer> (greeklish ASCII)
+    await this.page.waitForURL(/\/leksokipos\/.+\/.+/);
   }
 }

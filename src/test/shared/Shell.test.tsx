@@ -24,7 +24,7 @@ function getHamburger() {
 describe("Shell rendering", () => {
   it("renders the platform header link", () => {
     setup();
-    expect(screen.getByRole("link", { name: /word games/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /leksarxeia/i })).toBeInTheDocument();
   });
 
   it("header has dark bg-stone-900 background", () => {
@@ -91,9 +91,9 @@ describe("Drawer game links", () => {
     const links = within(nav).getAllByRole("link");
     const hrefs = links.map((l) => l.getAttribute("href"));
 
-    expect(hrefs).toContain("/spelling-bee");
-    expect(hrefs).toContain("/wordle");
-    expect(hrefs).toContain("/connections");
+    expect(hrefs).toContain("/leksokipos");
+    expect(hrefs).toContain("/leksiarxeio");
+    expect(hrefs).toContain("/leksindeseis");
   });
 
   it("closes the drawer when a game link is clicked", async () => {
@@ -101,7 +101,7 @@ describe("Drawer game links", () => {
     await user.click(getHamburger());
 
     const nav = screen.getByRole("navigation", { name: /game navigation/i });
-    const spellingBeeLink = within(nav).getByRole("link", { name: /spelling bee/i });
+    const spellingBeeLink = within(nav).getByRole("link", { name: /leksokipos/i });
     await user.click(spellingBeeLink);
 
     expect(screen.queryByRole("navigation", { name: /game navigation/i })).not.toBeInTheDocument();

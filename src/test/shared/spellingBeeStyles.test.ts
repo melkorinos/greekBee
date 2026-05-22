@@ -1,4 +1,4 @@
-// spellingBeeStyles.test.ts
+﻿// spellingBeeStyles.test.ts
 // Smoke-tests for src/components/spelling-bee/styles.ts.
 //
 // Goals:
@@ -52,7 +52,7 @@ import {
   // Score bar
   scoreBarFill,
   scoreBarTrack,
-} from "@/components/spelling-bee/styles";
+} from "@/components/leksokipos/styles";
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 

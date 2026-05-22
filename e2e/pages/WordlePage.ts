@@ -4,10 +4,10 @@ export class WordlePage {
   readonly heading;
 
   constructor(private page: Page) {
-    this.heading = page.getByRole("heading", { name: /Wordle GR/i });
+    this.heading = page.getByRole("heading", { name: /Leksiarxeio/i });
   }
 
   async goto() {
-    await this.page.goto("/wordle");
+    await this.page.goto("/leksiarxeio");
   }
 }

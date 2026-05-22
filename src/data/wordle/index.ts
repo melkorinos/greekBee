@@ -1,11 +1,11 @@
-// Wordle GR — data loader (runs server-side via Next.js App Router).
+﻿// Wordle GR — data loader (runs server-side via Next.js App Router).
 // Picks today's answer deterministically by date so every user gets the same word.
 //
 // One list per length (words-N.json) is used for both the answer pool and
 // valid-guess validation.  No separate curated list — word quality will be
 // addressed later (see .claude/issue-tracker/issues/05-td003-wordle-answer-pool.md).
 
-import type { WordleLength, WordlePuzzle } from "@/games/wordle/types";
+import type { WordleLength, WordlePuzzle } from "@/games/leksiarxeio/types";
 
 import words4 from "./words-4.json";
 import words5 from "./words-5.json";

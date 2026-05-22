@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 
 import { greekToGreeklish } from "@/lib/greeklish";
-import { parseCustomUrl } from "@/games/spelling-bee/lib/parseCustomUrl";
+import { parseCustomUrl } from "@/games/leksokipos/lib/parseCustomUrl";
 
 describe("parseCustomUrl", () => {
   // ── Valid inputs ─────────────────────────────────────────────────────────────

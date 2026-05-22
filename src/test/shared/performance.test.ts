@@ -1,4 +1,4 @@
-// performance.test.ts
+﻿// performance.test.ts
 //
 // These tests guard against regressions that would increase Vercel Fluid Active
 // CPU time — the billing metric that is the most likely usage cap to be hit.
@@ -28,7 +28,7 @@
 import { buildCustomPuzzle, getPrebuiltPuzzleByLetters } from "@/data/spelling-bee/index";
 import { describe, expect, it } from "vitest";
 
-import { computeValidWords } from "@/games/spelling-bee/lib/computeValidWords";
+import { computeValidWords } from "@/games/leksokipos/lib/computeValidWords";
 import wordListEl from "@/data/words-el.json";
 
 // ── Thresholds ────────────────────────────────────────────────────────────────

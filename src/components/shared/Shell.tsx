@@ -9,9 +9,9 @@ import { useEffect } from "react";
 import { useState } from "react";
 
 const GAMES = [
-  { id: "spelling-bee", label: "🍯 Spelling Bee",  href: "/spelling-bee" },
-  { id: "wordle",       label: "🟩 Wordle GR",      href: "/wordle" },
-  { id: "connections",  label: "🔗 Connections",    href: "/connections" },
+  { id: "leksokipos",    label: "🌸 Leksokipos",    href: "/leksokipos" },
+  { id: "leksiarxeio",  label: "🟩 Leksiarxeio",   href: "/leksiarxeio" },
+  { id: "leksindeseis", label: "🔗 Leksindeseis",   href: "/leksindeseis" },
 ] as const;
 
 // ── Hamburger icon ────────────────────────────────────────────────────────────
@@ -72,7 +72,7 @@ export function Shell({ children }: ShellProps) {
             href="/"
             className="text-sm font-semibold text-stone-300 hover:text-white transition-colors"
           >
-            🎮 Word Games
+            🎮 Leksarxeia
           </Link>
           <button
             onClick={() => setDrawerOpen((v) => !v)}

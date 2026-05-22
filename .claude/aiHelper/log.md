@@ -5,6 +5,32 @@
 
 ---
 
+## 2026-05-22 — Session 31: Platform & Game Rebrand (Leksarxeia) ✅
+
+**Outcome:** 655 tests (43 files) · 0 failures · ESLint 0 errors · build clean.
+
+### Changes
+
+1. **Platform rename** — `"Παιχνίδια Λέξεων"` → `Leksarxeia` in h1, Shell header, `layout.tsx` metadata.
+
+2. **Game 1: Spelling Bee → Leksokipos** — Route `src/app/leksokipos/`, components `src/components/leksokipos/`, game logic `src/games/leksokipos/`. Store slice `"spelling-bee"` → `"leksokipos"`. HowToPlayModal title + bulletIcon (🐝→🌸). HoneycombGrid aria-label updated.
+
+3. **Rank names** — All English ranks replaced with Greek: `"Beginner"` → `"Σπόρος"`, `"Moving Up"` → `"Βλαστός"`, `"Good"` → `"Μπουμπούκι"`, `"Solid"` → `"Άνοιγμα"`, `"Great"` → `"Ανθισμένο"`, `"Amazing"` → `"Θαυμαστό"`, `"Genius"` → `"Ευφυΐα"`, `"Queen Bee"` → `"Άνθος"`. Updated in `types.ts`, `ranking.ts`, `gameReducer.ts` initial state.
+
+4. **Game 2: Wordle GR → Leksiarxeio** — Route `src/app/leksiarxeio/`, components `src/components/leksiarxeio/`, game logic `src/games/leksiarxeio/`. Store slices `"wordle"` → `"leksiarxeio"`, `"wordle-identity"` → `"leksiarxeio-identity"`. Header h1 + aria-labels updated.
+
+5. **Game 3: Connections → Leksindeseis** — Route `src/app/leksindeseis/`, components `src/components/leksindeseis/`, game logic `src/games/leksindeseis/`. Store slice `"connections"` → `"leksindeseis"`. h1 + HowToPlay title updated.
+
+6. **`migrateFromLegacyKeys()`** — Deleted entirely (function + 4 tests). Old data abandoned per handoff spec.
+
+7. **`GameId` + `PersistenceEnvelope`** in `src/types/index.ts` — All 3 game keys renamed.
+
+8. **All source directories renamed** — `src/games/`, `src/components/`, `src/test/` subdirectories all renamed to match new game names. 50+ import paths updated.
+
+9. **Tests updated** — Rank string assertions in `gameLogic`, `gameReducer`, `GameBoard` tests. `useGameStore.test.ts` slice keys + `migrateFromLegacyKeys` block removed. `Shell.test.tsx` href + platform name assertions. E2e page objects + spec descriptions.
+
+---
+
 ## 2026-05-22 — Session 30: Architecture Candidate 3 — Connections Leaderboard ✅
 
 **Outcome:** 659 tests (43 files) · 0 failures · ESLint 0 errors.
@@ -29,60 +55,6 @@
 The `connections_scores` Supabase table must be created via the dashboard SQL included as a comment block at the top of `src/app/api/connections-scores/route.ts`.
 
 ---
-
-## 2026-05-22 — Session 29: Architecture Candidate 2 — Unified Score Submission ✅
-
-**Outcome:** 651 tests (42 files) · 0 failures · ESLint 0 errors.
-
-### Changes
-
-1. **`src/lib/postScore.ts`** (new) — `postScore(url, body)`: shared fire-and-forget POST wrapper used by both submission hooks.
-
-2. **`src/lib/supabasePost.ts`** (new) — `upsertAndClean(table, conflictColumns, dateField, row)`: shared server-side upsert + 7-day rolling cleanup. Returns `null` on success, error message string on DB failure.
-
-3. **`src/hooks/useScoreSubmission.ts`** — replaced direct `fetch` calls with `postScore`; removed unused `eslint-disable` comment.
-
-4. **`src/hooks/useWordleScoreSubmission.ts`** — replaced `readSlice` at call time with `displayName` prop + ref pattern (matches SpellingBee); uses `postScore`; removed `readSlice` import.
-
-5. **`src/components/wordle/WordleBoard.tsx`** — passes `displayName` to `useWordleScoreSubmission`; removed dead `deviceId`/`displayName` props from `LengthPanel` (were never used inside the panel).
-
-6. **`src/app/api/scores/route.ts`** — POST handler uses `upsertAndClean`; ~15 lines removed.
-
-7. **`src/app/api/wordle-scores/route.ts`** — POST handler uses `upsertAndClean`; ~15 lines removed.
-
-8. **`src/test/useWordleScoreSubmission.test.ts`** (new) — 6 tests: POST fields, deviceId guard, won/lost penalty, displayName fallback, ref stability.
-
----
-
-## 2026-05-22 — Session 28: Architecture Candidate 1 — Unified Persistence ✅
-
-**Outcome:** 645 tests (41 files) · 0 failures · ESLint 0 errors.
-
-### Changes
-
-1. **`src/hooks/useRoundPersistence.ts`** (new) — generic `useRoundPersistence<TSnapshot>(gameId, sessionKey, snapshot, onRestore, shouldSave?)`. Replaces three incompatible per-game patterns. SessionMap format: `Record<string, TSnapshot>` per game slice. Hydrates in `useEffect` (SSR-safe), saves on snapshot change, returns `clear()`.
-
-2. **`src/hooks/usePersistence.ts`** — deleted.
-
-3. **`src/games/spelling-bee/hooks/useGameState.ts`** — migrated; one-time legacy-key migration effect included.
-
-4. **`src/games/wordle/hooks/useWordleState.ts`** — migrated; removed per-length envelope; `puzzle.id` is the natural session key.
-
-5. **`src/games/connections/hooks/useConnectionsState.ts`** — migrated; hydration deferred from render-time to `useEffect`; `shuffleOrder` + `useMemo` display-order eliminates setState-in-effect.
-
-6. **`src/games/connections/hooks/connectionsReducer.ts`** — added `RESTORE_STATE` action; terminal guard bypassed for it.
-
-7. **`src/components/wordle/WordleBoard.tsx`** — updated completed-length detection to read `store[puzzle.id].status`.
-
-8. **`src/test/persistence.test.ts`** — rewritten; 13 tests: hydration (5), saving (5), clear() (3).
-
-9. **`src/test/performance.test.ts`** — raised `COMPUTE_VALID_WORDS_BUDGET_MS` 800→2000 ms to match machine speed.
-
-10. **`npm install`** — restored missing `@supabase/supabase-js` (in package.json but not installed).
-
-### Docs
-- `README.md`: section 8 (Persistence), architecture folder listing, test table
-- `memory.md`: test count 639→645, folder listing, test coverage map
 
 ---
 
@@ -110,6 +82,8 @@ The `connections_scores` Supabase table must be created via the dashboard SQL in
 
 | Session | Date | Outcome | Tests |
 |---------|------|---------|-------|
+| 29 — Unified Score Submission | 2026-05-22 | `postScore` + `upsertAndClean` shared libs; `useWordleScoreSubmission` refactored | 651 |
+| 28 — Unified Persistence | 2026-05-22 | `useRoundPersistence` replaces 3 per-game patterns; `usePersistence.ts` deleted | 645 |
 | 26 — Wordle tile layout + header | 2026-05-21 | `flex-1 aspect-square` tiles with per-length `max-w-*`; `WordleHeader` extracted; 🏆 button in header; WIP badge removed | 639 |
 | 25 — Vercel Fluid CPU | 2026-05-21 | `validWordsCache`; ISR revalidate 3600; Edge runtime on all API routes | 627 |
 | 24 — Architecture Candidate 5 | 2026-05-20 | `isDailyPuzzle` + `isISODate` single-source; replaced 4 inline regexes | 627 |

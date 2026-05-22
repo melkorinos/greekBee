@@ -1,4 +1,4 @@
-// POST /api/scores  — upsert a player's score for a puzzle
+﻿// POST /api/scores  — upsert a player's score for a puzzle
 // GET  /api/scores?puzzleId=&deviceId= — top 20 + pinned player row
 //
 // RLS: anon INSERT + anon SELECT (open leaderboard).
@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseClient } from "@/lib/supabase";
-import { isISODate } from "@/games/spelling-bee/lib";
+import { isISODate } from "@/games/leksokipos/lib";
 import { upsertAndClean } from "@/lib/supabasePost";
 
 // Run on the Edge runtime — avoids Fluid (Node.js) CPU billing for this

@@ -1,4 +1,4 @@
-// POST /api/wordle-scores — upsert one length result for a player on a given date
+﻿// POST /api/wordle-scores — upsert one length result for a player on a given date
 // GET  /api/wordle-scores?date=YYYY-MM-DD&deviceId= — daily aggregate leaderboard
 //
 // Score = sum of attempts across all 5 lengths (4–8).
@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseClient } from "@/lib/supabase";
-import { isISODate } from "@/games/spelling-bee/lib";
+import { isISODate } from "@/games/leksokipos/lib";
 import { upsertAndClean } from "@/lib/supabasePost";
 
 // Run on the Edge runtime — avoids Fluid (Node.js) CPU billing.
