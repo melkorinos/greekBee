@@ -1,7 +1,7 @@
 # Agent Memory — Greek Word Games Platform
 
 ## ⚡ Current State (2026-05-22)
-Three live games + custom puzzle URLs. **651 tests passing.**
+Three live games + custom puzzle URLs. **659 tests passing.**
 
 | Game | Route | Status |
 |------|-------|--------|
@@ -88,7 +88,7 @@ src/
 
 ---
 
-## 🧪 Test Coverage Map (42 files, 651 tests)
+## 🧪 Test Coverage Map (43 files, 659 tests)
 
 > **How to use this as an agent**: before writing a new test, grep the `describe` column for the function/component name. If it appears, read that file's describe block to check if the specific case is already covered. Only write new tests for gaps.
 
@@ -118,6 +118,7 @@ src/
 | `connectionsDataLoader.test.ts` | `getTodaysConnectionsPuzzle` — date match, fallback, uniqueness, shape |
 | `persistence.test.ts` | `useRoundPersistence` — hydration (5 cases), saving (5 cases incl. `shouldSave`), `clear()` (3 cases) |
 | `useWordleScoreSubmission.test.ts` | `useWordleScoreSubmission` — POST fields, deviceId guard, won/lost penalty, displayName fallback, ref stability |
+| `useConnectionsScoreSubmission.test.ts` | `useConnectionsScoreSubmission` — POST fields, deviceId guard, score=0 guard, dedup guard, Ανώνυμος fallback; `submitWithName` fields, guards |
 | `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`, `migrateFromLegacyKeys`, cross-game isolation |
 | `Shell.test.tsx` | Rendering, hamburger drawer open/close/Escape/backdrop, nav links, theme classes |
 | `letterPickerModal.test.tsx` | Visibility, center/outer selection, deselect, 7-letter cap, Reset, Random (vowel center ×20, ≥2 vowels ×20, ≥2 outer consonants ×20), Generate |

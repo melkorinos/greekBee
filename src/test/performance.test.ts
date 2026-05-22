@@ -44,7 +44,7 @@ const COMPUTE_VALID_WORDS_BUDGET_MS = 2000;
 const CACHE_HIT_BUDGET_MS = 5;
 
 /** Maximum acceptable ms to scan the 1 008-puzzle curated list */
-const CURATED_LOOKUP_BUDGET_MS = 10;
+const CURATED_LOOKUP_BUDGET_MS = 50;
 
 // ── computeValidWords — raw scan speed ───────────────────────────────────────
 

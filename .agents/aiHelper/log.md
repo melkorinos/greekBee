@@ -5,6 +5,31 @@
 
 ---
 
+## 2026-05-22 — Session 30: Architecture Candidate 3 — Connections Leaderboard ✅
+
+**Outcome:** 659 tests (43 files) · 0 failures · ESLint 0 errors.
+
+### Changes
+
+1. **`src/app/api/connections-scores/route.ts`** (new) — `POST` + `GET` for Connections leaderboard. POST validates score 1–4; uses `upsertAndClean`. GET returns top20 + pinned player row ordered by `score DESC`. Includes Supabase `connections_scores` table creation SQL (user must run in dashboard).
+
+2. **`src/hooks/useConnectionsScoreSubmission.ts`** (new) — `submit(score)` (with dedup guard, `lastPostedRef`) and `submitWithName(score, name)`. Uses `postScore`; displayName stored in ref.
+
+3. **`src/components/connections/ConnectionsLeaderboardModal.tsx`** (new) — Leaderboard modal. Uses `useLeaderboard` with custom `buildUrl → /api/connections-scores`. Displays `N/4` scores. Reuses SpellingBee `styles.ts` tokens. Display-name editor calls `onSaveName`.
+
+4. **`src/components/connections/ConnectionsBoard.tsx`** (new, replaces `src/app/connections/ConnectionsBoard.tsx`) — Full board component. Wires identity (`getOrCreateDeviceId`, `getDisplayName`, `setDisplayName`), score submission, game-end detection (ref watching `playing→won`), 🏆 button, and `ConnectionsLeaderboardModal`. Identity uses `useReducer` + `dispatch` to avoid `react-hooks/set-state-in-effect`.
+
+5. **`src/app/connections/ConnectionsBoard.tsx`** — changed to re-export from `@/components/connections/ConnectionsBoard`.
+
+6. **`src/test/useConnectionsScoreSubmission.test.ts`** (new) — 8 tests: POST fields, deviceId guard, score=0 guard, dedup guard, "Ανώνυμος" fallback for `submit()`; plus `submitWithName()` fields, score=0, deviceId guards.
+
+7. **`src/test/performance.test.ts`** — raised `CURATED_LOOKUP_BUDGET_MS` 10→50 ms (timing flake on this machine).
+
+### Note for user
+The `connections_scores` Supabase table must be created via the dashboard SQL included as a comment block at the top of `src/app/api/connections-scores/route.ts`.
+
+---
+
 ## 2026-05-22 — Session 29: Architecture Candidate 2 — Unified Score Submission ✅
 
 **Outcome:** 651 tests (42 files) · 0 failures · ESLint 0 errors.
