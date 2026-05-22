@@ -13,7 +13,7 @@ import { existsSync, readFileSync } from "fs";
 
 import { resolve } from "path";
 
-const ROOT = resolve(__dirname, "../../");
+const ROOT = resolve(__dirname, "../../../");
 
 // ── Parse .gitignore ──────────────────────────────────────────────────────────
 
