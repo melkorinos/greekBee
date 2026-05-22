@@ -4,11 +4,11 @@
 
 At the start of every session, read these files in order:
 
-1. `.agents/aiHelper/soul.md` — identity, beliefs, hard constraints, post-feature protocol
-2. `.agents/aiHelper/memory.md` — all architecture decisions already made
-3. `.agents/aiHelper/goals.md` — phased roadmap; check which phase is current
-4. `.agents/aiHelper/reflections.md` — risks and tensions to watch
-5. `.agents/aiHelper/log.md` — what has been done in previous sessions
+1. `.claude/aiHelper/soul.md` — identity, beliefs, hard constraints, post-feature protocol
+2. `.claude/aiHelper/memory.md` — all architecture decisions already made
+3. `.claude/aiHelper/goals.md` — phased roadmap; check which phase is current
+4. `.claude/aiHelper/reflections.md` — risks and tensions to watch
+5. `.claude/aiHelper/log.md` — what has been done in previous sessions
 
 ## Standing rules (every session)
 
@@ -19,7 +19,7 @@ At the start of every session, read these files in order:
 - No component graduates to `src/components/shared/` speculatively — only when two games genuinely need it.
 - No magic hex values or inline styles — Tailwind utility classes only.
 - Do not install new dependencies without explicit approval.
-- Keep `.agents/aiHelper/log.md` under 250 lines — condense older entries before adding new.
+- Keep `.claude/aiHelper/log.md` under 250 lines — condense older entries before adding new.
 - Do not touch `words-el.json` or any `puzzles-*.json` unless the task explicitly requires it.
 
 ## Available slash commands
@@ -28,7 +28,7 @@ All commands live in `.claude/skills/`. Project-specific first, then mattpocock/
 
 | Command | Purpose |
 |---------|---------|
-| `/aihelper` | Full context reload — reads all `.agents/aiHelper/` files then waits for your task |
+| `/aihelper` | Full context reload — reads all `.claude/aiHelper/` files then waits for your task |
 | `/improve-codebase-architecture` | Surface architectural seams and deepening opportunities |
 | `/grill-me` | Relentless Q&A to stress-test a plan or design |
 | `/grill-with-docs` | Grill session that cross-checks against domain docs and updates them inline |
@@ -43,3 +43,17 @@ All commands live in `.claude/skills/`. Project-specific first, then mattpocock/
 | `/caveman` | Ultra-compressed mode — full technical accuracy, zero filler |
 | `/setup-matt-pocock-skills` | One-time setup: issue tracker, triage labels, domain doc layout |
 | `/write-a-skill` | Create a new skill with proper structure |
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as local markdown files under `.scratch/<feature>/`. See `.claude/issue-tracker/issue-tracker.md`.
+
+### Triage labels
+
+Using the default five-role vocabulary (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix). See `.claude/issue-tracker/triage-labels.md`.
+
+### Domain docs
+
+Single-context repo — one `CONTEXT.md` + `docs/adr/` at the root. See `.claude/issue-tracker/domain.md`.
