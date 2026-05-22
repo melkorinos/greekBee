@@ -7,7 +7,7 @@ import { buildInitialState, gameReducer } from "./gameReducer";
 import { migrateFromLegacyKeys, readSlice, writeSlice } from "@/hooks/useGameStore";
 import { useCallback, useEffect, useMemo, useReducer } from "react";
 
-import type { SpellingBeePuzzle } from "../types";
+import type { RankName, SpellingBeePuzzle } from "../types";
 import { normalizeLetters } from "../lib/normalize";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 
@@ -15,7 +15,7 @@ import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 interface SpellingBeeRoundSnapshot {
   foundWords:   string[];
   score:        number;
-  currentRank:  string;
+  currentRank:  RankName;
   startedAt:    number;
   givenUp:      boolean;
 }

@@ -71,7 +71,7 @@ export function useWordleState(
       status:  saved.status,
     }), []),
     // Only persist once the player has made at least one guess
-    useCallback((snap) => snap.guesses.length > 0, []),
+    useCallback((snap: WordleRoundSnapshot) => snap.guesses.length > 0, []),
   );
 
   // ── Fire onGameEnd once when status transitions away from "playing" ──────────
