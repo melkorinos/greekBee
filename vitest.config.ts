@@ -14,6 +14,8 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     // Make describe/it/expect available without importing them
     globals: true,
+    // Exclude Playwright E2E tests — they are run by `playwright test`, not vitest
+    exclude: ["e2e/**", "node_modules/**"],
   },
   resolve: {
     // Mirror the @/* alias defined in tsconfig so imports work in tests too
