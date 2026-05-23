@@ -93,3 +93,42 @@ export function setDisplayName(name: string): void {
   writeEnvelope({ ...envelope, displayName: name.trim() });
 }
 
+// ── Cross-device profile ─────────────────────────────────────────────────────
+// profileLinked = true means this device has an active cross-device profile.
+// When active, deviceId doubles as the profile's device_uuid — the same UUID
+// is used for both leaderboard identity and game-state sync.
+
+/** Returns true if this device has an active cross-device profile. */
+export function isProfileLinked(): boolean {
+  if (typeof window === "undefined") return false;
+  return readEnvelope()["profileLinked"] === true;
+}
+
+/** Set or clear the profileLinked flag. */
+export function setProfileLinked(value: boolean): void {
+  const envelope = readEnvelope();
+  writeEnvelope({ ...envelope, profileLinked: value });
+}
+
+/**
+ * Overwrite the deviceId. Used during profile restore — the restored profile's
+ * device_uuid becomes this device's identity for both leaderboard and sync.
+ */
+export function setDeviceId(id: string): void {
+  const envelope = readEnvelope();
+  writeEnvelope({ ...envelope, deviceId: id });
+}
+
+/**
+ * Unlink the cross-device profile from this device.
+ * Generates a fresh anonymous deviceId so the player can continue anonymously.
+ */
+export function disconnectProfile(): void {
+  const envelope = readEnvelope();
+  writeEnvelope({
+    ...envelope,
+    deviceId:      crypto.randomUUID(),
+    profileLinked: false,
+  });
+}
+

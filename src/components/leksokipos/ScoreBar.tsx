@@ -14,6 +14,7 @@ interface ScoreBarProps {
   score: number;
   maxScore: number;
   currentRank: RankName;
+  onOpenLeaderboard?: () => void;
 }
 
 // ── Class constants ──────────────────────────────────────────────────────────
@@ -36,7 +37,7 @@ function RankIcon() {
   );
 }
 
-export function ScoreBar({ score, maxScore, currentRank }: ScoreBarProps) {
+export function ScoreBar({ score, maxScore, currentRank, onOpenLeaderboard }: ScoreBarProps) {
   const [showRanks, setShowRanks] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -70,9 +71,21 @@ export function ScoreBar({ score, maxScore, currentRank }: ScoreBarProps) {
             {currentRank}
           </span>
         </div>
-        <span data-testid="score-label" className={styles.scoreLabel}>
-          {score} pts
-        </span>
+        <div className="flex items-center gap-2">
+          <span data-testid="score-label" className={styles.scoreLabel}>
+            {score} pts
+          </span>
+          {onOpenLeaderboard && (
+            <button
+              data-testid="btn-leaderboard"
+              onClick={onOpenLeaderboard}
+              aria-label="Πίνακας Σκορ"
+              className="text-stone-400 hover:text-amber-500 transition-colors leading-none"
+            >
+              🏆
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Rank ladder popover */}

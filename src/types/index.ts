@@ -30,4 +30,6 @@ export interface PersistenceEnvelope {
   "deviceId"?:             string;
   /** Player's chosen display name for leaderboards. */
   "displayName"?:          string;
+  /** True once a cross-device profile has been created or restored on this device. */
+  "profileLinked"?:        boolean;
 }

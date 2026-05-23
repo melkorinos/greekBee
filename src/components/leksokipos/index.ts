@@ -1,6 +1,4 @@
 // Leksokipos UI components — export everything from here.
-export { HoneycombGrid } from "./HoneycombGrid";
-export type { HoneycombGridProps } from "./HoneycombGrid";
 export { WordInput } from "./WordInput";
 export { ScoreBar } from "./ScoreBar";
 export { FoundWordsList } from "./FoundWordsList";

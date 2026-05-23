@@ -128,6 +128,7 @@ export function GameBoard({ puzzle, recentPuzzleDates = [] }: GameBoardProps) {
         score={score}
         maxScore={puzzleMaxScore}
         currentRank={currentRank}
+        onOpenLeaderboard={isDaily ? () => setLeaderboardOpen(true) : undefined}
       />
 
       {/* Active game UI -- hidden once the player gives up */}
@@ -188,16 +189,6 @@ export function GameBoard({ puzzle, recentPuzzleDates = [] }: GameBoardProps) {
             >
               Ανακάτεμα
             </button>
-            {isDaily && (
-              <button
-                data-testid="btn-leaderboard"
-                onClick={() => setLeaderboardOpen(true)}
-                className={btnSecondary}
-                aria-label="Πίνακας Σκορ"
-              >
-                🏆
-              </button>
-            )}
           </div>
         </>
       )}
