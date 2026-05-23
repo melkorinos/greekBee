@@ -2,7 +2,7 @@
 
 import { ConnectionsBoard }           from "./ConnectionsBoard";
 import { HowToPlayModal }             from "@/components/shared/HowToPlayModal";
-import { getTodaysConnectionsPuzzle } from "@/data/connections";
+import { getTodaysConnectionsPuzzle } from "@/data/leksindeseis";
 
 function getTodayString(): string {
   return new Date().toISOString().slice(0, 10);

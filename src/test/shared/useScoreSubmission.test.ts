@@ -1,4 +1,4 @@
-// useScoreSubmission.test.ts — unit tests for the Spelling Bee score-posting hook.
+// useScoreSubmission.test.ts — unit tests for the Leksokipos score-posting hook.
 //
 // fetch is mocked per-test via vi.spyOn.
 
@@ -24,7 +24,7 @@ const BASE = {
 };
 
 describe("useScoreSubmission — submit()", () => {
-  it("POSTs to /api/scores with correct fields", async () => {
+  it("POSTs to /api/game-scores with correct fields", async () => {
     const spy = mockFetch();
     const { result } = renderHook(() => useScoreSubmission(BASE));
 
@@ -32,9 +32,10 @@ describe("useScoreSubmission — submit()", () => {
 
     expect(spy).toHaveBeenCalledOnce();
     const [url, init] = spy.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/scores");
+    expect(url).toBe("/api/game-scores");
     const body = JSON.parse(init.body as string);
-    expect(body.puzzle_id).toBe("2026-05-20");
+    expect(body.game_id).toBe("leksokipos");
+    expect(body.puzzle_date).toBe("2026-05-20");
     expect(body.device_id).toBe("device-abc");
     expect(body.display_name).toBe("Άννα");
     expect(body.score).toBe(10);

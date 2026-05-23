@@ -1,4 +1,4 @@
-// Wordle GR — letter state aggregation for keyboard colouring.
+// Leksiarxeio — letter state aggregation for keyboard colouring.
 // Derives the best known state for each letter from all submitted guesses.
 
 import type { GuessResult, LetterState, LetterStateMap } from "../types";

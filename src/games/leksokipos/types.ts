@@ -1,4 +1,4 @@
-// Spelling Bee-specific TypeScript types.
+// Leksokipos-specific TypeScript types.
 // All types here are scoped to this game — root src/types/index.ts only holds
 // platform-wide types (Language, GameId, PersistenceEnvelope).
 
@@ -6,8 +6,8 @@ import type { Language } from "@/types";
 
 // ─── Puzzle ───────────────────────────────────────────────────────────────────
 
-/** A single daily Spelling Bee puzzle definition. */
-export interface SpellingBeePuzzle {
+/** A single daily Leksokipos puzzle definition. */
+export interface LeksokiposPuzzle {
   /** Unique identifier for the puzzle (e.g. "2024-03-25-el") */
   id: string;
   /** The language this puzzle belongs to */
@@ -68,7 +68,7 @@ export interface ValidationResult {
 /** The full game state managed by useReducer in the game hook */
 export interface GameState {
   /** The active puzzle being played */
-  puzzle: SpellingBeePuzzle;
+  puzzle: LeksokiposPuzzle;
   /** Letters the player has typed so far (not yet submitted) */
   currentInput: string;
   /** All words the player has successfully found, in submission order */

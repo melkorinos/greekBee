@@ -1,9 +1,9 @@
-﻿// Spelling Bee puzzle data access layer.
+﻿// Leksokipos puzzle data access layer.
 // Loads puzzle definitions from the local JSON file.
-// Also exposes buildCustomPuzzle() for the dynamic /spelling-bee/[center]/[outer] route.
+// Also exposes buildCustomPuzzle() for the dynamic /leksokipos/[center]/[outer] route.
 
 import type { Language } from "@/types";
-import type { SpellingBeePuzzle } from "@/games/leksokipos/types";
+import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { computeValidWords } from "@/games/leksokipos/lib/computeValidWords";
 import greekPuzzles from "./puzzles-el.json";
 import { normalizeLetters } from "@/games/leksokipos/lib/normalize";
@@ -11,15 +11,15 @@ import wordListEl from "../words-el.json";
 
 // Cast the imported JSON to the typed Puzzle array.
 // TypeScript will warn us if the JSON shape ever drifts from the Puzzle interface.
-const PUZZLES: Record<Language, SpellingBeePuzzle[]> = {
-  el: greekPuzzles as SpellingBeePuzzle[],
+const PUZZLES: Record<Language, LeksokiposPuzzle[]> = {
+  el: greekPuzzles as LeksokiposPuzzle[],
 };
 
 /**
  * Returns the puzzle for a given date and language.
  * Falls back to the most recent available puzzle if no match is found.
  */
-export function getPuzzleForDate(date: string, language: Language = "el"): SpellingBeePuzzle {
+export function getPuzzleForDate(date: string, language: Language = "el"): LeksokiposPuzzle {
   const puzzles = PUZZLES[language];
 
   if (puzzles.length === 0) {
@@ -35,7 +35,7 @@ export function getPuzzleForDate(date: string, language: Language = "el"): Spell
 /**
  * Returns today's puzzle using the current date in ISO format (YYYY-MM-DD).
  */
-export function getTodaysPuzzle(language: Language = "el"): SpellingBeePuzzle {
+export function getTodaysPuzzle(language: Language = "el"): LeksokiposPuzzle {
   const today = new Date().toISOString().split("T")[0];
   return getPuzzleForDate(today, language);
 }
@@ -43,7 +43,7 @@ export function getTodaysPuzzle(language: Language = "el"): SpellingBeePuzzle {
 /**
  * Returns a puzzle by its unique ID, or null if not found.
  */
-export function getPuzzleById(id: string, language: Language): SpellingBeePuzzle | null {
+export function getPuzzleById(id: string, language: Language): LeksokiposPuzzle | null {
   return PUZZLES[language].find((p) => p.id === id) ?? null;
 }
 
@@ -51,7 +51,7 @@ export function getPuzzleById(id: string, language: Language): SpellingBeePuzzle
  * Returns a random puzzle for the given language, optionally excluding one by ID.
  * Used for the "Random Puzzle" feature.
  */
-export function getRandomPuzzle(language: Language, excludeId?: string): SpellingBeePuzzle {
+export function getRandomPuzzle(language: Language, excludeId?: string): LeksokiposPuzzle {
   const list = PUZZLES[language];
   const candidates = excludeId ? list.filter((p) => p.id !== excludeId) : list;
   const pool = candidates.length > 0 ? candidates : list;
@@ -63,7 +63,7 @@ export function getRandomPuzzle(language: Language, excludeId?: string): Spellin
  * Cycles back to the first puzzle when the last one is reached.
  * Used to build the "Next Puzzle" URL server-side.
  */
-export function getNextPuzzle(current: SpellingBeePuzzle): SpellingBeePuzzle {
+export function getNextPuzzle(current: LeksokiposPuzzle): LeksokiposPuzzle {
   const list = PUZZLES[current.language as Language];
   const idx = list.findIndex((p) => p.id === current.id);
   const nextIdx = idx >= 0 ? (idx + 1) % list.length : 0;
@@ -81,7 +81,7 @@ export function getPrebuiltPuzzleByLetters(
   center: string,
   outer: string[],
   language: Language = "el"
-): SpellingBeePuzzle | null {
+): LeksokiposPuzzle | null {
   const normalizedCenter = normalizeLetters(center);
   const normalizedOuter  = [...outer.map(normalizeLetters)].sort().join("");
   return (
@@ -148,7 +148,7 @@ export function buildCustomPuzzle(
   centerLetter: string,
   outerLetters: string[],
   language: Language = "el"
-): SpellingBeePuzzle {
+): LeksokiposPuzzle {
   const center = normalizeLetters(centerLetter);
   const outer = outerLetters.map(normalizeLetters);
 

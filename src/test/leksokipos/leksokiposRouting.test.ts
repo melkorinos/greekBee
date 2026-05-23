@@ -1,9 +1,9 @@
-﻿// spellingBeeRouting.test.ts — tests for the /spelling-bee routing contract.
+﻿// leksokiposRouting.test.ts — tests for the /leksokipos routing contract.
 //
-// The /spelling-bee page is a pure redirect gateway:
-//   - no params      → today's puzzle  → redirect to /spelling-bee/[center]/[outer]
-//   - ?random=1      → random puzzle   → redirect to /spelling-bee/[center]/[outer]
-//   - ?puzzle=<id>   → that puzzle     → redirect to /spelling-bee/[center]/[outer]
+// The /leksokipos page is a pure redirect gateway:
+//   - no params      → today's puzzle  → redirect to /leksokipos/[center]/[outer]
+//   - ?random=1      → random puzzle   → redirect to /leksokipos/[center]/[outer]
+//   - ?puzzle=<id>   → that puzzle     → redirect to /leksokipos/[center]/[outer]
 //
 // These tests verify that every puzzle's letter fields produce a URL that
 // parseCustomUrl can round-trip successfully — i.e. the redirect target is
@@ -16,36 +16,36 @@ import {
   getPuzzleForDate,
   getRandomPuzzle,
   getTodaysPuzzle,
-} from "@/data/spelling-bee";
+} from "@/data/leksokipos";
 
-import type { SpellingBeePuzzle } from "@/games/leksokipos/types";
+import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { greekToGreeklish } from "@/lib/greeklish";
 import { parseCustomUrl } from "@/games/leksokipos/lib/parseCustomUrl";
-import puzzlesEl from "@/data/spelling-bee/puzzles-el.json";
+import puzzlesEl from "@/data/leksokipos/puzzles-el.json";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Builds the canonical greeklish redirect path exactly as the page does. */
-function canonicalPath(puzzle: SpellingBeePuzzle): string {
-  return `/spelling-bee/${greekToGreeklish(puzzle.centerLetter)}/${greekToGreeklish(puzzle.outerLetters.join(""))}`;
+function canonicalPath(puzzle: LeksokiposPuzzle): string {
+  return `/leksokipos/${greekToGreeklish(puzzle.centerLetter)}/${greekToGreeklish(puzzle.outerLetters.join(""))}`;
 }
 
 /**
  * Builds the encoded redirect path (kept for regression tests that verify the
  * old percent-encoded Greek form — parseCustomUrl still accepts those).
  */
-function encodedRedirectPath(puzzle: SpellingBeePuzzle): string {
-  return `/spelling-bee/${encodeURIComponent(puzzle.centerLetter)}/${encodeURIComponent(puzzle.outerLetters.join(""))}`;
+function encodedRedirectPath(puzzle: LeksokiposPuzzle): string {
+  return `/leksokipos/${encodeURIComponent(puzzle.centerLetter)}/${encodeURIComponent(puzzle.outerLetters.join(""))}`;
 }
 
 /**
  * Asserts that the canonical path for a puzzle round-trips through
  * parseCustomUrl successfully — i.e. the redirect URL will not 404.
  */
-function expectValidRedirect(puzzle: SpellingBeePuzzle, label: string) {
+function expectValidRedirect(puzzle: LeksokiposPuzzle, label: string) {
   const path = canonicalPath(puzzle);
   // Extract the [center] and [outer] segments from the path
-  const parts = path.split("/"); // ['', 'spelling-bee', center, outer]
+  const parts = path.split("/"); // ['', 'leksokipos', center, outer]
   const center = parts[2];
   const outer = parts[3];
 
@@ -79,7 +79,7 @@ describe("greeklish canonical path — ASCII-only", () => {
 
   it("all 1,008 pre-built puzzles produce ASCII-only canonical paths", () => {
     const failures: string[] = [];
-    for (const puzzle of puzzlesEl as SpellingBeePuzzle[]) {
+    for (const puzzle of puzzlesEl as LeksokiposPuzzle[]) {
       const path = canonicalPath(puzzle);
       const hasNonAscii = [...path].some((ch) => ch.charCodeAt(0) >= 128);
       if (hasNonAscii) failures.push(puzzle.id);
@@ -111,7 +111,7 @@ describe("backward-compat — old percent-encoded Greek URLs", () => {
 
   it("all 1,008 pre-built puzzles round-trip through the old encoded form", () => {
     const failures: string[] = [];
-    for (const puzzle of puzzlesEl as SpellingBeePuzzle[]) {
+    for (const puzzle of puzzlesEl as LeksokiposPuzzle[]) {
       const path = encodedRedirectPath(puzzle);
       const parts = path.split("/");
       const parsed = parseCustomUrl(
@@ -130,9 +130,9 @@ describe("backward-compat — old percent-encoded Greek URLs", () => {
 // ── Canonical path format ─────────────────────────────────────────────────────
 
 describe("canonicalPath format", () => {
-  it("produces a path starting with /spelling-bee/", () => {
+  it("produces a path starting with /leksokipos/", () => {
     const p = getPuzzleForDate("2026-03-25");
-    expect(canonicalPath(p)).toMatch(/^\/spelling-bee\/.+\/.+$/);
+    expect(canonicalPath(p)).toMatch(/^\/leksokipos\/.+\/.+$/);
   });
 
   it("center segment is exactly 1 character", () => {
@@ -204,7 +204,7 @@ describe("redirect round-trip — getRandomPuzzle", () => {
 // catches it before it reaches production and causes a 404.
 
 describe("all pre-built puzzles — redirect round-trip", () => {
-  const puzzles = puzzlesEl as SpellingBeePuzzle[];
+  const puzzles = puzzlesEl as LeksokiposPuzzle[];
 
   it(`all ${puzzles.length} puzzles produce a canonical path that parseCustomUrl accepts`, () => {
     const failures: string[] = [];

@@ -1,4 +1,4 @@
-﻿// Wordle GR — data loader (runs server-side via Next.js App Router).
+﻿// Leksiarxeio — data loader (runs server-side via Next.js App Router).
 // Picks today's answer deterministically by date so every user gets the same word.
 //
 // One list per length (words-N.json) is used for both the answer pool and

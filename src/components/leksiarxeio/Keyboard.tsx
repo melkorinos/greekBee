@@ -1,6 +1,6 @@
 ﻿"use client";
 
-// On-screen Greek keyboard for Wordle GR.
+// On-screen Greek keyboard for Leksiarxeio.
 // Layout mirrors a standard Greek soft keyboard, adapted for Wordle.
 
 import type { LetterStateMap } from "@/games/leksiarxeio/types";

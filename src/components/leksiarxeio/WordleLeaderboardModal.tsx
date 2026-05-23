@@ -1,8 +1,8 @@
-﻿// WordleLeaderboardModal — bottom-sheet leaderboard for daily Wordle GR.
+﻿// WordleLeaderboardModal — bottom-sheet leaderboard for daily Leksiarxeio.
 //
 // Score = sum of attempts across all 5 lengths (4–8) for a given day.
 // Lower score = better rank.  Missing lengths count as 7 (penalty).
-// Mirrors the Spelling Bee LeaderboardModal in structure and style.
+// Mirrors the Leksokipos LeaderboardModal in structure and style.
 
 "use client";
 
@@ -22,7 +22,7 @@ import Link from "next/link";
 import type { LeaderboardUrlBuilder } from "@/hooks/useLeaderboard";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 
-// Re-use Spelling Bee style tokens — identical visual language
+// Re-use Leksokipos style tokens — identical visual language
 
 
 // ── Day helpers ───────────────────────────────────────────────────────────────
@@ -73,13 +73,13 @@ export function WordleLeaderboardModal({
     if (isOpen) setSelectedDate(today);
   }, [isOpen, today]);
 
-  // URL builder for the Wordle leaderboard endpoint.
-  // Wordle uses ?date= not ?puzzleId= so we cannot use the default builder.
+  // URL builder for the Leksiarxeio leaderboard endpoint.
+  // Uses ?date= (not ?puzzle_date=) to match the leksiarxeio-scores route shape.
   const buildUrl: LeaderboardUrlBuilder = useMemo(
     () => (date, deviceId) => {
       const params = new URLSearchParams({ date });
       if (deviceId) params.set("deviceId", deviceId);
-      return `/api/wordle-scores?${params.toString()}`;
+      return `/api/leksiarxeio-scores?${params.toString()}`;
     },
     []
   );

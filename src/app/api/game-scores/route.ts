@@ -1,8 +1,11 @@
-﻿// POST /api/scores  — upsert a player's score for a puzzle
-// GET  /api/scores?puzzleId=&deviceId= — top 20 + pinned player row
+// POST /api/game-scores — upsert a player's score for any game that uses game_scores
+// GET  /api/game-scores?game_id=&puzzle_date=&deviceId= — top 20 + pinned player row
 //
-// RLS: anon INSERT + anon SELECT (open leaderboard).
-// Score de-duplication: unique constraint on (device_id, puzzle_id).
+// Covers: Leksokipos (score = points, higher is better)
+//         Leksindeseis (score = mistakesRemaining 1–4, higher is better)
+//
+// RLS: anon INSERT + anon SELECT + anon UPDATE (open leaderboard).
+// Score de-duplication: unique constraint on (game_id, device_id, puzzle_date).
 // The client only sends scores when they increase, so an overwrite upsert is safe.
 
 import { NextRequest, NextResponse } from "next/server";
@@ -11,19 +14,13 @@ import { getSupabaseClient } from "@/lib/supabase";
 import { isISODate } from "@/games/leksokipos/lib";
 import { upsertAndClean } from "@/lib/supabasePost";
 
-// Run on the Edge runtime — avoids Fluid (Node.js) CPU billing for this
-// simple DB-proxy route. Supabase JS v2 is fully Edge-compatible (uses fetch,
-// not native Node.js modules).
-//
-// Edge CPU is billed against a separate, more generous free tier
-// ("Edge Request CPU Duration") rather than "Fluid Active CPU", which is the
-// app's most constrained usage tier.
 export const runtime = "edge";
 
 // ── POST ──────────────────────────────────────────────────────────────────────
 
 interface ScorePayload {
-  puzzle_id:    string;
+  game_id:      string;
+  puzzle_date:  string;
   device_id:    string;
   display_name: string;
   score:        number;
@@ -37,21 +34,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { puzzle_id, device_id, display_name, score } = body;
-  if (!puzzle_id || !device_id || typeof score !== "number") {
+  const { game_id, puzzle_date: rawDate, device_id, display_name, score } = body;
+
+  // Strip a trailing locale suffix (e.g. "2026-05-22-el" → "2026-05-22")
+  const puzzle_date = rawDate?.replace(/-[a-z]{2}$/i, "") ?? "";
+
+  if (!game_id || !puzzle_date || !device_id || typeof score !== "number") {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
-  // Only allow date-scoped puzzle IDs (YYYY-MM-DD) — no custom puzzles on the leaderboard.
-  if (!isISODate(puzzle_id)) {
-    return NextResponse.json({ error: "Invalid puzzle_id format" }, { status: 400 });
+  if (!isISODate(puzzle_date)) {
+    return NextResponse.json({ error: "Invalid puzzle_date format" }, { status: 400 });
   }
 
-  const err = await upsertAndClean("scores", "device_id,puzzle_id", "puzzle_id", {
-    puzzle_id,
-    device_id,
-    display_name: (display_name ?? "").trim() || "Ανώνυμος",
-    score,
-  });
+  const err = await upsertAndClean(
+    "game_scores",
+    "game_id,device_id,puzzle_date",
+    "puzzle_date",
+    {
+      game_id,
+      puzzle_date,
+      device_id,
+      display_name: (display_name ?? "").trim() || "Ανώνυμος",
+      score,
+    },
+  );
   if (err) return NextResponse.json({ error: err }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
@@ -59,20 +65,21 @@ export async function POST(req: NextRequest) {
 // ── GET ───────────────────────────────────────────────────────────────────────
 
 export async function GET(req: NextRequest) {
-  const puzzleId = req.nextUrl.searchParams.get("puzzleId");
-  const deviceId = req.nextUrl.searchParams.get("deviceId") ?? "";
+  const gameId    = req.nextUrl.searchParams.get("game_id") ?? "";
+  const puzzleDate = req.nextUrl.searchParams.get("puzzle_date") ?? "";
+  const deviceId  = req.nextUrl.searchParams.get("deviceId") ?? "";
 
-  if (!puzzleId) {
-    return NextResponse.json({ error: "puzzleId is required" }, { status: 400 });
+  if (!gameId || !puzzleDate) {
+    return NextResponse.json({ error: "game_id and puzzle_date are required" }, { status: 400 });
   }
 
   const supabase = getSupabaseClient();
 
-  // Fetch top 20 rows — strip device_id before returning to client.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rows, error } = await (supabase.from("scores") as any)
+  const { data: rows, error } = await (supabase.from("game_scores") as any)
     .select("device_id, display_name, score")
-    .eq("puzzle_id", puzzleId)
+    .eq("game_id", gameId)
+    .eq("puzzle_date", puzzleDate)
     .order("score", { ascending: false })
     .limit(20);
 
@@ -90,7 +97,6 @@ export async function GET(req: NextRequest) {
     isPlayer:     r.device_id === deviceId,
   }));
 
-  // If the player is already in the top 20, no pinned row needed.
   const playerInTop20 = top20.some((r) => r.isPlayer);
 
   let playerRow: {
@@ -101,20 +107,20 @@ export async function GET(req: NextRequest) {
   } | null = null;
 
   if (!playerInTop20 && deviceId) {
-    // Fetch the player's own row.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: playerData } = await (supabase.from("scores") as any)
+    const { data: playerData } = await (supabase.from("game_scores") as any)
       .select("display_name, score")
-      .eq("puzzle_id", puzzleId)
+      .eq("game_id", gameId)
+      .eq("puzzle_date", puzzleDate)
       .eq("device_id", deviceId)
       .single();
 
     if (playerData) {
-      // Count how many players have a strictly higher score → rank = count + 1.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { count } = await (supabase.from("scores") as any)
+      const { count } = await (supabase.from("game_scores") as any)
         .select("*", { count: "exact", head: true })
-        .eq("puzzle_id", puzzleId)
+        .eq("game_id", gameId)
+        .eq("puzzle_date", puzzleDate)
         .gt("score", playerData.score as number);
 
       playerRow = {

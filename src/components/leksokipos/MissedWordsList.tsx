@@ -6,12 +6,12 @@
 
 import { foundWordClass, foundWordPangramClass } from "./styles";
 
-import type { SpellingBeePuzzle } from "@/games/leksokipos/types";
+import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { isPangram } from "@/games/leksokipos/lib/pangram";
 import { useMemo } from "react";
 
 interface MissedWordsListProps {
-  puzzle: SpellingBeePuzzle;
+  puzzle: LeksokiposPuzzle;
   foundWords: string[];
 }
 

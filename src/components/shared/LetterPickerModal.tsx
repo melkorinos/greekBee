@@ -2,10 +2,10 @@
 
 // LetterPickerModal — shared modal for picking a set of Greek letters.
 //
-// Currently used by the Spelling Bee "New Puzzle" flow.  Designed to be
+// Currently used by the Leksokipos "New Puzzle" flow.  Designed to be
 // reusable by other games (e.g. Wordle custom-word sharer) via props.
 //
-// UX rules (Spelling Bee mode):
+// UX rules (Leksokipos mode):
 //  - The FIRST letter tapped becomes the center (mandatory) letter — shown in yellow.
 //  - The next 6 taps fill the outer ring — shown in dark.
 //  - Tapping a selected outer letter deselects it.

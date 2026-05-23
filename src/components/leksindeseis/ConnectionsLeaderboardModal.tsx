@@ -20,9 +20,9 @@ import type { LeaderboardUrlBuilder } from "@/hooks/useLeaderboard";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 
 const buildUrl: LeaderboardUrlBuilder = (date, deviceId) => {
-  const params = new URLSearchParams({ date });
+  const params = new URLSearchParams({ game_id: "leksindeseis", puzzle_date: date });
   if (deviceId) params.set("deviceId", deviceId);
-  return `/api/connections-scores?${params.toString()}`;
+  return `/api/game-scores?${params.toString()}`;
 };
 
 // ── Props ──────────────────────────────────────────────────────────────────────

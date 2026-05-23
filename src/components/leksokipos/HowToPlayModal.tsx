@@ -1,4 +1,4 @@
-// HowToPlayModal — Spelling Bee rules modal.
+// HowToPlayModal — Leksokipos rules modal.
 // Thin wrapper around the shared HowToPlayModal primitive.
 
 import { HowToPlayModal as SharedModal } from "@/components/shared/HowToPlayModal";

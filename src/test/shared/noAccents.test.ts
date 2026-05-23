@@ -12,13 +12,13 @@
 // and will be visible to players.
 
 import { describe, expect, it } from "vitest";
-import { buildCustomPuzzle } from "@/data/spelling-bee";
+import { buildCustomPuzzle } from "@/data/leksokipos";
 import { computeValidWords } from "@/games/leksokipos/lib/computeValidWords";
 import { parseCustomUrl } from "@/games/leksokipos/lib/parseCustomUrl";
 import { buildInitialState, gameReducer } from "@/games/leksokipos/hooks/gameReducer";
-import type { SpellingBeePuzzle } from "@/games/leksokipos/types";
-import { getPuzzleForDate, getRandomPuzzle } from "@/data/spelling-bee";
-import puzzlesEl from "@/data/spelling-bee/puzzles-el.json";
+import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
+import { getPuzzleForDate, getRandomPuzzle } from "@/data/leksokipos";
+import puzzlesEl from "@/data/leksokipos/puzzles-el.json";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -64,7 +64,7 @@ describe("hasAccent helper", () => {
 // ── puzzles-el.json puzzle letters ────────────────────────────────────────────
 
 describe("puzzles-el.json — no accents in puzzle letter fields", () => {
-  const puzzles = puzzlesEl as SpellingBeePuzzle[];
+  const puzzles = puzzlesEl as LeksokiposPuzzle[];
 
   it("centerLetter is accent-free in every puzzle", () => {
     for (const p of puzzles) {
@@ -150,7 +150,7 @@ describe("parseCustomUrl — normalised output is accent-free", () => {
 
   it("canonical URL path built from output contains no accents", () => {
     const result = parseCustomUrl("α", "βγδεζη");
-    const path = `/spelling-bee/${result!.center}/${result!.outer.join("")}`;
+    const path = `/leksokipos/${result!.center}/${result!.outer.join("")}`;
     expect(hasAccent(path)).toBe(false);
   });
 });
@@ -158,7 +158,7 @@ describe("parseCustomUrl — normalised output is accent-free", () => {
 // ── Game reducer — stored words are accent-free ───────────────────────────────
 
 describe("gameReducer SUBMIT_WORD — stored words are accent-free", () => {
-  const puzzle: SpellingBeePuzzle = {
+  const puzzle: LeksokiposPuzzle = {
     id: "test-noaccents",
     language: "el",
     date: "2026-01-01",

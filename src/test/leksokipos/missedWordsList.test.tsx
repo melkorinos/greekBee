@@ -4,9 +4,9 @@ import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 import { MissedWordsList } from "@/components/leksokipos/MissedWordsList";
-import type { SpellingBeePuzzle } from "@/games/leksokipos/types";
+import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 
-const puzzle: SpellingBeePuzzle = {
+const puzzle: LeksokiposPuzzle = {
   id: "test-missed",
   language: "el",
   date: "2026-01-01",

@@ -1,5 +1,5 @@
 // parseCustomUrl — validates and normalises the raw [center]/[outer] URL params
-// for the custom Spelling Bee route (/spelling-bee/[center]/[outer]).
+// for the custom Leksokipos route (/leksokipos/[center]/[outer]).
 //
 // Extracted as a pure function so it can be unit-tested independently of Next.js.
 // No React imports — safe to import from game-logic land.

@@ -1,5 +1,5 @@
-// spelling-bee/page.tsx — redirects to the letter-based canonical URL for
-// today's puzzle (/spelling-bee/[center]/[outer]).
+// leksokipos/page.tsx — redirects to the letter-based canonical URL for
+// today's puzzle (/leksokipos/[center]/[outer]).
 //
 // Why redirect instead of rendering here?
 // The letter URL IS the shareable link. If someone shares it, the recipient

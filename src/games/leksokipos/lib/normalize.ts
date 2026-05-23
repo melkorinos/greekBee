@@ -9,7 +9,7 @@
 // stores the base form.
 //
 // NOTE: Graduate to src/lib/normalize.ts when a third game needs it
-// (trigger: two games now use it — Spelling Bee + Wordle GR).
+// (trigger: two games now use it — Leksokipos + Leksiarxeio).
 
 /**
  * Normalises a string for puzzle letter comparison:

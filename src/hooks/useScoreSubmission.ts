@@ -1,4 +1,4 @@
-// useScoreSubmission — owns the score-posting lifecycle for daily Spelling Bee puzzles.
+// useScoreSubmission — owns the score-posting lifecycle for daily Leksokipos puzzles.
 //
 // Interface: submit(score) — one call, nothing else to know.
 //
@@ -50,8 +50,9 @@ export function useScoreSubmission({
       if (!enabled || !deviceId) return;
       if (score <= 0 || score <= lastPostedRef.current) return;
       lastPostedRef.current = score;
-      postScore("/api/scores", {
-        puzzle_id:    puzzleId,
+      postScore("/api/game-scores", {
+        game_id:      "leksokipos",
+        puzzle_date:  puzzleId,
         device_id:    deviceId,
         display_name: displayNameRef.current || "Ανώνυμος",
         score,
@@ -70,8 +71,9 @@ export function useScoreSubmission({
   const submitWithName = useCallback(
     (score: number, name: string) => {
       if (!enabled || !deviceId || score <= 0) return;
-      postScore("/api/scores", {
-        puzzle_id:    puzzleId,
+      postScore("/api/game-scores", {
+        game_id:      "leksokipos",
+        puzzle_date:  puzzleId,
         device_id:    deviceId,
         display_name: name || "Ανώνυμος",
         score,

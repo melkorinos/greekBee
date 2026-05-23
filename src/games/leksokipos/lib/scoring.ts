@@ -1,7 +1,7 @@
-// Word scoring — pure function, mirrors the NYT Spelling Bee scoring rules.
+// Word scoring — pure function, mirrors the Leksokipos scoring rules.
 // Scores are based on word length with a flat bonus for pangrams.
 
-import type { SpellingBeePuzzle } from "../types";
+import type { LeksokiposPuzzle } from "../types";
 import { isPangram } from "./pangram";
 
 /** Bonus points awarded on top of regular score for a pangram */
@@ -15,7 +15,7 @@ const PANGRAM_BONUS = 7;
  *  - 5+ letter words → 1 point per letter
  *  - Pangrams        → above score + 7 bonus points
  */
-export function scoreWord(word: string, puzzle: SpellingBeePuzzle): number {
+export function scoreWord(word: string, puzzle: LeksokiposPuzzle): number {
   const base = word.length === 4 ? 1 : word.length;
   const bonus = isPangram(word, puzzle) ? PANGRAM_BONUS : 0;
   return base + bonus;
@@ -35,7 +35,7 @@ export function scoreWord(word: string, puzzle: SpellingBeePuzzle): number {
  */
 export const MAX_SCORE_CAP = 500;
 
-export function maxScore(puzzle: SpellingBeePuzzle): number {
+export function maxScore(puzzle: LeksokiposPuzzle): number {
   const raw = puzzle.validWords.reduce(
     (total, word) => total + scoreWord(word, puzzle),
     0

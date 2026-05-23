@@ -1,5 +1,5 @@
 // computeValidWords — dynamically computes the valid word list for any 7-letter
-// combination.  Used by the custom-URL route (/spelling-bee/[center]/[outer])
+// combination.  Used by the custom-URL route (/leksokipos/[center]/[outer])
 // so that players can construct arbitrary puzzle URLs without operator pre-curation.
 //
 // Pure function: no React, no side-effects, fully unit-testable.
@@ -20,7 +20,7 @@
 import { normalizeLetters } from "./normalize";
 
 /**
- * Returns every word from `wordList` that satisfies Spelling Bee rules for the
+ * Returns every word from `wordList` that satisfies Leksokipos rules for the
  * given letter set:
  *  - At least 4 letters long
  *  - Contains the center letter (after normalisation)

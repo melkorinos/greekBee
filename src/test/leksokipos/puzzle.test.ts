@@ -3,10 +3,10 @@
 import { describe, expect, it } from "vitest";
 
 import { isDailyPuzzle, isISODate } from "@/games/leksokipos/lib/puzzle";
-import type { SpellingBeePuzzle } from "@/games/leksokipos/types";
+import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 
 // Minimal puzzle stub — only `id` is needed by isDailyPuzzle
-function puzzleWith(id: string): Pick<SpellingBeePuzzle, "id"> {
+function puzzleWith(id: string): Pick<LeksokiposPuzzle, "id"> {
   return { id };
 }
 

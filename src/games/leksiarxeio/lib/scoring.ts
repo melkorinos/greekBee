@@ -1,4 +1,4 @@
-// Wordle GR scoring — pure function, no React.
+// Leksiarxeio scoring — pure function, no React.
 
 import { WORDLE_SCORES } from "../types";
 

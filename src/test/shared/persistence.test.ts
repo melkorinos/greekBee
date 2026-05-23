@@ -16,7 +16,7 @@ interface TestSnapshot {
   foundWords: string[];
 }
 
-const GAME_ID  = "spelling-bee" as const;
+const GAME_ID  = "leksokipos" as const;
 const SESSION  = "test-puzzle-id";
 const SNAPSHOT: TestSnapshot = { score: 10, foundWords: ["αλφα"] };
 

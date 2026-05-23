@@ -1,17 +1,17 @@
 "use client";
 
-// useGameState — the main React hook for the Spelling Bee game.
+// useGameState — the main React hook for the Leksokipos game.
 // Wires up the pure reducer with useReducer and exposes a clean API to components.
 
 import { buildInitialState, gameReducer } from "./gameReducer";
 import { useCallback, useMemo, useReducer } from "react";
 
-import type { RankName, SpellingBeePuzzle } from "../types";
+import type { RankName, LeksokiposPuzzle } from "../types";
 import { normalizeLetters } from "../lib/normalize";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 
-// Fields persisted for a single Spelling Bee round
-interface SpellingBeeRoundSnapshot {
+// Fields persisted for a single Leksokipos round
+interface LeksokiposRoundSnapshot {
   foundWords:   string[];
   score:        number;
   currentRank:  RankName;
@@ -24,7 +24,7 @@ interface SpellingBeeRoundSnapshot {
  *
  * @param initialPuzzle - The puzzle to start with (loaded from data layer)
  */
-export function useGameState(initialPuzzle: SpellingBeePuzzle) {
+export function useGameState(initialPuzzle: LeksokiposPuzzle) {
   // Always start from clean state — avoids SSR/client hydration mismatch.
   const [state, dispatch] = useReducer(
     gameReducer,
@@ -35,7 +35,7 @@ export function useGameState(initialPuzzle: SpellingBeePuzzle) {
   // Memoize only the fields that should be persisted.
   // useMemo creates a new object reference only when these fields change,
   // which is what triggers the save effect inside useRoundPersistence.
-  const snapshot = useMemo<SpellingBeeRoundSnapshot>(() => ({
+  const snapshot = useMemo<LeksokiposRoundSnapshot>(() => ({
     foundWords:  state.foundWords,
     score:       state.score,
     currentRank: state.currentRank,
@@ -43,7 +43,7 @@ export function useGameState(initialPuzzle: SpellingBeePuzzle) {
     givenUp:     state.givenUp ?? false,
   }), [state.foundWords, state.score, state.currentRank, state.startedAt, state.givenUp]);
 
-  const clearRound = useRoundPersistence<SpellingBeeRoundSnapshot>(
+  const clearRound = useRoundPersistence<LeksokiposRoundSnapshot>(
     "leksokipos",
     initialPuzzle.id,
     snapshot,
@@ -98,7 +98,7 @@ export function useGameState(initialPuzzle: SpellingBeePuzzle) {
   );
 
   const newGame = useCallback(
-    (puzzle: SpellingBeePuzzle) => {
+    (puzzle: LeksokiposPuzzle) => {
       clearRound();
       dispatch({ type: "NEW_GAME", puzzle });
     },

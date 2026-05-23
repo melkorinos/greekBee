@@ -1,6 +1,6 @@
 "use client";
 
-// Wordle GR — React hook.
+// Leksiarxeio — React hook.
 // Wires the reducer to persistence and exposes a clean API to the UI.
 
 import type { GuessResult, WordlePuzzle, WordleStatus } from "../types";

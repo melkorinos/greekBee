@@ -47,7 +47,8 @@ export function useConnectionsScoreSubmission({
       if (!deviceId) return;
       if (score <= 0 || score <= lastPostedRef.current) return;
       lastPostedRef.current = score;
-      postScore("/api/connections-scores", {
+      postScore("/api/game-scores", {
+        game_id:      "leksindeseis",
         puzzle_date:  puzzleDate,
         device_id:    deviceId,
         display_name: displayNameRef.current || "Ανώνυμος",
@@ -60,7 +61,8 @@ export function useConnectionsScoreSubmission({
   const submitWithName = useCallback(
     (score: number, name: string) => {
       if (!deviceId || score <= 0) return;
-      postScore("/api/connections-scores", {
+      postScore("/api/game-scores", {
+        game_id:      "leksindeseis",
         puzzle_date:  puzzleDate,
         device_id:    deviceId,
         display_name: name || "Ανώνυμος",

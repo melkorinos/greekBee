@@ -1,4 +1,4 @@
-// LeaderboardModal — bottom-sheet leaderboard for daily Spelling Bee puzzles.
+// LeaderboardModal — bottom-sheet leaderboard for daily Leksokipos puzzles.
 //
 // Features:
 //   - Rolling 7-day strip (pill buttons) to browse recent leaderboards;

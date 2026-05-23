@@ -27,16 +27,16 @@ export interface LeaderboardResponse {
 const EMPTY: LeaderboardResponse = { top20: [], playerRow: null };
 
 /**
- * Builds the fetch URL for the Spelling Bee leaderboard (default).
+ * Builds the fetch URL for the Leksokipos leaderboard (default).
  * Pass a custom `buildUrl` to point the hook at a different endpoint
- * (e.g. Wordle: `/api/wordle-scores?date=`).
+ * (e.g. Leksiarxeio: `/api/leksiarxeio-scores?date=`).
  */
 export type LeaderboardUrlBuilder = (puzzleId: string, deviceId: string) => string;
 
 const defaultBuildUrl: LeaderboardUrlBuilder = (puzzleId, deviceId) => {
-  const params = new URLSearchParams({ puzzleId });
+  const params = new URLSearchParams({ game_id: "leksokipos", puzzle_date: puzzleId });
   if (deviceId) params.set("deviceId", deviceId);
-  return `/api/scores?${params.toString()}`;
+  return `/api/game-scores?${params.toString()}`;
 };
 
 export function useLeaderboard(

@@ -4,7 +4,7 @@
 import { MAX_SCORE_CAP, maxScore, scoreWord } from "@/games/leksokipos/lib/scoring";
 import { describe, expect, it } from "vitest";
 
-import type { SpellingBeePuzzle } from "@/games/leksokipos/types";
+import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { calculateRank } from "@/games/leksokipos/lib/ranking";
 import { isPangram } from "@/games/leksokipos/lib/pangram";
 import { validateWord } from "@/games/leksokipos/lib/validation";
@@ -12,7 +12,7 @@ import { validateWord } from "@/games/leksokipos/lib/validation";
 // ── Shared test fixture ────────────────────────────────────────────────────────
 
 /** Minimal puzzle used across all logic tests */
-const puzzle: SpellingBeePuzzle = {
+const puzzle: LeksokiposPuzzle = {
   id: "test-puzzle",
   language: "el",
   date: "2026-01-01",
@@ -67,7 +67,7 @@ describe("maxScore", () => {
     const bigWords = Array.from({ length: 100 }, (_, i) =>
       "abcdefghi" + String.fromCharCode(97 + (i % 26))
     );
-    const bigPuzzle: SpellingBeePuzzle = {
+    const bigPuzzle: LeksokiposPuzzle = {
       ...puzzle,
       validWords: bigWords,
     };

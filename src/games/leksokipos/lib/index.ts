@@ -1,4 +1,4 @@
-﻿// Pure game-logic helpers for Spelling Bee (validation, scoring, ranking).
+﻿// Pure game-logic helpers for Leksokipos (validation, scoring, ranking).
 // These are plain functions with no React dependency — easy to unit test.
 // Import from "@/games/leksokipos/lib" to get everything in one shot.
 

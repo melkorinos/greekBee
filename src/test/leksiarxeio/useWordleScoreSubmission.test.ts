@@ -23,7 +23,7 @@ const BASE = {
 };
 
 describe("useWordleScoreSubmission — submit()", () => {
-  it("POSTs to /api/wordle-scores with correct fields", async () => {
+  it("POSTs to /api/leksiarxeio-scores with correct fields", async () => {
     const spy = mockFetch();
     const { result } = renderHook(() => useWordleScoreSubmission(BASE));
 
@@ -31,7 +31,7 @@ describe("useWordleScoreSubmission — submit()", () => {
 
     expect(spy).toHaveBeenCalledOnce();
     const [url, init] = spy.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/wordle-scores");
+    expect(url).toBe("/api/leksiarxeio-scores");
     const body = JSON.parse(init.body as string);
     expect(body.puzzle_date).toBe("2026-05-22");
     expect(body.word_length).toBe(5);

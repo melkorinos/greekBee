@@ -1,4 +1,4 @@
-// Spelling Bee UI components — export everything from here.
+// Leksokipos UI components — export everything from here.
 export { HoneycombGrid } from "./HoneycombGrid";
 export type { HoneycombGridProps } from "./HoneycombGrid";
 export { WordInput } from "./WordInput";

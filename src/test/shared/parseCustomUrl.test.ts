@@ -1,6 +1,6 @@
 ﻿// parseCustomUrl.test.ts — unit tests for the custom puzzle URL param validator.
 // parseCustomUrl is the security/correctness boundary for the
-// /spelling-bee/[center]/[outer] route. Bugs here either cause silent bad
+// /leksokipos/[center]/[outer] route. Bugs here either cause silent bad
 // games or break valid URLs for real players.
 
 import { describe, expect, it } from "vitest";

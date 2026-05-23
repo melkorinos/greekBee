@@ -62,7 +62,7 @@ describe("writeSlice", () => {
   it("overwrites only the target slice on a second write", () => {
     writeSlice("leksokipos", { score: 1 });
     writeSlice("leksiarxeio",       { streak: 3 });
-    writeSlice("leksokipos", { score: 99 }); // second write to spelling-bee
+    writeSlice("leksokipos", { score: 99 }); // second write to leksokipos
 
     const env = rawEnvelope();
     expect(env["leksokipos"]).toEqual({ score: 99 }); // updated

@@ -2,7 +2,7 @@
 
 // ShareButton — copies the current page URL to the clipboard so players can
 // share a custom puzzle with friends.
-// Used only in the /spelling-bee/[center]/[outer] route for now.
+// Used only in the /leksokipos/[center]/[outer] route for now.
 
 import { useCallback, useState } from "react";
 
@@ -10,7 +10,7 @@ type CopyState = "idle" | "copied" | "error";
 
 interface ShareButtonProps {
   /**
-   * Canonical path (e.g. `/spelling-bee/α/βγδεζη`) built from the normalised
+   * Canonical path (e.g. `/leksokipos/α/βγδεζη`) built from the normalised
    * letters server-side.  The full URL is assembled client-side by prepending
    * `window.location.origin` so the share link is always accent-free and absolute.
    * If omitted, falls back to `window.location.href` (e.g. for non-custom pages).

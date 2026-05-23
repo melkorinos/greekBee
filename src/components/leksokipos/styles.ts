@@ -1,4 +1,4 @@
-// styles.ts — shared Tailwind class tokens for all Spelling Bee UI components.
+// styles.ts — shared Tailwind class tokens for all Leksokipos UI components.
 //
 // Centralise every repeated pattern here so a future rebrand is a single-file change.
 // Components import named constants — no magic strings scattered across the codebase.

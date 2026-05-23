@@ -1,7 +1,7 @@
 ﻿// Unit tests for the game reducer — fast, no React, no DOM.
 // Tests every action type directly through the reducer's interface.
 
-import type { GameState, SpellingBeePuzzle } from "@/games/leksokipos/types";
+import type { GameState, LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { buildInitialState, gameReducer } from "@/games/leksokipos/hooks/gameReducer";
 import { describe, expect, it } from "vitest";
 
@@ -9,7 +9,7 @@ import { maxScore } from "@/games/leksokipos/lib/scoring";
 
 // ── Shared test fixture ────────────────────────────────────────────────────────
 
-const puzzle: SpellingBeePuzzle = {
+const puzzle: LeksokiposPuzzle = {
   id: "test-reducer",
   language: "el",
   date: "2026-01-01",
@@ -214,7 +214,7 @@ describe("NEW_GAME", () => {
     }
     s = gameReducer(s, { type: "SUBMIT_WORD" });
 
-    const newPuzzle: SpellingBeePuzzle ={ ...puzzle, id: "new-puzzle" };
+    const newPuzzle: LeksokiposPuzzle ={ ...puzzle, id: "new-puzzle" };
     s = gameReducer(s, { type: "NEW_GAME", puzzle: newPuzzle });
 
     expect(s.score).toBe(0);
@@ -225,7 +225,7 @@ describe("NEW_GAME", () => {
   });
 
   it("sets puzzleMaxScore for the new puzzle", () => {
-    const newPuzzle: SpellingBeePuzzle ={ ...puzzle, id: "new-puzzle" };
+    const newPuzzle: LeksokiposPuzzle ={ ...puzzle, id: "new-puzzle" };
     const s = gameReducer(freshState(), { type: "NEW_GAME", puzzle: newPuzzle });
     expect(s.puzzleMaxScore).toBe(maxScore(newPuzzle));
   });

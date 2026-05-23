@@ -1,4 +1,4 @@
-// evaluateGuess — pure function, the core of Wordle GR.
+// evaluateGuess — pure function, the core of Leksiarxeio.
 // Given the secret answer and a submitted guess, returns a TileState for each position.
 // No React, no side effects — fully unit-testable.
 //

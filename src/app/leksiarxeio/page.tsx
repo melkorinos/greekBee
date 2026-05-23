@@ -1,8 +1,8 @@
-﻿// Wordle GR — server component.
+﻿// Leksiarxeio — server component.
 // Loads all 5 daily puzzles (lengths 4–8) and passes them to the client board.
 // The client manages which length is currently active.
 
-import { WORDLE_LENGTHS, getAllTodaysWordlePuzzles, getTodayDateString, getValidWords } from "@/data/wordle";
+import { WORDLE_LENGTHS, getAllTodaysWordlePuzzles, getTodayDateString, getValidWords } from "@/data/leksiarxeio";
 
 import type { WordleLength } from "@/games/leksiarxeio/types";
 import { WordlePageClient } from "@/components/leksiarxeio/WordleHeader";

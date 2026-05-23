@@ -1,4 +1,4 @@
-// useWordleScoreSubmission — owns the score-posting lifecycle for daily Wordle GR.
+// useWordleScoreSubmission — owns the score-posting lifecycle for daily Leksiarxeio.
 //
 // Interface: submit(length, attempts, won) — three values, nothing else to know.
 //
@@ -41,7 +41,7 @@ export function useWordleScoreSubmission({
   const submit = useCallback(
     (length: number, attempts: number, won: boolean) => {
       if (!deviceId) return;
-      postScore("/api/wordle-scores", {
+      postScore("/api/leksiarxeio-scores", {
         puzzle_date:  today,
         word_length:  length,
         device_id:    deviceId,

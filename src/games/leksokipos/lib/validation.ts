@@ -1,7 +1,7 @@
 // Word validation logic — pure functions, no React, fully unit-testable.
-// Every rule of the Spelling Bee game is enforced here.
+// Every rule of the Leksokipos game is enforced here.
 
-import type { SpellingBeePuzzle, ValidationResult, ValidationStatus } from "../types";
+import type { LeksokiposPuzzle, ValidationResult, ValidationStatus } from "../types";
 
 import { isPangram } from "./pangram";
 import { normalizeLetters } from "./normalize";
@@ -19,7 +19,7 @@ interface PuzzleIndex {
 
 const puzzleIndexCache = new Map<string, PuzzleIndex>();
 
-function getPuzzleIndex(puzzle: SpellingBeePuzzle): PuzzleIndex {
+function getPuzzleIndex(puzzle: LeksokiposPuzzle): PuzzleIndex {
   const cached = puzzleIndexCache.get(puzzle.id);
   if (cached) return cached;
   const index: PuzzleIndex = {
@@ -37,7 +37,7 @@ function getPuzzleIndex(puzzle: SpellingBeePuzzle): PuzzleIndex {
  */
 export function validateWord(
   word: string,
-  puzzle: SpellingBeePuzzle,
+  puzzle: LeksokiposPuzzle,
   foundWords: string[]
 ): ValidationResult {
   // Normalise: lowercase + convert Greek final sigma ς → σ
@@ -60,7 +60,7 @@ export function validateWord(
  */
 function getValidationStatus(
   word: string,
-  puzzle: SpellingBeePuzzle,
+  puzzle: LeksokiposPuzzle,
   foundWords: string[]
 ): ValidationStatus {
   // Rule 1: minimum length of 4 letters

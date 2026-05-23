@@ -1,6 +1,5 @@
 // Puzzle data access layer — re-exports from game-scoped loaders.
-// Import directly from "@/data/spelling-bee" for Spelling Bee puzzles.
-// This barrel exists so existing @/data imports don't break during migration.
+// Import directly from "@/data/leksokipos" for Leksokipos puzzles.
 
 export {
   getPuzzleForDate,
@@ -11,4 +10,4 @@ export {
   buildCustomPuzzle,
   getPrebuiltPuzzleByLetters,
   getRecentPuzzleDates,
-} from "./spelling-bee/index";
+} from "./leksokipos/index";

@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   getTodaysConnectionsPuzzle,
   allConnectionsPuzzles,
-} from "@/data/connections";
+} from "@/data/leksindeseis";
 
 // ── allConnectionsPuzzles ──────────────────────────────────────────────────────
 

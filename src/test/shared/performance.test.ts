@@ -25,7 +25,7 @@
 // All tests run against the real words-el.json so they reflect actual production
 // input size. Import cost is paid once per test-runner process (module cache).
 
-import { buildCustomPuzzle, getPrebuiltPuzzleByLetters } from "@/data/spelling-bee/index";
+import { buildCustomPuzzle, getPrebuiltPuzzleByLetters } from "@/data/leksokipos/index";
 import { describe, expect, it } from "vitest";
 
 import { computeValidWords } from "@/games/leksokipos/lib/computeValidWords";

@@ -1,5 +1,5 @@
-﻿// spellingBeeStyles.test.ts
-// Smoke-tests for src/components/spelling-bee/styles.ts.
+﻿// leksokiposStyles.test.ts
+// Smoke-tests for src/components/leksokipos/styles.ts.
 //
 // Goals:
 //   1. Every exported token is a non-empty string (catches accidental deletions / renames).

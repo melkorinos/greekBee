@@ -7,7 +7,7 @@ import {
   getTodayDateString,
   getTodaysWordlePuzzle,
   getValidWords,
-} from "@/data/wordle";
+} from "@/data/leksiarxeio";
 import { describe, expect, it } from "vitest";
 
 describe("getTodaysWordlePuzzle", () => {

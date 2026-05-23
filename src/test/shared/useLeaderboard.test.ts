@@ -71,14 +71,15 @@ describe("useLeaderboard — initial fetch", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it("passes puzzleId and deviceId as query params", async () => {
+  it("passes puzzle_date, game_id and deviceId as query params", async () => {
     const spy = mockFetch(SAMPLE_RESPONSE);
 
     renderHook(() => useLeaderboard("2026-05-18", "device-abc", true));
 
     await waitFor(() => expect(spy).toHaveBeenCalledOnce());
     const [url] = spy.mock.calls[0] as [string];
-    expect(url).toContain("puzzleId=2026-05-18");
+    expect(url).toContain("puzzle_date=2026-05-18");
+    expect(url).toContain("game_id=leksokipos");
     expect(url).toContain("deviceId=device-abc");
   });
 
@@ -218,17 +219,17 @@ describe("useLeaderboard — manual refresh", () => {
 // ── custom buildUrl ────────────────────────────────────────────────────────────
 
 describe("useLeaderboard — custom buildUrl", () => {
-  it("calls the custom URL builder instead of the default /api/scores", async () => {
+  it("calls the custom URL builder instead of the default /api/game-scores", async () => {
     const spy = mockFetch(SAMPLE_RESPONSE);
     const buildUrl = (puzzleId: string, deviceId: string) =>
-      `/api/wordle-scores?date=${puzzleId}&deviceId=${deviceId}`;
+      `/api/leksiarxeio-scores?date=${puzzleId}&deviceId=${deviceId}`;
 
     renderHook(() => useLeaderboard("2026-05-18", "device-x", true, buildUrl));
 
     await waitFor(() => expect(spy).toHaveBeenCalledOnce());
     const [url] = spy.mock.calls[0] as [string];
-    expect(url).toBe("/api/wordle-scores?date=2026-05-18&deviceId=device-x");
-    expect(url).not.toContain("/api/scores");
+    expect(url).toBe("/api/leksiarxeio-scores?date=2026-05-18&deviceId=device-x");
+    expect(url).not.toContain("/api/game-scores");
   });
 
   it("passes puzzleId and deviceId to the custom builder", async () => {

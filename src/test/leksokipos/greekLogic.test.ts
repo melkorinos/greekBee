@@ -3,15 +3,15 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { SpellingBeePuzzle } from "@/games/leksokipos/types";
-import { getPuzzleForDate } from "@/data/spelling-bee";
+import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
+import { getPuzzleForDate } from "@/data/leksokipos";
 import { isPangram } from "@/games/leksokipos/lib/pangram";
 import { scoreWord } from "@/games/leksokipos/lib/scoring";
 import { validateWord } from "@/games/leksokipos/lib/validation";
 
 // ── Greek test puzzle (mirrors puzzles-el.json) ────────────────────────────────
 
-const puzzle: SpellingBeePuzzle = {
+const puzzle: LeksokiposPuzzle = {
   id: "2026-03-25-el",
   language: "el",
   date: "2026-03-25",

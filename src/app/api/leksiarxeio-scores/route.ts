@@ -1,5 +1,5 @@
-﻿// POST /api/wordle-scores — upsert one length result for a player on a given date
-// GET  /api/wordle-scores?date=YYYY-MM-DD&deviceId= — daily aggregate leaderboard
+// POST /api/leksiarxeio-scores — upsert one length result for a player on a given date
+// GET  /api/leksiarxeio-scores?date=YYYY-MM-DD&deviceId= — daily aggregate leaderboard
 //
 // Score = sum of attempts across all 5 lengths (4–8).
 // Missing lengths are treated as 7 (worse than a failed game) to penalise
@@ -15,10 +15,6 @@ import { getSupabaseClient } from "@/lib/supabase";
 import { isISODate } from "@/games/leksokipos/lib";
 import { upsertAndClean } from "@/lib/supabasePost";
 
-// Run on the Edge runtime — avoids Fluid (Node.js) CPU billing.
-// All Supabase calls in this route use fetch under the hood, which is
-// available in the Edge runtime without any Node.js polyfills.
-// Edge CPU is billed against a separate free tier from Fluid Active CPU.
 export const runtime = "edge";
 
 const WORDLE_LENGTHS = [4, 5, 6, 7, 8] as const;
@@ -58,7 +54,7 @@ export async function POST(req: NextRequest) {
   }
 
   const err = await upsertAndClean(
-    "wordle_scores",
+    "leksiarxeio_scores",
     "device_id,puzzle_date,word_length",
     "puzzle_date",
     {
@@ -99,7 +95,7 @@ export async function GET(req: NextRequest) {
   const supabase = getSupabaseClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rows, error } = await (supabase.from("wordle_scores") as any)
+  const { data: rows, error } = await (supabase.from("leksiarxeio_scores") as any)
     .select("device_id, display_name, word_length, attempts")
     .eq("puzzle_date", date);
 
@@ -138,7 +134,6 @@ export async function GET(req: NextRequest) {
     isPlayer:     p.device_id === deviceId,
   }));
 
-  // If the player is already in top20, no pinned row needed
   const playerInTop20 = top20.some((r) => r.isPlayer);
   let playerRow: {
     rank:         number;

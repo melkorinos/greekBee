@@ -23,7 +23,7 @@ const BASE = {
 };
 
 describe("useConnectionsScoreSubmission — submit()", () => {
-  it("POSTs to /api/connections-scores with correct fields", async () => {
+  it("POSTs to /api/game-scores with correct fields", async () => {
     const spy = mockFetch();
     const { result } = renderHook(() => useConnectionsScoreSubmission(BASE));
 
@@ -31,8 +31,9 @@ describe("useConnectionsScoreSubmission — submit()", () => {
 
     expect(spy).toHaveBeenCalledOnce();
     const [url, init] = spy.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/connections-scores");
+    expect(url).toBe("/api/game-scores");
     const body = JSON.parse(init.body as string);
+    expect(body.game_id).toBe("leksindeseis");
     expect(body.puzzle_date).toBe("2026-05-22");
     expect(body.device_id).toBe("device-abc");
     expect(body.display_name).toBe("Νίκος");

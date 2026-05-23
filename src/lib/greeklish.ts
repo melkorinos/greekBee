@@ -1,6 +1,6 @@
 // greeklish.ts — bijective Latin ↔ Greek single-character transliteration.
 //
-// Used to produce clean ASCII URLs for the custom Spelling Bee route so that
+// Used to produce clean ASCII URLs for the custom Leksokipos route so that
 // shared links look readable and do not contain percent-encoded multi-byte
 // sequences (Greek code points each encode as 4 ASCII characters in a URL).
 //

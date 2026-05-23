@@ -1,4 +1,4 @@
-// spellingBeeDataLoader.test.ts — unit tests for the Spelling Bee data layer.
+// leksokiposDataLoader.test.ts — unit tests for the Leksokipos data layer.
 // Covers: getPuzzleForDate, getPuzzleById, getRandomPuzzle, getNextPuzzle.
 // These functions are the gateway between raw JSON and the game; bugs here
 // would break the daily puzzle for all players.
@@ -11,7 +11,7 @@ import {
   getPuzzleForDate,
   getRandomPuzzle,
   getRecentPuzzleDates,
-} from "@/data/spelling-bee";
+} from "@/data/leksokipos";
 
 // ── getPuzzleForDate ───────────────────────────────────────────────────────────
 

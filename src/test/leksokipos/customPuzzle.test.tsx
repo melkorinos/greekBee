@@ -3,15 +3,15 @@
 // combo into a fully playable Puzzle object at request time.
 
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { buildCustomPuzzle } from "@/data/spelling-bee/index";
-import type { SpellingBeePuzzle } from "@/games/leksokipos/types";
+import { buildCustomPuzzle } from "@/data/leksokipos/index";
+import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 
 // ── buildCustomPuzzle ──────────────────────────────────────────────────────────
 
 describe("buildCustomPuzzle", () => {
   it("returns a Puzzle with the expected shape", () => {
     const puzzle = buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
-    expect(puzzle).toMatchObject<Partial<SpellingBeePuzzle>>({
+    expect(puzzle).toMatchObject<Partial<LeksokiposPuzzle>>({
       language: "el",
       centerLetter: "α",
       outerLetters: ["λ", "τ", "ι", "δ", "ε", "σ"],
@@ -113,7 +113,7 @@ describe("ShareButton", () => {
   });
 
   it("renders the share button", () => {
-    render(<ShareButton canonicalPath="/spelling-bee/α/βγδεζη" />);
+    render(<ShareButton canonicalPath="/leksokipos/α/βγδεζη" />);
     expect(screen.getByTestId("btn-share")).toBeInTheDocument();
     // Idle tooltip text is rendered in the DOM (via the hover tooltip div)
     expect(screen.getByText("Κοινοποίηση")).toBeInTheDocument();
@@ -122,7 +122,7 @@ describe("ShareButton", () => {
   it("copies the provided URL to the clipboard on click", async () => {
     // In jsdom window.location.origin is 'http://localhost', so the full URL
     // is origin + canonicalPath.
-    const path = "/spelling-bee/α/βγδεζη";
+    const path = "/leksokipos/α/βγδεζη";
     render(<ShareButton canonicalPath={path} />);
     await act(async () => {
       fireEvent.click(screen.getByTestId("btn-share"));
@@ -132,7 +132,7 @@ describe("ShareButton", () => {
   });
 
   it("shows a success tooltip after a successful copy", async () => {
-    render(<ShareButton canonicalPath="/spelling-bee/α/βγδεζη" />);
+    render(<ShareButton canonicalPath="/leksokipos/α/βγδεζη" />);
     await act(async () => {
       fireEvent.click(screen.getByTestId("btn-share"));
     });
@@ -142,7 +142,7 @@ describe("ShareButton", () => {
 
   it("shows an error tooltip when clipboard write fails", async () => {
     writeText.mockRejectedValue(new Error("denied"));
-    render(<ShareButton canonicalPath="/spelling-bee/α/βγδεζη" />);
+    render(<ShareButton canonicalPath="/leksokipos/α/βγδεζη" />);
     await act(async () => {
       fireEvent.click(screen.getByTestId("btn-share"));
     });

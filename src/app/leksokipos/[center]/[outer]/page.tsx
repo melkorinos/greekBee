@@ -52,7 +52,7 @@ export default async function CustomSpellingBeePage({
   const parsed = parseCustomUrl(rawCenter, rawOuter);
   if (!parsed) notFound();
 
-  // Canonical URL uses greeklish (plain ASCII) — e.g. /spelling-bee/k/aeiost.
+  // Canonical URL uses greeklish (plain ASCII) — e.g. /leksokipos/k/aeiost.
   // Redirect if raw params are not already in greeklish canonical form
   // (handles: old percent-encoded Greek URLs, accented letters, uppercase, etc.).
   const canonicalCenter = greekToGreeklish(parsed.center);

@@ -1,4 +1,4 @@
-// Wordle GR — pure reducer (no side effects, no React).
+// Leksiarxeio — pure reducer (no side effects, no React).
 // All game state transitions live here.
 
 import type { GuessResult, TileState, WordleState } from "../types";

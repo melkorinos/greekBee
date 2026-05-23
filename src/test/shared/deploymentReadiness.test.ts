@@ -60,16 +60,16 @@ function isIgnored(filePath: string, patterns: string[]): boolean {
 // src/data/**/index.ts. Add an entry here whenever you add a new static import.
 
 const STATICALLY_IMPORTED_DATA_FILES = [
-  // Wordle — one list per length (answers + valid guesses, same file)
-  "src/data/wordle/words-4.json",
-  "src/data/wordle/words-5.json",
-  "src/data/wordle/words-6.json",
-  "src/data/wordle/words-7.json",
-  "src/data/wordle/words-8.json",
-  // Connections
-  "src/data/connections/puzzles-connections.json",
-  // Spelling Bee — pre-built puzzles + full word list (used by buildCustomPuzzle)
-  "src/data/spelling-bee/puzzles-el.json",
+  // Leksiarxeio — one list per length (answers + valid guesses, same file)
+  "src/data/leksiarxeio/words-4.json",
+  "src/data/leksiarxeio/words-5.json",
+  "src/data/leksiarxeio/words-6.json",
+  "src/data/leksiarxeio/words-7.json",
+  "src/data/leksiarxeio/words-8.json",
+  // Leksindeseis
+  "src/data/leksindeseis/puzzles-connections.json",
+  // Leksokipos — pre-built puzzles + full word list (used by buildCustomPuzzle)
+  "src/data/leksokipos/puzzles-el.json",
   "src/data/words-el.json",
 ];
 

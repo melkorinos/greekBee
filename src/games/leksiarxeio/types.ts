@@ -1,9 +1,9 @@
-// Wordle GR — game-specific TypeScript types.
+// Leksiarxeio — game-specific TypeScript types.
 // Lives here in isolation; root src/types/index.ts only holds platform-wide types.
 
 // ─── Puzzle ───────────────────────────────────────────────────────────────────
 
-/** Supported word lengths for Wordle GR. Currently only 5 is active. */
+/** Supported word lengths for Leksiarxeio. Currently only 5 is active. */
 export type WordleLength = 3 | 4 | 5 | 6 | 7 | 8;
 
 /** A single daily Wordle puzzle. */
