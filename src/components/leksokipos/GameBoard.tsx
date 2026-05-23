@@ -9,7 +9,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { FeedbackMessage } from "./FeedbackMessage";
 import { FoundWordsList } from "./FoundWordsList";
-import { HoneycombGrid } from "./HoneycombGrid";
+import { FlowerGrid } from "./FlowerGrid";
 import { LeaderboardModal } from "./LeaderboardModal";
 import { MissedWordsList } from "./MissedWordsList";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
@@ -159,7 +159,7 @@ export function GameBoard({ puzzle, recentPuzzleDates = [] }: GameBoardProps) {
             onSuccess={handleSuggestSuccess}
           />
 
-          <HoneycombGrid
+          <FlowerGrid
             centerLetter={activePuzzle.centerLetter}
             outerLetters={activePuzzle.outerLetters}
             onLetterClick={(l) => { setJustSuggested(null); addLetter(l); }}

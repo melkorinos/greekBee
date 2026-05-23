@@ -1,64 +1,59 @@
-# Handoff — Leksarxeia Platform: Phase 2 Cleanup + Visual Rebrand
+# Handoff — Leksarxeia Platform: Phase 4 (FlowerGrid + Cross-Device Persistence)
 
 **Date:** 2026-05-23
-**Previous session:** Session 31 (rebrand Phase 1) + Tier 2 DB consolidation
+**Previous sessions:** Session 31 (rebrand Phase 1) → Tier 2 DB consolidation → Tier 3 internal cleanup
 **Current state:** 658 tests · 0 failures · ESLint 0 errors · build clean
 
 ---
 
-## What was completed this session (Tier 2) ✅
+## What was completed (Tier 3) ✅
 
-- Created `src/app/api/game-scores/route.ts` — unified POST/GET for Leksokipos + Leksindeseis
-- Created `src/app/api/leksiarxeio-scores/route.ts` — renamed from `wordle-scores`, table ref updated to `leksiarxeio_scores`
-- Updated 3 hooks: `useScoreSubmission`, `useConnectionsScoreSubmission`, `useWordleScoreSubmission`
-- Updated `buildUrl` in `useLeaderboard.ts` + `ConnectionsLeaderboardModal`, `WordleLeaderboardModal`
-- Deleted old routes: `scores/`, `connections-scores/`, `wordle-scores/`
-- Replaced `scoresRoute.test.ts` with `gameScoresRoute.test.ts` (covers new route)
-- Cleared stale `.next` type cache after route deletions
-
-API routes now live at:
-| Route | Serves |
-|-------|--------|
-| `/api/game-scores` | Leksokipos + Leksindeseis |
-| `/api/leksiarxeio-scores` | Leksiarxeio |
-| `/api/suggest-word` | Word suggestions (untouched) |
+- Renamed data directories: `spelling-bee/` → `leksokipos/`, `wordle/` → `leksiarxeio/`, `connections/` → `leksindeseis/`
+- Updated all `@/data/spelling-bee`, `@/data/wordle`, `@/data/connections` imports (12 files)
+- Renamed TS types: `SpellingBeePuzzle` → `LeksokiposPuzzle`, `SpellingBeeRoundSnapshot` → `LeksokiposRoundSnapshot` (~20 call sites each)
+- Renamed test files: `spellingBeeRouting` → `leksokiposRouting`, `spellingBeeDataLoader` → `leksokiposDataLoader`, `spellingBeeStyles` → `leksokiposStyles`
+- Fixed stale path strings in tests (`/spelling-bee/` → `/leksokipos/`, game ID `"spelling-bee"` → `"leksokipos"`, data file paths in `deploymentReadiness.test.ts`)
+- Fixed ~40 comment-only stale references (`Spelling Bee` → `Leksokipos`, `Wordle GR` → `Leksiarxeio`) throughout all `src/` directories
 
 ---
 
 ## Remaining work
 
-### Tier 3 — Internal code cleanup (agent-executable, no design decisions)
+### Visual Rebrand — Leksokipos FlowerGrid
 
-#### Data directory renames
-| Current | Target |
-|---------|--------|
-| `src/data/spelling-bee/` | `src/data/leksokipos/` |
-| `src/data/wordle/` | `src/data/leksiarxeio/` |
-| `src/data/connections/` | `src/data/leksindeseis/` |
+#### Decisions locked
 
-Update all `@/data/spelling-bee`, `@/data/wordle`, `@/data/connections` imports after moving.
-Key affected: `src/data/index.ts`, all three game `page.tsx` files, and all test files that import from these paths.
+| Item | Decision |
+|------|----------|
+| **Scope** | Leksokipos only — Leksiarxeio stays dark, Leksindeseis keeps category colours |
+| **Layout** | Same 1 center + 6 surrounding positions as current HoneycombGrid |
+| **Shape** | New component: `FlowerGrid` — petals instead of hexagons |
+| **Palette** | Coral (center petal) + Mint (outer petals) |
+| **Letter colour** | Deferred — not in scope for this phase |
 
-#### TypeScript type renames
-| Current | Target |
-|---------|--------|
-| `SpellingBeePuzzle` (~20 call sites) | `LeksokiposPuzzle` |
-| `SpellingBeeRoundSnapshot` (in `useGameState.ts`) | `LeksokiposRoundSnapshot` |
+#### Still undecided (resolve with `/grill-me` before implementing)
 
-#### Test file renames
-| Current | Target |
-|---------|--------|
-| `src/test/leksokipos/spellingBeeRouting.test.ts` | `leksokiposRouting.test.ts` |
-| `src/test/leksokipos/spellingBeeDataLoader.test.ts` | `leksokiposDataLoader.test.ts` |
-| `src/test/shared/spellingBeeStyles.test.ts` | `leksokiposStyles.test.ts` |
+1. **Petal shape** — rounded rectangle? teardrop/organic curve? CSS clip-path or SVG `<path>`?
+2. **Exact coral/mint hex values** — propose 2–3 options for user to pick
+3. **Hover/selected state colours**
+4. **Center letter highlight** — current HoneycombGrid uses yellow; what replaces it?
+5. **Responsive sizing** — fixed px or scale with viewport?
 
-Update internal describe-block strings and file-header comments too.
+#### What to build
 
-#### Other stale strings
-- `src/test/shared/noAccents.test.ts:153` — path string `/spelling-bee/…` → `/leksokipos/…`
-- `src/test/leksokipos/spellingBeeRouting.test.ts:30,38,135` — `canonicalPath` helper returns `/spelling-bee/…` → `/leksokipos/…`
-- `src/test/shared/persistence.test.ts:19` — `GAME_ID = "spelling-bee" as const` → `"leksokipos"`
-- Comment-only stale references to "Spelling Bee" / "Wordle GR" throughout `src/games/leksokipos/lib/`, `src/hooks/`, `src/components/leksiarxeio/`
+1. **`src/components/leksokipos/FlowerGrid.tsx`** — replaces `HoneycombGrid.tsx`
+   - Same props: `centerLetter`, `outerLetters`, `onLetterClick`, `inputWord`
+   - Same `aria-label="Leksokipos grid"`
+   - Tailwind utility classes only — extend `tailwind.config.ts` if coral/mint not in default palette
+
+2. Wire in `src/components/leksokipos/GameBoard.tsx` — swap `HoneycombGrid` import for `FlowerGrid`
+
+3. `GameBoard.test.tsx` queries by aria-label — stays the same; remove hexagon-specific selectors
+
+4. Delete `HoneycombGrid.tsx` once FlowerGrid confirmed working
+
+**Use `/prototype` skill first** — build throwaway to validate shape + colours before wiring into production.
+**Use `/grill-me` to resolve the 5 open design questions before prototyping.**
 
 ---
 
@@ -153,43 +148,6 @@ CREATE POLICY "anon update" ON game_state FOR UPDATE TO anon USING (true);
 
 ---
 
-### Visual Rebrand — Leksokipos FlowerGrid
-
-#### Decisions locked
-
-| Item | Decision |
-|------|----------|
-| **Scope** | Leksokipos only — Leksiarxeio stays dark, Leksindeseis keeps category colours |
-| **Layout** | Same 1 center + 6 surrounding positions as current HoneycombGrid |
-| **Shape** | New component: `FlowerGrid` — petals instead of hexagons |
-| **Palette** | Coral (center petal) + Mint (outer petals) |
-| **Letter colour** | Deferred — not in scope for this phase |
-
-#### Still undecided (resolve before implementing)
-
-1. **Petal shape** — rounded rectangle? teardrop/organic curve? CSS clip-path or SVG `<path>`?
-2. **Exact coral/mint hex values** — propose 2–3 options for user to pick
-3. **Hover/selected state colours**
-4. **Center letter highlight** — current HoneycombGrid uses yellow; what replaces it?
-5. **Responsive sizing** — fixed px or scale with viewport?
-
-#### What to build
-
-1. **`src/components/leksokipos/FlowerGrid.tsx`** — replaces `HoneycombGrid.tsx`
-   - Same props: `centerLetter`, `outerLetters`, `onLetterClick`, `inputWord`
-   - Same `aria-label="Leksokipos grid"`
-   - Tailwind utility classes only — extend `tailwind.config.ts` if coral/mint not in default palette
-
-2. Wire in `src/components/leksokipos/GameBoard.tsx` — swap `HoneycombGrid` import for `FlowerGrid`
-
-3. `GameBoard.test.tsx` queries by aria-label — stays the same; remove hexagon-specific selectors
-
-4. Delete `HoneycombGrid.tsx` once FlowerGrid confirmed working
-
-**Use `/prototype` skill first** — build throwaway to validate shape + colours before wiring into production.
-
----
-
 ## Architecture constraints (never violate)
 
 - No inline styles — Tailwind utility classes only
@@ -205,8 +163,8 @@ CREATE POLICY "anon update" ON game_state FOR UPDATE TO anon USING (true);
 
 ## Recommended session order
 
-1. **Tier 3: Internal cleanup** — data dir renames, TypeScript type renames, test file renames, stale comments.
+1. **`/grill-me` on FlowerGrid** — resolve the 5 open design questions (petal shape, exact hex values, hover/selected states, center highlight, responsive sizing). User will trigger this.
 2. **Prototype FlowerGrid** — use `/prototype`, present shape + colour options to user.
 3. **Implement FlowerGrid** — after user approves, wire into production with `/tdd`.
-4. **Cross-device persistence** — human runs SQL above, then agent builds profile + game-state routes, sync hook, ProfileModal.
+4. **Cross-device persistence** — human runs SQL above first, then agent builds profile + game-state routes, sync hook, ProfileModal.
 5. **Update docs** — `memory.md`, `log.md` per standing protocol.
