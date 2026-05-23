@@ -31,7 +31,7 @@ const BASE_Y = +(DIST - Math.sqrt(CENTER_R ** 2 - BASE_X ** 2)).toFixed(1); // â
 // Single bezier per side keeps the path clean; the kink at the base corner (junction
 // of bezier and arc) falls exactly on the circle boundary and is hidden by the
 // center circle's 2-px stroke. No petal body overlap occurs outside r=40.
-const PETAL_PATH = `M 0,-52 C 18,-52 36,5 ${BASE_X},${BASE_Y} A ${CENTER_R} ${CENTER_R} 0 0 0 -${BASE_X},${BASE_Y} C -36,5 -18,-52 0,-52 Z`;
+const PETAL_PATH = `M 0,-52 C 18,-52 44,-2 ${BASE_X},${BASE_Y} A ${CENTER_R} ${CENTER_R} 0 0 0 -${BASE_X},${BASE_Y} C -44,-2 -18,-52 0,-52 Z`;
 
 function petalAngle(cx: number, cy: number): number {
   return Math.atan2(-cy, -cx) * (180 / Math.PI) - 90;

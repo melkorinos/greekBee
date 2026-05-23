@@ -1,85 +1,71 @@
-# Handoff — Leksarxeia Platform: Phase 4 (FlowerGrid + Cross-Device Persistence)
+# Handoff — Leksarxeia Platform: Phase 4 (FlowerGrid ✅ + Cross-Device Persistence)
 
 **Date:** 2026-05-23
-**Previous sessions:** Session 31 (rebrand Phase 1) → Tier 2 DB consolidation → Tier 3 internal cleanup
+**Previous sessions:** Session 31 (rebrand Phase 1) → Tier 2 DB consolidation → Tier 3 internal cleanup → Session 32 (FlowerGrid)
 **Current state:** 658 tests · 0 failures · ESLint 0 errors · build clean
 
 ---
 
-## What was completed (Tier 3) ✅
+## What was completed this session ✅
 
-- Renamed data directories: `spelling-bee/` → `leksokipos/`, `wordle/` → `leksiarxeio/`, `connections/` → `leksindeseis/`
-- Updated all `@/data/spelling-bee`, `@/data/wordle`, `@/data/connections` imports (12 files)
-- Renamed TS types: `SpellingBeePuzzle` → `LeksokiposPuzzle`, `SpellingBeeRoundSnapshot` → `LeksokiposRoundSnapshot` (~20 call sites each)
-- Renamed test files: `spellingBeeRouting` → `leksokiposRouting`, `spellingBeeDataLoader` → `leksokiposDataLoader`, `spellingBeeStyles` → `leksokiposStyles`
-- Fixed stale path strings in tests (`/spelling-bee/` → `/leksokipos/`, game ID `"spelling-bee"` → `"leksokipos"`, data file paths in `deploymentReadiness.test.ts`)
-- Fixed ~40 comment-only stale references (`Spelling Bee` → `Leksokipos`, `Wordle GR` → `Leksiarxeio`) throughout all `src/` directories
+### Visual Rebrand — Leksokipos FlowerGrid
+
+All design questions resolved and component shipped:
+
+| Decision | Value |
+|----------|-------|
+| **Shape** | SVG `<path>` teardrop petal, tip faces outward, rounded base hugs center circle |
+| **Palette** | Coral `#FFAA90` center (stroke `#E0906C`) · Mint `#A8DBBF` outer petals (stroke `#78C09A`) |
+| **Press feedback** | `active:scale-95` + `active:fill-[darker]` · `transition-all duration-75` |
+| **Hover states** | None — mobile-first |
+| **Letter highlight** | None — no letter-in-word colouring in scope |
+| **Overlap** | Petals do NOT visually overlap outside r=40. Only base zone overlaps (hidden under center circle). |
+| **Z-order** | Center circle rendered last (always on top of all petals). No clip-path needed. |
+| **Sizing** | `w-full max-w-xs mx-auto`, `viewBox="-150 -150 300 300"` |
+| **Border** | `stroke-2` on both petals and center circle |
+
+**Key geometry constants** (in `FlowerGrid.tsx`):
+- `R = 50`, `DIST = R*√3 ≈ 86.6`, `CENTER_R = 40`
+- `BASE_X = 18`, `BASE_Y ≈ 50.9` — base corners exactly on circle boundary (`18² + 36.5² = 40²`)
+- Body control: `(44, -2)` — belly slightly above midpoint for better tap target feel
+- Petal path: `M 0,-52 C 18,-52 44,-2 18,50.9 A 40 40 0 0 0 -18,50.9 C -44,-2 -18,-52 0,-52 Z`
+- Arc radius in path **must equal** `CENTER_R` — rigid-body SVG transform makes the arc collinear with the center circle
+
+**Visual tuning reference** (for future iterations):
+- `BASE_X` wider → petals fan at root, more base hidden by circle
+- Body control x higher (44→52) → fatter mid-petal belly
+- Body control y more negative (-2→-8) → belly shifts toward tip
+- Tip y more negative (-52→-62) → longer petals, more spread
+
+**Still to do:** Delete `HoneycombGrid.tsx` (kept as safety net during iteration — safe to remove now).
 
 ---
 
 ## Remaining work
 
-### Visual Rebrand — Leksokipos FlowerGrid
-
-#### Decisions locked
-
-| Item | Decision |
-|------|----------|
-| **Scope** | Leksokipos only — Leksiarxeio stays dark, Leksindeseis keeps category colours |
-| **Layout** | Same 1 center + 6 surrounding positions as current HoneycombGrid |
-| **Shape** | New component: `FlowerGrid` — petals instead of hexagons |
-| **Palette** | Coral (center petal) + Mint (outer petals) |
-| **Letter colour** | Deferred — not in scope for this phase |
-
-#### Still undecided (resolve with `/grill-me` before implementing)
-
-1. **Petal shape** — rounded rectangle? teardrop/organic curve? CSS clip-path or SVG `<path>`?
-2. **Exact coral/mint hex values** — propose 2–3 options for user to pick
-3. **Hover/selected state colours**
-4. **Center letter highlight** — current HoneycombGrid uses yellow; what replaces it?
-5. **Responsive sizing** — fixed px or scale with viewport?
-
-#### What to build
-
-1. **`src/components/leksokipos/FlowerGrid.tsx`** — replaces `HoneycombGrid.tsx`
-   - Same props: `centerLetter`, `outerLetters`, `onLetterClick`, `inputWord`
-   - Same `aria-label="Leksokipos grid"`
-   - Tailwind utility classes only — extend `tailwind.config.ts` if coral/mint not in default palette
-
-2. Wire in `src/components/leksokipos/GameBoard.tsx` — swap `HoneycombGrid` import for `FlowerGrid`
-
-3. `GameBoard.test.tsx` queries by aria-label — stays the same; remove hexagon-specific selectors
-
-4. Delete `HoneycombGrid.tsx` once FlowerGrid confirmed working
-
-**Use `/prototype` skill first** — build throwaway to validate shape + colours before wiring into production.
-**Use `/grill-me` to resolve the 5 open design questions before prototyping.**
-
----
-
 ### Cross-device persistence — Leksokipos only (design locked, not yet built)
+
+> **Prerequisite:** human runs the SQL below in Supabase dashboard before agent starts this feature.
 
 #### Decisions locked
 
 | Decision | Value |
 |----------|-------|
-| **Scope** | Leksokipos only now. Leksiarxeio + Leksindeseis don't need it. Future games can opt in. |
+| **Scope** | Leksokipos only. Future games may opt in explicitly. |
 | **Both fields optional** | Player can play fully anonymously. Name + PIN only needed to sync devices. |
 | **Name uniqueness** | Not enforced. Two players named "Νίκος" is fine. |
 | **PIN generation** | Auto-generated by server (4 digits). Never user-chosen. |
-| **Collision handling** | `(name, pin)` is NOT unique — multiple save states can exist for same pair. On load, show all matches and let user pick. |
-| **What is synced** | Full game state blob (found words, score, current input) — not just the leaderboard score |
+| **Collision handling** | `(name, pin)` is NOT unique — multiple save states can exist. On load, show picker. |
+| **What is synced** | Full game state blob (found words, score, current input) |
 | **Retention** | 7 days max, matching existing rolling-window policy |
 
-#### Collision pick UI (when multiple save states match name + PIN)
+#### Collision pick UI
 > "Βρέθηκαν X αποθηκευμένα παιχνίδια — ποιο είναι το δικό σου?"
-Each entry shows: date created · last played · current score. Player recognises theirs and taps it.
+Each entry shows: date created · last played · current score.
 
-#### DB tables (run in Supabase before agent starts this feature)
+#### DB tables (run in Supabase before agent starts)
 
 ```sql
--- Player profiles: name + pin → stable UUID
--- No uniqueness on (display_name, pin) — duplicates are intentional
 CREATE TABLE player_profiles (
   id           BIGSERIAL PRIMARY KEY,
   display_name TEXT    NOT NULL,
@@ -93,7 +79,6 @@ CREATE POLICY "anon insert" ON player_profiles FOR INSERT TO anon WITH CHECK (tr
 CREATE POLICY "anon select" ON player_profiles FOR SELECT TO anon USING (true);
 CREATE POLICY "anon update" ON player_profiles FOR UPDATE TO anon USING (true);
 
--- Game state: full state blob per (device_uuid, game_id, puzzle_date)
 CREATE TABLE game_state (
   id           BIGSERIAL PRIMARY KEY,
   device_uuid  TEXT    NOT NULL,
@@ -113,31 +98,29 @@ CREATE POLICY "anon update" ON game_state FOR UPDATE TO anon USING (true);
 
 | Route | Purpose |
 |-------|---------|
-| `POST /api/profile` | Create profile: `{display_name}` → server generates PIN, inserts row, returns `{pin, device_uuid}` |
-| `GET /api/profile?name=&pin=` | Load save states: returns array of matching profiles (could be 0, 1, or many) with `device_uuid` + metadata |
+| `POST /api/profile` | `{display_name}` → server generates PIN, inserts row, returns `{pin, device_uuid}` |
+| `GET /api/profile?name=&pin=` | Returns array of matching profiles (0, 1, or many) with `device_uuid` + metadata |
 | `POST /api/game-state` | Upsert state blob: `{device_uuid, game_id, puzzle_date, state}` |
 | `GET /api/game-state?device_uuid=&game_id=&puzzle_date=` | Fetch state blob for restore |
 
 #### User flows
 
 **Create profile (first device):**
-1. Player taps "Αποθήκευσε την πρόοδό σου" button
-2. Enters display name (optional — can leave blank for "Ανώνυμος")
-3. Server generates a 4-digit PIN, inserts `player_profiles` row, returns PIN
+1. Player taps "Αποθήκευσε την πρόοδό σου"
+2. Enters display name (optional — blank → "Ανώνυμος")
+3. Server generates PIN, returns it
 4. UI shows: **"Ο κωδικός σου είναι: 4829 — σημείωσέ τον!"**
-5. `device_uuid` stored in `wordgames:state` (replaces anonymous UUID)
-6. Game state starts syncing to `game_state` table on every meaningful action
+5. `device_uuid` stored in `wordgames:state`
+6. Game state syncs on every meaningful action
 
 **Restore on second device:**
 1. Player taps "Φόρτωσε αποθηκευμένο παιχνίδι"
 2. Enters name + PIN
-3. `GET /api/profile?name=&pin=` returns array of matches
-   - 0 matches → "Δεν βρέθηκε αποθηκευμένο παιχνίδι"
-   - 1 match → load directly
-   - 2+ matches → show picker list (date created, last played, score)
-4. On selection: store chosen `device_uuid` in localStorage, fetch today's game state, restore
+3. 0 matches → error · 1 match → load · 2+ → show picker
+4. Store chosen `device_uuid` in localStorage, fetch + restore today's state
 
-#### Code locations (when building)
+#### Code locations
+
 | File | Purpose |
 |------|---------|
 | `src/app/api/profile/route.ts` | POST (create) + GET (lookup by name+pin) |
@@ -145,6 +128,22 @@ CREATE POLICY "anon update" ON game_state FOR UPDATE TO anon USING (true);
 | `src/hooks/useGameStateSync.ts` | Writes state to server on every meaningful action (Leksokipos only) |
 | `src/components/leksokipos/ProfileModal.tsx` | Create profile + restore UI |
 | `src/components/leksokipos/GameBoard.tsx` | Wire ProfileModal + useGameStateSync |
+
+---
+
+## Forward-looking design notes (not in scope yet — no implementation needed)
+
+### Dark mode
+The platform currently has no `dark:` Tailwind classes anywhere (Leksiarxeio uses unconditional dark classes; Leksokipos + picker are unconditionally light). A future dark mode pass will need to audit all three games. The FlowerGrid pastel colours will need dark-mode variants when that work begins.
+
+### Multiple FlowerGrid designs for Leksokipos
+The user may want players to choose between different visual themes for the Leksokipos grid (e.g., different petal shapes or colour palettes). When this is built:
+- `FlowerGrid` props should accept a `variant` or `theme` parameter
+- The current design becomes `variant="default"`
+- No data model changes needed — purely cosmetic, stored in user preferences slice
+
+### Future game renames
+If a game is renamed again, the intent is **UI-only changes** — user-facing strings, page titles, nav labels — not a full directory/type/route rename like the Session 31 rebrand. Keep internal code names (`leksokipos`, `leksiarxeio`, `leksindeseis`) stable; only update display strings.
 
 ---
 
@@ -156,15 +155,6 @@ CREATE POLICY "anon update" ON game_state FOR UPDATE TO anon USING (true);
 - Each game reads/writes only its own store slice
 - After every change: `npm run test -- --run`, `npx eslint .`, `npm run build` — all must pass
 - PowerShell only on Windows — `Select-Object -Last N`, never `tail`
-- **Cross-device persistence is Leksokipos-only** — do not add `useGameStateSync` to Leksiarxeio or Leksindeseis without explicit instruction. Future games may opt in.
-- **`(name, pin)` is not a unique key** — never add a UNIQUE constraint on that pair. Duplicates are handled by showing a picker to the user.
-
----
-
-## Recommended session order
-
-1. **`/grill-me` on FlowerGrid** — resolve the 5 open design questions (petal shape, exact hex values, hover/selected states, center highlight, responsive sizing). User will trigger this.
-2. **Prototype FlowerGrid** — use `/prototype`, present shape + colour options to user.
-3. **Implement FlowerGrid** — after user approves, wire into production with `/tdd`.
-4. **Cross-device persistence** — human runs SQL above first, then agent builds profile + game-state routes, sync hook, ProfileModal.
-5. **Update docs** — `memory.md`, `log.md` per standing protocol.
+- **Cross-device persistence is Leksokipos-only** — do not add `useGameStateSync` to other games without explicit instruction
+- **`(name, pin)` is not a unique key** — never add a UNIQUE constraint on that pair
+- **FlowerGrid arc radius must equal `CENTER_R`** — changing one without the other breaks the seamless base join

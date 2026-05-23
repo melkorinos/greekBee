@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-05-23 — Session 32: FlowerGrid visual component ✅
+
+**Outcome:** 658 tests (43 files) · 0 failures · ESLint 0 errors · build clean.
+
+### Changes
+
+1. **`src/components/leksokipos/FlowerGrid.tsx`** (new) — SVG flower grid replacing `HoneycombGrid`. Six teardrop petals (mint `#A8DBBF`, stroke `#78C09A`) + coral center circle (`#FFAA90`, stroke `#E0906C`). Petal base is an SVG `A 40 40` arc that is geometrically collinear with the center circle boundary after the rigid-body transform — seamless join. Petals do not overlap outside r=40; center circle rendered last covers all base overlap. `active:scale-95` + brief darkening for press feedback. `stroke-2` border on all shapes.
+
+2. **`src/components/leksokipos/GameBoard.tsx`** — Swapped `HoneycombGrid` import for `FlowerGrid`. `inputWord` prop dropped (letter-in-word highlight not in scope).
+
+3. **`HoneycombGrid.tsx`** — Still present as safety net. Safe to delete.
+
+4. **Design decisions locked** — petal shape, palette, no hover states (mobile-first), no letter highlight, single-bezier-per-side path, `BASE_X=18`, body control `(44,-2)`.
+
+5. **Forward-looking notes added to docs** — dark mode (future), multiple FlowerGrid themes via `variant` prop (future), UI-only future renames (internal code names stay stable).
+
+---
+
 ## 2026-05-22 — Session 31: Platform & Game Rebrand (Leksarxeia) ✅
 
 **Outcome:** 655 tests (43 files) · 0 failures · ESLint 0 errors · build clean.
