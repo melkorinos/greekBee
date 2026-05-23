@@ -5,6 +5,36 @@
 
 ---
 
+## 2026-05-23 — Session 33: Internal identifier rebranding (Leksiarxeio + Leksindeseis) ✅
+
+**Outcome:** 684 tests (43 files) · 0 failures · ESLint 0 errors · build clean.
+
+### Changes
+
+All internal code identifiers now match the Greek game names. Routes, storage keys, and puzzle IDs
+were already correct — this session renamed types, functions, hooks, components, and test files.
+
+**Leksiarxeio:** `WordleLength/Puzzle/Status/State` → `LeksiarxeioLength/Puzzle/Status/State` ·
+`WORDLE_LENGTHS` → `LEKSIARXEIO_LENGTHS` · `scoreWordle` → `scoreLeksiarxeio` ·
+`wordleReducer/makeInitialWordleState` → `leksiarxeioReducer/makeInitialLeksiarxeioState` ·
+`useWordleState` → `useLeksiarxeioState` · `useWordleScoreSubmission` → `useLeksiarxeioScoreSubmission` ·
+Components: `WordleBoard/WordleHeader/WordleLeaderboardModal` → `LeksiarxeioBoard/LeksiarxeioHeader/LeksiarxeioLeaderboardModal` ·
+Page: `WordlePage/WordlePageClient` → `LeksiarxeioPage/LeksiarxeioPageClient`.
+
+**Leksindeseis:** `ConnectionGroup/Puzzle/State/Status/Action/RoundSnapshot` → `LeksindeseisGroup/Puzzle/State/Status/Action/RoundSnapshot` ·
+`connectionsReducer` → `leksindeseisReducer` · `useConnectionsState` → `useLeksindeseisState` ·
+`useConnectionsScoreSubmission` → `useLeksindeseisScoreSubmission` ·
+`getTodaysConnectionsPuzzle` → `getTodaysLeksindeseisPuzzle` · `allConnectionsPuzzles` → `allLeksindeseisPuzzles` ·
+`ConnectionsPage` → `LeksindeseisPage`.
+
+**Intentionally NOT renamed:** puzzle ID strings `"${date}-wordle-${length}"` — localStorage keys; renaming silently wipes player sessions.
+
+Old files deleted: `useWordleState.ts`, `useWordleScoreSubmission.ts`, `WordleBoard.tsx`, `WordleHeader.tsx`,
+`WordleLeaderboardModal.tsx`, `useConnectionsState.ts`, `useConnectionsScoreSubmission.ts`.
+Test files renamed to match.
+
+---
+
 ## 2026-05-23 — Session 32: FlowerGrid visual component ✅
 
 **Outcome:** 658 tests (43 files) · 0 failures · ESLint 0 errors · build clean.

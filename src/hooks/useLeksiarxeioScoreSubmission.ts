@@ -1,4 +1,4 @@
-// useWordleScoreSubmission — owns the score-posting lifecycle for daily Leksiarxeio.
+// useLeksiarxeioScoreSubmission — owns the score-posting lifecycle for daily Leksiarxeio.
 //
 // Interface: submit(length, attempts, won) — three values, nothing else to know.
 //
@@ -14,7 +14,7 @@
 import { postScore } from "@/lib/postScore";
 import { useCallback, useEffect, useRef } from "react";
 
-interface UseWordleScoreSubmissionOptions {
+interface UseLeksiarxeioScoreSubmissionOptions {
   /** The game date (YYYY-MM-DD) — used as the leaderboard partition key. */
   today:       string;
   /** Stable anonymous device identifier. Empty string = skip posting. */
@@ -26,15 +26,15 @@ interface UseWordleScoreSubmissionOptions {
 /**
  * Returns a stable `submit(length, attempts, won)` function.
  *
- * Calling submit() will POST to /api/wordle-scores with:
+ * Calling submit() will POST to /api/leksiarxeio-scores with:
  *   - attempts = `attempts` when won, 7 when lost (penalty)
  *   - display_name read via ref so it's always current without re-creating submit()
  */
-export function useWordleScoreSubmission({
+export function useLeksiarxeioScoreSubmission({
   today,
   deviceId,
   displayName,
-}: UseWordleScoreSubmissionOptions) {
+}: UseLeksiarxeioScoreSubmissionOptions) {
   const displayNameRef = useRef(displayName);
   useEffect(() => { displayNameRef.current = displayName; }, [displayName]);
 

@@ -2,7 +2,7 @@
 // Reads words-el.raw.json (the original accented Greek dictionary — immutable
 // source of truth), normalises each word (strip accents, ς→σ, lowercase),
 // filters to a target letter length, deduplicates, and writes the result to
-// src/data/wordle/words-<length>.json.
+// src/data/leksiarxeio/words-<length>.json.
 //
 // Usage: node scripts/normalize-wordlist.mjs --length=5
 //
@@ -44,8 +44,8 @@ const unique = [...new Set(raw.map(normalize).filter((w) => w.length === targetL
 console.log(`${targetLength}-letter words: ${unique.length}`);
 
 // ── Write output ──────────────────────────────────────────────────────────────
-const outDir = join(root, "src/data/wordle");
+const outDir = join(root, "src/data/leksiarxeio");
 mkdirSync(outDir, { recursive: true });
 const outPath = join(outDir, `words-${targetLength}.json`);
 writeFileSync(outPath, JSON.stringify(unique), "utf8");
-console.log(`Written → src/data/wordle/words-${targetLength}.json`);
+console.log(`Written → src/data/leksiarxeio/words-${targetLength}.json`);

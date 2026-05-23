@@ -42,7 +42,7 @@ export const revalidate = 3600;
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-export default async function CustomSpellingBeePage({
+export default async function CustomLeksokiposPage({
   params,
 }: {
   params: Promise<{ center: string; outer: string }>;

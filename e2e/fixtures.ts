@@ -1,19 +1,19 @@
 import { expect, test as base } from "@playwright/test";
 
-import { ConnectionsPage } from "./pages/ConnectionsPage";
-import { SpellingBeePage } from "./pages/SpellingBeePage";
-import { WordlePage } from "./pages/WordlePage";
+import { LeksiarxeioPage } from "./pages/LeksiarxeioPage";
+import { LeksokiposPage } from "./pages/LeksokiposPage";
+import { LeksindeseisPage } from "./pages/LeksindeseisPage";
 
 type Fixtures = {
-  spellingBee: SpellingBeePage;
-  wordle: WordlePage;
-  connections: ConnectionsPage;
+  leksokipos:   LeksokiposPage;
+  leksiarxeio:  LeksiarxeioPage;
+  leksindeseis: LeksindeseisPage;
 };
 
 export const test = base.extend<Fixtures>({
-  spellingBee: async ({ page }, use) => use(new SpellingBeePage(page)),
-  wordle:      async ({ page }, use) => use(new WordlePage(page)),
-  connections: async ({ page }, use) => use(new ConnectionsPage(page)),
+  leksokipos:   async ({ page }, use) => use(new LeksokiposPage(page)),
+  leksiarxeio:  async ({ page }, use) => use(new LeksiarxeioPage(page)),
+  leksindeseis: async ({ page }, use) => use(new LeksindeseisPage(page)),
 });
 
 export { expect };

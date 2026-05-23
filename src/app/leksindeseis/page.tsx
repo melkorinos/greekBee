@@ -1,8 +1,8 @@
-// connections/page.tsx — Leksindeseis game page.
+// leksindeseis/page.tsx — Leksindeseis game page.
 
 import { ConnectionsBoard }           from "./ConnectionsBoard";
 import { HowToPlayModal }             from "@/components/shared/HowToPlayModal";
-import { getTodaysConnectionsPuzzle } from "@/data/leksindeseis";
+import { getTodaysLeksindeseisPuzzle } from "@/data/leksindeseis";
 
 function getTodayString(): string {
   return new Date().toISOString().slice(0, 10);
@@ -17,9 +17,9 @@ const CONNECTIONS_RULES = [
   "Νέο παζλ κάθε μέρα!",
 ];
 
-export default function ConnectionsPage() {
+export default function LeksindeseisPage() {
   const today  = getTodayString();
-  const puzzle = getTodaysConnectionsPuzzle(today);
+  const puzzle = getTodaysLeksindeseisPuzzle(today);
 
   return (
     <main className="flex flex-col items-center min-h-screen bg-zinc-50 px-4 py-6">

@@ -1,21 +1,21 @@
 "use client";
 
-// useConnectionsState — React hook managing Connections game state.
+// useLeksindeseisState — React hook managing Leksindeseis game state.
 // Handles persistence via useRoundPersistence; never touches localStorage directly.
 
 import type {
-  ConnectionsRoundSnapshot,
-  ConnectionsPuzzle,
-  ConnectionsState,
+  LeksindeseisRoundSnapshot,
+  LeksindeseisPuzzle,
+  LeksindeseisState,
 } from "../types";
 import { useCallback, useMemo, useReducer, useState } from "react";
 
-import { connectionsReducer } from "./connectionsReducer";
+import { leksindeseisReducer } from "./leksindeseisReducer";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 
 const MAX_MISTAKES = 4;
 
-function buildInitialState(puzzle: ConnectionsPuzzle): ConnectionsState {
+function buildInitialState(puzzle: LeksindeseisPuzzle): LeksindeseisState {
   return {
     puzzle,
     solvedGroups:      [],
@@ -27,23 +27,23 @@ function buildInitialState(puzzle: ConnectionsPuzzle): ConnectionsState {
   };
 }
 
-export function useConnectionsState(puzzle: ConnectionsPuzzle) {
+export function useLeksindeseisState(puzzle: LeksindeseisPuzzle) {
   const [state, dispatch] = useReducer(
-    connectionsReducer,
+    leksindeseisReducer,
     puzzle,
     buildInitialState,
   );
 
   // Memoize only the fields that need to be persisted.
   // puzzle.date is the session key, not part of the snapshot.
-  const snapshot = useMemo<ConnectionsRoundSnapshot>(() => ({
+  const snapshot = useMemo<LeksindeseisRoundSnapshot>(() => ({
     solvedGroups:      state.solvedGroups,
     mistakesRemaining: state.mistakesRemaining,
     status:            state.status,
     guessHistory:      state.guessHistory,
   }), [state.solvedGroups, state.mistakesRemaining, state.status, state.guessHistory]);
 
-  useRoundPersistence<ConnectionsRoundSnapshot>(
+  useRoundPersistence<LeksindeseisRoundSnapshot>(
     "leksindeseis",
     puzzle.date,
     snapshot,

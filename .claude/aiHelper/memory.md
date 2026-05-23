@@ -1,7 +1,7 @@
 # Agent Memory — Greek Word Games Platform
 
 ## ⚡ Current State (2026-05-23)
-Three live games + custom puzzle URLs. **658 tests passing.**
+Three live games + custom puzzle URLs. **684 tests passing.**
 
 | Game | Route | Status |
 |------|-------|--------|
@@ -21,7 +21,7 @@ Three live games + custom puzzle URLs. **658 tests passing.**
 | **Theming** | Leksiarxeio + Shell header = dark (unconditional classes). Leksokipos + picker = light. No `dark:` Tailwind classes anywhere — dark mode not yet implemented. Shared form style tokens in `src/components/leksokipos/styles.ts` (`labelClass`, `inputClass`, `inputCompactClass`, etc.) — use these for all modal inputs/labels. |
 | **Game logic** | Pure functions in `src/games/*/lib/` — zero React imports |
 | **Shared components** | Earn their place: only graduate to `src/components/shared/` when 2 games genuinely need it |
-| **Connections** | No `language` field on `ConnectionsPuzzle` — it has no word-list dependency |
+| **Leksindeseis** | No `language` field on `LeksindeseisPuzzle` — it has no word-list dependency |
 | **Custom puzzle ID** | `custom-{center}-{sortedOuter}` — letter-derived only; not date-scoped so localStorage survives refreshes |
 | **No Greek accents anywhere** | Zero accents in URLs, stored state, puzzle letter fields, valid-word output. Enforced by `noAccents.test.ts`. `normalizeLetters()` is the single normalisation point — call it at every entry boundary. |
 | **ShareButton `canonicalPath`** | Server builds the share path from normalised letters; client prepends `window.location.origin`. Accent-free by construction. |
@@ -48,22 +48,22 @@ src/
   components/
     shared/          Shell, FeedbackBanner, HowToPlayModal
     leksokipos/      GameBoard, FlowerGrid, WordInput, ScoreBar, FeedbackMessage, FoundWordsList, ShareButton (`canonicalPath` prop), NewPuzzleButton
-    leksiarxeio/     WordleBoard, WordleHeader (WordlePageClient), GuessGrid, Tile, Keyboard, WordleLeaderboardModal
-    leksindeseis/    GroupGrid, WordCard, CategoryReveal
+    leksiarxeio/     LeksiarxeioBoard, LeksiarxeioHeader (LeksiarxeioPageClient), GuessGrid, Tile, Keyboard, LeksiarxeioLeaderboardModal
+    leksindeseis/    GroupGrid, WordCard, CategoryReveal, ConnectionsBoard, ConnectionsLeaderboardModal
   games/
     leksokipos/lib/  validation, scoring, ranking, pangram, normalize, computeValidWords, parseCustomUrl
     leksokipos/hooks/  gameReducer, useGameState
     leksiarxeio/lib/   evaluateGuess, isValidGuess
-    leksiarxeio/hooks/ wordleReducer, useWordleState
-    leksindeseis/hooks/ connectionsReducer, useConnectionsState
+    leksiarxeio/hooks/ leksiarxeioReducer, useLeksiarxeioState
+    leksindeseis/hooks/ leksindeseisReducer, useLeksindeseisState
   data/
     leksokipos/      puzzles-el.json (1008 puzzles 2026-03-25→2028-12-26), index.ts
     leksiarxeio/     words-{4..8}.json (answer pool + valid guesses, same list), index.ts
     leksindeseis/    puzzles-connections.json, index.ts
     words-el.json    (811k words, normalised — statically imported by buildCustomPuzzle)
-  hooks/             useGameStore.ts, useRoundPersistence.ts
+  hooks/             useGameStore.ts, useRoundPersistence.ts, useLeksiarxeioScoreSubmission.ts, useLeksindeseisScoreSubmission.ts
   types/             index.ts
-  test/              43 test files — 658 tests
+  test/              43 test files — 684 tests
 ```
 
 ---
@@ -85,20 +85,20 @@ Tracked as individual issues in `.claude/issue-tracker/issues/` (7 open items). 
 
 ---
 
-## 🧪 Test Coverage Map (43 files, 658 tests)
+## 🧪 Test Coverage Map (43 files, 684 tests)
 
 > **How to use this as an agent**: before writing a new test, grep the `describe` column for the function/component name. If it appears, read that file's describe block to check if the specific case is already covered. Only write new tests for gaps.
 
 | File | `describe` blocks (= what is tested) |
 |------|---------------------------------------|
-| `wordleGuessGrid.test.tsx` | `GuessGrid` — no inline submit, flex-1 aspect-square tiles per length, grid max-width per length (4→210px … 7→372px, 8 full), Keyboard w-full |
-| `wordleHeader.test.tsx` | `WordlePageClient` — title, 🏆 button, HowToPlay trigger, both in header row, scoring note in modal |
+| `guessGrid.test.tsx` | `GuessGrid` — no inline submit, flex-1 aspect-square tiles per length, grid max-width per length (4→210px … 7→372px, 8 full), Keyboard w-full |
+| `header.test.tsx` | `LeksiarxeioPageClient` — title, 🏆 button, HowToPlay trigger, both in header row, scoring note in modal |
 | `evaluateGuess.test.ts` | `evaluateGuess` — all-correct, all-absent, present, mixed, duplicate answer/guess letters, length |
-| `wordleLogic.test.ts` | `isValidGuess`, `getTodaysWordlePuzzle` determinism |
-| `wordleReducer.test.ts` | `ADD_LETTER`, `DELETE_LETTER`, `SUBMIT_GUESS` (short/invalid/valid/win/lose), `RESTORE_STATE` |
-| `wordleDataLoader.test.ts` | `getTodaysWordlePuzzle`, `getAnswerPool`, `getValidWords`, `getTodayDateString` |
-| `wordleTheme.test.tsx` | Tile dark theme classes, Keyboard dark theme classes |
-| `gameLogic.test.ts` | `isPangram`, `scoreWord`, `maxScore`, `calculateRank`, `validateWord` |
+| `gameLogic.test.ts` (leksiarxeio) | `scoreLeksiarxeio`, `buildLetterStateMap` |
+| `leksiarxeioReducer.test.ts` | `ADD_LETTER`, `DELETE_LETTER`, `SUBMIT_GUESS` (short/invalid/valid/win/lose), `RESTORE_STATE` |
+| `dataLoader.test.ts` (leksiarxeio) | `getTodaysLeksiarxeioPuzzle`, `getAllTodaysLeksiarxeioPuzzles`, `getValidWords`, `getTodayDateString` |
+| `theme.test.tsx` | Tile dark theme classes, Keyboard dark theme classes |
+| `gameLogic.test.ts` (leksokipos) | `isPangram`, `scoreWord`, `maxScore`, `calculateRank`, `validateWord` |
 | `gameReducer.test.ts` | `buildInitialState`, `ADD_LETTER`, `DELETE_LETTER`, `CLEAR_INPUT`, `SUBMIT_WORD` (valid/invalid), `SHUFFLE_LETTERS`, `NEW_GAME`, `RESTORE_STATE` |
 | `GameBoard.test.tsx` | Rendering (inline submit absent/present at 3/4 letters), keyboard input, hex clicks, word submission, feedback messages, button interactions |
 | `greekLogic.test.ts` | `isPangram (Greek)`, `scoreWord (Greek)`, `validateWord (Greek)`, `getPuzzleForDate` (data-independent) |
@@ -110,13 +110,13 @@ Tracked as individual issues in `.claude/issue-tracker/issues/` (7 open items). 
 | `parseCustomUrl.test.ts` | `parseCustomUrl` — valid, invalid center, invalid outer, uniqueness checks |
 | `normalize.test.ts` | `normalizeLetters` — case, accent stripping, ς→σ, edge cases |
 | `noAccents.test.ts` | Accent-free invariant across puzzles, `buildCustomPuzzle`, `computeValidWords`, `parseCustomUrl`, reducer |
-| `connectionsReducer.test.ts` | `SELECT_WORD`, `SUBMIT_GUESS` (correct/wrong/one-away), `SHUFFLE`, game over, win |
-| `connectionsGroupGrid.test.tsx` | `GroupGrid` — render, solved groups, selection, onSelect, disabled |
-| `connectionsDataLoader.test.ts` | `getTodaysConnectionsPuzzle` — date match, fallback, uniqueness, shape |
+| `leksindeseisReducer.test.ts` | `SELECT_WORD`, `SUBMIT_GUESS` (correct/wrong/one-away), `CLEAR_FEEDBACK`, terminal guard |
+| `groupGrid.test.tsx` | `GroupGrid` — render, solved groups, selection, onSelect, disabled |
+| `dataLoader.test.ts` (leksindeseis) | `getTodaysLeksindeseisPuzzle` — date match, fallback, uniqueness, shape |
 | `persistence.test.ts` | `useRoundPersistence` — hydration (5 cases), saving (5 cases incl. `shouldSave`), `clear()` (3 cases) |
-| `useWordleScoreSubmission.test.ts` | `useWordleScoreSubmission` — POST fields, deviceId guard, won/lost penalty, displayName fallback, ref stability |
-| `useConnectionsScoreSubmission.test.ts` | `useConnectionsScoreSubmission` — POST fields, deviceId guard, score=0 guard, dedup guard, Ανώνυμος fallback; `submitWithName` fields, guards |
-| `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`, `migrateFromLegacyKeys`, cross-game isolation |
+| `useLeksiarxeioScoreSubmission.test.ts` | `useLeksiarxeioScoreSubmission` — POST fields, deviceId guard, won/lost penalty, displayName fallback, ref stability |
+| `useLeksindeseisScoreSubmission.test.ts` | `useLeksindeseisScoreSubmission` — POST fields, deviceId guard, score=0 guard, dedup guard, Ανώνυμος fallback; `submitWithName` fields, guards |
+| `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`, cross-game isolation |
 | `Shell.test.tsx` | Rendering, hamburger drawer open/close/Escape/backdrop, nav links, theme classes |
 | `letterPickerModal.test.tsx` | Visibility, center/outer selection, deselect, 7-letter cap, Reset, Random (vowel center ×20, ≥2 vowels ×20, ≥2 outer consonants ×20), Generate |
 | `mobileLayout.test.tsx` | Mobile viewport rendering checks |

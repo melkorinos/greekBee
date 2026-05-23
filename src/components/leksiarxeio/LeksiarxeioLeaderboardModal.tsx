@@ -1,4 +1,4 @@
-﻿// WordleLeaderboardModal — bottom-sheet leaderboard for daily Leksiarxeio.
+// LeksiarxeioLeaderboardModal — bottom-sheet leaderboard for daily Leksiarxeio.
 //
 // Score = sum of attempts across all 5 lengths (4–8) for a given day.
 // Lower score = better rank.  Missing lengths count as 7 (penalty).
@@ -41,7 +41,7 @@ function getLast7Dates(today: string): string[] {
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
-interface WordleLeaderboardModalProps {
+interface LeksiarxeioLeaderboardModalProps {
   isOpen:       boolean;
   today:        string;   // YYYY-MM-DD — the current game date
   deviceId:     string;
@@ -52,14 +52,14 @@ interface WordleLeaderboardModalProps {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function WordleLeaderboardModal({
+export function LeksiarxeioLeaderboardModal({
   isOpen,
   today,
   deviceId,
   displayName,
   onSaveName,
   onClose,
-}: WordleLeaderboardModalProps) {
+}: LeksiarxeioLeaderboardModalProps) {
   const recentDates = getLast7Dates(today);
 
   const [selectedDate, setSelectedDate] = useState(today);

@@ -1,11 +1,11 @@
-// useWordleScoreSubmission.test.ts — unit tests for the Wordle score-posting hook.
+// useLeksiarxeioScoreSubmission.test.ts — unit tests for the Leksiarxeio score-posting hook.
 //
 // fetch is mocked per-test via vi.spyOn.
 
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { useWordleScoreSubmission } from "@/hooks/useWordleScoreSubmission";
+import { useLeksiarxeioScoreSubmission } from "@/hooks/useLeksiarxeioScoreSubmission";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -22,10 +22,10 @@ const BASE = {
   displayName: "Νίκος",
 };
 
-describe("useWordleScoreSubmission — submit()", () => {
+describe("useLeksiarxeioScoreSubmission — submit()", () => {
   it("POSTs to /api/leksiarxeio-scores with correct fields", async () => {
     const spy = mockFetch();
-    const { result } = renderHook(() => useWordleScoreSubmission(BASE));
+    const { result } = renderHook(() => useLeksiarxeioScoreSubmission(BASE));
 
     await act(async () => { result.current.submit(5, 3, true); });
 
@@ -42,7 +42,7 @@ describe("useWordleScoreSubmission — submit()", () => {
 
   it("does not POST when deviceId is empty", async () => {
     const spy = mockFetch();
-    const { result } = renderHook(() => useWordleScoreSubmission({ ...BASE, deviceId: "" }));
+    const { result } = renderHook(() => useLeksiarxeioScoreSubmission({ ...BASE, deviceId: "" }));
 
     await act(async () => { result.current.submit(5, 3, true); });
 
@@ -51,7 +51,7 @@ describe("useWordleScoreSubmission — submit()", () => {
 
   it("passes attempts as-is when the player won", async () => {
     const spy = mockFetch();
-    const { result } = renderHook(() => useWordleScoreSubmission(BASE));
+    const { result } = renderHook(() => useLeksiarxeioScoreSubmission(BASE));
 
     await act(async () => { result.current.submit(5, 4, true); });
 
@@ -61,7 +61,7 @@ describe("useWordleScoreSubmission — submit()", () => {
 
   it("maps attempts to 7 (penalty) when the player lost", async () => {
     const spy = mockFetch();
-    const { result } = renderHook(() => useWordleScoreSubmission(BASE));
+    const { result } = renderHook(() => useLeksiarxeioScoreSubmission(BASE));
 
     await act(async () => { result.current.submit(5, 6, false); });
 
@@ -71,7 +71,7 @@ describe("useWordleScoreSubmission — submit()", () => {
 
   it("falls back to 'Ανώνυμος' when displayName is empty", async () => {
     const spy = mockFetch();
-    const { result } = renderHook(() => useWordleScoreSubmission({ ...BASE, displayName: "" }));
+    const { result } = renderHook(() => useLeksiarxeioScoreSubmission({ ...BASE, displayName: "" }));
 
     await act(async () => { result.current.submit(5, 2, true); });
 
@@ -82,7 +82,7 @@ describe("useWordleScoreSubmission — submit()", () => {
   it("uses the latest displayName via ref without re-creating submit", async () => {
     const spy = mockFetch();
     const { result, rerender } = renderHook(
-      (props: { displayName: string }) => useWordleScoreSubmission({ ...BASE, ...props }),
+      (props: { displayName: string }) => useLeksiarxeioScoreSubmission({ ...BASE, ...props }),
       { initialProps: { displayName: "Παλιό" } },
     );
 

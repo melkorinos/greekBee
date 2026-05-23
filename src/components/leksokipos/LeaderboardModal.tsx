@@ -1,15 +1,13 @@
-// LeaderboardModal — bottom-sheet leaderboard for daily Leksokipos puzzles.
-//
-// Features:
-//   - Rolling 7-day strip (pill buttons) to browse recent leaderboards;
-//     defaults to today's puzzle; no calendar widget
-//   - Top 20 rows sorted by score; player's own row is highlighted
-//   - If the player is outside the top 20, their row is pinned below a dashed separator
-//   - Inline display-name editor (persisted to localStorage via onSaveName)
-//   - "Παίξε αυτό το παζλ" link to jump to any past day's puzzle
-//   - Auto-polls every 5 min via useLeaderboard (only while modal is open)
-
 "use client";
+
+// LeaderboardModal — bottom-sheet leaderboard + cross-device profile section.
+//
+// Profile section sits between the header and the name editor.
+// Mode state machine: idle → creating → pin-reveal
+//                     idle → restoring → picker (2+ matches)
+//                     any  → linked (profile active)
+// All async operations (API calls, state hot-swap) live in GameBoard —
+// this component stays presentational and receives them as callbacks.
 
 import { btnPrimaryCompact, inputCompactClass, labelClass, lbRowBase, lbRowPlayer, lbTdName, lbTdRank, lbTdScore } from "./styles";
 import { useEffect, useState } from "react";
@@ -21,23 +19,53 @@ import { useLeaderboard } from "@/hooks/useLeaderboard";
 
 const GREEK_DAYS = ["Κυρ", "Δευ", "Τρι", "Τετ", "Πεμ", "Παρ", "Σαβ"] as const;
 
-/** Returns e.g. "Δευ 18" for a YYYY-MM-DD date string. */
 function formatDayLabel(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   return `${GREEK_DAYS[d.getDay()]} ${d.getDate()}`;
 }
 
+function formatPickerDate(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return `${d.getDate()}/${d.getMonth() + 1}`;
+  } catch {
+    return iso.slice(0, 10);
+  }
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-interface LeaderboardModalProps {
-  isOpen:          boolean;
-  defaultPuzzleId: string;   // current daily puzzle date e.g. "2026-05-18"
-  recentDates:     string[]; // last 7 puzzle dates, newest-first (from data layer)
-  deviceId:        string;
-  displayName:     string;
-  onSaveName:      (name: string) => void;
-  onClose:         () => void;
+export interface ProfileMatch {
+  device_uuid:  string;
+  display_name: string;
+  created_at:   string;
+  last_active:  string;
 }
+
+type ProfileMode =
+  | "idle"        // not linked — shows create + restore entry points
+  | "creating"    // name input + Δημιουργία
+  | "pin-reveal"  // shows generated PIN; user must note it down
+  | "restoring"   // name + PIN inputs + Επαναφορά
+  | "picker"      // 2+ matches — user picks one
+  | "linked";     // profile active — shows name + Αποσύνδεση
+
+interface LeaderboardModalProps {
+  isOpen:           boolean;
+  defaultPuzzleId:  string;
+  recentDates:      string[];
+  deviceId:         string;
+  displayName:      string;
+  profileLinked:    boolean;
+  onSaveName:       (name: string) => void;
+  onProfileCreate:  (name: string) => Promise<{ pin: string }>;
+  onProfileRestore: (name: string, pin: string) => Promise<ProfileMatch[]>;
+  onProfileSelect:  (deviceUuid: string, displayName: string) => Promise<void>;
+  onDisconnect:     () => void;
+  onClose:          () => void;
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 export function LeaderboardModal({
   isOpen,
@@ -45,30 +73,119 @@ export function LeaderboardModal({
   recentDates,
   deviceId,
   displayName,
+  profileLinked,
   onSaveName,
+  onProfileCreate,
+  onProfileRestore,
+  onProfileSelect,
+  onDisconnect,
   onClose,
 }: LeaderboardModalProps) {
+
+  // ── Leaderboard state ────────────────────────────────────────────────────────
+
   const [selectedDate, setSelectedDate] = useState(defaultPuzzleId);
   const [nameInput,    setNameInput]    = useState(displayName);
-
-  // Today's date — used to determine which pill shows "Σήμερα".
   const today = new Date().toISOString().split("T")[0];
 
-  // Sync name input if parent updates displayName (e.g. first-time save).
   useEffect(() => { setNameInput(displayName); }, [displayName]);
 
-  // Reset to the current puzzle date every time the modal opens.
   useEffect(() => {
-    if (isOpen) setSelectedDate(defaultPuzzleId);
-  }, [isOpen, defaultPuzzleId]);
+    if (isOpen) {
+      setSelectedDate(defaultPuzzleId);
+      setProfileMode(profileLinked ? "linked" : "idle");
+      setProfileNameInput("");
+      setProfilePinInput("");
+      setProfileError(null);
+      setRevealedPin("");
+      setProfileMatches([]);
+      setProfileLoading(false);
+    }
+  }, [isOpen, defaultPuzzleId, profileLinked]);
 
   const { data, isLoading, error, refresh } = useLeaderboard(
     selectedDate,
     deviceId,
-    isOpen  // pause polling when modal is closed
+    isOpen
   );
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
+  // ── Profile state ────────────────────────────────────────────────────────────
+
+  const [profileMode,      setProfileMode]      = useState<ProfileMode>(profileLinked ? "linked" : "idle");
+  const [profileNameInput, setProfileNameInput] = useState("");
+  const [profilePinInput,  setProfilePinInput]  = useState("");
+  const [revealedPin,      setRevealedPin]      = useState("");
+  const [profileError,     setProfileError]     = useState<string | null>(null);
+  const [profileMatches,   setProfileMatches]   = useState<ProfileMatch[]>([]);
+  const [profileLoading,   setProfileLoading]   = useState(false);
+
+  // ── Profile handlers ─────────────────────────────────────────────────────────
+
+  async function handleCreateSubmit() {
+    setProfileLoading(true);
+    setProfileError(null);
+    try {
+      const { pin } = await onProfileCreate(profileNameInput.trim());
+      setRevealedPin(pin);
+      setProfileMode("pin-reveal");
+    } catch {
+      setProfileError("Παρουσιάστηκε σφάλμα. Δοκίμασε ξανά.");
+    } finally {
+      setProfileLoading(false);
+    }
+  }
+
+  async function handleRestoreSubmit() {
+    setProfileLoading(true);
+    setProfileError(null);
+    try {
+      const matches = await onProfileRestore(profileNameInput.trim(), profilePinInput.trim());
+      if (matches.length === 0) {
+        setProfileError("Δεν βρέθηκε προφίλ με αυτό το όνομα και PIN.");
+        setProfileLoading(false);
+        return;
+      }
+      if (matches.length === 1) {
+        await handlePickerSelect(matches[0]!);
+        return;
+      }
+      setProfileMatches(matches);
+      setProfileMode("picker");
+      setProfileLoading(false);
+    } catch {
+      setProfileError("Παρουσιάστηκε σφάλμα. Δοκίμασε ξανά.");
+      setProfileLoading(false);
+    }
+  }
+
+  async function handlePickerSelect(match: ProfileMatch) {
+    setProfileLoading(true);
+    setProfileError(null);
+    try {
+      await onProfileSelect(match.device_uuid, match.display_name);
+      // onProfileSelect closes the modal via GameBoard
+    } catch {
+      setProfileError("Σφάλμα κατά την επαναφορά. Δοκίμασε ξανά.");
+      setProfileLoading(false);
+    }
+  }
+
+  function handleDisconnect() {
+    onDisconnect();
+    setProfileMode("idle");
+    setProfileNameInput("");
+    setProfilePinInput("");
+    setProfileError(null);
+  }
+
+  function cancelProfile() {
+    setProfileMode("idle");
+    setProfileNameInput("");
+    setProfilePinInput("");
+    setProfileError(null);
+  }
+
+  // ── Leaderboard handlers ─────────────────────────────────────────────────────
 
   function handleSaveName() {
     const trimmed = nameInput.trim();
@@ -80,12 +197,11 @@ export function LeaderboardModal({
     if (e.target === e.currentTarget) onClose();
   }
 
-  // ── Derived ────────────────────────────────────────────────────────────────
+  // ── Derived ──────────────────────────────────────────────────────────────────
 
   const { top20, playerRow } = data;
   const nameDirty = nameInput.trim() !== displayName && nameInput.trim() !== "";
   const isViewingCurrentPuzzle = selectedDate === defaultPuzzleId;
-
 
   if (!isOpen) return null;
 
@@ -97,13 +213,11 @@ export function LeaderboardModal({
       aria-label="Πίνακας Σκορ"
       onClick={handleOverlayClick}
     >
-      {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/40" />
 
-      {/* Bottom-sheet panel */}
       <div className="relative bg-white rounded-t-2xl w-full max-w-sm max-h-[82vh] flex flex-col shadow-2xl">
 
-        {/* ── Header ─────────────────────────────────────────────────────── */}
+        {/* ── Header ─────────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-stone-100">
           <h2 className="text-base font-bold text-stone-800">🏆 Πίνακας Σκορ</h2>
           <button
@@ -115,32 +229,194 @@ export function LeaderboardModal({
           </button>
         </div>
 
-        {/* ── Display name ───────────────────────────────────────────────── */}
+        {/* ── Profile section ─────────────────────────────────────────────────── */}
         <div className="px-5 py-3 border-b border-stone-100">
-          <label className={`${labelClass} mb-1.5`}>
-            Το όνομά σου
-          </label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && nameDirty && handleSaveName()}
-              placeholder="Ανώνυμος"
-              maxLength={30}
-              className={`flex-1 ${inputCompactClass}`}
-            />
-            <button
-              onClick={handleSaveName}
-              disabled={!nameDirty}
-              className={btnPrimaryCompact}
-            >
-              {!nameDirty && displayName ? "✓" : "Αποθήκευση"}
-            </button>
-          </div>
+          <p className={`${labelClass} mb-1.5`}>Συγχρονισμός συσκευών</p>
+
+          {profileMode === "idle" && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setProfileMode("creating")}
+                className="text-xs text-stone-500 underline underline-offset-2 hover:text-stone-800 transition-colors"
+              >
+                Δημιουργία προφίλ
+              </button>
+              <span className="text-stone-300 select-none">|</span>
+              <button
+                onClick={() => setProfileMode("restoring")}
+                className="text-xs text-stone-500 underline underline-offset-2 hover:text-stone-800 transition-colors"
+              >
+                Επαναφορά
+              </button>
+            </div>
+          )}
+
+          {profileMode === "creating" && (
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Όνομα (προαιρετικό)"
+                value={profileNameInput}
+                onChange={(e) => setProfileNameInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && !profileLoading && handleCreateSubmit()}
+                maxLength={30}
+                className={`w-full ${inputCompactClass}`}
+                autoFocus
+              />
+              {profileError && (
+                <p className="text-xs text-red-500">{profileError}</p>
+              )}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={cancelProfile}
+                  className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+                >
+                  Άκυρο
+                </button>
+                <button
+                  onClick={() => void handleCreateSubmit()}
+                  disabled={profileLoading}
+                  className={btnPrimaryCompact}
+                >
+                  {profileLoading ? "…" : "Δημιουργία"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {profileMode === "pin-reveal" && (
+            <div className="space-y-2 text-center">
+              <p className="text-xs text-stone-500">Ο κωδικός σου είναι:</p>
+              <p className="text-3xl font-mono font-bold tracking-widest text-stone-900 bg-stone-50 border border-stone-200 rounded-xl py-2 px-4">
+                {revealedPin}
+              </p>
+              <p className="text-xs text-amber-600 font-medium">
+                Σημείωσέ τον — δεν αποθηκεύεται εδώ.
+              </p>
+              <button
+                onClick={() => setProfileMode("linked")}
+                className={btnPrimaryCompact}
+              >
+                Το κράτησα ✓
+              </button>
+            </div>
+          )}
+
+          {profileMode === "restoring" && (
+            <div className="space-y-2">
+              <input
+                type="text"
+                placeholder="Όνομα"
+                value={profileNameInput}
+                onChange={(e) => setProfileNameInput(e.target.value)}
+                maxLength={30}
+                className={`w-full ${inputCompactClass}`}
+                autoFocus
+              />
+              <input
+                type="text"
+                placeholder="PIN (4 ψηφία)"
+                value={profilePinInput}
+                onChange={(e) => setProfilePinInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                onKeyDown={(e) => e.key === "Enter" && !profileLoading && profilePinInput.length === 4 && handleRestoreSubmit()}
+                inputMode="numeric"
+                maxLength={4}
+                className={`w-full ${inputCompactClass}`}
+              />
+              {profileError && (
+                <p className="text-xs text-red-500">{profileError}</p>
+              )}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={cancelProfile}
+                  className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+                >
+                  Άκυρο
+                </button>
+                <button
+                  onClick={() => void handleRestoreSubmit()}
+                  disabled={profileLoading || !profileNameInput.trim() || profilePinInput.length !== 4}
+                  className={btnPrimaryCompact}
+                >
+                  {profileLoading ? "…" : "Επαναφορά"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {profileMode === "picker" && (
+            <div className="space-y-1.5">
+              <p className="text-xs text-stone-500 mb-1">
+                Βρέθηκαν {profileMatches.length} παιχνίδια — ποιο είναι το δικό σου;
+              </p>
+              {profileError && (
+                <p className="text-xs text-red-500">{profileError}</p>
+              )}
+              {profileMatches.map((m) => (
+                <button
+                  key={m.device_uuid}
+                  onClick={() => void handlePickerSelect(m)}
+                  disabled={profileLoading}
+                  className="w-full text-left text-xs px-3 py-2 rounded-lg bg-stone-50 hover:bg-stone-100 active:bg-stone-200 disabled:opacity-50 transition-colors flex justify-between items-center"
+                >
+                  <span className="font-medium text-stone-700">{m.display_name}</span>
+                  <span className="text-stone-400">
+                    Τελευταία: {formatPickerDate(m.last_active)}
+                  </span>
+                </button>
+              ))}
+              <button
+                onClick={() => { setProfileMode("restoring"); setProfileError(null); }}
+                className="text-xs text-stone-400 hover:text-stone-600 transition-colors mt-1"
+              >
+                ← Πίσω
+              </button>
+            </div>
+          )}
+
+          {profileMode === "linked" && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-green-600 font-semibold">
+                ✓ {displayName || "Ανώνυμος"}
+              </span>
+              <button
+                onClick={handleDisconnect}
+                className="text-xs text-stone-400 hover:text-red-500 transition-colors"
+              >
+                Αποσύνδεση
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* ── Day strip ──────────────────────────────────────────────── */}
+        {/* ── Display name — hidden when profile is active ─────────────────────── */}
+        {!profileLinked && (
+          <div className="px-5 py-3 border-b border-stone-100">
+            <label className={`${labelClass} mb-1.5`}>
+              Το όνομά σου
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && nameDirty && handleSaveName()}
+                placeholder="Ανώνυμος"
+                maxLength={30}
+                className={`flex-1 ${inputCompactClass}`}
+              />
+              <button
+                onClick={handleSaveName}
+                disabled={!nameDirty}
+                className={btnPrimaryCompact}
+              >
+                {!nameDirty && displayName ? "✓" : "Αποθήκευση"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Day strip ───────────────────────────────────────────────────────── */}
         <div className="px-4 py-3 border-b border-stone-100">
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             {recentDates.map((date) => {
@@ -177,13 +453,11 @@ export function LeaderboardModal({
           </button>
         </div>
 
-        {/* ── Leaderboard content ────────────────────────────────────────── */}
+        {/* ── Leaderboard content ─────────────────────────────────────────────── */}
         <div className="overflow-y-auto flex-1 px-5 py-3">
 
           {isLoading && (
-            <p className="text-center text-stone-400 text-sm py-10">
-              Φόρτωση…
-            </p>
+            <p className="text-center text-stone-400 text-sm py-10">Φόρτωση…</p>
           )}
 
           {!isLoading && error && (
@@ -235,7 +509,6 @@ export function LeaderboardModal({
             </table>
           )}
 
-          {/* Pinned player row — only shown when player is outside the top 20 */}
           {!isLoading && playerRow && (
             <>
               <div className="border-t-2 border-dashed border-stone-200 my-3" />
@@ -253,10 +526,9 @@ export function LeaderboardModal({
               </table>
             </>
           )}
-
         </div>
 
-        {/* ── Footer: play-this-puzzle link ─────────────────────────────── */}
+        {/* ── Footer ──────────────────────────────────────────────────────────── */}
         {!isViewingCurrentPuzzle && selectedDate <= today && (
           <div className="px-5 py-3 border-t border-stone-100 text-center">
             <Link

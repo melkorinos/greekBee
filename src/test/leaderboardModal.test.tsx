@@ -7,6 +7,7 @@
 //   4. No play link when today's pill is selected.
 //   5. Display-name save button calls onSaveName with the trimmed value.
 //   6. Modal renders nothing when isOpen=false.
+//   7. Profile section — idle, linked, create, restore modes.
 
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -44,13 +45,18 @@ const RECENT_DATES = makeRecentDates(7);
 
 function renderModal(overrides: Partial<React.ComponentProps<typeof LeaderboardModal>> = {}) {
   const defaults: React.ComponentProps<typeof LeaderboardModal> = {
-    isOpen:          true,
-    defaultPuzzleId: TODAY,
-    recentDates:     RECENT_DATES,
-    deviceId:        "test-device-id",
-    displayName:     "",
-    onSaveName:      vi.fn(),
-    onClose:         vi.fn(),
+    isOpen:           true,
+    defaultPuzzleId:  TODAY,
+    recentDates:      RECENT_DATES,
+    deviceId:         "test-device-id",
+    displayName:      "",
+    profileLinked:    false,
+    onSaveName:       vi.fn(),
+    onProfileCreate:  vi.fn().mockResolvedValue({ pin: "1234" }),
+    onProfileRestore: vi.fn().mockResolvedValue([]),
+    onProfileSelect:  vi.fn().mockResolvedValue(undefined),
+    onDisconnect:     vi.fn(),
+    onClose:          vi.fn(),
     ...overrides,
   };
   return render(<LeaderboardModal {...defaults} />);
@@ -121,6 +127,113 @@ describe("LeaderboardModal — play link", () => {
     links.forEach((link) =>
       expect(link.closest("a")).toHaveAttribute("href", `/leksokipos?puzzle=${past}`)
     );
+  });
+});
+
+// ── Profile section ───────────────────────────────────────────────────────────
+
+describe("LeaderboardModal — profile section (idle)", () => {
+  it("shows 'Δημιουργία προφίλ' and 'Επαναφορά' links when not linked", () => {
+    renderModal({ profileLinked: false });
+    expect(screen.getByText("Δημιουργία προφίλ")).toBeInTheDocument();
+    expect(screen.getByText("Επαναφορά")).toBeInTheDocument();
+  });
+
+  it("clicking 'Δημιουργία προφίλ' shows the create form", async () => {
+    renderModal({ profileLinked: false });
+    await userEvent.click(screen.getByText("Δημιουργία προφίλ"));
+    expect(screen.getByPlaceholderText("Όνομα (προαιρετικό)")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Δημιουργία" })).toBeInTheDocument();
+  });
+
+  it("clicking 'Επαναφορά' shows the restore form", async () => {
+    renderModal({ profileLinked: false });
+    await userEvent.click(screen.getByText("Επαναφορά"));
+    expect(screen.getByPlaceholderText("Όνομα")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("PIN (4 ψηφία)")).toBeInTheDocument();
+  });
+
+  it("'Άκυρο' in create form returns to idle", async () => {
+    renderModal({ profileLinked: false });
+    await userEvent.click(screen.getByText("Δημιουργία προφίλ"));
+    await userEvent.click(screen.getByText("Άκυρο"));
+    expect(screen.getByText("Δημιουργία προφίλ")).toBeInTheDocument();
+  });
+});
+
+describe("LeaderboardModal — profile section (linked)", () => {
+  it("shows the linked name when profileLinked=true", () => {
+    renderModal({ profileLinked: true, displayName: "Νίκος" });
+    expect(screen.getByText(/Νίκος/)).toBeInTheDocument();
+    expect(screen.getByText("Αποσύνδεση")).toBeInTheDocument();
+  });
+
+  it("shows 'Ανώνυμος' when profileLinked=true but displayName is empty", () => {
+    renderModal({ profileLinked: true, displayName: "" });
+    expect(screen.getByText(/Ανώνυμος/)).toBeInTheDocument();
+  });
+
+  it("calls onDisconnect when 'Αποσύνδεση' is clicked", async () => {
+    const onDisconnect = vi.fn();
+    renderModal({ profileLinked: true, displayName: "Νίκος", onDisconnect });
+    await userEvent.click(screen.getByText("Αποσύνδεση"));
+    expect(onDisconnect).toHaveBeenCalledOnce();
+  });
+
+  it("hides the name editor when profileLinked=true", () => {
+    renderModal({ profileLinked: true });
+    expect(screen.queryByPlaceholderText("Ανώνυμος")).toBeNull();
+  });
+
+  it("shows the name editor when profileLinked=false", () => {
+    renderModal({ profileLinked: false });
+    expect(screen.getByPlaceholderText("Ανώνυμος")).toBeInTheDocument();
+  });
+});
+
+describe("LeaderboardModal — profile create flow", () => {
+  it("calls onProfileCreate with the entered name and shows PIN on success", async () => {
+    const onProfileCreate = vi.fn().mockResolvedValue({ pin: "4829" });
+    renderModal({ profileLinked: false, onProfileCreate });
+    await userEvent.click(screen.getByText("Δημιουργία προφίλ"));
+    await userEvent.type(screen.getByPlaceholderText("Όνομα (προαιρετικό)"), "Μαρία");
+    await userEvent.click(screen.getByRole("button", { name: "Δημιουργία" }));
+    expect(onProfileCreate).toHaveBeenCalledWith("Μαρία");
+    expect(await screen.findByText("4829")).toBeInTheDocument();
+  });
+
+  it("shows error message when onProfileCreate throws", async () => {
+    const onProfileCreate = vi.fn().mockRejectedValue(new Error("fail"));
+    renderModal({ profileLinked: false, onProfileCreate });
+    await userEvent.click(screen.getByText("Δημιουργία προφίλ"));
+    await userEvent.click(screen.getByRole("button", { name: "Δημιουργία" }));
+    expect(await screen.findByText(/σφάλμα/i)).toBeInTheDocument();
+  });
+});
+
+describe("LeaderboardModal — profile restore flow", () => {
+  it("shows error when no profiles match", async () => {
+    const onProfileRestore = vi.fn().mockResolvedValue([]);
+    renderModal({ profileLinked: false, onProfileRestore });
+    await userEvent.click(screen.getByText("Επαναφορά"));
+    await userEvent.type(screen.getByPlaceholderText("Όνομα"), "Νίκος");
+    await userEvent.type(screen.getByPlaceholderText("PIN (4 ψηφία)"), "9999");
+    await userEvent.click(screen.getByRole("button", { name: "Επαναφορά" }));
+    expect(await screen.findByText(/Δεν βρέθηκε/)).toBeInTheDocument();
+  });
+
+  it("shows collision picker when 2+ profiles match", async () => {
+    const matches = [
+      { device_uuid: "uuid-1", display_name: "Νίκος", created_at: "2026-05-01T00:00:00Z", last_active: "2026-05-20T00:00:00Z" },
+      { device_uuid: "uuid-2", display_name: "Νίκος", created_at: "2026-05-10T00:00:00Z", last_active: "2026-05-22T00:00:00Z" },
+    ];
+    const onProfileRestore = vi.fn().mockResolvedValue(matches);
+    renderModal({ profileLinked: false, onProfileRestore });
+    await userEvent.click(screen.getByText("Επαναφορά"));
+    await userEvent.type(screen.getByPlaceholderText("Όνομα"), "Νίκος");
+    await userEvent.type(screen.getByPlaceholderText("PIN (4 ψηφία)"), "1234");
+    await userEvent.click(screen.getByRole("button", { name: "Επαναφορά" }));
+    expect(await screen.findByText(/Βρέθηκαν 2/)).toBeInTheDocument();
   });
 });
 

@@ -1,4 +1,4 @@
-// vitest.config.ts — Vitest configuration for the Spelling Bee project.
+// vitest.config.ts — Vitest configuration for the Leksarxeia platform.
 // Uses jsdom so React components can render without a real browser.
 
 import { defineConfig } from "vitest/config";

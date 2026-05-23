@@ -1,9 +1,9 @@
-﻿// Unit tests for wordleReducer.
+// Unit tests for leksiarxeioReducer.
 
-import { WordleAction, makeInitialWordleState, wordleReducer } from "@/games/leksiarxeio/hooks/wordleReducer";
+import { LeksiarxeioAction, makeInitialLeksiarxeioState, leksiarxeioReducer } from "@/games/leksiarxeio/hooks/leksiarxeioReducer";
 import { describe, expect, it } from "vitest";
 
-import type { WordleState } from "@/games/leksiarxeio/types";
+import type { LeksiarxeioState } from "@/games/leksiarxeio/types";
 
 const PUZZLE = {
   id: "test-puzzle",
@@ -14,15 +14,15 @@ const PUZZLE = {
 
 const VALID_WORDS = new Set(["αβγδε", "αζηθι", "κλμνξ"]);
 
-function fresh(): WordleState {
-  return makeInitialWordleState(PUZZLE);
+function fresh(): LeksiarxeioState {
+  return makeInitialLeksiarxeioState(PUZZLE);
 }
 
-function dispatch(state: WordleState, action: WordleAction): WordleState {
-  return wordleReducer(state, action);
+function dispatch(state: LeksiarxeioState, action: LeksiarxeioAction): LeksiarxeioState {
+  return leksiarxeioReducer(state, action);
 }
 
-describe("wordleReducer — ADD_LETTER", () => {
+describe("leksiarxeioReducer — ADD_LETTER", () => {
   it("appends a letter to currentInput", () => {
     const s = dispatch(fresh(), { type: "ADD_LETTER", letter: "α" });
     expect(s.currentInput).toBe("α");
@@ -37,12 +37,12 @@ describe("wordleReducer — ADD_LETTER", () => {
   });
 
   it("ignores input when game is won", () => {
-    const s: WordleState = { ...fresh(), status: "won" };
+    const s: LeksiarxeioState = { ...fresh(), status: "won" };
     expect(dispatch(s, { type: "ADD_LETTER", letter: "α" }).currentInput).toBe("");
   });
 });
 
-describe("wordleReducer — DELETE_LETTER", () => {
+describe("leksiarxeioReducer — DELETE_LETTER", () => {
   it("removes the last letter", () => {
     let s = dispatch(fresh(), { type: "ADD_LETTER", letter: "α" });
     s = dispatch(s, { type: "DELETE_LETTER" });
@@ -55,8 +55,8 @@ describe("wordleReducer — DELETE_LETTER", () => {
   });
 });
 
-describe("wordleReducer — SUBMIT_GUESS", () => {
-  function typeWord(state: WordleState, word: string): WordleState {
+describe("leksiarxeioReducer — SUBMIT_GUESS", () => {
+  function typeWord(state: LeksiarxeioState, word: string): LeksiarxeioState {
     let s = state;
     for (const l of word) s = dispatch(s, { type: "ADD_LETTER", letter: l });
     return s;
@@ -102,7 +102,7 @@ describe("wordleReducer — SUBMIT_GUESS", () => {
   });
 });
 
-describe("wordleReducer — RESTORE_STATE", () => {
+describe("leksiarxeioReducer — RESTORE_STATE", () => {
   it("restores guesses and status", () => {
     const s = dispatch(fresh(), {
       type: "RESTORE_STATE",

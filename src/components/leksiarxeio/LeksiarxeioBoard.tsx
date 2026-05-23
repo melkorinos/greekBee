@@ -1,34 +1,34 @@
-﻿"use client";
+"use client";
 
-// Top-level Wordle board — assembles GuessGrid + Keyboard + feedback message.
+// Top-level Leksiarxeio board — assembles GuessGrid + Keyboard + feedback message.
 // Manages the active word length (4–8) with a - N + switcher.
 // Wires physical keyboard events and leaderboard score submission.
 
-import type { WordleLength, WordlePuzzle } from "@/games/leksiarxeio/types";
+import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
 import { readSlice, writeSlice } from "@/hooks/useGameStore";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { GuessGrid } from "./GuessGrid";
 import { Keyboard } from "./Keyboard";
-import { WordleLeaderboardModal } from "./WordleLeaderboardModal";
+import { LeksiarxeioLeaderboardModal } from "./LeksiarxeioLeaderboardModal";
 import { normalizeLetters } from "@/games/leksokipos/lib/normalize";
-import { useWordleScoreSubmission } from "@/hooks/useWordleScoreSubmission";
-import { useWordleState } from "@/games/leksiarxeio/hooks/useWordleState";
+import { useLeksiarxeioScoreSubmission } from "@/hooks/useLeksiarxeioScoreSubmission";
+import { useLeksiarxeioState } from "@/games/leksiarxeio/hooks/useLeksiarxeioState";
 
 // Greek letter regex (covers the Greek alphabet range)
 const GREEK_LETTER = /^[α-ωά-ώΑ-ΩΆ-Ώ]$/i;
 
-const LENGTHS: WordleLength[] = [4, 5, 6, 7, 8];
+const LENGTHS: LeksiarxeioLength[] = [4, 5, 6, 7, 8];
 
 // ── Persistence slice for identity (device + display name) ────────────────────
-interface WordleIdentitySlice {
+interface LeksiarxeioIdentitySlice {
   deviceId:    string;
   displayName: string;
 }
 
 function getOrCreateDeviceId(): string {
-  const existing = readSlice<WordleIdentitySlice>("leksiarxeio-identity");
+  const existing = readSlice<LeksiarxeioIdentitySlice>("leksiarxeio-identity");
   if (existing?.deviceId) return existing.deviceId;
   const id = crypto.randomUUID();
   writeSlice("leksiarxeio-identity", { deviceId: id, displayName: "" });
@@ -37,10 +37,10 @@ function getOrCreateDeviceId(): string {
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
-interface WordleBoardProps {
-  puzzles:   WordlePuzzle[];                      // one per length 4–8, server-provided
-  wordLists: Record<WordleLength, string[]>;
-  today:     string;                              // YYYY-MM-DD
+interface LeksiarxeioBoardProps {
+  puzzles:   LeksiarxeioPuzzle[];                      // one per length 4–8, server-provided
+  wordLists: Record<LeksiarxeioLength, string[]>;
+  today:     string;                                   // YYYY-MM-DD
   /** Ref callback so the page can inject a leaderboard-open trigger */
   onOpenLeaderboardRef?: (fn: () => void) => void;
 }
@@ -50,13 +50,13 @@ interface WordleBoardProps {
 // so each instance maintains its own independent state.
 
 interface LengthPanelProps {
-  puzzle:        WordlePuzzle;
+  puzzle:        LeksiarxeioPuzzle;
   validWords:    string[];
   isActive:      boolean;
-  activeLength:  WordleLength;
+  activeLength:  LeksiarxeioLength;
   onPrev:        () => void;
   onNext:        () => void;
-  onGameEnd:     (length: WordleLength, attempts: number, won: boolean) => void;
+  onGameEnd:     (length: LeksiarxeioLength, attempts: number, won: boolean) => void;
 }
 
 function LengthPanel({
@@ -69,7 +69,7 @@ function LengthPanel({
   onGameEnd,
 }: LengthPanelProps) {
   const handleGameEnd = useCallback(
-    (attempts: number, won: boolean) => onGameEnd(puzzle.length as WordleLength, attempts, won),
+    (attempts: number, won: boolean) => onGameEnd(puzzle.length as LeksiarxeioLength, attempts, won),
     [onGameEnd, puzzle.length]
   );
 
@@ -84,7 +84,7 @@ function LengthPanel({
     deleteLetter,
     submitGuess,
     clearMessage,
-  } = useWordleState(puzzle, validWords, handleGameEnd);
+  } = useLeksiarxeioState(puzzle, validWords, handleGameEnd);
 
   // Physical keyboard — only active panel handles keys
   const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
@@ -177,8 +177,8 @@ function LengthPanel({
 
 // ── Main board ────────────────────────────────────────────────────────────────
 
-export function WordleBoard({ puzzles, wordLists, today, onOpenLeaderboardRef }: WordleBoardProps) {
-  const [activeLength,    setActiveLength]    = useState<WordleLength>(4);
+export function LeksiarxeioBoard({ puzzles, wordLists, today, onOpenLeaderboardRef }: LeksiarxeioBoardProps) {
+  const [activeLength,    setActiveLength]    = useState<LeksiarxeioLength>(4);
   const [lbOpen,          setLbOpen]          = useState(false);
   const [deviceId,        setDeviceId]        = useState("");
   const [displayName,     setDisplayName]     = useState("");
@@ -191,27 +191,27 @@ export function WordleBoard({ puzzles, wordLists, today, onOpenLeaderboardRef }:
 
   // Track which lengths are finished (won or lost) so auto-advance can skip them.
   // A ref is used alongside state to avoid stale-closure issues inside setTimeout.
-  const completedRef = useRef(new Set<WordleLength>());
-  const [, setCompletedLengths] = useState<Set<WordleLength>>(new Set());
+  const completedRef = useRef(new Set<LeksiarxeioLength>());
+  const [, setCompletedLengths] = useState<Set<LeksiarxeioLength>>(new Set());
 
   // Hydrate identity on mount
   useEffect(() => {
     const id   = getOrCreateDeviceId();
-    const sl   = readSlice<WordleIdentitySlice>("leksiarxeio-identity");
+    const sl   = readSlice<LeksiarxeioIdentitySlice>("leksiarxeio-identity");
     setDeviceId(id);
     setDisplayName(sl?.displayName ?? "");
   }, []);
 
   // Restore already-completed lengths from persistence so auto-advance skips them.
-  // The Wordle slice is a SessionMap keyed by puzzle ID (e.g. "2026-05-22-wordle-5").
+  // The Leksiarxeio slice is a SessionMap keyed by puzzle ID (e.g. "2026-05-22-wordle-5").
   useEffect(() => {
     const store = readSlice<Record<string, { status: string }>>("leksiarxeio");
     if (!store) return;
-    const done = new Set<WordleLength>();
+    const done = new Set<LeksiarxeioLength>();
     for (const p of puzzles) {
       const session = store[p.id];
       if (session && session.status !== "playing") {
-        done.add(p.length as WordleLength);
+        done.add(p.length as LeksiarxeioLength);
       }
     }
     completedRef.current = done;
@@ -222,13 +222,11 @@ export function WordleBoard({ puzzles, wordLists, today, onOpenLeaderboardRef }:
 
   function handleSaveName(name: string) {
     setDisplayName(name);
-    writeSlice<WordleIdentitySlice>("leksiarxeio-identity", { deviceId, displayName: name });
-    // Update display_name in any already-submitted scores for today
-    // (fire-and-forget — not critical)
+    writeSlice<LeksiarxeioIdentitySlice>("leksiarxeio-identity", { deviceId, displayName: name });
   }
 
   // Score submission -- all posting logic lives in the hook.
-  const { submit: postWordleScore } = useWordleScoreSubmission({ today, deviceId, displayName });
+  const { submit: postLeksiarxeioScore } = useLeksiarxeioScoreSubmission({ today, deviceId, displayName });
 
   // Score submission + auto-advance: called by each LengthPanel when its game ends.
   //
@@ -241,8 +239,8 @@ export function WordleBoard({ puzzles, wordLists, today, onOpenLeaderboardRef }:
   //      unsolved word instead of revisiting finished rounds.
   //   3. If everything is done (or this was the last round): open the leaderboard.
   const handleGameEnd = useCallback(
-    (length: WordleLength, attempts: number, won: boolean) => {
-      postWordleScore(length, attempts, won);
+    (length: LeksiarxeioLength, attempts: number, won: boolean) => {
+      postLeksiarxeioScore(length, attempts, won);
 
       // Update the ref first so the timeout closure sees the fresh set.
       const newCompleted = new Set([...completedRef.current, length]);
@@ -252,7 +250,7 @@ export function WordleBoard({ puzzles, wordLists, today, onOpenLeaderboardRef }:
       setTimeout(() => {
         const completed = completedRef.current;
         const currentIdx = LENGTHS.indexOf(length);
-        let next: WordleLength | null = null;
+        let next: LeksiarxeioLength | null = null;
 
         // Walk forward through LENGTHS (wrapping), pick first unfinished.
         for (let i = 1; i < LENGTHS.length; i++) {
@@ -271,7 +269,7 @@ export function WordleBoard({ puzzles, wordLists, today, onOpenLeaderboardRef }:
         }
       }, 1500);
     },
-    [postWordleScore]
+    [postLeksiarxeioScore]
   );
 
   // Length switcher — wraps around
@@ -295,7 +293,7 @@ export function WordleBoard({ puzzles, wordLists, today, onOpenLeaderboardRef }:
         <LengthPanel
           key={puzzle.length}
           puzzle={puzzle}
-          validWords={wordLists[puzzle.length as WordleLength]}
+          validWords={wordLists[puzzle.length as LeksiarxeioLength]}
           isActive={puzzle.length === activeLength}
           activeLength={activeLength}
           onPrev={prevLength}
@@ -305,7 +303,7 @@ export function WordleBoard({ puzzles, wordLists, today, onOpenLeaderboardRef }:
       ))}
 
       {/* ── Leaderboard modal ─────────────────────────────────────────────── */}
-      <WordleLeaderboardModal
+      <LeksiarxeioLeaderboardModal
         isOpen={lbOpen}
         today={today}
         deviceId={deviceId}
@@ -316,4 +314,3 @@ export function WordleBoard({ puzzles, wordLists, today, onOpenLeaderboardRef }:
     </>
   );
 }
-

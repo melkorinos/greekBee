@@ -1,33 +1,33 @@
-// connectionsReducer — pure reducer for Connections game state.
+// leksindeseisReducer — pure reducer for Leksindeseis game state.
 // Zero React imports. Fully unit-testable.
 
 import type {
-  ConnectionGroup,
-  ConnectionsAction,
-  ConnectionsState,
+  LeksindeseisGroup,
+  LeksindeseisAction,
+  LeksindeseisState,
 } from "../types";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Check if a sorted word array matches a group's words exactly. */
-function matchesGroup(selection: string[], group: ConnectionGroup): boolean {
+function matchesGroup(selection: string[], group: LeksindeseisGroup): boolean {
   const sel = [...selection].sort();
   const grp = [...group.words].sort();
   return sel.every((w, i) => w === grp[i]) && sel.length === grp.length;
 }
 
 /** Is this selection exactly one word away from a group? */
-function isOneAway(selection: string[], group: ConnectionGroup): boolean {
+function isOneAway(selection: string[], group: LeksindeseisGroup): boolean {
   const overlap = selection.filter((w) => group.words.includes(w));
   return overlap.length === 3;
 }
 
 // ── Reducer ───────────────────────────────────────────────────────────────────
 
-export function connectionsReducer(
-  state: ConnectionsState,
-  action: ConnectionsAction,
-): ConnectionsState {
+export function leksindeseisReducer(
+  state: LeksindeseisState,
+  action: LeksindeseisAction,
+): LeksindeseisState {
   if (
     state.status !== "playing" &&
     action.type !== "CLEAR_FEEDBACK" &&

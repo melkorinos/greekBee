@@ -1,16 +1,16 @@
-﻿"use client";
+"use client";
 
-// Header row for the Wordle page: title, rules ?, and leaderboard 🏆 button.
+// Header row for the Leksiarxeio page: title, rules ?, and leaderboard 🏆 button.
 // Lives in a client component so it can hold the open-leaderboard callback ref
-// that WordleBoard exposes.
+// that LeksiarxeioBoard exposes.
 
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
-import { WordleBoard } from "./WordleBoard";
-import type { WordleLength } from "@/games/leksiarxeio/types";
-import type { WordlePuzzle } from "@/games/leksiarxeio/types";
+import { LeksiarxeioBoard } from "./LeksiarxeioBoard";
+import type { LeksiarxeioLength } from "@/games/leksiarxeio/types";
+import type { LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
 import { useRef } from "react";
 
-const WORDLE_RULES = [
+const LEKSIARXEIO_RULES = [
   "Μάντεψε τη λέξη της ημέρας σε **6 προσπάθειες**.",
   "Χρησιμοποίησε τα **- / +** για να αλλάξεις μήκος λέξης (4–8 γράμματα).",
   "Κάθε προσπάθεια πρέπει να είναι έγκυρη ελληνική λέξη του επιλεγμένου μήκους.",
@@ -21,13 +21,13 @@ const WORDLE_RULES = [
   "🏆 Σκορ: 1 πόντος ανά προσπάθεια που έσωσες (max 6) × μήκος λέξης. Λιγότερες προσπάθειες = περισσότεροι πόντοι.",
 ];
 
-interface WordlePageClientProps {
-  puzzles:   WordlePuzzle[];
-  wordLists: Record<WordleLength, string[]>;
+interface LeksiarxeioPageClientProps {
+  puzzles:   LeksiarxeioPuzzle[];
+  wordLists: Record<LeksiarxeioLength, string[]>;
   today:     string;
 }
 
-export function WordlePageClient({ puzzles, wordLists, today }: WordlePageClientProps) {
+export function LeksiarxeioPageClient({ puzzles, wordLists, today }: LeksiarxeioPageClientProps) {
   const openLbRef = useRef<(() => void) | null>(null);
 
   function handleOpenLeaderboardRef(fn: () => void) {
@@ -51,13 +51,13 @@ export function WordlePageClient({ puzzles, wordLists, today }: WordlePageClient
           </button>
           <HowToPlayModal
             title="Πώς να παίξεις — Leksiarxeio"
-            items={WORDLE_RULES}
+            items={LEKSIARXEIO_RULES}
             bulletIcon="▸"
             lightTrigger
           />
         </div>
       </div>
-      <WordleBoard
+      <LeksiarxeioBoard
         puzzles={puzzles}
         wordLists={wordLists}
         today={today}

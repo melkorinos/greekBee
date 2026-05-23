@@ -269,3 +269,18 @@ describe("Give-up flow", () => {
     expect(missedList).not.toHaveTextContent("anti");
   });
 });
+
+// ── Leaderboard button location ────────────────────────────────────────────────
+
+describe("Leaderboard button", () => {
+  it("renders inside ScoreBar (next to score) for daily puzzles", () => {
+    render(<GameBoard puzzle={{ ...puzzle, id: "2026-05-20-el", date: "2026-05-20" }} />);
+    const scoreBar = screen.getByTestId("score-bar");
+    expect(scoreBar.querySelector('[data-testid="btn-leaderboard"]')).toBeInTheDocument();
+  });
+
+  it("is absent for non-daily (custom) puzzles", () => {
+    setup();
+    expect(screen.queryByTestId("btn-leaderboard")).toBeNull();
+  });
+});

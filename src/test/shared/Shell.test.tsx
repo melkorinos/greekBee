@@ -101,8 +101,8 @@ describe("Drawer game links", () => {
     await user.click(getHamburger());
 
     const nav = screen.getByRole("navigation", { name: /game navigation/i });
-    const spellingBeeLink = within(nav).getByRole("link", { name: /leksokipos/i });
-    await user.click(spellingBeeLink);
+    const leksokiposLink = within(nav).getByRole("link", { name: /leksokipos/i });
+    await user.click(leksokiposLink);
 
     expect(screen.queryByRole("navigation", { name: /game navigation/i })).not.toBeInTheDocument();
   });

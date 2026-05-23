@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-export class ConnectionsPage {
+export class LeksindeseisPage {
   readonly heading;
 
   constructor(private page: Page) {

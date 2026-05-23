@@ -7,6 +7,7 @@ import { buildInitialState, gameReducer } from "./gameReducer";
 import { useCallback, useMemo, useReducer } from "react";
 
 import type { RankName, LeksokiposPuzzle } from "../types";
+import { calculateRank } from "../lib/ranking";
 import { normalizeLetters } from "../lib/normalize";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 
@@ -97,6 +98,21 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     []
   );
 
+  const restoreFromSync = useCallback(
+    (blob: { foundWords: string[]; score: number; currentInput: string }) => {
+      dispatch({
+        type: "RESTORE_STATE",
+        saved: {
+          foundWords:   blob.foundWords,
+          score:        blob.score,
+          currentInput: blob.currentInput,
+          currentRank:  calculateRank(blob.score, state.puzzleMaxScore),
+        },
+      });
+    },
+    [state.puzzleMaxScore]
+  );
+
   const newGame = useCallback(
     (puzzle: LeksokiposPuzzle) => {
       clearRound();
@@ -123,5 +139,6 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     handleKeyboardLetter,
     newGame,
     giveUp,
+    restoreFromSync,
   };
 }

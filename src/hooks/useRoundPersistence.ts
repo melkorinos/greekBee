@@ -2,7 +2,7 @@
 
 // useRoundPersistence — unified persistence hook for a single game round.
 // Replaces the three incompatible persistence implementations across
-// SpellingBee, Wordle, and Connections with one consistent seam.
+// Leksokipos, Leksiarxeio, and Leksindeseis with one consistent seam.
 //
 // Storage format: { [sessionKey]: TSnapshot } under the game's slice.
 // Multiple sessions co-exist (e.g. different Wordle word lengths on the same day).

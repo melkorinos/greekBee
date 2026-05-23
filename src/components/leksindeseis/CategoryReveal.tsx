@@ -1,9 +1,9 @@
 ﻿// CategoryReveal — displays a correctly solved group as a coloured bar.
 
-import type { ConnectionGroup } from "@/games/leksindeseis/types";
+import type { LeksindeseisGroup } from "@/games/leksindeseis/types";
 
 interface CategoryRevealProps {
-  group: ConnectionGroup;
+  group: LeksindeseisGroup;
 }
 
 // Difficulty colours (1=amber, 2=green, 3=blue, 4=purple)

@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-export class WordlePage {
+export class LeksiarxeioPage {
   readonly heading;
 
   constructor(private page: Page) {

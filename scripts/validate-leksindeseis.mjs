@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// validate-connections.mjs — validates puzzles-connections.json.
+// validate-leksindeseis.mjs — validates puzzles-connections.json.
 // Checks: exactly 4 groups, each with exactly 4 words, no duplicate words,
 // valid difficulty values (1–4), all dates unique, words non-empty strings.
 
@@ -9,7 +9,7 @@ import { fileURLToPath } from "url";
 import { readFileSync } from "fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const dataPath = resolve(__dirname, "../src/data/connections/puzzles-connections.json");
+const dataPath = resolve(__dirname, "../src/data/leksindeseis/puzzles-connections.json");
 
 const puzzles = JSON.parse(readFileSync(dataPath, "utf8"));
 

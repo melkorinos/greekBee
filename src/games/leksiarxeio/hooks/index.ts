@@ -1,4 +1,4 @@
-export { wordleReducer, makeInitialWordleState } from "./wordleReducer";
-export { useWordleState }                        from "./useWordleState";
-export type { WordleAction }                     from "./wordleReducer";
-export type { UseWordleStateReturn }             from "./useWordleState";
+export { leksiarxeioReducer, makeInitialLeksiarxeioState } from "./leksiarxeioReducer";
+export { useLeksiarxeioState }                             from "./useLeksiarxeioState";
+export type { LeksiarxeioAction }                          from "./leksiarxeioReducer";
+export type { UseLeksiarxeioStateReturn }                  from "./useLeksiarxeioState";

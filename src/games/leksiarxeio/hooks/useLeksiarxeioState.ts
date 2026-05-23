@@ -3,32 +3,32 @@
 // Leksiarxeio — React hook.
 // Wires the reducer to persistence and exposes a clean API to the UI.
 
-import type { GuessResult, WordlePuzzle, WordleStatus } from "../types";
-import { makeInitialWordleState, wordleReducer } from "./wordleReducer";
+import type { GuessResult, LeksiarxeioPuzzle, LeksiarxeioStatus } from "../types";
+import { leksiarxeioReducer, makeInitialLeksiarxeioState } from "./leksiarxeioReducer";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
 import { buildLetterStateMap } from "../lib/letterState";
-import { scoreWordle } from "../lib/scoring";
+import { scoreLeksiarxeio } from "../lib/scoring";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 
 const MAX_GUESSES = 6;
 
-// Fields persisted for a single Wordle session.
+// Fields persisted for a single Leksiarxeio session.
 // The puzzle ID (e.g. "2026-05-22-wordle-5") already encodes date + length,
 // so separate word-length sessions are stored as separate SessionStore entries.
-interface WordleRoundSnapshot {
+interface LeksiarxeioRoundSnapshot {
   guesses: GuessResult[];
-  status:  WordleStatus;
+  status:  LeksiarxeioStatus;
 }
 
 /**
- * All state and actions the Wordle UI needs.
+ * All state and actions the Leksiarxeio UI needs.
  * Words are kept as lower-case normalised strings; the UI uppercases for display.
  */
-export interface UseWordleStateReturn {
-  guesses:      ReturnType<typeof makeInitialWordleState>["guesses"];
+export interface UseLeksiarxeioStateReturn {
+  guesses:      ReturnType<typeof makeInitialLeksiarxeioState>["guesses"];
   currentInput: string;
-  status:       ReturnType<typeof makeInitialWordleState>["status"];
+  status:       ReturnType<typeof makeInitialLeksiarxeioState>["status"];
   lastMessage:  string | null;
   letterStates: ReturnType<typeof buildLetterStateMap>;
   maxGuesses:   number;
@@ -40,28 +40,28 @@ export interface UseWordleStateReturn {
   clearMessage: () => void;
 }
 
-export function useWordleState(
-  puzzle: WordlePuzzle,
+export function useLeksiarxeioState(
+  puzzle: LeksiarxeioPuzzle,
   validWords: string[],
   /** Called when the game ends (won or lost) with the number of attempts used */
   onGameEnd?: (attempts: number, won: boolean) => void,
-): UseWordleStateReturn {
+): UseLeksiarxeioStateReturn {
   const validSet = useMemo(() => new Set(validWords), [validWords]);
 
   const [state, dispatch] = useReducer(
-    wordleReducer,
+    leksiarxeioReducer,
     puzzle,
-    makeInitialWordleState
+    makeInitialLeksiarxeioState
   );
 
   // Memoize only the fields that need to be persisted.
   // puzzle.id is not included — it's the session key, not part of the snapshot.
-  const snapshot = useMemo<WordleRoundSnapshot>(() => ({
+  const snapshot = useMemo<LeksiarxeioRoundSnapshot>(() => ({
     guesses: state.guesses,
     status:  state.status,
   }), [state.guesses, state.status]);
 
-  useRoundPersistence<WordleRoundSnapshot>(
+  useRoundPersistence<LeksiarxeioRoundSnapshot>(
     "leksiarxeio",
     puzzle.id,
     snapshot,
@@ -71,7 +71,7 @@ export function useWordleState(
       status:  saved.status,
     }), []),
     // Only persist once the player has made at least one guess
-    useCallback((snap: WordleRoundSnapshot) => snap.guesses.length > 0, []),
+    useCallback((snap: LeksiarxeioRoundSnapshot) => snap.guesses.length > 0, []),
   );
 
   // ── Fire onGameEnd once when status transitions away from "playing" ──────────
@@ -92,7 +92,7 @@ export function useWordleState(
   const score = useMemo(
     () =>
       state.status !== "playing"
-        ? scoreWordle(state.guesses.length, state.status === "won")
+        ? scoreLeksiarxeio(state.guesses.length, state.status === "won")
         : 0,
     [state.guesses.length, state.status]
   );

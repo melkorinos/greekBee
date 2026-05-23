@@ -3,7 +3,7 @@
 // GameBoard -- the top-level client component that composes all game UI pieces.
 // Receives the initial puzzle as a prop (loaded server-side in page.tsx).
 
-import { getDisplayName, getOrCreateDeviceId, setDisplayName as saveDisplayName } from "@/hooks/useGameStore";
+import { disconnectProfile, getDisplayName, getOrCreateDeviceId, isProfileLinked, setDeviceId, setDisplayName as saveDisplayName, setProfileLinked } from "@/hooks/useGameStore";
 import { getSuggestedWords, markSuggested } from "@/hooks/suggestions";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -13,11 +13,13 @@ import { FlowerGrid } from "./FlowerGrid";
 import { LeaderboardModal } from "./LeaderboardModal";
 import { MissedWordsList } from "./MissedWordsList";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
+import type { ProfileMatch } from "./LeaderboardModal";
 import { ScoreBar } from "./ScoreBar";
 import { SuggestWordModal } from "./SuggestWordModal";
 import { WordInput } from "./WordInput";
 import { btnSecondary } from "./styles";
 import { useGameState } from "@/games/leksokipos/hooks/useGameState";
+import { useGameStateSync } from "@/hooks/useGameStateSync";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { isDailyPuzzle } from "@/games/leksokipos/lib";
 
@@ -44,6 +46,7 @@ export function GameBoard({ puzzle, recentPuzzleDates = [] }: GameBoardProps) {
     shuffleLetters,
     handleKeyboardLetter,
     giveUp,
+    restoreFromSync,
   } = useGameState(puzzle);
 
   // Word suggestion
@@ -53,13 +56,16 @@ export function GameBoard({ puzzle, recentPuzzleDates = [] }: GameBoardProps) {
   );
   const [justSuggested, setJustSuggested] = useState<string | null>(null);
 
-  // Leaderboard
-  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
-  const [displayName, setDisplayNameState] = useState<string>(
+  // Leaderboard + profile
+  const [leaderboardOpen,   setLeaderboardOpen]   = useState(false);
+  const [displayName,       setDisplayNameState]   = useState<string>(
     () => typeof window === "undefined" ? "" : getDisplayName()
   );
-  const [deviceId] = useState<string>(
+  const [deviceId, setDeviceIdState] = useState<string>(
     () => typeof window === "undefined" ? "" : getOrCreateDeviceId()
+  );
+  const [profileLinkedState, setProfileLinkedState] = useState<boolean>(
+    () => typeof window === "undefined" ? false : isProfileLinked()
   );
 
   // Only daily puzzles participate in the leaderboard.
@@ -76,6 +82,59 @@ export function GameBoard({ puzzle, recentPuzzleDates = [] }: GameBoardProps) {
 
   // Auto-post whenever the score increases.
   useEffect(() => { postScore(score); }, [score, postScore]);
+
+  // Cross-device sync — pushes state on every valid word, daily puzzles only.
+  useGameStateSync({ puzzleDate: leaderboardPuzzleId, isDaily, foundWords, score, currentInput });
+
+  // ── Profile callbacks ────────────────────────────────────────────────────────
+
+  async function handleProfileCreate(name: string): Promise<{ pin: string }> {
+    const res = await fetch("/api/profile", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ display_name: name, device_uuid: deviceId }),
+    });
+    if (!res.ok) throw new Error("profile create failed");
+    const data = (await res.json()) as { pin: string };
+    setProfileLinked(true);
+    setProfileLinkedState(true);
+    handleSaveName(name || "Ανώνυμος");
+    return data;
+  }
+
+  async function handleProfileRestore(name: string, pin: string): Promise<ProfileMatch[]> {
+    const res = await fetch(
+      `/api/profile?name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}`
+    );
+    if (!res.ok) throw new Error("profile lookup failed");
+    const data = (await res.json()) as { profiles: ProfileMatch[] };
+    return data.profiles;
+  }
+
+  async function handleProfileSelect(selectedUuid: string, selectedName: string): Promise<void> {
+    setDeviceId(selectedUuid);
+    setDeviceIdState(selectedUuid);
+    setProfileLinked(true);
+    setProfileLinkedState(true);
+    handleSaveName(selectedName);
+
+    const res = await fetch(
+      `/api/game-state?device_uuid=${encodeURIComponent(selectedUuid)}&game_id=leksokipos&puzzle_date=${encodeURIComponent(leaderboardPuzzleId)}`
+    );
+    if (res.ok) {
+      const { state } = (await res.json()) as {
+        state: { foundWords: string[]; score: number; currentInput: string } | null;
+      };
+      if (state) restoreFromSync(state);
+    }
+    setLeaderboardOpen(false);
+  }
+
+  function handleDisconnect(): void {
+    disconnectProfile();
+    setDeviceIdState(getOrCreateDeviceId());
+    setProfileLinkedState(false);
+  }
 
   function handleSuggest(word: string) {
     setSuggestWord(word);
@@ -240,7 +299,12 @@ export function GameBoard({ puzzle, recentPuzzleDates = [] }: GameBoardProps) {
           recentDates={recentPuzzleDates}
           deviceId={deviceId}
           displayName={displayName}
+          profileLinked={profileLinkedState}
           onSaveName={handleSaveName}
+          onProfileCreate={handleProfileCreate}
+          onProfileRestore={handleProfileRestore}
+          onProfileSelect={handleProfileSelect}
+          onDisconnect={handleDisconnect}
           onClose={() => setLeaderboardOpen(false)}
         />
       )}

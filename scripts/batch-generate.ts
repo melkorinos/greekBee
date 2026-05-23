@@ -104,7 +104,7 @@ function normalize(text: string): string {
 // ── Paths ──────────────────────────────────────────────────────────────────────
 
 const wordListPath = path.resolve(`src/data/words-${LANG}.json`);
-const puzzlePath = path.resolve(`src/data/spelling-bee/puzzles-${LANG}.json`);
+const puzzlePath = path.resolve(`src/data/leksokipos/puzzles-${LANG}.json`);
 
 if (!fs.existsSync(wordListPath)) {
   console.error(`❌  Word list not found: ${wordListPath}`);

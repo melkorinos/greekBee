@@ -4,10 +4,14 @@
 
 import {
   clearSlice,
+  disconnectProfile,
   getDisplayName,
   getOrCreateDeviceId,
+  isProfileLinked,
   readSlice,
+  setDeviceId,
   setDisplayName,
+  setProfileLinked,
   writeSlice,
 } from "@/hooks/useGameStore";
 import { describe, expect, it } from "vitest";
@@ -177,5 +181,79 @@ describe("setDisplayName", () => {
     setDisplayName("Πρώτο");
     setDisplayName("Δεύτερο");
     expect(getDisplayName()).toBe("Δεύτερο");
+  });
+});
+
+// ── Cross-device profile helpers ──────────────────────────────────────────────
+
+describe("isProfileLinked / setProfileLinked", () => {
+  it("returns false when nothing has been set", () => {
+    expect(isProfileLinked()).toBe(false);
+  });
+
+  it("returns true after setProfileLinked(true)", () => {
+    setProfileLinked(true);
+    expect(isProfileLinked()).toBe(true);
+  });
+
+  it("returns false after setProfileLinked(false)", () => {
+    setProfileLinked(true);
+    setProfileLinked(false);
+    expect(isProfileLinked()).toBe(false);
+  });
+
+  it("persists under profileLinked in the envelope", () => {
+    setProfileLinked(true);
+    const envelope = JSON.parse(localStorage.getItem("wordgames:state")!);
+    expect(envelope.profileLinked).toBe(true);
+  });
+
+  it("does not disturb other slices", () => {
+    writeSlice("leksokipos", { score: 3 });
+    setProfileLinked(true);
+    expect(readSlice("leksokipos")).toEqual({ score: 3 });
+  });
+});
+
+describe("setDeviceId", () => {
+  it("overwrites the deviceId in the envelope", () => {
+    getOrCreateDeviceId(); // ensure a UUID exists first
+    setDeviceId("aaaaaaaa-bbbb-4ccc-8ddd-ffffffffffff");
+    expect(getOrCreateDeviceId()).toBe("aaaaaaaa-bbbb-4ccc-8ddd-ffffffffffff");
+  });
+
+  it("does not disturb other slices", () => {
+    writeSlice("leksokipos", { score: 5 });
+    setDeviceId("new-id");
+    expect(readSlice("leksokipos")).toEqual({ score: 5 });
+  });
+});
+
+describe("disconnectProfile", () => {
+  it("generates a new deviceId different from the one before", () => {
+    const before = getOrCreateDeviceId();
+    disconnectProfile();
+    const after = getOrCreateDeviceId();
+    expect(after).not.toBe(before);
+  });
+
+  it("new deviceId is a valid UUID v4", () => {
+    disconnectProfile();
+    const id = getOrCreateDeviceId();
+    expect(id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+  });
+
+  it("clears profileLinked", () => {
+    setProfileLinked(true);
+    disconnectProfile();
+    expect(isProfileLinked()).toBe(false);
+  });
+
+  it("does not disturb game slices", () => {
+    writeSlice("leksokipos", { score: 8 });
+    disconnectProfile();
+    expect(readSlice("leksokipos")).toEqual({ score: 8 });
   });
 });

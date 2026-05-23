@@ -1,16 +1,16 @@
-﻿// Unit tests for scoreWordle and buildLetterStateMap.
+﻿// Unit tests for scoreLeksiarxeio and buildLetterStateMap.
 
 import { describe, expect, it } from "vitest";
 
 import type { GuessResult } from "@/games/leksiarxeio/types";
 import { buildLetterStateMap } from "@/games/leksiarxeio/lib/letterState";
-import { scoreWordle } from "@/games/leksiarxeio/lib/scoring";
+import { scoreLeksiarxeio } from "@/games/leksiarxeio/lib/scoring";
 
-describe("scoreWordle", () => {
-  it("returns 6 for 1 guess", () => expect(scoreWordle(1, true)).toBe(6));
-  it("returns 5 for 2 guesses", () => expect(scoreWordle(2, true)).toBe(5));
-  it("returns 1 for 6 guesses", () => expect(scoreWordle(6, true)).toBe(1));
-  it("returns 0 for a loss", () => expect(scoreWordle(6, false)).toBe(0));
+describe("scoreLeksiarxeio", () => {
+  it("returns 6 for 1 guess", () => expect(scoreLeksiarxeio(1, true)).toBe(6));
+  it("returns 5 for 2 guesses", () => expect(scoreLeksiarxeio(2, true)).toBe(5));
+  it("returns 1 for 6 guesses", () => expect(scoreLeksiarxeio(6, true)).toBe(1));
+  it("returns 0 for a loss", () => expect(scoreLeksiarxeio(6, false)).toBe(0));
 });
 
 describe("buildLetterStateMap", () => {

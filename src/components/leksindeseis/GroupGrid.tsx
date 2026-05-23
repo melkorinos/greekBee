@@ -3,13 +3,13 @@
 // GroupGrid — the main 4×4 grid of word cards + solved category bars.
 
 import { CategoryReveal } from "./CategoryReveal";
-import type { ConnectionGroup } from "@/games/leksindeseis/types";
+import type { LeksindeseisGroup } from "@/games/leksindeseis/types";
 import { WordCard } from "./WordCard";
 
 interface GroupGridProps {
   displayOrder:     string[];
   currentSelection: string[];
-  solvedGroups:     ConnectionGroup[];
+  solvedGroups:     LeksindeseisGroup[];
   disabled:         boolean;
   onSelect:         (word: string) => void;
 }

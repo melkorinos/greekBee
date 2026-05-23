@@ -1,5 +1,5 @@
-// Connections game — TypeScript types.
-// No `language` field — Connections has no word-list dependency.
+// Leksindeseis game — TypeScript types.
+// No `language` field — Leksindeseis has no word-list dependency.
 
 // ── Puzzle ────────────────────────────────────────────────────────────────────
 
@@ -7,32 +7,32 @@
 export type ConnectionDifficulty = 1 | 2 | 3 | 4;
 
 /** One solved group of exactly 4 words. */
-export interface ConnectionGroup {
+export interface LeksindeseisGroup {
   category:   string;
   words:      [string, string, string, string];
   difficulty: ConnectionDifficulty;
 }
 
-/** A single day's Connections puzzle. */
-export interface ConnectionsPuzzle {
+/** A single day's Leksindeseis puzzle. */
+export interface LeksindeseisPuzzle {
   /** ISO date string "YYYY-MM-DD" — used to identify today's puzzle. */
   date:   string;
-  groups: [ConnectionGroup, ConnectionGroup, ConnectionGroup, ConnectionGroup];
+  groups: [LeksindeseisGroup, LeksindeseisGroup, LeksindeseisGroup, LeksindeseisGroup];
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
-export type ConnectionsStatus = "playing" | "won" | "lost";
+export type LeksindeseisStatus = "playing" | "won" | "lost";
 
-export interface ConnectionsState {
-  puzzle:            ConnectionsPuzzle;
+export interface LeksindeseisState {
+  puzzle:            LeksindeseisPuzzle;
   /** Groups the player has correctly solved, in order of solving. */
-  solvedGroups:      ConnectionGroup[];
+  solvedGroups:      LeksindeseisGroup[];
   /** Words currently selected (max 4). */
   currentSelection:  string[];
   /** Wrong guesses remaining — starts at 4. */
   mistakesRemaining: number;
-  status:            ConnectionsStatus;
+  status:            LeksindeseisStatus;
   /** Transient feedback message — cleared after display. */
   lastFeedback:      string | null;
   /** History of submitted guesses (for replay / display). */
@@ -41,19 +41,19 @@ export interface ConnectionsState {
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 
-export type ConnectionsAction =
+export type LeksindeseisAction =
   | { type: "SELECT_WORD";    word: string }
   | { type: "SUBMIT_GUESS" }
   | { type: "SHUFFLE" }
   | { type: "CLEAR_FEEDBACK" }
-  | { type: "RESTORE_STATE"; saved: ConnectionsRoundSnapshot };
+  | { type: "RESTORE_STATE"; saved: LeksindeseisRoundSnapshot };
 
 // ── Persistence snapshot ──────────────────────────────────────────────────────
 
-/** Fields persisted for a single Connections round (written by useRoundPersistence). */
-export interface ConnectionsRoundSnapshot {
-  solvedGroups:      ConnectionGroup[];
+/** Fields persisted for a single Leksindeseis round (written by useRoundPersistence). */
+export interface LeksindeseisRoundSnapshot {
+  solvedGroups:      LeksindeseisGroup[];
   mistakesRemaining: number;
-  status:            ConnectionsStatus;
+  status:            LeksindeseisStatus;
   guessHistory:      string[][];
 }

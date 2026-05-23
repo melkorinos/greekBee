@@ -17,7 +17,7 @@ import { upsertAndClean } from "@/lib/supabasePost";
 
 export const runtime = "edge";
 
-const WORDLE_LENGTHS = [4, 5, 6, 7, 8] as const;
+const LEKSIARXEIO_LENGTHS = [4, 5, 6, 7, 8] as const;
 const PENALTY        = 7; // attempts assigned to unplayed lengths
 
 // ── POST ──────────────────────────────────────────────────────────────────────
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   if (!isISODate(puzzle_date)) {
     return NextResponse.json({ error: "Invalid puzzle_date format" }, { status: 400 });
   }
-  if (!WORDLE_LENGTHS.includes(word_length as (typeof WORDLE_LENGTHS)[number])) {
+  if (!LEKSIARXEIO_LENGTHS.includes(word_length as (typeof LEKSIARXEIO_LENGTHS)[number])) {
     return NextResponse.json({ error: "Invalid word_length" }, { status: 400 });
   }
   if (attempts < 1 || attempts > 7) {
@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
       playerMap.set(row.device_id, {
         device_id:    row.device_id,
         display_name: row.display_name,
-        total:        WORDLE_LENGTHS.length * PENALTY, // start with all penalised
+        total:        LEKSIARXEIO_LENGTHS.length * PENALTY, // start with all penalised
       });
     }
     const p = playerMap.get(row.device_id)!;

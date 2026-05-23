@@ -1,11 +1,11 @@
-﻿// Leksiarxeio — data loader (runs server-side via Next.js App Router).
+// Leksiarxeio — data loader (runs server-side via Next.js App Router).
 // Picks today's answer deterministically by date so every user gets the same word.
 //
 // One list per length (words-N.json) is used for both the answer pool and
 // valid-guess validation.  No separate curated list — word quality will be
 // addressed later (see .claude/issue-tracker/issues/05-td003-wordle-answer-pool.md).
 
-import type { WordleLength, WordlePuzzle } from "@/games/leksiarxeio/types";
+import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
 
 import words4 from "./words-4.json";
 import words5 from "./words-5.json";
@@ -13,10 +13,10 @@ import words6 from "./words-6.json";
 import words7 from "./words-7.json";
 import words8 from "./words-8.json";
 
-export const WORDLE_LENGTHS: WordleLength[] = [4, 5, 6, 7, 8];
+export const LEKSIARXEIO_LENGTHS: LeksiarxeioLength[] = [4, 5, 6, 7, 8];
 
 /** Single word list per length — same list drives answers AND valid guesses */
-const WORD_LISTS: Record<WordleLength, string[]> = {
+const WORD_LISTS: Record<LeksiarxeioLength, string[]> = {
   3: [],               // unsupported — kept for type completeness
   4: words4 as string[],
   5: words5 as string[],
@@ -38,14 +38,14 @@ function dateToIndex(dateStr: string, listLength: number): number {
 }
 
 /**
- * Returns today's Wordle puzzle for the given word length.
+ * Returns today's Leksiarxeio puzzle for the given word length.
  * `date` should be an ISO date string (YYYY-MM-DD) — pass from the server so
  * all users share the same puzzle regardless of their local timezone.
  */
-export function getTodaysWordlePuzzle(
+export function getTodaysLeksiarxeioPuzzle(
   date: string,
-  length: WordleLength = 4
-): WordlePuzzle {
+  length: LeksiarxeioLength = 4
+): LeksiarxeioPuzzle {
   const pool = WORD_LISTS[length];
   if (!pool || pool.length === 0) {
     throw new Error(`No word list available for length ${length}`);
@@ -65,15 +65,15 @@ export function getTodaysWordlePuzzle(
 /**
  * Returns all 5 daily puzzles (lengths 4–8) for a given date.
  */
-export function getAllTodaysWordlePuzzles(date: string): WordlePuzzle[] {
-  return WORDLE_LENGTHS.map((l) => getTodaysWordlePuzzle(date, l));
+export function getAllTodaysLeksiarxeioPuzzles(date: string): LeksiarxeioPuzzle[] {
+  return LEKSIARXEIO_LENGTHS.map((l) => getTodaysLeksiarxeioPuzzle(date, l));
 }
 
 /**
  * Returns the word list for a given length — used for both answer selection
  * and client-side guess validation.
  */
-export function getValidWords(length: WordleLength = 4): string[] {
+export function getValidWords(length: LeksiarxeioLength = 4): string[] {
   return WORD_LISTS[length] ?? [];
 }
 

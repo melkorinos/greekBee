@@ -1,4 +1,4 @@
-// useConnectionsScoreSubmission — owns the score-posting lifecycle for daily Connections puzzles.
+// useLeksindeseisScoreSubmission — owns the score-posting lifecycle for daily Leksindeseis puzzles.
 //
 // Interface: submit(score) — one call, nothing else to know.
 //
@@ -14,7 +14,7 @@
 import { postScore } from "@/lib/postScore";
 import { useCallback, useEffect, useRef } from "react";
 
-interface UseConnectionsScoreSubmissionOptions {
+interface UseLeksindeseisScoreSubmissionOptions {
   /** The puzzle date (YYYY-MM-DD) — used as the leaderboard partition key. */
   puzzleDate:  string;
   /** Stable anonymous device identifier. Empty string = skip posting. */
@@ -26,18 +26,18 @@ interface UseConnectionsScoreSubmissionOptions {
 /**
  * Returns a stable `submit(score)` function.
  *
- * Calling submit(score) will POST to /api/connections-scores only when:
+ * Calling submit(score) will POST to /api/game-scores only when:
  *   - deviceId is non-empty
  *   - score is strictly greater than the last successfully posted score (dedup)
  *
- * For Connections, score = mistakesRemaining (1–4) when the player wins.
+ * For Leksindeseis, score = mistakesRemaining (1–4) when the player wins.
  * Lost games should never call submit().
  */
-export function useConnectionsScoreSubmission({
+export function useLeksindeseisScoreSubmission({
   puzzleDate,
   deviceId,
   displayName,
-}: UseConnectionsScoreSubmissionOptions) {
+}: UseLeksindeseisScoreSubmissionOptions) {
   const lastPostedRef  = useRef(0);
   const displayNameRef = useRef(displayName);
   useEffect(() => { displayNameRef.current = displayName; }, [displayName]);

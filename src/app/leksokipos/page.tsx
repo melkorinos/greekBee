@@ -16,7 +16,7 @@ import type { Language } from "@/types";
 import { greekToGreeklish } from "@/lib/greeklish";
 import { redirect } from "next/navigation";
 
-export default async function SpellingBeePage({
+export default async function LeksokiposPage({
   searchParams,
 }: {
   searchParams: Promise<{ puzzle?: string; random?: string; exclude?: string }>;

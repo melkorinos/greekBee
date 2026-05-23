@@ -1,7 +1,7 @@
 // Leksiarxeio — pure reducer (no side effects, no React).
 // All game state transitions live here.
 
-import type { GuessResult, TileState, WordleState } from "../types";
+import type { GuessResult, TileState, LeksiarxeioState } from "../types";
 
 import { evaluateGuess } from "../lib/evaluateGuess";
 
@@ -9,17 +9,17 @@ const MAX_GUESSES = 6;
 
 // ─── Action types ─────────────────────────────────────────────────────────────
 
-export type WordleAction =
+export type LeksiarxeioAction =
   | { type: "ADD_LETTER";    letter: string }
   | { type: "DELETE_LETTER" }
   | { type: "SUBMIT_GUESS";  validWords: Set<string> }
-  | { type: "NEW_GAME";      state: WordleState }
-  | { type: "RESTORE_STATE"; guesses: GuessResult[]; status: WordleState["status"] }
+  | { type: "NEW_GAME";      state: LeksiarxeioState }
+  | { type: "RESTORE_STATE"; guesses: GuessResult[]; status: LeksiarxeioState["status"] }
   | { type: "CLEAR_MESSAGE" };
 
 // ─── Reducer ──────────────────────────────────────────────────────────────────
 
-export function wordleReducer(state: WordleState, action: WordleAction): WordleState {
+export function leksiarxeioReducer(state: LeksiarxeioState, action: LeksiarxeioAction): LeksiarxeioState {
   switch (action.type) {
 
     case "ADD_LETTER": {
@@ -105,9 +105,9 @@ export function wordleReducer(state: WordleState, action: WordleAction): WordleS
 
 // ─── Initial state factory ────────────────────────────────────────────────────
 
-export function makeInitialWordleState(
-  puzzle: WordleState["puzzle"]
-): WordleState {
+export function makeInitialLeksiarxeioState(
+  puzzle: LeksiarxeioState["puzzle"]
+): LeksiarxeioState {
   return {
     puzzle,
     guesses: [],

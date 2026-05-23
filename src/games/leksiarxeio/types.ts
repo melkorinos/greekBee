@@ -4,10 +4,10 @@
 // ─── Puzzle ───────────────────────────────────────────────────────────────────
 
 /** Supported word lengths for Leksiarxeio. Currently only 5 is active. */
-export type WordleLength = 3 | 4 | 5 | 6 | 7 | 8;
+export type LeksiarxeioLength = 3 | 4 | 5 | 6 | 7 | 8;
 
 /** A single daily Wordle puzzle. */
-export interface WordlePuzzle {
+export interface LeksiarxeioPuzzle {
   /** Unique identifier, e.g. "2026-05-12-wordle-5" */
   id: string;
   /** ISO date string this puzzle is intended for */
@@ -15,7 +15,7 @@ export interface WordlePuzzle {
   /** The secret answer word (already normalised — no accents, final sigma → σ) */
   answer: string;
   /** Number of letters in the answer */
-  length: WordleLength;
+  length: LeksiarxeioLength;
 }
 
 // ─── Guess evaluation ─────────────────────────────────────────────────────────
@@ -36,17 +36,17 @@ export interface GuessResult {
 
 // ─── Game State ───────────────────────────────────────────────────────────────
 
-export type WordleStatus = "playing" | "won" | "lost";
+export type LeksiarxeioStatus = "playing" | "won" | "lost";
 
 /** The full Wordle game state */
-export interface WordleState {
-  puzzle: WordlePuzzle;
+export interface LeksiarxeioState {
+  puzzle: LeksiarxeioPuzzle;
   /** All submitted and evaluated guesses */
   guesses: GuessResult[];
   /** Letters the player has typed for the current (unsubmitted) guess */
   currentInput: string;
   /** Overall game status */
-  status: WordleStatus;
+  status: LeksiarxeioStatus;
   /** Feedback message for the last action (e.g. "Not in word list") */
   lastMessage: string | null;
 }
@@ -65,7 +65,7 @@ export type LetterStateMap = Record<string, LetterState>;
 // ─── Scoring ──────────────────────────────────────────────────────────────────
 
 /** Points awarded per number of guesses used (1 = best, 6 = worst, 0 = failed) */
-export const WORDLE_SCORES: Record<number, number> = {
+export const LEKSIARXEIO_SCORES: Record<number, number> = {
   1: 6,
   2: 5,
   3: 4,

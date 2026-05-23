@@ -1,20 +1,20 @@
-﻿"use client";
+"use client";
 
 // ConnectionsBoard — client component that owns game state.
-// Imported by the server-rendered connections/page.tsx.
+// Imported by the server-rendered leksindeseis/page.tsx.
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 
-import type { ConnectionsPuzzle }           from "@/games/leksindeseis/types";
+import type { LeksindeseisPuzzle }           from "@/games/leksindeseis/types";
 import { ConnectionsLeaderboardModal }      from "@/components/leksindeseis/ConnectionsLeaderboardModal";
 import { FeedbackBanner }                  from "@/components/shared/FeedbackBanner";
 import { GroupGrid }                       from "@/components/leksindeseis/GroupGrid";
 import { getDisplayName, getOrCreateDeviceId, setDisplayName } from "@/hooks/useGameStore";
-import { useConnectionsScoreSubmission }   from "@/hooks/useConnectionsScoreSubmission";
-import { useConnectionsState }             from "@/games/leksindeseis/hooks/useConnectionsState";
+import { useLeksindeseisScoreSubmission }  from "@/hooks/useLeksindeseisScoreSubmission";
+import { useLeksindeseisState }            from "@/games/leksindeseis/hooks/useLeksindeseisState";
 
 interface ConnectionsBoardProps {
-  puzzle: ConnectionsPuzzle;
+  puzzle: LeksindeseisPuzzle;
 }
 
 // ── Identity reducer (avoids react-hooks/set-state-in-effect) ─────────────────
@@ -64,7 +64,7 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
     submitGuess,
     shuffleWords,
     clearFeedback,
-  } = useConnectionsState(puzzle);
+  } = useLeksindeseisState(puzzle);
 
   // ── Identity ────────────────────────────────────────────────────────────────
   const [identity, dispatchIdentity] = useReducer(
@@ -89,7 +89,7 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
   }
 
   // ── Score submission ─────────────────────────────────────────────────────────
-  const { submit: postScore, submitWithName } = useConnectionsScoreSubmission({
+  const { submit: postScore, submitWithName } = useLeksindeseisScoreSubmission({
     puzzleDate:  puzzle.date,
     deviceId:    identity.deviceId,
     displayName: identity.displayName,

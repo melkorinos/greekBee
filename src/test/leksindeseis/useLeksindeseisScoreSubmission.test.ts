@@ -1,11 +1,11 @@
-// useConnectionsScoreSubmission.test.ts — unit tests for the Connections score-posting hook.
+// useLeksindeseisScoreSubmission.test.ts — unit tests for the Leksindeseis score-posting hook.
 //
 // fetch is mocked per-test via vi.spyOn.
 
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { useConnectionsScoreSubmission } from "@/hooks/useConnectionsScoreSubmission";
+import { useLeksindeseisScoreSubmission } from "@/hooks/useLeksindeseisScoreSubmission";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -22,10 +22,10 @@ const BASE = {
   displayName: "Νίκος",
 };
 
-describe("useConnectionsScoreSubmission — submit()", () => {
+describe("useLeksindeseisScoreSubmission — submit()", () => {
   it("POSTs to /api/game-scores with correct fields", async () => {
     const spy = mockFetch();
-    const { result } = renderHook(() => useConnectionsScoreSubmission(BASE));
+    const { result } = renderHook(() => useLeksindeseisScoreSubmission(BASE));
 
     await act(async () => { result.current.submit(3); });
 
@@ -43,7 +43,7 @@ describe("useConnectionsScoreSubmission — submit()", () => {
   it("does not POST when deviceId is empty", async () => {
     const spy = mockFetch();
     const { result } = renderHook(() =>
-      useConnectionsScoreSubmission({ ...BASE, deviceId: "" })
+      useLeksindeseisScoreSubmission({ ...BASE, deviceId: "" })
     );
 
     await act(async () => { result.current.submit(4); });
@@ -53,7 +53,7 @@ describe("useConnectionsScoreSubmission — submit()", () => {
 
   it("does not POST when score is 0", async () => {
     const spy = mockFetch();
-    const { result } = renderHook(() => useConnectionsScoreSubmission(BASE));
+    const { result } = renderHook(() => useLeksindeseisScoreSubmission(BASE));
 
     await act(async () => { result.current.submit(0); });
 
@@ -62,7 +62,7 @@ describe("useConnectionsScoreSubmission — submit()", () => {
 
   it("does not POST when score does not increase (dedup guard)", async () => {
     const spy = mockFetch();
-    const { result } = renderHook(() => useConnectionsScoreSubmission(BASE));
+    const { result } = renderHook(() => useLeksindeseisScoreSubmission(BASE));
 
     await act(async () => { result.current.submit(3); });
     await act(async () => { result.current.submit(3); }); // same score — should be ignored
@@ -73,7 +73,7 @@ describe("useConnectionsScoreSubmission — submit()", () => {
   it("falls back to 'Ανώνυμος' when displayName is empty", async () => {
     const spy = mockFetch();
     const { result } = renderHook(() =>
-      useConnectionsScoreSubmission({ ...BASE, displayName: "" })
+      useLeksindeseisScoreSubmission({ ...BASE, displayName: "" })
     );
 
     await act(async () => { result.current.submit(4); });
@@ -83,10 +83,10 @@ describe("useConnectionsScoreSubmission — submit()", () => {
   });
 });
 
-describe("useConnectionsScoreSubmission — submitWithName()", () => {
+describe("useLeksindeseisScoreSubmission — submitWithName()", () => {
   it("POSTs with the provided name, bypassing the dedup guard", async () => {
     const spy = mockFetch();
-    const { result } = renderHook(() => useConnectionsScoreSubmission(BASE));
+    const { result } = renderHook(() => useLeksindeseisScoreSubmission(BASE));
 
     await act(async () => { result.current.submitWithName(4, "Νέος"); });
 
@@ -98,7 +98,7 @@ describe("useConnectionsScoreSubmission — submitWithName()", () => {
 
   it("does not POST when score is 0", async () => {
     const spy = mockFetch();
-    const { result } = renderHook(() => useConnectionsScoreSubmission(BASE));
+    const { result } = renderHook(() => useLeksindeseisScoreSubmission(BASE));
 
     await act(async () => { result.current.submitWithName(0, "Νέος"); });
 
@@ -108,7 +108,7 @@ describe("useConnectionsScoreSubmission — submitWithName()", () => {
   it("does not POST when deviceId is empty", async () => {
     const spy = mockFetch();
     const { result } = renderHook(() =>
-      useConnectionsScoreSubmission({ ...BASE, deviceId: "" })
+      useLeksindeseisScoreSubmission({ ...BASE, deviceId: "" })
     );
 
     await act(async () => { result.current.submitWithName(4, "Νέος"); });

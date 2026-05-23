@@ -1,10 +1,10 @@
 import type { Page } from "@playwright/test";
 
-export class SpellingBeePage {
+export class LeksokiposPage {
   readonly honeycomb;
 
   constructor(private page: Page) {
-    // HoneycombGrid renders as an SVG — stable proxy for "game board mounted"
+    // FlowerGrid renders as an SVG — stable proxy for "game board mounted"
     this.honeycomb = page.locator("svg").first();
   }
 

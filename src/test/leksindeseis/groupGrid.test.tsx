@@ -3,11 +3,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-import type { ConnectionGroup } from "@/games/leksindeseis/types";
+import type { LeksindeseisGroup } from "@/games/leksindeseis/types";
 import { GroupGrid } from "@/components/leksindeseis/GroupGrid";
 import userEvent from "@testing-library/user-event";
 
-const SOLVED_GROUP: ConnectionGroup = {
+const SOLVED_GROUP: LeksindeseisGroup = {
   category:   "Χρώματα",
   words:      ["κόκκινο", "μπλε", "πράσινο", "κίτρινο"],
   difficulty: 1,

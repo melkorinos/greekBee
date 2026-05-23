@@ -1,45 +1,45 @@
-﻿// wordleHeader.test.tsx
-// Tests for WordlePageClient: header layout, 🏆 leaderboard button presence,
+// header.test.tsx
+// Tests for LeksiarxeioPageClient: header layout, 🏆 leaderboard button presence,
 // and scoring note in the rules modal.
 
-import type { WordleLength, WordlePuzzle } from "@/games/leksiarxeio/types";
+import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-import { WordlePageClient } from "@/components/leksiarxeio/WordleHeader";
+import { LeksiarxeioPageClient } from "@/components/leksiarxeio/LeksiarxeioHeader";
 import userEvent from "@testing-library/user-event";
 
 // ── Minimal stubs ──────────────────────────────────────────────────────────────
 
-vi.mock("@/components/leksiarxeio/WordleBoard", () => ({
-  WordleBoard: ({ onOpenLeaderboardRef }: { onOpenLeaderboardRef?: (fn: () => void) => void }) => {
+vi.mock("@/components/leksiarxeio/LeksiarxeioBoard", () => ({
+  LeksiarxeioBoard: ({ onOpenLeaderboardRef }: { onOpenLeaderboardRef?: (fn: () => void) => void }) => {
     // Immediately register a no-op so the ref is populated on mount
     onOpenLeaderboardRef?.(() => {});
-    return <div data-testid="wordle-board" />;
+    return <div data-testid="leksiarxeio-board" />;
   },
 }));
 
-const PUZZLE: WordlePuzzle = {
+const PUZZLE: LeksiarxeioPuzzle = {
   id:     "2026-05-21",
   date:   "2026-05-21",
   answer: "αβγδε",
   length: 5,
 };
 
-const PUZZLES: WordlePuzzle[] = [PUZZLE];
-const WORD_LISTS: Record<WordleLength, string[]> = {
+const PUZZLES: LeksiarxeioPuzzle[] = [PUZZLE];
+const WORD_LISTS: Record<LeksiarxeioLength, string[]> = {
   3: [], 4: [], 5: ["αβγδε"], 6: [], 7: [], 8: [],
 };
 
 function renderHeader() {
   return render(
-    <WordlePageClient puzzles={PUZZLES} wordLists={WORD_LISTS} today="2026-05-21" />
+    <LeksiarxeioPageClient puzzles={PUZZLES} wordLists={WORD_LISTS} today="2026-05-21" />
   );
 }
 
 // ── Header layout ─────────────────────────────────────────────────────────────
 
-describe("WordlePageClient — header", () => {
+describe("LeksiarxeioPageClient — header", () => {
   it("renders the page title", () => {
     renderHeader();
     expect(screen.getByRole("heading", { level: 1 })).toBeDefined();
@@ -69,7 +69,7 @@ describe("WordlePageClient — header", () => {
 
 // ── Scoring note in rules ──────────────────────────────────────────────────────
 
-describe("WordlePageClient — rules scoring note", () => {
+describe("LeksiarxeioPageClient — rules scoring note", () => {
   it("opens the HowToPlay modal and shows a scoring note", async () => {
     renderHeader();
     const helpBtn = screen.getByRole("button", { name: /how to play/i });

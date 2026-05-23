@@ -1,13 +1,13 @@
-﻿// connectionsReducer.test.ts — unit tests for Connections game reducer.
+// leksindeseisReducer.test.ts — unit tests for Leksindeseis game reducer.
 
-import type { ConnectionsPuzzle, ConnectionsState } from "@/games/leksindeseis/types";
+import type { LeksindeseisPuzzle, LeksindeseisState } from "@/games/leksindeseis/types";
 import { describe, expect, it } from "vitest";
 
-import { connectionsReducer } from "@/games/leksindeseis/hooks/connectionsReducer";
+import { leksindeseisReducer } from "@/games/leksindeseis/hooks/leksindeseisReducer";
 
 // ── Fixture ───────────────────────────────────────────────────────────────────
 
-const PUZZLE: ConnectionsPuzzle = {
+const PUZZLE: LeksindeseisPuzzle = {
   date: "2026-05-12",
   groups: [
     { category: "Χρώματα",  words: ["κόκκινο", "μπλε", "πράσινο", "κίτρινο"],  difficulty: 1 },
@@ -17,7 +17,7 @@ const PUZZLE: ConnectionsPuzzle = {
   ],
 };
 
-function freshState(): ConnectionsState {
+function freshState(): LeksindeseisState {
   return {
     puzzle:            PUZZLE,
     solvedGroups:      [],
@@ -33,22 +33,22 @@ function freshState(): ConnectionsState {
 
 describe("SELECT_WORD", () => {
   it("adds a word to the selection", () => {
-    const state = connectionsReducer(freshState(), { type: "SELECT_WORD", word: "κόκκινο" });
+    const state = leksindeseisReducer(freshState(), { type: "SELECT_WORD", word: "κόκκινο" });
     expect(state.currentSelection).toContain("κόκκινο");
   });
 
   it("deselects an already-selected word", () => {
-    const s1 = connectionsReducer(freshState(), { type: "SELECT_WORD", word: "κόκκινο" });
-    const s2 = connectionsReducer(s1, { type: "SELECT_WORD", word: "κόκκινο" });
+    const s1 = leksindeseisReducer(freshState(), { type: "SELECT_WORD", word: "κόκκινο" });
+    const s2 = leksindeseisReducer(s1, { type: "SELECT_WORD", word: "κόκκινο" });
     expect(s2.currentSelection).not.toContain("κόκκινο");
   });
 
   it("does not allow more than 4 words", () => {
     let s = freshState();
     for (const w of ["κόκκινο", "μπλε", "πράσινο", "κίτρινο"]) {
-      s = connectionsReducer(s, { type: "SELECT_WORD", word: w });
+      s = leksindeseisReducer(s, { type: "SELECT_WORD", word: w });
     }
-    const s2 = connectionsReducer(s, { type: "SELECT_WORD", word: "σκύλος" });
+    const s2 = leksindeseisReducer(s, { type: "SELECT_WORD", word: "σκύλος" });
     expect(s2.currentSelection).toHaveLength(4);
     expect(s2.currentSelection).not.toContain("σκύλος");
   });
@@ -57,12 +57,12 @@ describe("SELECT_WORD", () => {
 // ── SUBMIT_GUESS — correct ────────────────────────────────────────────────────
 
 describe("SUBMIT_GUESS — correct group", () => {
-  function stateWithSelection(words: string[]): ConnectionsState {
+  function stateWithSelection(words: string[]): LeksindeseisState {
     return { ...freshState(), currentSelection: words };
   }
 
   it("marks the group as solved and clears selection", () => {
-    const s = connectionsReducer(
+    const s = leksindeseisReducer(
       stateWithSelection(["κόκκινο", "μπλε", "πράσινο", "κίτρινο"]),
       { type: "SUBMIT_GUESS" },
     );
@@ -75,7 +75,7 @@ describe("SUBMIT_GUESS — correct group", () => {
     let s = freshState();
     for (const group of PUZZLE.groups) {
       s = { ...s, currentSelection: [...group.words] };
-      s = connectionsReducer(s, { type: "SUBMIT_GUESS" });
+      s = leksindeseisReducer(s, { type: "SUBMIT_GUESS" });
     }
     expect(s.status).toBe("won");
   });
@@ -85,7 +85,7 @@ describe("SUBMIT_GUESS — correct group", () => {
 
 describe("SUBMIT_GUESS — wrong guess", () => {
   it("decrements mistakesRemaining by 1", () => {
-    const s = connectionsReducer(
+    const s = leksindeseisReducer(
       { ...freshState(), currentSelection: ["κόκκινο", "σκύλος", "μήλο", "άθροισμα"] },
       { type: "SUBMIT_GUESS" },
     );
@@ -103,13 +103,13 @@ describe("SUBMIT_GUESS — wrong guess", () => {
     let s = freshState();
     for (const guess of wrongGuesses) {
       s = { ...s, currentSelection: guess };
-      s = connectionsReducer(s, { type: "SUBMIT_GUESS" });
+      s = leksindeseisReducer(s, { type: "SUBMIT_GUESS" });
     }
     expect(s.status).toBe("lost");
   });
 
   it("does not submit when fewer than 4 words selected", () => {
-    const s = connectionsReducer(
+    const s = leksindeseisReducer(
       { ...freshState(), currentSelection: ["κόκκινο", "μπλε"] },
       { type: "SUBMIT_GUESS" },
     );
@@ -119,9 +119,9 @@ describe("SUBMIT_GUESS — wrong guess", () => {
   it("blocks already-guessed combinations", () => {
     const guess = ["κόκκινο", "σκύλος", "μήλο", "άθροισμα"];
     let s = { ...freshState(), currentSelection: guess };
-    s = connectionsReducer(s, { type: "SUBMIT_GUESS" });
+    s = leksindeseisReducer(s, { type: "SUBMIT_GUESS" });
     s = { ...s, currentSelection: guess };
-    s = connectionsReducer(s, { type: "SUBMIT_GUESS" });
+    s = leksindeseisReducer(s, { type: "SUBMIT_GUESS" });
     // Second submit should not decrement mistakes
     expect(s.mistakesRemaining).toBe(3);
     expect(s.lastFeedback).toContain("ήδη");
@@ -132,7 +132,7 @@ describe("SUBMIT_GUESS — wrong guess", () => {
 
 describe("CLEAR_FEEDBACK", () => {
   it("clears the lastFeedback", () => {
-    const s = connectionsReducer(
+    const s = leksindeseisReducer(
       { ...freshState(), lastFeedback: "some message" },
       { type: "CLEAR_FEEDBACK" },
     );
@@ -144,8 +144,8 @@ describe("CLEAR_FEEDBACK", () => {
 
 describe("Terminal state guard", () => {
   it("ignores SELECT_WORD when game is won", () => {
-    const s: ConnectionsState = { ...freshState(), status: "won" };
-    const s2 = connectionsReducer(s, { type: "SELECT_WORD", word: "κόκκινο" });
+    const s: LeksindeseisState = { ...freshState(), status: "won" };
+    const s2 = leksindeseisReducer(s, { type: "SELECT_WORD", word: "κόκκινο" });
     expect(s2.currentSelection).toHaveLength(0);
   });
 });

@@ -85,7 +85,7 @@ function noSuspiciousAffix(word) {
 }
 
 // ── Read source ───────────────────────────────────────────────────────────────
-const srcPath = join(root, `src/data/wordle/words-${targetLength}.json`);
+const srcPath = join(root, `src/data/leksiarxeio/words-${targetLength}.json`);
 const words   = JSON.parse(readFileSync(srcPath, "utf8"));
 console.log(`Source: ${words.length.toLocaleString()} ${targetLength}-letter words`);
 
@@ -103,8 +103,8 @@ console.log(`After filtering: ${curated.length.toLocaleString()} words`);
 console.log(`Covers ${Math.ceil(curated.length / 365)} year(s) of daily puzzles.`);
 
 // ── Write output ──────────────────────────────────────────────────────────────
-const outDir  = join(root, `src/data/wordle`);
+const outDir  = join(root, `src/data/leksiarxeio`);
 mkdirSync(outDir, { recursive: true });
 const outPath = join(outDir, `answers-${targetLength}.json`);
 writeFileSync(outPath, JSON.stringify(curated, null, 2), "utf8");
-console.log(`Written → src/data/wordle/answers-${targetLength}.json`);
+console.log(`Written → src/data/leksiarxeio/answers-${targetLength}.json`);
