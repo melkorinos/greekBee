@@ -8,24 +8,28 @@ const R_INNER = 52;
 const R_OUTER = 140;
 const R_CENTER = 46;
 const GAP_DEG = 4;
+const INNER_EXTRA = 3; // degrees trimmed from each side of the inner arc → flares the gap toward center
 
 // Gradient stop at inner edge — segments start at R_INNER so the full visible
 // radial range (inner→outer) gets the full gradient sweep
 const INNER_STOP = `${((R_INNER / R_OUTER) * 100).toFixed(0)}%`; // "37%"
 
-function sectorPath(startDeg: number, endDeg: number): string {
+// outerStart/outerEnd drive the outer arc; innerStart/innerEnd drive the inner arc.
+// Making the inner span narrower than the outer flares the sides outward at the centre,
+// widening the physical gap between adjacent segments without touching the outer gap.
+function sectorPath(outerStart: number, outerEnd: number, innerStart: number, innerEnd: number): string {
   const r = (d: number) => (d * Math.PI) / 180;
-  const s = r(startDeg);
-  const e = r(endDeg);
-  const x1 = CX + R_INNER * Math.cos(s);
-  const y1 = CY + R_INNER * Math.sin(s);
-  const x2 = CX + R_OUTER * Math.cos(s);
-  const y2 = CY + R_OUTER * Math.sin(s);
-  const x3 = CX + R_OUTER * Math.cos(e);
-  const y3 = CY + R_OUTER * Math.sin(e);
-  const x4 = CX + R_INNER * Math.cos(e);
-  const y4 = CY + R_INNER * Math.sin(e);
+  const sOut = r(outerStart); const eOut = r(outerEnd);
+  const sIn  = r(innerStart); const eIn  = r(innerEnd);
   const fmt = (n: number) => n.toFixed(2);
+  const x1 = CX + R_INNER * Math.cos(sIn);
+  const y1 = CY + R_INNER * Math.sin(sIn);
+  const x2 = CX + R_OUTER * Math.cos(sOut);
+  const y2 = CY + R_OUTER * Math.sin(sOut);
+  const x3 = CX + R_OUTER * Math.cos(eOut);
+  const y3 = CY + R_OUTER * Math.sin(eOut);
+  const x4 = CX + R_INNER * Math.cos(eIn);
+  const y4 = CY + R_INNER * Math.sin(eIn);
   return [
     `M ${fmt(x1)},${fmt(y1)}`,
     `L ${fmt(x2)},${fmt(y2)}`,
@@ -47,7 +51,8 @@ interface SegmentProps {
 
 const Segment = memo(function Segment({ letter, centerDeg, onClickLetter }: SegmentProps) {
   const half = 30 - GAP_DEG / 2;
-  const d = sectorPath(centerDeg - half, centerDeg + half);
+  const innerHalf = half - INNER_EXTRA;
+  const d = sectorPath(centerDeg - half, centerDeg + half, centerDeg - innerHalf, centerDeg + innerHalf);
   const midR = (R_INNER + R_OUTER) / 2;
   const rad = (centerDeg * Math.PI) / 180;
   const tx = CX + midR * Math.cos(rad);
