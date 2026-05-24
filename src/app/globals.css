@@ -25,6 +25,16 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Remove Android Chrome's tap-highlight rectangle (dark square on touch). */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Hide focus ring on touch/mouse; keep it for keyboard navigation. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 /* Prevent horizontal scroll on all game pages.
    Without this, wide elements (e.g. the Wordle keyboard) expand the
    CSS layout-viewport, which shifts fixed-position modals to the right
