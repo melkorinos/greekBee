@@ -209,7 +209,7 @@ scripts/            Puzzle generation & curation CLIs (batch-generate, curate-an
 
 ## High scores / leaderboard
 
-**Leksokipos** — live. Rolling 7-day leaderboard via Supabase (`scores` table). Score = Leksokipos points, higher = better.
+**Leksokipos** — live. Rolling 7-day leaderboard via Supabase (`game_scores` table with `game_id = "leksokipos"`). Score = Leksokipos points, higher = better.
 
 **Leksiarxeio** — live. Rolling 7-day daily leaderboard via Supabase (`leksiarxeio_scores` table). Score = sum of attempts across all 5 lengths (4–8) for a given day; lower = better. Missing lengths count as 7 (penalty). Players appear on the board as soon as they finish at least one length.
 
@@ -220,6 +220,19 @@ scripts/            Puzzle generation & curation CLIs (batch-generate, curate-an
 ## Tech debt
 
 Tracked as individual issues in [`.claude/issue-tracker/issues/`](.claude/issue-tracker/issues/). Each file has a `Status:` line using the project triage vocabulary (`needs-triage`, `ready-for-agent`, `ready-for-human`).
+
+| # | Issue | Status |
+|---|-------|--------|
+| 01 | [No E2E tests](.claude/issue-tracker/issues/01-no-e2e-tests.md) | needs-triage |
+| 02 | [Mobile keyboard gap](.claude/issue-tracker/issues/02-mobile-keyboard-gap.md) | needs-triage |
+| 03 | [Style token cleanup](.claude/issue-tracker/issues/03-td001-style-tokens.md) | needs-triage |
+| 04 | [Max score cap](.claude/issue-tracker/issues/04-td002-max-score-cap.md) | needs-triage |
+| 05 | [Leksiarxeio answer pool quality](.claude/issue-tracker/issues/05-td003-wordle-answer-pool.md) | needs-triage |
+| 06 | [Supabase / Vercel storage](.claude/issue-tracker/issues/06-td004-supabase-vercel-storage.md) | needs-triage |
+| 07 | [Strip validWords from puzzles-el.json](.claude/issue-tracker/issues/07-puzzles-json-file-size.md) | needs-triage |
+| 08 | [Scheduled stale-row cleanup](.claude/issue-tracker/issues/08-scheduled-stale-row-cleanup.md) | ready-for-agent |
+| 09 | [API rate limiting per device](.claude/issue-tracker/issues/09-api-rate-limiting.md) | ready-for-human |
+| 10 | [Word suggestion review pipeline](.claude/issue-tracker/issues/10-word-suggestion-review-pipeline.md) | ready-for-agent |
 
 ---
 
