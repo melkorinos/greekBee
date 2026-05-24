@@ -1,17 +1,21 @@
-# Mobile physical keyboard gap
+# Leksiarxeio on-screen keyboard dispatch not tested
 
 Status: ready-for-agent
 
-`window.keydown` in Wordle GR works on desktop only. The on-screen `Keyboard` component handles mobile input, but there is no test verifying the on-screen keyboard dispatches correctly end-to-end.
+The physical `window.keydown` listener in `useLeksiarxeioState` works on desktop only. On mobile, players use the on-screen `Keyboard` component (`src/components/leksiarxeio/Keyboard.tsx`), which exposes `onLetter`, `onDelete`, and `onEnter` callback props. These callbacks are wired in `LeksiarxeioBoard` but there are no tests verifying that clicking an on-screen key reaches the reducer and updates visible game state end-to-end.
 
-## Affected file
+Existing keyboard tests (`src/test/leksiarxeio/theme.test.tsx`, `guessGrid.test.tsx`) only cover layout and CSS classes — not interaction.
 
-`src/games/wordle/hooks/useWordleState.ts` — `keydown` listener
+## Affected files
+
+- `src/components/leksiarxeio/Keyboard.tsx` — `onLetter`, `onDelete`, `onEnter` props
+- `src/components/leksiarxeio/LeksiarxeioBoard.tsx` — wires callbacks into `useLeksiarxeioState`
 
 ## Acceptance criteria
 
-- A component test (RTL) verifies that clicking an on-screen key letter dispatches `ADD_LETTER` and updates the guess row.
-- A test verifies that clicking the on-screen backspace dispatches `DELETE_LETTER`.
-- A test verifies that clicking the on-screen enter dispatches `SUBMIT_GUESS`.
+- [ ] RTL test: clicking a letter key calls `onLetter` with the correct normalised character and the guess row updates to show the letter
+- [ ] RTL test: clicking the on-screen backspace (⌫) calls `onDelete` and the last letter is removed from the guess row
+- [ ] RTL test: clicking the on-screen enter (↵) with a full valid guess calls `onEnter` and the row transitions out of `pending` state
+- [ ] All three tests render `LeksiarxeioBoard` (or `Keyboard` in isolation with mock callbacks) — not just the keyboard layout
 
 ## Comments
