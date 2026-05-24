@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Architecture Review — Greek Word Games Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .badge-strong { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .badge-worth  { background: #fef9c3; color: #713f12; border: 1px solid #fde68a; }
+    .badge-spec   { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 28px; margin-bottom: 32px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+    .before-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; }
+    .after-box  { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; }
+    code { font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.82em; background: #f8fafc; padding: 1px 5px; border-radius: 4px; border: 1px solid #e2e8f0; }
+    pre  { font-family: 'Fira Code', 'Cascadia Code', monospace; font-size: 0.8em; background: #f8fafc; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; overflow-x: auto; line-height: 1.6; }
+    .mermaid { text-align: center; }
+    h1 { font-size: 1.9rem; font-weight: 700; }
+    h2 { font-size: 1.25rem; font-weight: 700; margin-bottom: 4px; }
+    h3 { font-size: 1rem; font-weight: 600; margin-bottom: 8px; color: #374151; }
+    .section-label { font-size: 0.7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #94a3b8; margin-bottom: 6px; }
+    .pill { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+<div class="max-w-4xl mx-auto px-6 py-12">
+
+  <!-- Header -->
+  <div class="mb-10">
+    <p class="text-slate-400 text-sm font-mono mb-1">Greek Word Games Platform · Architecture Review · 2026-05-24</p>
+    <h1>Architectural Friction Report</h1>
+    <p class="mt-3 text-slate-600 max-w-2xl">
+      Five deepening opportunities found by exploring the codebase organically.
+      Each candidate is evaluated using the <strong>deletion test</strong>: would removing the module concentrate complexity, or just move it?
+      Diagrams use domain vocabulary from <code>CONTEXT.md</code> and architecture vocabulary from <code>LANGUAGE.md</code>.
+    </p>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- CANDIDATE 1: Score Submission Hooks -->
+  <!-- ────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="flex items-start justify-between gap-4 mb-5">
+      <div>
+        <p class="section-label">Candidate 1</p>
+        <h2>Three nearly-identical Score submission hooks</h2>
+      </div>
+      <span class="pill badge-strong mt-1 whitespace-nowrap">Strong</span>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Files</p>
+      <div class="flex flex-wrap gap-2">
+        <code>src/hooks/useScoreSubmission.ts</code>
+        <code>src/hooks/useLeksiarxeioScoreSubmission.ts</code>
+        <code>src/hooks/useLeksindeseisScoreSubmission.ts</code>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Problem</p>
+      <p class="text-slate-700">All three hooks share an identical structure: a <code>displayNameRef</code> for stale-closure avoidance, a <code>useEffect</code> that fires on score change, a <code>deviceId</code> guard, and a fire-and-forget <code>POST</code>. The differences are surface-level: endpoint URL, field names, and whether a loss maps to a penalty score. This is a shallow interface repeated three times — the deletion test confirms it: deleting any one hook doesn't concentrate complexity, it just moves it to a caller. That's the signal of a pass-through.</p>
+      <p class="mt-2 text-slate-700">Real risk: a bug in the stale-closure pattern (already subtle) must be fixed in three places independently.</p>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Solution</p>
+      <p class="text-slate-700">Extract a single <code>useScoreSubmission(config)</code> hook. The config object supplies the endpoint, field mapping, and optional penalty transform. Each game creates its own thin adapter that passes a config — not 85 lines of logic, just a config literal. The <em>seam</em> is now the config interface; each game is an <em>adapter</em> at that seam.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div class="before-box">
+        <h3 class="text-red-700">Before — three parallel implementations</h3>
+        <pre class="text-xs">// useScoreSubmission.ts (~85 lines)
+const ref = useRef(displayName);
+useEffect(() => { ref.current = displayName }, [displayName]);
+useEffect(() => {
+  if (!deviceId || !enabled) return;
+  fetch('/api/scores', { method:'POST',
+    body: JSON.stringify({ device_uuid: deviceId,
+      display_name: ref.current, score, puzzleId }) });
+}, [score, deviceId, enabled]);
+
+// useLeksiarxeioScoreSubmission.ts (~85 lines)
+const ref = useRef(displayName);  // ← copy-paste
+useEffect(() => { ref.current = displayName }, [displayName]);
+useEffect(() => {
+  if (!deviceId || !enabled) return;
+  const attempts = won ? guessCount : 7;  // ← only real diff
+  fetch('/api/scores/leksiarxeio', { ... });
+}, [guessCount, won, deviceId, enabled]);
+
+// useLeksindeseisScoreSubmission.ts (~85 lines)
+const ref = useRef(displayName); // ← copy-paste again
+...</pre>
+      </div>
+      <div class="after-box">
+        <h3 class="text-green-700">After — one deep module, three adapters</h3>
+        <pre class="text-xs">// useScoreSubmission.ts (deep, ~60 lines)
+export function useScoreSubmission&lt;T&gt;(config: {
+  endpoint: string;
+  buildPayload: (ctx: SubmitCtx) =&gt; T;
+  trigger: unknown;   // the value that fires submission
+  enabled: boolean;
+}) { /* stale-ref + fetch, once */ }
+
+// useLeksokiposScoreSubmission.ts (~12 lines)
+export function useLeksokiposScoreSubmission(...) {
+  return useScoreSubmission({
+    endpoint: '/api/scores',
+    buildPayload: (ctx) =&gt; ({ score: ctx.score, ... }),
+    trigger: score,
+    enabled,
+  });
+}
+
+// useLeksiarxeioScoreSubmission.ts (~12 lines)
+// Only difference: penalty mapping lives here, visibly</pre>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Benefits — Locality &amp; Leverage</p>
+      <ul class="list-disc list-inside text-slate-700 space-y-1 text-sm">
+        <li><strong>Locality</strong>: the stale-closure fix, retry logic, or error silencing lives in one file. Any bug in the submission pattern is fixed once.</li>
+        <li><strong>Leverage</strong>: callers only supply a config — they get the entire submission lifecycle (guards, ref pattern, fire-and-forget) for free.</li>
+        <li><strong>Testability</strong>: the config interface becomes the test surface. You can test the generic hook with a mock config, and test each game's config literal in isolation.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- CANDIDATE 2: Leksindeseis missing lib/ -->
+  <!-- ────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="flex items-start justify-between gap-4 mb-5">
+      <div>
+        <p class="section-label">Candidate 2</p>
+        <h2>Leksindeseis has no pure-function <code>lib/</code> folder</h2>
+      </div>
+      <span class="pill badge-strong mt-1 whitespace-nowrap">Strong</span>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Files</p>
+      <div class="flex flex-wrap gap-2">
+        <code>src/games/leksindeseis/hooks/leksindeseisReducer.ts</code>
+        <code>src/games/leksindeseis/types.ts</code>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Problem</p>
+      <p class="text-slate-700">Leksokipos and Leksiarxeio both have a <code>lib/</code> folder with pure functions that are tested independently. Leksindeseis has none — its two core rules (<code>matchesGroup()</code> and <code>isOneAway()</code>) are buried inside the reducer at lines 13 and 20. This is a shallow reducer: the interface (dispatch an action) is as complex as the implementation (the two rules), because you can't reach the rules without dispatching.</p>
+      <p class="mt-2 text-slate-700">Deletion test on the reducer: delete it and the rules reappear as free functions in <code>lib/</code> — complexity is concentrated, not moved. The reducer was earning its keep before; now we see it was also hiding something.</p>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Solution</p>
+      <p class="text-slate-700">Extract <code>matchesGroup(selection, group)</code> and <code>isOneAway(selection, group)</code> to <code>src/games/leksindeseis/lib/matching.ts</code>. The reducer becomes a thin orchestrator. Both functions are now independently testable — no mock store, no dispatch, no hook setup.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div class="before-box">
+        <h3 class="text-red-700">Before — rules embedded in reducer</h3>
+        <pre class="text-xs">// leksindeseisReducer.ts (145 lines)
+
+// Lines 13-19: pure logic, but unreachable
+function matchesGroup(sel: string[], g: Group) {
+  return sel.length === 4 &amp;&amp;
+    g.words.every(w =&gt; sel.includes(w));
+}
+// Lines 20-26: pure logic, but unreachable
+function isOneAway(sel: string[], g: Group) {
+  const matches = sel.filter(w =&gt; g.words.includes(w));
+  return matches.length === 3;
+}
+
+// Lines 80-120: reducer dispatches that call them
+case 'SUBMIT_GUESS':
+  const correct = state.groups.find(g =&gt;
+    matchesGroup(action.selection, g));
+  ...</pre>
+      </div>
+      <div class="after-box">
+        <h3 class="text-green-700">After — pure lib exposed at seam</h3>
+        <pre class="text-xs">// src/games/leksindeseis/lib/matching.ts
+export function matchesGroup(
+  selection: string[], group: Group
+): boolean {
+  return selection.length === 4 &amp;&amp;
+    group.words.every(w =&gt; selection.includes(w));
+}
+export function isOneAway(
+  selection: string[], group: Group
+): boolean {
+  return selection.filter(w =&gt;
+    group.words.includes(w)).length === 3;
+}
+
+// leksindeseisReducer.ts (now ~80 lines)
+import { matchesGroup, isOneAway } from '../lib/matching';
+// reducer is an orchestrator, not a rule-holder</pre>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Benefits — Locality &amp; Leverage</p>
+      <ul class="list-disc list-inside text-slate-700 space-y-1 text-sm">
+        <li><strong>Locality</strong>: matching rules (the core of Leksindeseis) live in one file. A future "hint" feature can call <code>isOneAway()</code> without touching the reducer.</li>
+        <li><strong>Leverage</strong>: tests for the rules don't need a store, a dispatch, or a full puzzle — just two arrays.</li>
+        <li><strong>Consistency</strong>: all three games now follow the same pattern (<code>lib/</code> = pure rules, <code>hooks/</code> = orchestration). An agent onboarding later won't have to ask "why is Leksindeseis different?"</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- CANDIDATE 3: No Game Registry -->
+  <!-- ────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="flex items-start justify-between gap-4 mb-5">
+      <div>
+        <p class="section-label">Candidate 3</p>
+        <h2>No Game Registry — <code>GameId</code> type and Shell nav diverge silently</h2>
+      </div>
+      <span class="pill badge-worth mt-1 whitespace-nowrap">Worth exploring</span>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Files</p>
+      <div class="flex flex-wrap gap-2">
+        <code>src/types/index.ts</code>
+        <code>src/components/shared/Shell.tsx</code>
+        <code>src/app/page.tsx (picker)</code>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Problem</p>
+      <p class="text-slate-700">"What games exist on the Platform?" has three separate answers in the codebase: the <code>GameId</code> union type in <code>src/types/index.ts</code>, the hardcoded <code>GAMES</code> array in <code>Shell.tsx</code>, and the picker cards in <code>src/app/page.tsx</code>. These three are not connected by any shared module — they are maintained by convention alone.</p>
+      <p class="mt-2 text-slate-700">When a fourth Game is added, a developer must update all three independently. There is no compiler error if one is missed. The Shell may silently omit a game from the drawer; the picker may show it without a nav link.</p>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Solution</p>
+      <p class="text-slate-700">Create <code>src/config/games.ts</code> — a single Game Registry that maps each <code>GameId</code> to its display label, href, and description. The <code>GameId</code> union type is derived from the registry's keys (no drift possible). Shell and picker both consume the registry. The registry becomes the seam; Shell and picker are adapters.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div class="before-box">
+        <h3 class="text-red-700">Before — three copies of "what games exist"</h3>
+        <div class="mermaid text-xs">
+graph TD
+  T[types/index.ts<br/>GameId union] -.->|convention| S[Shell.tsx<br/>GAMES array]
+  T -.->|convention| P[app/page.tsx<br/>picker cards]
+  S -.->|no link| P
+  style T fill:#fee2e2,stroke:#fca5a5
+  style S fill:#fee2e2,stroke:#fca5a5
+  style P fill:#fee2e2,stroke:#fca5a5
+        </div>
+      </div>
+      <div class="after-box">
+        <h3 class="text-green-700">After — one registry, two adapters</h3>
+        <div class="mermaid text-xs">
+graph TD
+  R[config/games.ts<br/>GAME_REGISTRY] -->|derives| T[types/index.ts<br/>GameId = keyof registry]
+  R -->|consumed by| S[Shell.tsx]
+  R -->|consumed by| P[app/page.tsx]
+  style R fill:#dcfce7,stroke:#86efac
+  style T fill:#f0fdf4,stroke:#bbf7d0
+  style S fill:#f0fdf4,stroke:#bbf7d0
+  style P fill:#f0fdf4,stroke:#bbf7d0
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Benefits — Locality &amp; Leverage</p>
+      <ul class="list-disc list-inside text-slate-700 space-y-1 text-sm">
+        <li><strong>Locality</strong>: adding a fourth Game requires one change in one file — all consumers update for free.</li>
+        <li><strong>Leverage</strong>: the registry can grow to include metadata (icon, description, color, feature flags) without touching Shell or the picker.</li>
+        <li><strong>Testability</strong>: a test can assert that every entry in <code>GAME_REGISTRY</code> has a matching route directory, closing the gap between type-system and filesystem.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- CANDIDATE 4: Round Snapshots scattered -->
+  <!-- ────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="flex items-start justify-between gap-4 mb-5">
+      <div>
+        <p class="section-label">Candidate 4</p>
+        <h2>Round Snapshot types defined inconsistently across games</h2>
+      </div>
+      <span class="pill badge-worth mt-1 whitespace-nowrap">Worth exploring</span>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Files</p>
+      <div class="flex flex-wrap gap-2">
+        <code>src/games/leksokipos/hooks/useGameState.ts</code>
+        <code>src/games/leksiarxeio/hooks/useLeksiarxeioState.ts</code>
+        <code>src/games/leksindeseis/types.ts</code>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Problem</p>
+      <p class="text-slate-700">A Round Snapshot is the typed shape of what crosses the persistence boundary — what leaves the game's Session, enters <code>useGameStore</code>, and survives a browser refresh. This is the most important type boundary in the system. Yet each game defines it differently: Leksokipos and Leksiarxeio define their Snapshot types inside hook files; Leksindeseis defines its in <code>types.ts</code>. Nobody looking at <code>src/games/leksindeseis/types.ts</code> would guess that the equivalent Leksokipos type is hidden inside a hook.</p>
+      <p class="mt-2 text-slate-700">The <code>PersistenceEnvelope</code> (root types) uses <code>unknown</code> for each game slice — intentional — but this means TypeScript cannot cross-check the snapshot against what the envelope actually stores. The types exist, just not where a future agent would look.</p>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Solution</p>
+      <p class="text-slate-700">Move each game's Snapshot type to its own <code>src/games/{game}/types.ts</code>. This makes <code>types.ts</code> the definitive answer to "what shape does this game persist?" — a single file, one place to look. No logic changes; this is a type-only reorganization.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div class="before-box">
+        <h3 class="text-red-700">Before — Snapshot types scattered</h3>
+        <pre class="text-xs">// useGameState.ts (Leksokipos hook, line 15)
+type LeksokiposRoundSnapshot = {
+  foundWords: string[];
+  score: number;
+  currentInput: string;
+};
+// 70 lines of hook logic below...
+
+// useLeksiarxeioState.ts (Leksiarxeio hook, line 19)
+type LeksiarxeioRoundSnapshot = {
+  guesses: GuessResult[];
+};
+
+// types.ts (Leksindeseis — the outlier that got it right)
+export type LeksindeseisRoundSnapshot = {
+  solvedGroups: string[];
+  mistakesRemaining: number;
+};</pre>
+      </div>
+      <div class="after-box">
+        <h3 class="text-green-700">After — Snapshot at the types boundary</h3>
+        <pre class="text-xs">// src/games/leksokipos/types.ts
+export type LeksokiposPuzzle = { ... };
+export type LeksokiposRoundSnapshot = {
+  foundWords: string[];
+  score: number;
+  currentInput: string;
+};
+
+// src/games/leksiarxeio/types.ts
+export type LeksiarxeioPuzzle = { ... };
+export type LeksiarxeioRoundSnapshot = {
+  guesses: GuessResult[];
+};
+
+// All three games: Snapshot lives next to Puzzle type.
+// One file = one boundary = one place to look.</pre>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Benefits — Locality &amp; Leverage</p>
+      <ul class="list-disc list-inside text-slate-700 space-y-1 text-sm">
+        <li><strong>Locality</strong>: the persistence boundary for each Game is documented in one file, alongside the Puzzle type it belongs to.</li>
+        <li><strong>Leverage</strong>: a migration tool, a schema validator, or a future remote-sync feature can import all three Snapshot types without touching hook files.</li>
+        <li><strong>Consistency</strong>: Leksindeseis already does this correctly — this change makes all three Games uniform.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- CANDIDATE 5: useGameStateSync misplaced -->
+  <!-- ────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="flex items-start justify-between gap-4 mb-5">
+      <div>
+        <p class="section-label">Candidate 5</p>
+        <h2><code>useGameStateSync</code> is a Leksokipos hook living in shared space</h2>
+      </div>
+      <span class="pill badge-worth mt-1 whitespace-nowrap">Worth exploring</span>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Files</p>
+      <div class="flex flex-wrap gap-2">
+        <code>src/hooks/useGameStateSync.ts</code>
+        <code>src/components/leksokipos/GameBoard.tsx</code>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Problem</p>
+      <p class="text-slate-700"><code>src/hooks/</code> contains <code>useGameStore</code> (shared — correct), <code>useRoundPersistence</code> (shared — correct), and <code>useGameStateSync</code> (Leksokipos-only — misplaced). The sync hook hardcodes <code>game_id: "leksokipos"</code> and posts to <code>/api/game-state</code>. It is only ever imported by <code>GameBoard.tsx</code>. Its presence in shared space implies a platform utility — it isn't.</p>
+      <p class="mt-2 text-slate-700">Deletion test: delete <code>useGameStateSync</code> from <code>src/hooks/</code> — complexity reappears in <code>src/games/leksokipos/hooks/</code> where it belongs. The module earns its keep, but it's in the wrong folder.</p>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Solution</p>
+      <p class="text-slate-700">Move <code>useGameStateSync.ts</code> to <code>src/games/leksokipos/hooks/useGameStateSync.ts</code>. Update the one import in <code>GameBoard.tsx</code>. No logic changes — pure file-system reorganization. The <em>seam</em> between shared platform hooks and game-specific hooks is now enforced by folder structure.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div class="before-box">
+        <h3 class="text-red-700">Before — misplaced hook implies shared</h3>
+        <pre class="text-xs">src/hooks/
+  useGameStore.ts        ← shared ✓
+  useRoundPersistence.ts ← shared ✓
+  useGameStateSync.ts    ← Leksokipos only ✗
+  useLeksiarxeioScoreSubmission.ts ← Leksiarxeio only ✗
+  useLeksindeseisScoreSubmission.ts ← Leksindeseis only ✗</pre>
+      </div>
+      <div class="after-box">
+        <h3 class="text-green-700">After — folder = contract</h3>
+        <pre class="text-xs">src/hooks/
+  useGameStore.ts        ← shared
+  useRoundPersistence.ts ← shared
+
+src/games/leksokipos/hooks/
+  useGameState.ts
+  useGameStateSync.ts    ← belongs here
+
+src/games/leksiarxeio/hooks/
+  useLeksiarxeioState.ts
+  useLeksiarxeioScoreSubmission.ts ← belongs here
+
+src/games/leksindeseis/hooks/
+  useLeksindeseisState.ts
+  useLeksindeseisScoreSubmission.ts ← belongs here</pre>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <p class="section-label">Benefits — Locality &amp; Leverage</p>
+      <ul class="list-disc list-inside text-slate-700 space-y-1 text-sm">
+        <li><strong>Locality</strong>: everything Leksokipos-specific lives under <code>src/games/leksokipos/</code>. No hunting across folders to understand one game.</li>
+        <li><strong>Leverage</strong>: shared hooks folder becomes a strict contract — anything in <code>src/hooks/</code> is actually shared. Future agents can rely on this.</li>
+        <li><strong>Testability</strong>: no change — but a future glob test can assert that <code>src/hooks/</code> contains no hardcoded game IDs.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ────────────────────────────────────────────── -->
+  <!-- TOP RECOMMENDATION -->
+  <!-- ────────────────────────────────────────────── -->
+  <div style="border: 2px solid #6366f1; border-radius: 12px; padding: 28px; background: #eef2ff;">
+    <p class="section-label" style="color: #6366f1;">Top Recommendation</p>
+    <h2 style="color: #4338ca;">Start with Candidate 2 — Leksindeseis <code>lib/</code> extraction</h2>
+    <p class="mt-3 text-slate-700">It is the smallest change, the clearest win, and it has zero risk: extract two small pure functions from the reducer into a new file. No API changes, no hook refactoring, no type migrations. The result is immediately testable and establishes pattern consistency across all three Games — which makes every future agent session predictably easier to navigate.</p>
+    <p class="mt-2 text-slate-700">Once done, <strong>Candidate 1</strong> (score submission hooks) is the highest leverage: ~85 lines of copy-paste code becomes ~60 lines of shared logic + ~12 lines per game. The stale-closure pattern, one of the subtlest pieces of the codebase, will be audited and fixed exactly once.</p>
+    <div class="mt-4 flex flex-wrap gap-3">
+      <div style="background:#fff; border:1px solid #c7d2fe; border-radius:8px; padding:10px 16px;">
+        <p class="text-xs font-bold text-indigo-700 mb-1">Suggested order</p>
+        <ol class="text-sm text-slate-700 list-decimal list-inside space-y-1">
+          <li>Candidate 2 — Leksindeseis lib/ (30 min, zero risk)</li>
+          <li>Candidate 1 — Score submission hooks (2–3 h, high leverage)</li>
+          <li>Candidate 5 — Move game-specific hooks (15 min, file rename)</li>
+          <li>Candidate 4 — Snapshot types to types.ts (1 h, type-only)</li>
+          <li>Candidate 3 — Game Registry (discuss first — ADR candidate)</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

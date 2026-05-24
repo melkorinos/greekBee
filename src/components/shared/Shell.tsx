@@ -4,15 +4,10 @@
 // Provides a sticky header with the platform name and a hamburger button
 // that opens a slide-out drawer listing all available games.
 
+import { GAME_REGISTRY } from "@/config/games";
 import Link from "next/link";
 import { useEffect } from "react";
 import { useState } from "react";
-
-const GAMES = [
-  { id: "leksokipos",    label: "🌸 Leksokipos",    href: "/leksokipos" },
-  { id: "leksiarxeio",  label: "🟩 Leksiarxeio",   href: "/leksiarxeio" },
-  { id: "leksindeseis", label: "🔗 Leksindeseis",   href: "/leksindeseis" },
-] as const;
 
 // ── Hamburger icon ────────────────────────────────────────────────────────────
 function HamburgerIcon({ open }: { open: boolean }) {
@@ -103,8 +98,8 @@ export function Shell({ children }: ShellProps) {
               Games
             </p>
             <ul className="space-y-1">
-              {GAMES.map((game) => (
-                <li key={game.id}>
+              {Object.entries(GAME_REGISTRY).map(([id, game]) => (
+                <li key={id}>
                   <Link
                     href={game.href}
                     onClick={() => setDrawerOpen(false)}

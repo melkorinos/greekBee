@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { DEFAULT_CONFIG, FlowerGrid, FlowerGridConfig } from "./FlowerGrid";
 
+// ── Primitive controls ────────────────────────────────────────────────────────
+
 interface SliderRowProps {
   label: string;
   description: string;
@@ -27,9 +29,33 @@ function SliderRow({ label, description, value, min, max, step, onChange }: Slid
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-1.5 accent-amber-700 cursor-pointer"
+        className="w-full h-1.5 cursor-pointer accent-amber-700"
       />
       <p className="text-[10px] text-stone-400 leading-tight">{description}</p>
+    </div>
+  );
+}
+
+interface ColorRowProps {
+  label: string;
+  description: string;
+  value: string;
+  onChange: (v: string) => void;
+}
+
+function ColorRow({ label, description, value, onChange }: ColorRowProps) {
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="color"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="h-6 w-8 flex-none cursor-pointer rounded border border-stone-200 p-0.5 bg-white"
+      />
+      <div className="min-w-0">
+        <span className="text-xs font-semibold text-stone-700">{label}</span>
+        <p className="text-[10px] text-stone-400 leading-tight truncate">{description}</p>
+      </div>
     </div>
   );
 }
@@ -68,9 +94,36 @@ function ToggleRow({ label, description, value, onChange }: ToggleRowProps) {
 
 function SectionLabel({ children }: { children: string }) {
   return (
-    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 pt-1">{children}</p>
+    <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400 pt-1 border-t border-stone-100">
+      {children}
+    </p>
   );
 }
+
+function VariantToggle({ value, onChange }: { value: "pie" | "flower"; onChange: (v: "pie" | "flower") => void }) {
+  return (
+    <div className="flex rounded-lg overflow-hidden border border-stone-200 text-xs font-semibold">
+      <button
+        onClick={() => onChange("pie")}
+        className={`flex-1 py-2 transition-colors ${
+          value === "pie" ? "bg-amber-700 text-white" : "bg-white text-stone-500 hover:bg-stone-50"
+        }`}
+      >
+        Pie Slice
+      </button>
+      <button
+        onClick={() => onChange("flower")}
+        className={`flex-1 py-2 transition-colors ${
+          value === "flower" ? "bg-emerald-700 text-white" : "bg-white text-stone-500 hover:bg-stone-50"
+        }`}
+      >
+        Flower
+      </button>
+    </div>
+  );
+}
+
+// ── Playground ────────────────────────────────────────────────────────────────
 
 export interface FlowerGridPlaygroundProps {
   centerLetter: string;
@@ -85,7 +138,6 @@ export function FlowerGridPlayground({ centerLetter, outerLetters, onLetterClick
 
   return (
     <>
-      {/* Grid renders in normal flow, identical to plain FlowerGrid */}
       <FlowerGrid
         centerLetter={centerLetter}
         outerLetters={outerLetters}
@@ -93,54 +145,184 @@ export function FlowerGridPlayground({ centerLetter, outerLetters, onLetterClick
         config={cfg}
       />
 
-      {/* Fixed panel — desktop only, does not affect game layout */}
       <div className="fixed top-0 right-0 h-screen w-72 bg-white border-l border-stone-200 overflow-y-auto z-50 flex flex-col">
-        <div className="px-4 pt-4 pb-2 border-b border-stone-100">
+        <div className="px-4 pt-4 pb-3 border-b border-stone-100 space-y-2">
           <p className="text-xs font-bold uppercase tracking-widest text-stone-500">Design Panel</p>
-          <p className="text-[10px] text-stone-400 mt-0.5">Temporary — desktop only</p>
+          <VariantToggle value={cfg.variant} onChange={(v) => set("variant", v)} />
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-          <SectionLabel>Shape</SectionLabel>
-          <SliderRow
-            label="Inner Radius"
-            description="Gap between center button and petal inner edge"
-            value={cfg.rInner} min={20} max={80} step={1}
-            onChange={(v) => set("rInner", v)}
-          />
-          <SliderRow
-            label="Outer Radius"
-            description="Outer edge of petals — overall flower size"
-            value={cfg.rOuter} min={80} max={160} step={1}
-            onChange={(v) => set("rOuter", v)}
-          />
+
+          {/* ── Pie sliders ── */}
+          {cfg.variant === "pie" && (
+            <>
+              <SectionLabel>Shape</SectionLabel>
+              <SliderRow
+                label="Inner Radius"
+                description="Gap from center button to inner arc"
+                value={cfg.rInner} min={20} max={80} step={1}
+                onChange={(v) => set("rInner", v)}
+              />
+              <SliderRow
+                label="Outer Radius"
+                description="Outer arc edge — overall flower size"
+                value={cfg.rOuter} min={80} max={160} step={1}
+                onChange={(v) => set("rOuter", v)}
+              />
+              <SectionLabel>Gaps</SectionLabel>
+              <SliderRow
+                label="Gap (degrees)"
+                description="Angular gap between adjacent petals"
+                value={cfg.gapDeg} min={0} max={14} step={0.5}
+                onChange={(v) => set("gapDeg", v)}
+              />
+              <SliderRow
+                label="Inner Flare"
+                description="Extra narrowing at inner arc — widens gap near center"
+                value={cfg.innerExtra} min={0} max={14} step={0.5}
+                onChange={(v) => set("innerExtra", v)}
+              />
+              <SectionLabel>Sides</SectionLabel>
+              <SliderRow
+                label="Side Curvature"
+                description="0 = straight sides; higher = sides bow outward"
+                value={cfg.sideCurvature} min={0} max={20} step={0.5}
+                onChange={(v) => set("sideCurvature", v)}
+              />
+              <SectionLabel>Pie Colors</SectionLabel>
+              <ColorRow
+                label="Fill (flat)"
+                description="Petal color when gradient is off"
+                value={cfg.segFillColor}
+                onChange={(v) => set("segFillColor", v)}
+              />
+              <ColorRow
+                label="Stroke"
+                description="Petal border color"
+                value={cfg.segStrokeColor}
+                onChange={(v) => set("segStrokeColor", v)}
+              />
+              <ColorRow
+                label="Letter"
+                description="Letter color on petals"
+                value={cfg.segTextColor}
+                onChange={(v) => set("segTextColor", v)}
+              />
+              <ColorRow
+                label="Gradient inner"
+                description="Gradient color near center"
+                value={cfg.segGradStart}
+                onChange={(v) => set("segGradStart", v)}
+              />
+              <ColorRow
+                label="Gradient outer"
+                description="Gradient color at outer edge"
+                value={cfg.segGradEnd}
+                onChange={(v) => set("segGradEnd", v)}
+              />
+            </>
+          )}
+
+          {/* ── Flower sliders ── */}
+          {cfg.variant === "flower" && (
+            <>
+              <SectionLabel>Petal Shape</SectionLabel>
+              <SliderRow
+                label="Petal Length"
+                description="Radial semi-axis — how far the petal extends outward"
+                value={cfg.petalLength} min={20} max={90} step={1}
+                onChange={(v) => set("petalLength", v)}
+              />
+              <SliderRow
+                label="Petal Width"
+                description="Tangential semi-axis — how wide the petal is"
+                value={cfg.petalWidth} min={10} max={70} step={1}
+                onChange={(v) => set("petalWidth", v)}
+              />
+              <SectionLabel>Petal Position</SectionLabel>
+              <SliderRow
+                label="Petal Distance"
+                description="Center-to-center distance from SVG origin to each petal"
+                value={cfg.petalDist} min={30} max={130} step={1}
+                onChange={(v) => set("petalDist", v)}
+              />
+              <SliderRow
+                label="Petal Rotation"
+                description="Extra angle offset — 0 = radial, non-zero = pinwheel tilt"
+                value={cfg.petalRotation} min={-45} max={45} step={1}
+                onChange={(v) => set("petalRotation", v)}
+              />
+              <SectionLabel>Flower Colors</SectionLabel>
+              <ColorRow
+                label="Fill (flat)"
+                description="Petal color when gradient is off"
+                value={cfg.petalFillColor}
+                onChange={(v) => set("petalFillColor", v)}
+              />
+              <ColorRow
+                label="Stroke"
+                description="Petal border color"
+                value={cfg.petalStrokeColor}
+                onChange={(v) => set("petalStrokeColor", v)}
+              />
+              <ColorRow
+                label="Letter"
+                description="Letter color on petals"
+                value={cfg.petalTextColor}
+                onChange={(v) => set("petalTextColor", v)}
+              />
+              <ColorRow
+                label="Gradient center"
+                description="Gradient color near SVG center"
+                value={cfg.petalGradStart}
+                onChange={(v) => set("petalGradStart", v)}
+              />
+              <ColorRow
+                label="Gradient outer"
+                description="Gradient color at petal tips"
+                value={cfg.petalGradEnd}
+                onChange={(v) => set("petalGradEnd", v)}
+              />
+            </>
+          )}
+
+          {/* ── Shared ── */}
+          <SectionLabel>Center Button</SectionLabel>
           <SliderRow
             label="Center Size"
             description="Radius of the required-letter circle"
             value={cfg.rCenter} min={20} max={70} step={1}
             onChange={(v) => set("rCenter", v)}
           />
-
-          <SectionLabel>Gaps</SectionLabel>
-          <SliderRow
-            label="Gap (degrees)"
-            description="Angular gap between adjacent petals"
-            value={cfg.gapDeg} min={0} max={12} step={0.5}
-            onChange={(v) => set("gapDeg", v)}
+          <ColorRow
+            label="Fill (flat)"
+            description="Center color when gradient is off"
+            value={cfg.centerFillColor}
+            onChange={(v) => set("centerFillColor", v)}
           />
-          <SliderRow
-            label="Inner Flare"
-            description="Extra narrowing at inner arc — widens gap near center"
-            value={cfg.innerExtra} min={0} max={12} step={0.5}
-            onChange={(v) => set("innerExtra", v)}
+          <ColorRow
+            label="Stroke"
+            description="Center border color"
+            value={cfg.centerStrokeColor}
+            onChange={(v) => set("centerStrokeColor", v)}
           />
-
-          <SectionLabel>Sides</SectionLabel>
-          <SliderRow
-            label="Side Curvature"
-            description="0 = straight radial sides; higher = petal sides bow outward"
-            value={cfg.sideCurvature} min={0} max={15} step={0.5}
-            onChange={(v) => set("sideCurvature", v)}
+          <ColorRow
+            label="Letter"
+            description="Letter color on center button"
+            value={cfg.centerTextColor}
+            onChange={(v) => set("centerTextColor", v)}
+          />
+          <ColorRow
+            label="Gradient inner"
+            description="Gradient color at circle center"
+            value={cfg.centerGradStart}
+            onChange={(v) => set("centerGradStart", v)}
+          />
+          <ColorRow
+            label="Gradient outer"
+            description="Gradient color at circle edge"
+            value={cfg.centerGradEnd}
+            onChange={(v) => set("centerGradEnd", v)}
           />
 
           <SectionLabel>Text</SectionLabel>
@@ -160,13 +342,13 @@ export function FlowerGridPlayground({ centerLetter, outerLetters, onLetterClick
           <SectionLabel>Style</SectionLabel>
           <SliderRow
             label="Stroke Width"
-            description="Border thickness around each petal"
+            description="Border thickness around all elements"
             value={cfg.strokeWidth} min={0} max={5} step={0.25}
             onChange={(v) => set("strokeWidth", v)}
           />
           <ToggleRow
             label="Gradient"
-            description="Radial gradient on petals (off = flat sand color)"
+            description="Radial gradient on petals and center (off = flat fill)"
             value={cfg.showGradient}
             onChange={(v) => set("showGradient", v)}
           />

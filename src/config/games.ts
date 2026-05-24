@@ -1,0 +1,34 @@
+/**
+ * Central Game Registry — single source of truth for every Game on the Platform.
+ * Add a new Game here; Shell nav and picker card update automatically.
+ * Picker-specific content (rules, HowToPlay copy) stays in app/page.tsx.
+ */
+export const GAME_REGISTRY = {
+  leksokipos: {
+    label:       "🌸 Leksokipos",
+    emoji:       "🌸",
+    title:       "Leksokipos",
+    description: "Βρες λέξεις με τα 7 γράμματα του κήπου.",
+    href:        "/leksokipos",
+    wip:         false,
+  },
+  leksiarxeio: {
+    label:       "🟩 Leksiarxeio",
+    emoji:       "🟩",
+    title:       "Leksiarxeio",
+    description: "Μάντεψε τη λέξη σε 6 προσπάθειες — 5 γράμματα.",
+    href:        "/leksiarxeio",
+    wip:         false,
+  },
+  leksindeseis: {
+    label:       "🔗 Leksindeseis",
+    emoji:       "🔗",
+    title:       "Leksindeseis",
+    description: "Ομαδοποίησε 16 λέξεις σε 4 κατηγορίες των 4.",
+    href:        "/leksindeseis",
+    wip:         true,
+  },
+} as const;
+
+/** The ID of any registered Game. */
+export type RegistryGameId = keyof typeof GAME_REGISTRY;

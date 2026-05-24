@@ -7,32 +7,16 @@
 // Note: rule strings are also defined in each game’s own page.tsx.
 // Extract to src/data/gameRules.ts when a third consumer appears.
 
+import { GAME_REGISTRY } from "@/config/games";
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
 import Link from "next/link";
 
-interface GameEntry {
-  id:          string;
-  emoji:       string;
-  title:       string;
-  description: string;
-  href:        string;
-  /** Shows a 🚧 badge but the card is still fully clickable */
-  wip:         boolean;
-  rulesTitle:  string;
-  bulletIcon:  string;
-  rules:       string[];
-}
-
-const GAMES: GameEntry[] = [
-  {
-    id:          "leksokipos",
-    emoji:       "🌸",
-    title:       "Leksokipos",
-    description: "Βρες λέξεις με τα 7 γράμματα του κήπου.",
-    href:        "/leksokipos",
-    wip:         false,
-    rulesTitle:  "Πώς να παίξεις — Leksokipos",
-    bulletIcon:  "🌸",
+// Picker-specific content (HowToPlay copy) — not platform metadata, stays here.
+// Extract to src/data/gameRules.ts when a third consumer appears.
+const GAME_RULES = {
+  leksokipos: {
+    rulesTitle: "Πώς να παίξεις — Leksokipos",
+    bulletIcon: "🌸",
     rules: [
       "Βρες όσες λέξεις μπορείς χρησιμοποιώντας τα 7 γράμματα.",
       "Κάθε λέξη πρέπει να περιέχει το **κεντρικό γράμμα**.",
@@ -42,15 +26,9 @@ const GAMES: GameEntry[] = [
       "Ανέβα στην κατάταξη από Σπόρο μέχρι Άνθος! 🌸",
     ],
   },
-  {
-    id:          "leksiarxeio",
-    emoji:       "🟩",
-    title:       "Leksiarxeio",
-    description: "Μάντεψε τη λέξη σε 6 προσπάθειες — 5 γράμματα.",
-    href:        "/leksiarxeio",
-    wip:         false,
-    rulesTitle:  "Πώς να παίξεις — Leksiarxeio",
-    bulletIcon:  "▸",
+  leksiarxeio: {
+    rulesTitle: "Πώς να παίξεις — Leksiarxeio",
+    bulletIcon: "▸",
     rules: [
       "Μάντεψε τη λέξη της ημέρας σε **6 προσπάθειες**.",
       "Κάθε προσπάθεια πρέπει να είναι έγκυρη 5γράμματη ελληνική λέξη.",
@@ -60,15 +38,9 @@ const GAMES: GameEntry[] = [
       "Νέα λέξη κάθε μέρα!",
     ],
   },
-  {
-    id:          "leksindeseis",
-    emoji:       "🔗",
-    title:       "Leksindeseis",
-    description: "Ομαδοποίησε 16 λέξεις σε 4 κατηγορίες των 4.",
-    href:        "/leksindeseis",
-    wip:         true,
-    rulesTitle:  "Πώς να παίξεις — Leksindeseis",
-    bulletIcon:  "🔗",
+  leksindeseis: {
+    rulesTitle: "Πώς να παίξεις — Leksindeseis",
+    bulletIcon: "🔗",
     rules: [
       "Οι 16 λέξεις χωρίζονται σε **4 κατηγορίες των 4 λέξεων**.",
       "Επίλεξε 4 λέξεις που νομίζεις ότι ανήκουν μαζί και πάτησε **Υποβολή**.",
@@ -77,7 +49,11 @@ const GAMES: GameEntry[] = [
       "Νέο παζλ κάθε μέρα!",
     ],
   },
-];
+} as const satisfies Record<keyof typeof GAME_REGISTRY, { rulesTitle: string; bulletIcon: string; rules: readonly string[] }>;
+
+const GAMES = (Object.keys(GAME_REGISTRY) as Array<keyof typeof GAME_REGISTRY>).map(
+  (id) => ({ id, ...GAME_REGISTRY[id], ...GAME_RULES[id] }),
+);
 
 export default function HomePage() {
   return (

@@ -1,18 +1,18 @@
-// useLeksiarxeioScoreSubmission — owns the score-posting lifecycle for daily Leksiarxeio.
+"use client";
+
+// useLeksiarxeioScoreSubmission — score-posting lifecycle for daily Leksiarxeio.
 //
 // Interface: submit(length, attempts, won) — three values, nothing else to know.
 //
 // Hides:
-//   - failed-game → 7-attempts mapping
-//   - display-name ref pattern to avoid stale closures
+//   - failed-game → 7-attempts penalty mapping
+//   - display-name ref pattern (via useScorePost)
 //   - fetch URL + JSON field names
-//   - error silencing
-//   - no-op when deviceId is not yet known
+//   - error silencing (handled by postScore)
+//   - no-op when deviceId is unknown
 
-"use client";
-
-import { postScore } from "@/lib/postScore";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback } from "react";
+import { useScorePost } from "./useScorePost";
 
 interface UseLeksiarxeioScoreSubmissionOptions {
   /** The game date (YYYY-MM-DD) — used as the leaderboard partition key. */
@@ -23,34 +23,24 @@ interface UseLeksiarxeioScoreSubmissionOptions {
   displayName: string;
 }
 
-/**
- * Returns a stable `submit(length, attempts, won)` function.
- *
- * Calling submit() will POST to /api/leksiarxeio-scores with:
- *   - attempts = `attempts` when won, 7 when lost (penalty)
- *   - display_name read via ref so it's always current without re-creating submit()
- */
 export function useLeksiarxeioScoreSubmission({
   today,
   deviceId,
   displayName,
 }: UseLeksiarxeioScoreSubmissionOptions) {
-  const displayNameRef = useRef(displayName);
-  useEffect(() => { displayNameRef.current = displayName; }, [displayName]);
+  const { post } = useScorePost(displayName);
 
   const submit = useCallback(
     (length: number, attempts: number, won: boolean) => {
       if (!deviceId) return;
-      postScore("/api/leksiarxeio-scores", {
-        puzzle_date:  today,
-        word_length:  length,
-        device_id:    deviceId,
-        display_name: displayNameRef.current || "Ανώνυμος",
-        attempts:     won ? attempts : 7,
+      post("/api/leksiarxeio-scores", {
+        puzzle_date: today,
+        word_length: length,
+        device_id:   deviceId,
+        attempts:    won ? attempts : 7,
       });
     },
-    // displayName intentionally excluded — read via ref to avoid churn.
-    [today, deviceId]
+    [today, deviceId, post],
   );
 
   return { submit };

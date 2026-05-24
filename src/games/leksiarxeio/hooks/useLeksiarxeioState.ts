@@ -3,7 +3,7 @@
 // Leksiarxeio — React hook.
 // Wires the reducer to persistence and exposes a clean API to the UI.
 
-import type { GuessResult, LeksiarxeioPuzzle, LeksiarxeioStatus } from "../types";
+import type { GuessResult, LeksiarxeioPuzzle, LeksiarxeioRoundSnapshot } from "../types";
 import { leksiarxeioReducer, makeInitialLeksiarxeioState } from "./leksiarxeioReducer";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
@@ -12,14 +12,6 @@ import { scoreLeksiarxeio } from "../lib/scoring";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 
 const MAX_GUESSES = 6;
-
-// Fields persisted for a single Leksiarxeio session.
-// The puzzle ID (e.g. "2026-05-22-wordle-5") already encodes date + length,
-// so separate word-length sessions are stored as separate SessionStore entries.
-interface LeksiarxeioRoundSnapshot {
-  guesses: GuessResult[];
-  status:  LeksiarxeioStatus;
-}
 
 /**
  * All state and actions the Leksiarxeio UI needs.

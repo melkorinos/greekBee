@@ -63,6 +63,17 @@ export interface ValidationResult {
   isPangram: boolean;
 }
 
+// ─── Persistence snapshot ─────────────────────────────────────────────────────
+
+/** Fields persisted for a single Leksokipos round (written by useRoundPersistence). */
+export interface LeksokiposRoundSnapshot {
+  foundWords:  string[];
+  score:       number;
+  currentRank: RankName;
+  startedAt:   number;
+  givenUp:     boolean;
+}
+
 // ─── Game State ───────────────────────────────────────────────────────────────
 
 /** The full game state managed by useReducer in the game hook */

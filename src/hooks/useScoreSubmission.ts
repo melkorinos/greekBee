@@ -1,18 +1,18 @@
-// useScoreSubmission — owns the score-posting lifecycle for daily Leksokipos puzzles.
+"use client";
+
+// useScoreSubmission — score-posting lifecycle for daily Leksokipos puzzles.
 //
 // Interface: submit(score) — one call, nothing else to know.
 //
 // Hides:
 //   - "only POST when score strictly increases" guard
-//   - display-name ref pattern to avoid stale closures
+//   - display-name ref pattern (via useScorePost)
 //   - fetch URL + JSON field names
-//   - error silencing (network errors must not crash the game)
-//   - no-op when the puzzle is not a daily puzzle or deviceId is not yet known
+//   - error silencing (handled by postScore)
+//   - no-op when puzzle is not daily or deviceId is unknown
 
-"use client";
-
-import { postScore } from "@/lib/postScore";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useRef } from "react";
+import { useScorePost } from "./useScorePost";
 
 interface UseScoreSubmissionOptions {
   /** The puzzle date string used as the leaderboard key (YYYY-MM-DD). */
@@ -25,61 +25,42 @@ interface UseScoreSubmissionOptions {
   enabled:     boolean;
 }
 
-/**
- * Returns a stable `submit(score)` function.
- *
- * Calling submit(score) will POST to /api/scores only when:
- *   - enabled is true
- *   - deviceId is non-empty
- *   - score is strictly greater than the last successfully posted score
- */
 export function useScoreSubmission({
   puzzleId,
   deviceId,
   displayName,
   enabled,
 }: UseScoreSubmissionOptions) {
-  // Track the last score we successfully sent so we never regress.
-  const lastPostedRef   = useRef(0);
-  // Stable ref to the latest displayName — avoids re-creating submit() on every name change.
-  const displayNameRef  = useRef(displayName);
-  useEffect(() => { displayNameRef.current = displayName; }, [displayName]);
+  const { post } = useScorePost(displayName);
+  const lastPostedRef = useRef(0);
 
   const submit = useCallback(
     (score: number) => {
       if (!enabled || !deviceId) return;
       if (score <= 0 || score <= lastPostedRef.current) return;
       lastPostedRef.current = score;
-      postScore("/api/game-scores", {
-        game_id:      "leksokipos",
-        puzzle_date:  puzzleId,
-        device_id:    deviceId,
-        display_name: displayNameRef.current || "Ανώνυμος",
+      post("/api/game-scores", {
+        game_id:     "leksokipos",
+        puzzle_date: puzzleId,
+        device_id:   deviceId,
         score,
       });
     },
-    // puzzleId and deviceId are stable across a session; enabled rarely changes.
-    // displayName is intentionally excluded — read via ref to avoid churn.
-    [enabled, puzzleId, deviceId]
+    [enabled, puzzleId, deviceId, post],
   );
 
-  /**
-   * Force-post the current score with a new display name.
-   * Called when the player saves a name change so the leaderboard row is updated
-   * immediately, bypassing the "strictly increasing" guard.
-   */
+  /** Force-post with a new name, bypassing the strictly-increasing guard. */
   const submitWithName = useCallback(
     (score: number, name: string) => {
       if (!enabled || !deviceId || score <= 0) return;
-      postScore("/api/game-scores", {
-        game_id:      "leksokipos",
-        puzzle_date:  puzzleId,
-        device_id:    deviceId,
-        display_name: name || "Ανώνυμος",
+      post("/api/game-scores", {
+        game_id:     "leksokipos",
+        puzzle_date: puzzleId,
+        device_id:   deviceId,
         score,
-      });
+      }, name || "Ανώνυμος");
     },
-    [enabled, puzzleId, deviceId]
+    [enabled, puzzleId, deviceId, post],
   );
 
   return { submit, submitWithName };

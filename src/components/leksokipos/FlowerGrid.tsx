@@ -6,29 +6,75 @@ const CX = 150;
 const CY = 150;
 
 export interface FlowerGridConfig {
-  rInner: number;
-  rOuter: number;
+  variant: "pie" | "flower";
+  // shared
   rCenter: number;
-  gapDeg: number;
-  innerExtra: number;
-  sideCurvature: number;
-  showGradient: boolean;
   segFontSize: number;
   centerFontSize: number;
   strokeWidth: number;
+  showGradient: boolean;
+  // pie-slice geometry
+  rInner: number;
+  rOuter: number;
+  gapDeg: number;
+  innerExtra: number;
+  sideCurvature: number;
+  // flower geometry
+  petalLength: number;
+  petalWidth: number;
+  petalDist: number;
+  petalRotation: number;
+  // pie colors
+  segFillColor: string;
+  segStrokeColor: string;
+  segTextColor: string;
+  segGradStart: string;
+  segGradEnd: string;
+  // flower colors
+  petalFillColor: string;
+  petalStrokeColor: string;
+  petalTextColor: string;
+  petalGradStart: string;
+  petalGradEnd: string;
+  // center colors (shared)
+  centerFillColor: string;
+  centerStrokeColor: string;
+  centerTextColor: string;
+  centerGradStart: string;
+  centerGradEnd: string;
 }
 
 export const DEFAULT_CONFIG: FlowerGridConfig = {
-  rInner: 52,
-  rOuter: 140,
+  variant: "pie",
   rCenter: 46,
-  gapDeg: 4,
-  innerExtra: 3,
-  sideCurvature: 0,
-  showGradient: true,
   segFontSize: 24,
   centerFontSize: 26,
   strokeWidth: 1.5,
+  showGradient: true,
+  rInner: 52,
+  rOuter: 140,
+  gapDeg: 4,
+  innerExtra: 3,
+  sideCurvature: 0,
+  petalLength: 55,
+  petalWidth: 30,
+  petalDist: 90,
+  petalRotation: 0,
+  segFillColor: "#DDD0BA",
+  segStrokeColor: "#C4A882",
+  segTextColor: "#5C4A35",
+  segGradStart: "#D8C4A8",
+  segGradEnd: "#EDE0CE",
+  petalFillColor: "#A8D4B0",
+  petalStrokeColor: "#7FB88A",
+  petalTextColor: "#2D5A36",
+  petalGradStart: "#C4EACC",
+  petalGradEnd: "#72B882",
+  centerFillColor: "#C4814F",
+  centerStrokeColor: "#9E5538",
+  centerTextColor: "#FFF5ED",
+  centerGradStart: "#D4855A",
+  centerGradEnd: "#B86844",
 };
 
 function sectorPath(
@@ -62,7 +108,6 @@ function sectorPath(
     ].join(" ");
   }
 
-  // Quadratic bezier curved sides — control point at midR, offset outward from the segment
   const midR = (rInner + rOuter) / 2;
   const clx = CX + midR * Math.cos(r(outerStart - sideCurvature));
   const cly = CY + midR * Math.sin(r(outerStart - sideCurvature));
@@ -79,7 +124,6 @@ function sectorPath(
   ].join(" ");
 }
 
-// right(0°), lower-right(60°), lower-left(120°), left(180°), upper-left(240°), upper-right(300°)
 const SEGMENT_CENTERS_DEG = [0, 60, 120, 180, 240, 300];
 
 interface SegmentProps {
@@ -90,7 +134,8 @@ interface SegmentProps {
 }
 
 const Segment = memo(function Segment({ letter, centerDeg, onClickLetter, cfg }: SegmentProps) {
-  const { rInner, rOuter, gapDeg, innerExtra, showGradient, segFontSize, strokeWidth } = cfg;
+  const { rInner, rOuter, gapDeg, innerExtra, showGradient, segFontSize, strokeWidth,
+          segFillColor, segStrokeColor, segTextColor } = cfg;
   const half = 30 - gapDeg / 2;
   const innerHalf = half - innerExtra;
   const d = sectorPath(centerDeg - half, centerDeg + half, centerDeg - innerHalf, centerDeg + innerHalf, cfg);
@@ -116,8 +161,8 @@ const Segment = memo(function Segment({ letter, centerDeg, onClickLetter, cfg }:
     >
       <path
         d={d}
-        fill={showGradient ? "url(#segGrad)" : "#DDD0BA"}
-        stroke="#C4A882"
+        fill={showGradient ? "url(#segGrad)" : segFillColor}
+        stroke={segStrokeColor}
         strokeWidth={strokeWidth}
       />
       <text
@@ -127,7 +172,64 @@ const Segment = memo(function Segment({ letter, centerDeg, onClickLetter, cfg }:
         dominantBaseline="central"
         fontSize={segFontSize}
         fontWeight={800}
-        className="fill-[#5C4A35] pointer-events-none uppercase"
+        style={{ fill: segTextColor }}
+        className="pointer-events-none uppercase"
+      >
+        {letter.toUpperCase()}
+      </text>
+    </g>
+  );
+});
+
+interface FlowerPetalProps {
+  letter: string;
+  angleDeg: number;
+  onClickLetter: (letter: string) => void;
+  cfg: FlowerGridConfig;
+}
+
+const FlowerPetal = memo(function FlowerPetal({ letter, angleDeg, onClickLetter, cfg }: FlowerPetalProps) {
+  const { petalDist, petalLength, petalWidth, petalRotation, showGradient, segFontSize, strokeWidth,
+          petalFillColor, petalStrokeColor, petalTextColor } = cfg;
+  const angle = angleDeg + petalRotation;
+  const rad = (angle * Math.PI) / 180;
+  const ex = CX + petalDist * Math.cos(rad);
+  const ey = CY + petalDist * Math.sin(rad);
+
+  return (
+    <g
+      onClick={() => onClickLetter(letter.toLowerCase())}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") onClickLetter(letter.toLowerCase());
+      }}
+      tabIndex={0}
+      role="button"
+      aria-label={`Letter ${letter.toUpperCase()}`}
+      className="cursor-pointer select-none
+        drop-shadow-[0_2px_6px_rgba(50,100,60,0.25)]
+        active:drop-shadow-none active:scale-95
+        [transform-box:fill-box] origin-center
+        transition-all duration-75"
+    >
+      <ellipse
+        cx={ex}
+        cy={ey}
+        rx={petalLength}
+        ry={petalWidth}
+        transform={`rotate(${angle}, ${ex.toFixed(2)}, ${ey.toFixed(2)})`}
+        fill={showGradient ? "url(#petalGrad)" : petalFillColor}
+        stroke={petalStrokeColor}
+        strokeWidth={strokeWidth}
+      />
+      <text
+        x={ex}
+        y={ey}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={segFontSize}
+        fontWeight={800}
+        style={{ fill: petalTextColor }}
+        className="pointer-events-none uppercase"
       >
         {letter.toUpperCase()}
       </text>
@@ -142,7 +244,8 @@ interface CenterCellProps {
 }
 
 const CenterCell = memo(function CenterCell({ letter, onClickLetter, cfg }: CenterCellProps) {
-  const { rCenter, centerFontSize, showGradient } = cfg;
+  const { rCenter, centerFontSize, showGradient, strokeWidth,
+          centerFillColor, centerStrokeColor, centerTextColor } = cfg;
   return (
     <g
       onClick={() => onClickLetter(letter.toLowerCase())}
@@ -162,9 +265,9 @@ const CenterCell = memo(function CenterCell({ letter, onClickLetter, cfg }: Cent
         cx={CX}
         cy={CY}
         r={rCenter}
-        fill={showGradient ? "url(#centerGrad)" : "#C4814F"}
-        stroke="#9E5538"
-        strokeWidth="2"
+        fill={showGradient ? "url(#centerGrad)" : centerFillColor}
+        stroke={centerStrokeColor}
+        strokeWidth={strokeWidth}
       />
       <text
         x={CX}
@@ -173,7 +276,8 @@ const CenterCell = memo(function CenterCell({ letter, onClickLetter, cfg }: Cent
         dominantBaseline="central"
         fontSize={centerFontSize}
         fontWeight={800}
-        className="fill-[#FFF5ED] pointer-events-none uppercase"
+        style={{ fill: centerTextColor }}
+        className="pointer-events-none uppercase"
       >
         {letter.toUpperCase()}
       </text>
@@ -200,16 +304,30 @@ export function FlowerGrid({ centerLetter, outerLetters, onLetterClick, config }
     >
       <defs>
         <radialGradient id="segGrad" cx={CX} cy={CY} r={cfg.rOuter} gradientUnits="userSpaceOnUse">
-          <stop offset={innerStop} stopColor="#D8C4A8" />
-          <stop offset="100%" stopColor="#EDE0CE" />
+          <stop offset={innerStop} stopColor={cfg.segGradStart} />
+          <stop offset="100%" stopColor={cfg.segGradEnd} />
+        </radialGradient>
+        <radialGradient id="petalGrad" cx={CX} cy={CY} r={cfg.petalDist + cfg.petalLength} gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor={cfg.petalGradStart} />
+          <stop offset="100%" stopColor={cfg.petalGradEnd} />
         </radialGradient>
         <radialGradient id="centerGrad" cx={CX} cy={CY} r={cfg.rCenter} gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#D4855A" />
-          <stop offset="100%" stopColor="#B86844" />
+          <stop offset="0%" stopColor={cfg.centerGradStart} />
+          <stop offset="100%" stopColor={cfg.centerGradEnd} />
         </radialGradient>
       </defs>
 
-      {outerLetters.slice(0, 6).map((letter, i) => (
+      {cfg.variant === "flower" && outerLetters.slice(0, 6).map((letter, i) => (
+        <FlowerPetal
+          key={`petal-${i}`}
+          letter={letter}
+          angleDeg={SEGMENT_CENTERS_DEG[i]}
+          onClickLetter={onLetterClick}
+          cfg={cfg}
+        />
+      ))}
+
+      {cfg.variant === "pie" && outerLetters.slice(0, 6).map((letter, i) => (
         <Segment
           key={`seg-${i}`}
           letter={letter}
@@ -218,6 +336,7 @@ export function FlowerGrid({ centerLetter, outerLetters, onLetterClick, config }
           cfg={cfg}
         />
       ))}
+
       <CenterCell letter={centerLetter} onClickLetter={onLetterClick} cfg={cfg} />
     </svg>
   );

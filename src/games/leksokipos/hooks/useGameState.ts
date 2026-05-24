@@ -6,19 +6,10 @@
 import { buildInitialState, gameReducer } from "./gameReducer";
 import { useCallback, useMemo, useReducer } from "react";
 
-import type { RankName, LeksokiposPuzzle } from "../types";
+import type { LeksokiposPuzzle, LeksokiposRoundSnapshot } from "../types";
 import { calculateRank } from "../lib/ranking";
 import { normalizeLetters } from "../lib/normalize";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
-
-// Fields persisted for a single Leksokipos round
-interface LeksokiposRoundSnapshot {
-  foundWords:   string[];
-  score:        number;
-  currentRank:  RankName;
-  startedAt:    number;
-  givenUp:      boolean;
-}
 
 /**
  * Central game hook — all components talk to this, never to the reducer directly.

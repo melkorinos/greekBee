@@ -1,18 +1,18 @@
-// useLeksindeseisScoreSubmission — owns the score-posting lifecycle for daily Leksindeseis puzzles.
+"use client";
+
+// useLeksindeseisScoreSubmission — score-posting lifecycle for daily Leksindeseis.
 //
 // Interface: submit(score) — one call, nothing else to know.
 //
 // Hides:
 //   - "only POST when score strictly increases" dedup guard
-//   - display-name ref pattern to avoid stale closures
+//   - display-name ref pattern (via useScorePost)
 //   - fetch URL + JSON field names
-//   - error silencing
-//   - no-op when deviceId is not yet known
+//   - error silencing (handled by postScore)
+//   - no-op when deviceId is unknown
 
-"use client";
-
-import { postScore } from "@/lib/postScore";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useRef } from "react";
+import { useScorePost } from "./useScorePost";
 
 interface UseLeksindeseisScoreSubmissionOptions {
   /** The puzzle date (YYYY-MM-DD) — used as the leaderboard partition key. */
@@ -23,53 +23,40 @@ interface UseLeksindeseisScoreSubmissionOptions {
   displayName: string;
 }
 
-/**
- * Returns a stable `submit(score)` function.
- *
- * Calling submit(score) will POST to /api/game-scores only when:
- *   - deviceId is non-empty
- *   - score is strictly greater than the last successfully posted score (dedup)
- *
- * For Leksindeseis, score = mistakesRemaining (1–4) when the player wins.
- * Lost games should never call submit().
- */
 export function useLeksindeseisScoreSubmission({
   puzzleDate,
   deviceId,
   displayName,
 }: UseLeksindeseisScoreSubmissionOptions) {
-  const lastPostedRef  = useRef(0);
-  const displayNameRef = useRef(displayName);
-  useEffect(() => { displayNameRef.current = displayName; }, [displayName]);
+  const { post } = useScorePost(displayName);
+  const lastPostedRef = useRef(0);
 
   const submit = useCallback(
     (score: number) => {
       if (!deviceId) return;
       if (score <= 0 || score <= lastPostedRef.current) return;
       lastPostedRef.current = score;
-      postScore("/api/game-scores", {
-        game_id:      "leksindeseis",
-        puzzle_date:  puzzleDate,
-        device_id:    deviceId,
-        display_name: displayNameRef.current || "Ανώνυμος",
+      post("/api/game-scores", {
+        game_id:     "leksindeseis",
+        puzzle_date: puzzleDate,
+        device_id:   deviceId,
         score,
       });
     },
-    [puzzleDate, deviceId]
+    [puzzleDate, deviceId, post],
   );
 
   const submitWithName = useCallback(
     (score: number, name: string) => {
       if (!deviceId || score <= 0) return;
-      postScore("/api/game-scores", {
-        game_id:      "leksindeseis",
-        puzzle_date:  puzzleDate,
-        device_id:    deviceId,
-        display_name: name || "Ανώνυμος",
+      post("/api/game-scores", {
+        game_id:     "leksindeseis",
+        puzzle_date: puzzleDate,
+        device_id:   deviceId,
         score,
-      });
+      }, name || "Ανώνυμος");
     },
-    [puzzleDate, deviceId]
+    [puzzleDate, deviceId, post],
   );
 
   return { submit, submitWithName };

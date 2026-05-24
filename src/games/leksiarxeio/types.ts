@@ -62,6 +62,14 @@ export type LetterState = "correct" | "present" | "absent" | "unknown";
 /** Map from letter → best known state, for the keyboard display */
 export type LetterStateMap = Record<string, LetterState>;
 
+// ─── Persistence snapshot ─────────────────────────────────────────────────────
+
+/** Fields persisted for a single Leksiarxeio session (written by useRoundPersistence). */
+export interface LeksiarxeioRoundSnapshot {
+  guesses: GuessResult[];
+  status:  LeksiarxeioStatus;
+}
+
 // ─── Scoring ──────────────────────────────────────────────────────────────────
 
 /** Points awarded per number of guesses used (1 = best, 6 = worst, 0 = failed) */
