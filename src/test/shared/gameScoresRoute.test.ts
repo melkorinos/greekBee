@@ -31,7 +31,7 @@ function makeChain(result: ChainResult) {
 
 vi.mock("@/lib/supabase", () => ({
   getSupabaseClient: () => ({
-    from: (_table: string) => {
+    from: () => {
       const result = _callQueue.shift() ?? { data: null, error: null, count: null };
       return makeChain(result);
     },

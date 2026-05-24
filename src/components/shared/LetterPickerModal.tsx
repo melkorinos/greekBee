@@ -29,8 +29,6 @@ const ALL_LETTERS = KEYBOARD_ROWS.flat(); // 24 letters
 
 // Greek vowels — used to enforce puzzle quality in random selection.
 const VOWELS = new Set(["α", "ε", "η", "ι", "ο", "υ", "ω"]);
-const CONSONANTS = ALL_LETTERS.filter((l) => !VOWELS.has(l));
-
 /**
  * Pick 7 unique random Greek letters that meet minimum quality rules:
  *   - Center letter is always a vowel (mandatory center = more valid words).

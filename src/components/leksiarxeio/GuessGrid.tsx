@@ -46,9 +46,6 @@ export function GuessGrid({
     });
   }
 
-  // Current input row index
-  const currentRowIdx = rows.length;
-
   // Current input row (if game is still playing)
   if (rows.length < maxGuesses) {
     const letters = currentInput.split("").concat(

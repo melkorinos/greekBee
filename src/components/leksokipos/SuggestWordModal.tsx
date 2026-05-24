@@ -6,7 +6,7 @@
 // onSuccess is called after a successful POST so the parent can mark the
 // word as already-suggested in localStorage and prevent re-submission.
 
-import { btnCancel, btnModalSubmit, inputClass, inputCompactClass, inputReadonlyClass, labelClass, labelOptionalClass } from "./styles";
+import { btnCancel, btnModalSubmit, inputClass, inputReadonlyClass, labelClass, labelOptionalClass } from "./styles";
 
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
 import { useState } from "react";

@@ -1,7 +1,7 @@
 ﻿// suggestWordModal.test.tsx — tests for the SuggestWordModal component.
 // Covers open/close, form fields, successful POST, success state, error state.
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 
 import { SuggestWordModal } from "@/components/leksokipos/SuggestWordModal";

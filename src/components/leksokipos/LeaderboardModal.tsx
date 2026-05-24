@@ -19,11 +19,6 @@ import { useLeaderboard } from "@/hooks/useLeaderboard";
 
 const GREEK_DAYS = ["Κυρ", "Δευ", "Τρι", "Τετ", "Πεμ", "Παρ", "Σαβ"] as const;
 
-function formatDayLabel(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  return `${GREEK_DAYS[d.getDay()]} ${d.getDate()}`;
-}
-
 function formatPickerDate(iso: string): string {
   try {
     const d = new Date(iso);

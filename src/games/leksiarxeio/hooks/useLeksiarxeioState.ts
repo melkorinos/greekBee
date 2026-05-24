@@ -3,7 +3,7 @@
 // Leksiarxeio — React hook.
 // Wires the reducer to persistence and exposes a clean API to the UI.
 
-import type { GuessResult, LeksiarxeioPuzzle, LeksiarxeioRoundSnapshot } from "../types";
+import type { LeksiarxeioPuzzle, LeksiarxeioRoundSnapshot } from "../types";
 import { leksiarxeioReducer, makeInitialLeksiarxeioState } from "./leksiarxeioReducer";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
