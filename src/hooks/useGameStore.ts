@@ -119,6 +119,18 @@ export function setDeviceId(id: string): void {
   writeEnvelope({ ...envelope, deviceId: id });
 }
 
+/** Returns the stored PIN for this device's cross-device profile, or "". */
+export function getProfilePin(): string {
+  if (typeof window === "undefined") return "";
+  return readEnvelope()["profilePin"] ?? "";
+}
+
+/** Store the 4-digit PIN after profile creation. */
+export function setProfilePin(pin: string): void {
+  const envelope = readEnvelope();
+  writeEnvelope({ ...envelope, profilePin: pin });
+}
+
 /**
  * Unlink the cross-device profile from this device.
  * Generates a fresh anonymous deviceId so the player can continue anonymously.
@@ -129,6 +141,7 @@ export function disconnectProfile(): void {
     ...envelope,
     deviceId:      crypto.randomUUID(),
     profileLinked: false,
+    profilePin:    undefined,
   });
 }
 

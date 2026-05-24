@@ -32,4 +32,6 @@ export interface PersistenceEnvelope {
   "displayName"?:          string;
   /** True once a cross-device profile has been created or restored on this device. */
   "profileLinked"?:        boolean;
+  /** The 4-digit PIN for this device's cross-device profile. Cleared on disconnect. */
+  "profilePin"?:           string;
 }

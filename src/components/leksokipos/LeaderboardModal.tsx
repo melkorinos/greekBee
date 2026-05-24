@@ -52,8 +52,10 @@ interface LeaderboardModalProps {
   deviceId:         string;
   displayName:      string;
   profileLinked:    boolean;
+  profilePin:       string;
   onSaveName:       (name: string) => void;
   onProfileCreate:  (name: string) => Promise<{ pin: string }>;
+  onProfileLinked:  () => void;
   onProfileRestore: (name: string, pin: string) => Promise<ProfileMatch[]>;
   onProfileSelect:  (deviceUuid: string, displayName: string) => Promise<void>;
   onDisconnect:     () => void;
@@ -69,8 +71,10 @@ export function LeaderboardModal({
   deviceId,
   displayName,
   profileLinked,
+  profilePin,
   onSaveName,
   onProfileCreate,
+  onProfileLinked,
   onProfileRestore,
   onProfileSelect,
   onDisconnect,
@@ -289,7 +293,7 @@ export function LeaderboardModal({
                 Σημείωσέ τον — δεν αποθηκεύεται εδώ.
               </p>
               <button
-                onClick={() => setProfileMode("linked")}
+                onClick={() => { onProfileLinked(); setProfileMode("linked"); }}
                 className={btnPrimaryCompact}
               >
                 Το κράτησα ✓
@@ -370,16 +374,26 @@ export function LeaderboardModal({
           )}
 
           {profileMode === "linked" && (
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-green-600 font-semibold">
-                ✓ {displayName || "Ανώνυμος"}
-              </span>
-              <button
-                onClick={handleDisconnect}
-                className="text-xs text-stone-400 hover:text-red-500 transition-colors"
-              >
-                Αποσύνδεση
-              </button>
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-green-600 font-semibold">
+                  ✓ {displayName || "Ανώνυμος"}
+                </span>
+                <button
+                  onClick={handleDisconnect}
+                  className="text-xs text-stone-400 hover:text-red-500 transition-colors"
+                >
+                  Αποσύνδεση
+                </button>
+              </div>
+              {profilePin && (
+                <p className="text-xs text-stone-400">
+                  PIN:{" "}
+                  <span className="font-mono font-bold tracking-widest text-stone-600">
+                    {profilePin}
+                  </span>
+                </p>
+              )}
             </div>
           )}
         </div>

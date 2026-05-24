@@ -3,7 +3,7 @@
 // GameBoard -- the top-level client component that composes all game UI pieces.
 // Receives the initial puzzle as a prop (loaded server-side in page.tsx).
 
-import { disconnectProfile, getDisplayName, getOrCreateDeviceId, isProfileLinked, setDeviceId, setDisplayName as saveDisplayName, setProfileLinked } from "@/hooks/useGameStore";
+import { disconnectProfile, getDisplayName, getOrCreateDeviceId, getProfilePin, isProfileLinked, setDeviceId, setDisplayName as saveDisplayName, setProfileLinked, setProfilePin } from "@/hooks/useGameStore";
 import { getSuggestedWords, markSuggested } from "@/hooks/suggestions";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -68,6 +68,9 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   const [profileLinkedState, setProfileLinkedState] = useState<boolean>(
     () => typeof window === "undefined" ? false : isProfileLinked()
   );
+  const [profilePin, setProfilePinState] = useState<string>(
+    () => typeof window === "undefined" ? "" : getProfilePin()
+  );
 
   // Only daily puzzles participate in the leaderboard.
   const isDaily          = isDailyPuzzle(activePuzzle);
@@ -97,10 +100,18 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
     });
     if (!res.ok) throw new Error("profile create failed");
     const data = (await res.json()) as { pin: string };
+    // Save name + PIN now — but do NOT flip profileLinked yet.
+    // profileLinked is set only after the user acknowledges the PIN (handleProfileLinked).
+    // Flipping it here would cause the modal's useEffect to wipe pin-reveal before it renders.
+    handleSaveName(name || "Ανώνυμος");
+    setProfilePin(data.pin);
+    setProfilePinState(data.pin);
+    return data;
+  }
+
+  function handleProfileLinked(): void {
     setProfileLinked(true);
     setProfileLinkedState(true);
-    handleSaveName(name || "Ανώνυμος");
-    return data;
   }
 
   async function handleProfileRestore(name: string, pin: string): Promise<ProfileMatch[]> {
@@ -135,6 +146,7 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
     disconnectProfile();
     setDeviceIdState(getOrCreateDeviceId());
     setProfileLinkedState(false);
+    setProfilePinState("");
   }
 
   function handleSuggest(word: string) {
@@ -302,8 +314,10 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
           deviceId={deviceId}
           displayName={displayName}
           profileLinked={profileLinkedState}
+          profilePin={profilePin}
           onSaveName={handleSaveName}
           onProfileCreate={handleProfileCreate}
+          onProfileLinked={handleProfileLinked}
           onProfileRestore={handleProfileRestore}
           onProfileSelect={handleProfileSelect}
           onDisconnect={handleDisconnect}
