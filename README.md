@@ -151,7 +151,7 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
    - `<ScoreBar>` — rank label, progress bar, rank ladder popover, leaderboard button (daily only).
    - `<WordInput>` — live letter display, centre letter highlighted in yellow.
    - `<FeedbackMessage>` — toast after each submission.
-   - `<FlowerGrid>` — 7 SVG teardrop-petal letter cells (coral centre, mint outer ring).
+   - `<FlowerGrid>` — SVG letter grid with two visual variants: **Pie Slice** (annular sectors) and **Flower** (elliptical petals). Configured via `FlowerGridConfig`. The player's variant preference is toggled from the page header and stored in `localStorage`.
    - `<FoundWordsList>` — sorted found words, pangrams highlighted.
    - `<HowToPlayModal>` — rules modal (? button, Greek only).
 
@@ -162,13 +162,13 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
 ```
 src/
   app/              Next.js App Router — shell layout, game picker, per-game routes
-    leksokipos/     Daily puzzle + custom /[center]/[outer] dynamic route
+    leksokipos/     Daily puzzle + custom /[center]/[outer] dynamic route (server component delegates to LeksokiposLayout)
     leksiarxeio/    4–8 letter Greek Wordle (multi-length)
     leksindeseis/   Group 16 words into 4 categories
     api/            Edge routes: game-scores, game-state, profile, suggest-word, leksiarxeio-scores
   components/
     shared/         Cross-game UI primitives (Shell, FeedbackBanner, HowToPlayModal, LetterPickerModal)
-    leksokipos/     Leksokipos components (GameBoard, FlowerGrid, ScoreBar, LeaderboardModal, …)
+    leksokipos/     Leksokipos components (LeksokiposLayout, GameBoard, FlowerGrid, FlowerGridPlayground, ScoreBar, LeaderboardModal, …)
     leksiarxeio/    Leksiarxeio components (LeksiarxeioBoard, GuessGrid, Tile, Keyboard)
     leksindeseis/   Leksindeseis components (GroupGrid, WordCard, CategoryReveal, ConnectionsBoard, ConnectionsLeaderboardModal)
   games/            Pure logic — one folder per game, zero React imports

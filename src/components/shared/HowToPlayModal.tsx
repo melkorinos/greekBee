@@ -7,7 +7,7 @@ import { useState } from "react";
 
 interface HowToPlayModalProps {
   title:        string;
-  items:        string[];
+  items:        readonly string[];
   bulletIcon?:  string;
   /** Use a light-coloured trigger button (for dark-background pages like Wordle) */
   lightTrigger?: boolean;

@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-05-24 — Session 34: FlowerGrid variant presets + prod toggle ✅
+
+**Outcome:** 704 tests (45 files) · 0 failures · ESLint 0 errors · build clean.
+
+### Changes
+
+1. **`src/components/leksokipos/FlowerGrid.tsx`** — Replaced `DEFAULT_CONFIG` with two named presets using user-specified values: `DEFAULT_PIE_CONFIG` (annular sectors, white petals, purple center) and `DEFAULT_FLOWER_CONFIG` (elliptical petals, cream petals, pink center). `DEFAULT_CONFIG = DEFAULT_PIE_CONFIG` preserved as an alias.
+
+2. **`src/components/leksokipos/FlowerGridPlayground.tsx`** — Added `variant?` prop (forwarded from `GameBoard`); in prod mode renders with the matching named preset config. Design-panel variant toggle now resets to the full matching preset instead of flipping one field. `isDesignMode` detection moved from `useEffect + setState` to `useSyncExternalStore` (fixes `react-hooks/set-state-in-effect` rule introduced in `eslint-plugin-react-hooks` v7).
+
+3. **`src/components/leksokipos/GameBoard.tsx`** — Added `variant?: "pie" | "flower"` prop, threaded through to `FlowerGridPlayground`.
+
+4. **`src/components/leksokipos/LeksokiposLayout.tsx`** (new) — Client wrapper replacing the server-rendered header + `GameBoard` pair. Holds variant state via `useSyncExternalStore` + a module-level pub/sub store (no effects). Variant toggle button in header: 🌸 = switch to flower, 🥧 = switch to pie; preference persists in `localStorage` key `leksokipos-variant`. `VariantToggleButton` styled consistently with other header buttons.
+
+5. **`src/app/leksokipos/[center]/[outer]/page.tsx`** — Replaced inline `<header> + <GameBoard>` with `<LeksokiposLayout>`. Server component still fetches all data; client wrapper manages variant state.
+
+6. **`src/test/leksokipos/LeksokiposLayout.test.tsx`** (new) — 11 tests covering: header rendering, variant toggle (default, click, localStorage save, restore, unknown value fallback, variant prop passthrough), tooFewWords warning. Design panel excluded from tests (developer tool).
+
+---
+
 ## 2026-05-23 — Session 33: Internal identifier rebranding (Leksiarxeio + Leksindeseis) ✅
 
 **Outcome:** 684 tests (43 files) · 0 failures · ESLint 0 errors · build clean.

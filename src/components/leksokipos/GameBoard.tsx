@@ -27,9 +27,10 @@ interface GameBoardProps {
   puzzle: LeksokiposPuzzle;
   /** Last 7 daily puzzle dates (newest-first), computed server-side. */
   recentPuzzleDates?: string[];
+  variant?: "pie" | "flower";
 }
 
-export function GameBoard({ puzzle, recentPuzzleDates = [] }: GameBoardProps) {
+export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoardProps) {
   const {
     puzzle: activePuzzle,
     currentInput,
@@ -223,6 +224,7 @@ export function GameBoard({ puzzle, recentPuzzleDates = [] }: GameBoardProps) {
             centerLetter={activePuzzle.centerLetter}
             outerLetters={activePuzzle.outerLetters}
             onLetterClick={(l) => { setJustSuggested(null); addLetter(l); }}
+            variant={variant}
           />
 
           <div className={buttonRowClass}>

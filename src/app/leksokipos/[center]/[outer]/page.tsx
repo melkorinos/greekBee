@@ -18,11 +18,8 @@
 import { buildCustomPuzzle, getPrebuiltPuzzleByLetters, getRecentPuzzleDates } from "@/data";
 import { notFound, redirect } from "next/navigation";
 
-import { GameBoard } from "@/components/leksokipos/GameBoard";
-import { HowToPlayModal } from "@/components/leksokipos/HowToPlayModal";
 import type { Language } from "@/types";
-import { NewPuzzleButton } from "@/components/leksokipos/NewPuzzleButton";
-import { ShareButton } from "@/components/leksokipos/ShareButton";
+import { LeksokiposLayout } from "@/components/leksokipos/LeksokiposLayout";
 import { greekToGreeklish } from "@/lib/greeklish";
 import { parseCustomUrl } from "@/games/leksokipos/lib/parseCustomUrl";
 
@@ -86,26 +83,12 @@ export default async function CustomLeksokiposPage({
 
   return (
     <div className="flex flex-col flex-1 items-center justify-start bg-zinc-50 font-sans min-h-screen">
-      <header className="w-full border-b border-stone-200 bg-white px-4 py-3">
-        <div className="flex items-center justify-between max-w-sm mx-auto">
-          <h1 className="text-xl font-bold tracking-tight text-stone-800">🌸 Leksokipos</h1>
-          <div className="flex items-center gap-2">
-            <ShareButton canonicalPath={canonicalPath} />
-            <NewPuzzleButton />
-            <HowToPlayModal />
-          </div>
-        </div>
-      </header>
-      {tooFewWords && (
-        <div className="w-full max-w-sm mx-auto mt-3 px-4">
-          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-center">
-            This letter combination has very few valid words. Try a different set!
-          </p>
-        </div>
-      )}
-      <div className="flex flex-1 w-full flex-col items-center bg-white">
-        <GameBoard puzzle={puzzle} recentPuzzleDates={recentPuzzleDates} />
-      </div>
+      <LeksokiposLayout
+        puzzle={puzzle}
+        recentPuzzleDates={recentPuzzleDates}
+        canonicalPath={canonicalPath}
+        tooFewWords={tooFewWords}
+      />
     </div>
   );
 }

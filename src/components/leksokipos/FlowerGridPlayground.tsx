@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { DEFAULT_CONFIG, FlowerGrid, FlowerGridConfig } from "./FlowerGrid";
+import { useState, useSyncExternalStore } from "react";
+import { DEFAULT_FLOWER_CONFIG, DEFAULT_PIE_CONFIG, FlowerGrid, FlowerGridConfig } from "./FlowerGrid";
 
 // ── Primitive controls ────────────────────────────────────────────────────────
 
@@ -129,12 +129,50 @@ export interface FlowerGridPlaygroundProps {
   centerLetter: string;
   outerLetters: string[];
   onLetterClick: (letter: string) => void;
+  variant?: "pie" | "flower";
 }
 
-export function FlowerGridPlayground({ centerLetter, outerLetters, onLetterClick }: FlowerGridPlaygroundProps) {
-  const [cfg, setCfg] = useState<FlowerGridConfig>(DEFAULT_CONFIG);
+export function FlowerGridPlayground({ centerLetter, outerLetters, onLetterClick, variant }: FlowerGridPlaygroundProps) {
+  // useSyncExternalStore reads the URL on the client; server always returns false.
+  // Avoids the setState-in-effect pattern while correctly detecting ?design on mount.
+  const isDesignMode = useSyncExternalStore(
+    () => () => {},
+    () => new URLSearchParams(window.location.search).has("design"),
+    () => false,
+  );
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [cfg, setCfg] = useState<FlowerGridConfig>(DEFAULT_PIE_CONFIG);
+  const [copied, setCopied] = useState(false);
+
   const set = <K extends keyof FlowerGridConfig>(key: K, val: FlowerGridConfig[K]) =>
     setCfg((prev) => ({ ...prev, [key]: val }));
+
+  function handleCopy() {
+    const text = JSON.stringify(cfg, null, 2);
+    navigator.clipboard.writeText(text).catch(() => {
+      const el = document.createElement("textarea");
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    });
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  // Not in design mode — render with the prod variant config
+  if (!isDesignMode) {
+    const prodConfig = variant === "flower" ? DEFAULT_FLOWER_CONFIG : DEFAULT_PIE_CONFIG;
+    return (
+      <FlowerGrid
+        centerLetter={centerLetter}
+        outerLetters={outerLetters}
+        onLetterClick={onLetterClick}
+        config={prodConfig}
+      />
+    );
+  }
 
   return (
     <>
@@ -145,225 +183,153 @@ export function FlowerGridPlayground({ centerLetter, outerLetters, onLetterClick
         config={cfg}
       />
 
-      <div className="fixed top-0 right-0 h-screen w-72 bg-white border-l border-stone-200 overflow-y-auto z-50 flex flex-col">
-        <div className="px-4 pt-4 pb-3 border-b border-stone-100 space-y-2">
-          <p className="text-xs font-bold uppercase tracking-widest text-stone-500">Design Panel</p>
-          <VariantToggle value={cfg.variant} onChange={(v) => set("variant", v)} />
+      {/* Mobile open button — only visible when panel is closed */}
+      {!panelOpen && (
+        <button
+          onClick={() => setPanelOpen(true)}
+          aria-label="Open design panel"
+          className="md:hidden fixed bottom-5 right-4 z-40 w-12 h-12 rounded-full bg-amber-700 text-white shadow-lg flex items-center justify-center text-xl"
+        >
+          ⚙
+        </button>
+      )}
+
+      {/* Panel — bottom sheet on mobile, fixed sidebar on desktop */}
+      <div
+        className={[
+          // base
+          "fixed z-50 bg-white border-stone-200 flex flex-col transition-transform duration-300",
+          // mobile: slides up from bottom
+          "bottom-0 left-0 right-0 border-t rounded-t-2xl max-h-[82vh]",
+          panelOpen ? "translate-y-0" : "translate-y-full",
+          // desktop: always-visible right sidebar, override all mobile styles
+          "md:top-0 md:right-0 md:left-auto md:bottom-auto md:w-72 md:h-screen",
+          "md:max-h-none md:rounded-none md:border-t-0 md:border-l md:translate-y-0",
+        ].join(" ")}
+      >
+        {/* Header */}
+        <div className="px-4 pt-3 pb-3 border-b border-stone-100 space-y-2 flex-none">
+          {/* Mobile drag handle */}
+          <div className="md:hidden w-10 h-1 bg-stone-200 rounded-full mx-auto" />
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-widest text-stone-500">Design Panel</p>
+            <button
+              onClick={() => setPanelOpen(false)}
+              aria-label="Close design panel"
+              className="md:hidden text-stone-400 hover:text-stone-600 text-lg leading-none px-1"
+            >
+              ×
+            </button>
+          </div>
+          <VariantToggle
+            value={cfg.variant}
+            onChange={(v) => setCfg(v === "flower" ? DEFAULT_FLOWER_CONFIG : DEFAULT_PIE_CONFIG)}
+          />
         </div>
 
+        {/* Scrollable controls */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
 
-          {/* ── Pie sliders ── */}
           {cfg.variant === "pie" && (
             <>
               <SectionLabel>Shape</SectionLabel>
-              <SliderRow
-                label="Inner Radius"
-                description="Gap from center button to inner arc"
-                value={cfg.rInner} min={20} max={80} step={1}
-                onChange={(v) => set("rInner", v)}
-              />
-              <SliderRow
-                label="Outer Radius"
-                description="Outer arc edge — overall flower size"
-                value={cfg.rOuter} min={80} max={160} step={1}
-                onChange={(v) => set("rOuter", v)}
-              />
+              <SliderRow label="Inner Radius" description="Gap from center button to inner arc"
+                value={cfg.rInner} min={20} max={80} step={1} onChange={(v) => set("rInner", v)} />
+              <SliderRow label="Outer Radius" description="Outer arc edge — overall flower size"
+                value={cfg.rOuter} min={80} max={160} step={1} onChange={(v) => set("rOuter", v)} />
               <SectionLabel>Gaps</SectionLabel>
-              <SliderRow
-                label="Gap (degrees)"
-                description="Angular gap between adjacent petals"
-                value={cfg.gapDeg} min={0} max={14} step={0.5}
-                onChange={(v) => set("gapDeg", v)}
-              />
-              <SliderRow
-                label="Inner Flare"
-                description="Extra narrowing at inner arc — widens gap near center"
-                value={cfg.innerExtra} min={0} max={14} step={0.5}
-                onChange={(v) => set("innerExtra", v)}
-              />
+              <SliderRow label="Gap (degrees)" description="Angular gap between adjacent petals"
+                value={cfg.gapDeg} min={0} max={14} step={0.5} onChange={(v) => set("gapDeg", v)} />
+              <SliderRow label="Inner Flare" description="Extra narrowing at inner arc — widens gap near center"
+                value={cfg.innerExtra} min={0} max={14} step={0.5} onChange={(v) => set("innerExtra", v)} />
               <SectionLabel>Sides</SectionLabel>
-              <SliderRow
-                label="Side Curvature"
-                description="0 = straight sides; higher = sides bow outward"
-                value={cfg.sideCurvature} min={0} max={20} step={0.5}
-                onChange={(v) => set("sideCurvature", v)}
-              />
+              <SliderRow label="Side Curvature" description="0 = straight sides; higher = sides bow outward"
+                value={cfg.sideCurvature} min={0} max={20} step={0.5} onChange={(v) => set("sideCurvature", v)} />
               <SectionLabel>Pie Colors</SectionLabel>
-              <ColorRow
-                label="Fill (flat)"
-                description="Petal color when gradient is off"
-                value={cfg.segFillColor}
-                onChange={(v) => set("segFillColor", v)}
-              />
-              <ColorRow
-                label="Stroke"
-                description="Petal border color"
-                value={cfg.segStrokeColor}
-                onChange={(v) => set("segStrokeColor", v)}
-              />
-              <ColorRow
-                label="Letter"
-                description="Letter color on petals"
-                value={cfg.segTextColor}
-                onChange={(v) => set("segTextColor", v)}
-              />
-              <ColorRow
-                label="Gradient inner"
-                description="Gradient color near center"
-                value={cfg.segGradStart}
-                onChange={(v) => set("segGradStart", v)}
-              />
-              <ColorRow
-                label="Gradient outer"
-                description="Gradient color at outer edge"
-                value={cfg.segGradEnd}
-                onChange={(v) => set("segGradEnd", v)}
-              />
+              <ColorRow label="Fill (flat)" description="Petal color when gradient is off"
+                value={cfg.segFillColor} onChange={(v) => set("segFillColor", v)} />
+              <ColorRow label="Stroke" description="Petal border color"
+                value={cfg.segStrokeColor} onChange={(v) => set("segStrokeColor", v)} />
+              <ColorRow label="Letter" description="Letter color on petals"
+                value={cfg.segTextColor} onChange={(v) => set("segTextColor", v)} />
+              <ColorRow label="Gradient inner" description="Gradient color near center"
+                value={cfg.segGradStart} onChange={(v) => set("segGradStart", v)} />
+              <ColorRow label="Gradient outer" description="Gradient color at outer edge"
+                value={cfg.segGradEnd} onChange={(v) => set("segGradEnd", v)} />
             </>
           )}
 
-          {/* ── Flower sliders ── */}
           {cfg.variant === "flower" && (
             <>
               <SectionLabel>Petal Shape</SectionLabel>
-              <SliderRow
-                label="Petal Length"
-                description="Radial semi-axis — how far the petal extends outward"
-                value={cfg.petalLength} min={20} max={90} step={1}
-                onChange={(v) => set("petalLength", v)}
-              />
-              <SliderRow
-                label="Petal Width"
-                description="Tangential semi-axis — how wide the petal is"
-                value={cfg.petalWidth} min={10} max={70} step={1}
-                onChange={(v) => set("petalWidth", v)}
-              />
+              <SliderRow label="Petal Length" description="Radial semi-axis — how far the petal extends outward"
+                value={cfg.petalLength} min={20} max={90} step={1} onChange={(v) => set("petalLength", v)} />
+              <SliderRow label="Petal Width" description="Tangential semi-axis — how wide the petal is"
+                value={cfg.petalWidth} min={10} max={70} step={1} onChange={(v) => set("petalWidth", v)} />
               <SectionLabel>Petal Position</SectionLabel>
-              <SliderRow
-                label="Petal Distance"
-                description="Center-to-center distance from SVG origin to each petal"
-                value={cfg.petalDist} min={30} max={130} step={1}
-                onChange={(v) => set("petalDist", v)}
-              />
-              <SliderRow
-                label="Petal Rotation"
-                description="Extra angle offset — 0 = radial, non-zero = pinwheel tilt"
-                value={cfg.petalRotation} min={-45} max={45} step={1}
-                onChange={(v) => set("petalRotation", v)}
-              />
+              <SliderRow label="Petal Distance" description="Center-to-center distance from origin to each petal"
+                value={cfg.petalDist} min={30} max={130} step={1} onChange={(v) => set("petalDist", v)} />
+              <SliderRow label="Petal Rotation" description="Extra angle offset — 0 = radial, non-zero = pinwheel tilt"
+                value={cfg.petalRotation} min={-45} max={45} step={1} onChange={(v) => set("petalRotation", v)} />
               <SectionLabel>Flower Colors</SectionLabel>
-              <ColorRow
-                label="Fill (flat)"
-                description="Petal color when gradient is off"
-                value={cfg.petalFillColor}
-                onChange={(v) => set("petalFillColor", v)}
-              />
-              <ColorRow
-                label="Stroke"
-                description="Petal border color"
-                value={cfg.petalStrokeColor}
-                onChange={(v) => set("petalStrokeColor", v)}
-              />
-              <ColorRow
-                label="Letter"
-                description="Letter color on petals"
-                value={cfg.petalTextColor}
-                onChange={(v) => set("petalTextColor", v)}
-              />
-              <ColorRow
-                label="Gradient center"
-                description="Gradient color near SVG center"
-                value={cfg.petalGradStart}
-                onChange={(v) => set("petalGradStart", v)}
-              />
-              <ColorRow
-                label="Gradient outer"
-                description="Gradient color at petal tips"
-                value={cfg.petalGradEnd}
-                onChange={(v) => set("petalGradEnd", v)}
-              />
+              <ColorRow label="Fill (flat)" description="Petal color when gradient is off"
+                value={cfg.petalFillColor} onChange={(v) => set("petalFillColor", v)} />
+              <ColorRow label="Stroke" description="Petal border color"
+                value={cfg.petalStrokeColor} onChange={(v) => set("petalStrokeColor", v)} />
+              <ColorRow label="Letter" description="Letter color on petals"
+                value={cfg.petalTextColor} onChange={(v) => set("petalTextColor", v)} />
+              <ColorRow label="Gradient center" description="Gradient color near SVG center"
+                value={cfg.petalGradStart} onChange={(v) => set("petalGradStart", v)} />
+              <ColorRow label="Gradient outer" description="Gradient color at petal tips"
+                value={cfg.petalGradEnd} onChange={(v) => set("petalGradEnd", v)} />
             </>
           )}
 
-          {/* ── Shared ── */}
           <SectionLabel>Center Button</SectionLabel>
-          <SliderRow
-            label="Center Size"
-            description="Radius of the required-letter circle"
-            value={cfg.rCenter} min={20} max={70} step={1}
-            onChange={(v) => set("rCenter", v)}
-          />
-          <ColorRow
-            label="Fill (flat)"
-            description="Center color when gradient is off"
-            value={cfg.centerFillColor}
-            onChange={(v) => set("centerFillColor", v)}
-          />
-          <ColorRow
-            label="Stroke"
-            description="Center border color"
-            value={cfg.centerStrokeColor}
-            onChange={(v) => set("centerStrokeColor", v)}
-          />
-          <ColorRow
-            label="Letter"
-            description="Letter color on center button"
-            value={cfg.centerTextColor}
-            onChange={(v) => set("centerTextColor", v)}
-          />
-          <ColorRow
-            label="Gradient inner"
-            description="Gradient color at circle center"
-            value={cfg.centerGradStart}
-            onChange={(v) => set("centerGradStart", v)}
-          />
-          <ColorRow
-            label="Gradient outer"
-            description="Gradient color at circle edge"
-            value={cfg.centerGradEnd}
-            onChange={(v) => set("centerGradEnd", v)}
-          />
+          <SliderRow label="Center Size" description="Radius of the required-letter circle"
+            value={cfg.rCenter} min={20} max={70} step={1} onChange={(v) => set("rCenter", v)} />
+          <ColorRow label="Fill (flat)" description="Center color when gradient is off"
+            value={cfg.centerFillColor} onChange={(v) => set("centerFillColor", v)} />
+          <ColorRow label="Stroke" description="Center border color"
+            value={cfg.centerStrokeColor} onChange={(v) => set("centerStrokeColor", v)} />
+          <ColorRow label="Letter" description="Letter color on center button"
+            value={cfg.centerTextColor} onChange={(v) => set("centerTextColor", v)} />
+          <ColorRow label="Gradient inner" description="Gradient color at circle center"
+            value={cfg.centerGradStart} onChange={(v) => set("centerGradStart", v)} />
+          <ColorRow label="Gradient outer" description="Gradient color at circle edge"
+            value={cfg.centerGradEnd} onChange={(v) => set("centerGradEnd", v)} />
 
           <SectionLabel>Text</SectionLabel>
-          <SliderRow
-            label="Petal Letter Size"
-            description="Font size on outer petals"
-            value={cfg.segFontSize} min={12} max={36} step={1}
-            onChange={(v) => set("segFontSize", v)}
-          />
-          <SliderRow
-            label="Center Letter Size"
-            description="Font size on the center button"
-            value={cfg.centerFontSize} min={12} max={40} step={1}
-            onChange={(v) => set("centerFontSize", v)}
-          />
+          <SliderRow label="Petal Letter Size" description="Font size on outer petals"
+            value={cfg.segFontSize} min={12} max={36} step={1} onChange={(v) => set("segFontSize", v)} />
+          <SliderRow label="Center Letter Size" description="Font size on the center button"
+            value={cfg.centerFontSize} min={12} max={40} step={1} onChange={(v) => set("centerFontSize", v)} />
 
           <SectionLabel>Style</SectionLabel>
-          <SliderRow
-            label="Stroke Width"
-            description="Border thickness around all elements"
-            value={cfg.strokeWidth} min={0} max={5} step={0.25}
-            onChange={(v) => set("strokeWidth", v)}
-          />
-          <ToggleRow
-            label="Gradient"
-            description="Radial gradient on petals and center (off = flat fill)"
-            value={cfg.showGradient}
-            onChange={(v) => set("showGradient", v)}
-          />
+          <SliderRow label="Stroke Width" description="Border thickness around all elements"
+            value={cfg.strokeWidth} min={0} max={5} step={0.25} onChange={(v) => set("strokeWidth", v)} />
+          <ToggleRow label="Gradient" description="Radial gradient on petals and center (off = flat fill)"
+            value={cfg.showGradient} onChange={(v) => set("showGradient", v)} />
         </div>
 
-        <div className="px-4 py-3 border-t border-stone-100 space-y-2">
+        {/* Footer */}
+        <div className="px-4 py-3 border-t border-stone-100 flex gap-2 flex-none">
           <button
-            onClick={() => setCfg(DEFAULT_CONFIG)}
-            className="text-[10px] text-stone-400 hover:text-stone-600 underline underline-offset-2"
+            onClick={handleCopy}
+            className={`flex-1 text-xs font-semibold py-2 rounded-lg transition-colors ${
+              copied
+                ? "bg-green-100 text-green-700"
+                : "bg-stone-100 hover:bg-stone-200 text-stone-600"
+            }`}
           >
-            Reset to defaults
+            {copied ? "✓ Copied!" : "Copy config"}
           </button>
-          <pre className="text-[9px] font-mono text-stone-400 bg-stone-50 rounded p-2 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed">
-            {JSON.stringify(cfg, null, 2)}
-          </pre>
+          <button
+            onClick={() => setCfg(cfg.variant === "flower" ? DEFAULT_FLOWER_CONFIG : DEFAULT_PIE_CONFIG)}
+            className="flex-none text-xs font-semibold py-2 px-3 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-500 transition-colors"
+          >
+            Reset
+          </button>
         </div>
       </div>
     </>

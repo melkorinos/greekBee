@@ -1,7 +1,7 @@
 # Agent Memory — Greek Word Games Platform
 
-## ⚡ Current State (2026-05-23)
-Three live games + custom puzzle URLs. **684 tests passing.**
+## ⚡ Current State (2026-05-24)
+Three live games + custom puzzle URLs. **704 tests passing.**
 
 | Game | Route | Status |
 |------|-------|--------|
@@ -16,7 +16,7 @@ Three live games + custom puzzle URLs. **684 tests passing.**
 | Topic | Decision |
 |-------|----------|
 | **Routing** | `/leksokipos`, `/leksiarxeio`, `/leksindeseis`, `/` game picker. Custom puzzle: `/leksokipos/[center]/[outer]` |
-| **Persistence** | Single `wordgames:state` localStorage key; typed envelope. `useGameStore` is the ONLY code that touches localStorage |
+| **Persistence** | Single `wordgames:state` localStorage key; typed envelope. `useGameStore` is the ONLY code that touches localStorage. **Known exception:** `leksokipos-variant` is a standalone key (not in the envelope) written by `LeksokiposLayout` for the grid-variant UI preference. Intentional — it is a display preference, not game state. |
 | **Types** | Root `src/types/index.ts` = `Language`, `GameId`, `PersistenceEnvelope` only. Game types live in `src/games/*/types.ts`. Leksokipos puzzle type is `LeksokiposPuzzle`. |
 | **Theming** | Leksiarxeio + Shell header = dark (unconditional classes). Leksokipos + picker = light. No `dark:` Tailwind classes anywhere — dark mode not yet implemented. Shared form style tokens in `src/components/leksokipos/styles.ts` (`labelClass`, `inputClass`, `inputCompactClass`, etc.) — use these for all modal inputs/labels. |
 | **Game logic** | Pure functions in `src/games/*/lib/` — zero React imports |
@@ -31,8 +31,7 @@ Three live games + custom puzzle URLs. **684 tests passing.**
 | **Leaderboard** | Per-puzzle (daily only, `YYYY-MM-DD` puzzle IDs). `POST /api/scores` upserts; `GET /api/scores?puzzleId=&deviceId=` returns top 20 + pinned player row. Score submitted silently on every new word (only when score strictly increases). Display name stored under `displayName` in `wordgames:state`; editable in `LeaderboardModal`. 🏆 button only visible for daily puzzles. Custom puzzles never appear on the leaderboard. POST also fires a fire-and-forget DELETE to remove scores older than 7 days. |
 | **Leaderboard date navigation** | Rolling 7-day pill strip (not a free-form calendar). `getRecentPuzzleDates(7)` in `src/data/leksokipos/index.ts` provides the dates server-side; passed as prop to `GameBoard` → `LeaderboardModal`. Today's pill is always the default. Past puzzles are playable via `?puzzle=YYYY-MM-DD` which uses `getPuzzleForDate` (not `getPuzzleById` — IDs have a `-el` suffix). |
 | **Future renames** | If a game is renamed again, change **UI strings only** (page titles, nav labels, display copy) — not directories, types, or routes. Internal code names (`leksokipos`, `leksiarxeio`, `leksindeseis`) are stable identifiers. |
-| **FlowerGrid arc constraint** | `A`-command radius in `PETAL_PATH` must always equal `CENTER_R` (both = 40). A rigid-body SVG transform maps the local arc exactly onto the center circle boundary. Changing one without the other breaks the seamless base join. |
-| **Multiple FlowerGrid themes** | Planned (not built). When implemented: add a `variant` prop to `FlowerGrid`; current design = `variant="default"`. Stored in user preferences slice, not puzzle data. |
+| **Multiple FlowerGrid themes** | **Built.** `FlowerGridConfig` holds all visual parameters; `DEFAULT_PIE_CONFIG` (annular sectors) and `DEFAULT_FLOWER_CONFIG` (elliptical petals) are the two named presets. The player-facing toggle lives in `LeksokiposLayout`'s header; preference persists in `leksokipos-variant` localStorage key via `useSyncExternalStore` + a module-level pub/sub store (no `useEffect`+`setState`). `FlowerGridPlayground` wraps `FlowerGrid`: in prod it uses the chosen config; in `?design` mode it shows a developer-only design panel (not tested). |
 
 ---
 
@@ -47,7 +46,7 @@ src/
     leksindeseis/page.tsx, ConnectionsBoard.tsx
   components/
     shared/          Shell, FeedbackBanner, HowToPlayModal
-    leksokipos/      GameBoard, FlowerGrid, WordInput, ScoreBar, FeedbackMessage, FoundWordsList, ShareButton (`canonicalPath` prop), NewPuzzleButton
+    leksokipos/      LeksokiposLayout (page client wrapper + variant toggle), GameBoard, FlowerGrid, FlowerGridPlayground (dev design tool; wraps FlowerGrid), WordInput, ScoreBar, FeedbackMessage, FoundWordsList, ShareButton, NewPuzzleButton
     leksiarxeio/     LeksiarxeioBoard, LeksiarxeioHeader (LeksiarxeioPageClient), GuessGrid, Tile, Keyboard, LeksiarxeioLeaderboardModal
     leksindeseis/    GroupGrid, WordCard, CategoryReveal, ConnectionsBoard, ConnectionsLeaderboardModal
   games/
@@ -63,7 +62,7 @@ src/
     words-el.json    (811k words, normalised — statically imported by buildCustomPuzzle)
   hooks/             useGameStore.ts, useRoundPersistence.ts, useLeksiarxeioScoreSubmission.ts, useLeksindeseisScoreSubmission.ts
   types/             index.ts
-  test/              43 test files — 684 tests
+  test/              45 test files — 704 tests
 ```
 
 ---
@@ -85,7 +84,7 @@ Tracked as individual issues in `.claude/issue-tracker/issues/` (7 open items). 
 
 ---
 
-## 🧪 Test Coverage Map (43 files, 684 tests)
+## 🧪 Test Coverage Map (45 files, 704 tests)
 
 > **How to use this as an agent**: before writing a new test, grep the `describe` column for the function/component name. If it appears, read that file's describe block to check if the specific case is already covered. Only write new tests for gaps.
 
@@ -100,6 +99,7 @@ Tracked as individual issues in `.claude/issue-tracker/issues/` (7 open items). 
 | `theme.test.tsx` | Tile dark theme classes, Keyboard dark theme classes |
 | `gameLogic.test.ts` (leksokipos) | `isPangram`, `scoreWord`, `maxScore`, `calculateRank`, `validateWord` |
 | `gameReducer.test.ts` | `buildInitialState`, `ADD_LETTER`, `DELETE_LETTER`, `CLEAR_INPUT`, `SUBMIT_WORD` (valid/invalid), `SHUFFLE_LETTERS`, `NEW_GAME`, `RESTORE_STATE` |
+| `LeksokiposLayout.test.tsx` | `LeksokiposLayout` — header rendering, variant toggle (default pie, click→flower→save, click twice→pie, restore from localStorage, passes variant to GameBoard), tooFewWords warning |
 | `GameBoard.test.tsx` | Rendering (inline submit absent/present at 3/4 letters), keyboard input, hex clicks, word submission, feedback messages, button interactions |
 | `greekLogic.test.ts` | `isPangram (Greek)`, `scoreWord (Greek)`, `validateWord (Greek)`, `getPuzzleForDate` (data-independent) |
 | `greeklish.test.ts` | `greekToGreeklish`, `greeklishToGreek` bijective codec |
