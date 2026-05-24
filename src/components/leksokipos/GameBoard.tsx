@@ -9,7 +9,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { FeedbackMessage } from "./FeedbackMessage";
 import { FoundWordsList } from "./FoundWordsList";
-import { FlowerGrid } from "./FlowerGrid";
+import { FlowerGridPlayground as FlowerGrid } from "./FlowerGridPlayground";
 import { LeaderboardModal } from "./LeaderboardModal";
 import { MissedWordsList } from "./MissedWordsList";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";

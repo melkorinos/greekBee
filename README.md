@@ -80,8 +80,8 @@ npm run parse-dict -- --lang=el
 # (strips accents, lowercases, ς→σ, deduplicates; backs up original as words-el.raw.json)
 node scripts/normalize-el-dict.mjs
 
-# Filter normalised dictionary to a target word length for Wordle
-# (output: src/data/wordle/words-N.json)
+# Filter normalised dictionary to a target word length for Leksiarxeio
+# (output: src/data/leksiarxeio/words-N.json)
 node scripts/normalize-wordlist.mjs --length=5
 
 # Generate a single puzzle manually
@@ -99,7 +99,7 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
 
 1. **Puzzle load** (`src/app/leksokipos/page.tsx` — server component)
    - The server reads the `?puzzle=YYYY-MM-DD` query param (or uses today's date).
-   - It calls `getPuzzleForDate` from `src/data/spelling-bee/index.ts`.
+   - It calls `getPuzzleForDate` from `src/data/leksokipos/index.ts`.
    - The resolved `Puzzle` object is passed as a prop to `<GameBoard>`.
 
 2. **State initialisation** (`src/games/leksokipos/hooks/gameReducer.ts → buildInitialState`)
@@ -111,12 +111,12 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
    - If found, a `RESTORE_STATE` action merges the saved fields (found words, score, rank) back into state.
 
 4. **Player input**
-   - Hex cells (`<HoneycombGrid>`) call `addLetter` on click.
+   - Flower cells (`<FlowerGrid>`) call `addLetter` on click.
    - Physical keyboard events are handled by `handleKeyboardLetter` (normalises accented input → base letter, then filters against the puzzle's allowed set). This logic lives entirely in `useGameState` — `<GameBoard>` is a pure event dispatcher.
    - Backspace → `deleteLetter`, Enter → `submitWord`.
 
 5. **Word submission** (`src/games/leksokipos/hooks/gameReducer.ts → SUBMIT_WORD`)
-   - `validateWord` (pure, `src/games/spelling-bee/lib/validation.ts`) runs 5 rules in order: length ≥ 4, letters in puzzle set, contains centre letter, in valid word list, not already found.
+   - `validateWord` (pure, `src/games/leksokipos/lib/validation.ts`) runs 5 rules in order: length ≥ 4, letters in puzzle set, contains centre letter, in valid word list, not already found.
    - A puzzle index (letter sets + valid word set) is built once per puzzle ID and cached in a module-level Map — never rebuilt on subsequent submissions.
    - If valid: score is updated, rank is recalculated via `calculateRank`, word is added to `foundWords`.
 
@@ -129,16 +129,16 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
 7. **Rank calculation** (`src/games/leksokipos/lib/ranking.ts`)
    - Score is compared against thresholds as a % of `maxScore`:
 
-   | Rank      | Threshold |
-   |-----------|-----------|
-   | Beginner  | 0%        |
-   | Moving Up | 6%        |
-   | Good      | 12%       |
-   | Solid     | 20%       |
-   | Great     | 30%       |
-   | Amazing   | 42%       |
-   | Genius    | 55%       |
-   | Queen Bee | 80%       |
+   | Rank        | Threshold |
+   |-------------|-----------|
+   | Σπόρος      | 0%        |
+   | Βλαστός     | 6%        |
+   | Μπουμπούκι  | 12%       |
+   | Άνοιγμα     | 20%       |
+   | Ανθισμένο   | 30%       |
+   | Θαυμαστό    | 42%       |
+   | Ευφυΐα      | 55%       |
+   | Άνθος       | 80%       |
 
    `rankProgress()` (pure function) derives the progress-bar fill, points-to-next and the full ladder for the UI — keeping all rank display logic out of React components.
 
@@ -169,8 +169,8 @@ src/
   components/
     shared/         Cross-game UI primitives (Shell, FeedbackBanner, HowToPlayModal, LetterPickerModal)
     leksokipos/     Leksokipos components (GameBoard, FlowerGrid, ScoreBar, LeaderboardModal, …)
-    leksiarxeio/    Leksiarxeio components (WordleBoard, GuessGrid, Tile, Keyboard)
-    leksindeseis/   Leksindeseis components (GroupGrid, WordCard, CategoryReveal)
+    leksiarxeio/    Leksiarxeio components (LeksiarxeioBoard, GuessGrid, Tile, Keyboard)
+    leksindeseis/   Leksindeseis components (GroupGrid, WordCard, CategoryReveal, ConnectionsBoard, ConnectionsLeaderboardModal)
   games/            Pure logic — one folder per game, zero React imports
     leksokipos/
       lib/          validation, scoring, ranking, pangram, normalize, computeValidWords, parseCustomUrl
@@ -178,10 +178,10 @@ src/
       types.ts
     leksiarxeio/
       lib/          evaluateGuess, isValidGuess, letterState, scoring
-      hooks/        useWordleState, wordleReducer
+      hooks/        useLeksiarxeioState, leksiarxeioReducer
       types.ts
     leksindeseis/
-      hooks/        useConnectionsState, connectionsReducer
+      hooks/        useLeksindeseisState, leksindeseisReducer
       types.ts
   hooks/
     useGameStore.ts        Unified localStorage envelope — the only code that touches localStorage
@@ -209,9 +209,11 @@ scripts/            Puzzle generation & curation CLIs (batch-generate, curate-an
 
 ## High scores / leaderboard
 
-**Spelling Bee** — live. Rolling 7-day leaderboard via Supabase (`scores` table). Score = Spelling Bee points, higher = better.
+**Leksokipos** — live. Rolling 7-day leaderboard via Supabase (`scores` table). Score = Leksokipos points, higher = better.
 
-**Wordle GR** — live. Rolling 7-day daily leaderboard via Supabase (`wordle_scores` table). Score = sum of attempts across all 5 lengths (4–8) for a given day; lower = better. Missing lengths count as 7 (penalty). Players appear on the board as soon as they finish at least one length.
+**Leksiarxeio** — live. Rolling 7-day daily leaderboard via Supabase (`leksiarxeio_scores` table). Score = sum of attempts across all 5 lengths (4–8) for a given day; lower = better. Missing lengths count as 7 (penalty). Players appear on the board as soon as they finish at least one length.
+
+**Leksindeseis** — live. Per-puzzle leaderboard via Supabase (`game_scores` table with `game_id = "leksindeseis"`). Score = mistakes remaining (1–4) when won; higher = better. Lost games do not appear on the board.
 
 ---
 
@@ -254,12 +256,12 @@ Test files are organised under `src/test/` by game and shared utilities:
 |------|--------|
 | `evaluateGuess.test.ts` | Two-pass algorithm — exact, present, absent, duplicate-letter edge cases |
 | `leksiarxeioReducer.test.ts` | `ADD_LETTER`, `DELETE_LETTER`, `SUBMIT_GUESS` (win/loss/invalid), `RESTORE_STATE` |
-| `gameLogic.test.ts` | `scoreWordle`, `buildLetterStateMap` priority rules |
+| `gameLogic.test.ts` | `scoreLeksiarxeio`, `buildLetterStateMap` priority rules |
 | `guessGrid.test.tsx` | GuessGrid tile rendering and colour states |
 | `header.test.tsx` | Header length-picker and stats display |
 | `theme.test.tsx` | Dark theme token propagation |
 | `dataLoader.test.ts` | Word-list loading and length validation |
-| `useWordleScoreSubmission.test.ts` | Score submission hook — post, throttle, error handling |
+| `useLeksiarxeioScoreSubmission.test.ts` | Score submission hook — POST fields, deviceId guard, won/lost penalty, displayName fallback |
 
 **Leksindeseis (`src/test/leksindeseis/`)**
 
@@ -268,7 +270,7 @@ Test files are organised under `src/test/` by game and shared utilities:
 | `leksindeseisReducer.test.ts` | Leksindeseis reducer — guesses, solves, one-away detection |
 | `groupGrid.test.tsx` | GroupGrid rendering and animation states |
 | `dataLoader.test.ts` | Puzzle loading and date resolution |
-| `useConnectionsScoreSubmission.test.ts` | Score submission hook |
+| `useLeksindeseisScoreSubmission.test.ts` | Score submission hook — POST fields, deviceId guard, dedup guard, submitWithName |
 
 **Shared (`src/test/shared/` and `src/test/`)**
 

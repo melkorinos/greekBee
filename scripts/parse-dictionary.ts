@@ -15,7 +15,7 @@
  * Filters applied:
  *   - Strips Hunspell suffix flags (everything after "/")
  *   - Lowercases all words
- *   - Removes words shorter than 4 letters (can't score in Spelling Bee)
+ *   - Removes words shorter than 4 letters (can't score in Leksokipos)
  *   - Deduplicates
  *   - Merges any extra words from --merge file (union, then re-sort)
  */

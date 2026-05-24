@@ -1,7 +1,7 @@
 /**
  * batch-generate.ts
  *
- * Generates many Spelling Bee puzzles from the Greek word list using random
+ * Generates many Leksokipos puzzles from the Greek word list using random
  * letter combinations and appends them all to puzzles-el.json.
  *
  * Loads the word list once, builds a centre-letter index so each puzzle
