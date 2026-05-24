@@ -51,8 +51,10 @@ function renderModal(overrides: Partial<React.ComponentProps<typeof LeaderboardM
     deviceId:         "test-device-id",
     displayName:      "",
     profileLinked:    false,
+    profilePin:       "",
     onSaveName:       vi.fn(),
     onProfileCreate:  vi.fn().mockResolvedValue({ pin: "1234" }),
+    onProfileLinked:  vi.fn(),
     onProfileRestore: vi.fn().mockResolvedValue([]),
     onProfileSelect:  vi.fn().mockResolvedValue(undefined),
     onDisconnect:     vi.fn(),
@@ -198,7 +200,7 @@ describe("LeaderboardModal — profile create flow", () => {
     await userEvent.click(screen.getByText("Δημιουργία προφίλ"));
     await userEvent.type(screen.getByPlaceholderText("Όνομα (προαιρετικό)"), "Μαρία");
     await userEvent.click(screen.getByRole("button", { name: "Δημιουργία" }));
-    expect(onProfileCreate).toHaveBeenCalledWith("Μαρία");
+    expect(onProfileCreate).toHaveBeenCalledWith("Μαρία", "");
     expect(await screen.findByText("4829")).toBeInTheDocument();
   });
 

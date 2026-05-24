@@ -92,11 +92,11 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
 
   // ── Profile callbacks ────────────────────────────────────────────────────────
 
-  async function handleProfileCreate(name: string): Promise<{ pin: string }> {
+  async function handleProfileCreate(name: string, pin: string): Promise<{ pin: string }> {
     const res = await fetch("/api/profile", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ display_name: name, device_uuid: deviceId }),
+      body:    JSON.stringify({ display_name: name, device_uuid: deviceId, pin }),
     });
     if (!res.ok) throw new Error("profile create failed");
     const data = (await res.json()) as { pin: string };

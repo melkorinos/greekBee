@@ -29,6 +29,7 @@ function generatePin(): string {
 interface CreateProfilePayload {
   display_name: string;
   device_uuid:  string;
+  pin?:         string;
 }
 
 export async function POST(req: NextRequest) {
@@ -39,14 +40,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { display_name: rawName, device_uuid } = body;
+  const { display_name: rawName, device_uuid, pin: clientPin } = body;
 
   if (!device_uuid) {
     return NextResponse.json({ error: "device_uuid is required" }, { status: 400 });
   }
 
   const display_name = (rawName ?? "").trim() || "Ανώνυμος";
-  const pin          = generatePin();
+  // Use the player's chosen PIN if it's exactly 4 digits, otherwise auto-generate.
+  const pin = /^\d{4}$/.test(clientPin ?? "") ? clientPin! : generatePin();
   const supabase     = getSupabaseClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

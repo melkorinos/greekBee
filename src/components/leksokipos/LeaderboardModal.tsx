@@ -54,7 +54,7 @@ interface LeaderboardModalProps {
   profileLinked:    boolean;
   profilePin:       string;
   onSaveName:       (name: string) => void;
-  onProfileCreate:  (name: string) => Promise<{ pin: string }>;
+  onProfileCreate:  (name: string, pin: string) => Promise<{ pin: string }>;
   onProfileLinked:  () => void;
   onProfileRestore: (name: string, pin: string) => Promise<ProfileMatch[]>;
   onProfileSelect:  (deviceUuid: string, displayName: string) => Promise<void>;
@@ -124,7 +124,7 @@ export function LeaderboardModal({
     setProfileLoading(true);
     setProfileError(null);
     try {
-      const { pin } = await onProfileCreate(profileNameInput.trim());
+      const { pin } = await onProfileCreate(profileNameInput.trim(), profilePinInput.trim());
       setRevealedPin(pin);
       setProfileMode("pin-reveal");
     } catch {
@@ -262,6 +262,16 @@ export function LeaderboardModal({
                 className={`w-full ${inputCompactClass}`}
                 autoFocus
               />
+              <input
+                type="text"
+                placeholder="PIN 4 ψηφίων (προαιρετικό)"
+                value={profilePinInput}
+                onChange={(e) => setProfilePinInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                onKeyDown={(e) => e.key === "Enter" && !profileLoading && handleCreateSubmit()}
+                inputMode="numeric"
+                maxLength={4}
+                className={`w-full ${inputCompactClass}`}
+              />
               {profileError && (
                 <p className="text-xs text-red-500">{profileError}</p>
               )}
@@ -274,7 +284,7 @@ export function LeaderboardModal({
                 </button>
                 <button
                   onClick={() => void handleCreateSubmit()}
-                  disabled={profileLoading}
+                  disabled={profileLoading || (profilePinInput.length > 0 && profilePinInput.length < 4)}
                   className={btnPrimaryCompact}
                 >
                   {profileLoading ? "…" : "Δημιουργία"}
@@ -289,8 +299,8 @@ export function LeaderboardModal({
               <p className="text-3xl font-mono font-bold tracking-widest text-stone-900 bg-stone-50 border border-stone-200 rounded-xl py-2 px-4">
                 {revealedPin}
               </p>
-              <p className="text-xs text-amber-600 font-medium">
-                Σημείωσέ τον — δεν αποθηκεύεται εδώ.
+              <p className="text-xs text-stone-500">
+                Φαίνεται πάντα στον Πίνακα Σκορ.
               </p>
               <button
                 onClick={() => { onProfileLinked(); setProfileMode("linked"); }}
