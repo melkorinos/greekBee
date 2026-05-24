@@ -4,6 +4,7 @@
 // Receives the initial puzzle as a prop (loaded server-side in page.tsx).
 
 import { disconnectProfile, getDisplayName, getOrCreateDeviceId, getProfilePin, isProfileLinked, setDeviceId, setDisplayName as saveDisplayName, setProfileLinked, setProfilePin } from "@/hooks/useGameStore";
+import { useProfileVerification } from "@/hooks/useProfileVerification";
 import { getSuggestedWords, markSuggested } from "@/hooks/suggestions";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
@@ -71,6 +72,13 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   const [profilePin, setProfilePinState] = useState<string>(
     () => typeof window === "undefined" ? "" : getProfilePin()
   );
+
+  // Auto-heal stale linked profile — silently disconnects if the DB row is gone.
+  useProfileVerification({
+    profileLinked: profileLinkedState,
+    deviceId,
+    onDisconnect:  handleDisconnect,
+  });
 
   // Only daily puzzles participate in the leaderboard.
   const isDaily          = isDailyPuzzle(activePuzzle);

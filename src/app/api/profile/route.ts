@@ -52,11 +52,10 @@ export async function POST(req: NextRequest) {
   const supabase     = getSupabaseClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from("player_profiles") as any).insert({
-    display_name,
-    pin,
-    device_uuid,
-  });
+  const { error } = await (supabase.from("player_profiles") as any).upsert(
+    { display_name, pin, device_uuid },
+    { onConflict: "device_uuid" }
+  );
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -75,14 +74,31 @@ export interface ProfileMatch {
 }
 
 export async function GET(req: NextRequest) {
-  const name = req.nextUrl.searchParams.get("name") ?? "";
-  const pin  = req.nextUrl.searchParams.get("pin")  ?? "";
+  const name       = req.nextUrl.searchParams.get("name")        ?? "";
+  const pin        = req.nextUrl.searchParams.get("pin")         ?? "";
+  const deviceUuid = req.nextUrl.searchParams.get("device_uuid") ?? "";
 
+  const supabase = getSupabaseClient();
+
+  // ── Existence check by device_uuid (startup profile verification) ───────────
+  if (deviceUuid) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from("player_profiles") as any)
+      .select("device_uuid")
+      .eq("device_uuid", deviceUuid)
+      .single();
+
+    if (error && error.message !== "JSON object requested, multiple (or no) rows returned") {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ exists: data !== null });
+  }
+
+  // ── Name + PIN lookup (cross-device restore) ─────────────────────────────────
   if (!name || !pin) {
     return NextResponse.json({ error: "name and pin are required" }, { status: 400 });
   }
-
-  const supabase = getSupabaseClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from("player_profiles") as any)

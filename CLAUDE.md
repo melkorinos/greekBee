@@ -21,6 +21,7 @@ At the start of every session, read these files in order:
 - Do not install new dependencies without explicit approval.
 - Keep `.claude/aiHelper/log.md` under 250 lines — condense older entries before adding new.
 - Do not touch `words-el.json` or any `puzzles-*.json` unless the task explicitly requires it.
+- When an issue is resolved, **delete its file** from `.claude/issue-tracker/issues/` — do not leave it with a "done" status.
 
 ## Available slash commands
 

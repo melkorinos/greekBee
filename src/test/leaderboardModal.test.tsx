@@ -135,10 +135,11 @@ describe("LeaderboardModal — play link", () => {
 // ── Profile section ───────────────────────────────────────────────────────────
 
 describe("LeaderboardModal — profile section (idle)", () => {
-  it("shows 'Δημιουργία προφίλ' and 'Επαναφορά' links when not linked", () => {
+  it("shows 'Δημιουργία προφίλ', 'Σύνδεση' and 'Αποσύνδεση' links when not linked", () => {
     renderModal({ profileLinked: false });
     expect(screen.getByText("Δημιουργία προφίλ")).toBeInTheDocument();
-    expect(screen.getByText("Επαναφορά")).toBeInTheDocument();
+    expect(screen.getByText("Σύνδεση")).toBeInTheDocument();
+    expect(screen.getByText("Αποσύνδεση")).toBeInTheDocument();
   });
 
   it("clicking 'Δημιουργία προφίλ' shows the create form", async () => {
@@ -148,9 +149,9 @@ describe("LeaderboardModal — profile section (idle)", () => {
     expect(screen.getByRole("button", { name: "Δημιουργία" })).toBeInTheDocument();
   });
 
-  it("clicking 'Επαναφορά' shows the restore form", async () => {
+  it("clicking 'Σύνδεση' shows the restore form", async () => {
     renderModal({ profileLinked: false });
-    await userEvent.click(screen.getByText("Επαναφορά"));
+    await userEvent.click(screen.getByText("Σύνδεση"));
     expect(screen.getByPlaceholderText("Όνομα")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("PIN (4 ψηφία)")).toBeInTheDocument();
   });
@@ -160,6 +161,30 @@ describe("LeaderboardModal — profile section (idle)", () => {
     await userEvent.click(screen.getByText("Δημιουργία προφίλ"));
     await userEvent.click(screen.getByText("Άκυρο"));
     expect(screen.getByText("Δημιουργία προφίλ")).toBeInTheDocument();
+  });
+
+  it("clicking 'Αποσύνδεση' shows confirmation row", async () => {
+    renderModal({ profileLinked: false });
+    await userEvent.click(screen.getByText("Αποσύνδεση"));
+    expect(screen.getByTestId("btn-disconnect-confirm")).toBeInTheDocument();
+    expect(screen.getByTestId("btn-disconnect-cancel")).toBeInTheDocument();
+  });
+
+  it("'Άκυρο' in disconnect confirmation returns to idle without calling onDisconnect", async () => {
+    const onDisconnect = vi.fn();
+    renderModal({ profileLinked: false, onDisconnect });
+    await userEvent.click(screen.getByText("Αποσύνδεση"));
+    await userEvent.click(screen.getByTestId("btn-disconnect-cancel"));
+    expect(onDisconnect).not.toHaveBeenCalled();
+    expect(screen.getByText("Δημιουργία προφίλ")).toBeInTheDocument();
+  });
+
+  it("confirming disconnect calls onDisconnect", async () => {
+    const onDisconnect = vi.fn();
+    renderModal({ profileLinked: false, onDisconnect });
+    await userEvent.click(screen.getByText("Αποσύνδεση"));
+    await userEvent.click(screen.getByTestId("btn-disconnect-confirm"));
+    expect(onDisconnect).toHaveBeenCalledOnce();
   });
 });
 
@@ -175,11 +200,29 @@ describe("LeaderboardModal — profile section (linked)", () => {
     expect(screen.getByText(/Ανώνυμος/)).toBeInTheDocument();
   });
 
-  it("calls onDisconnect when 'Αποσύνδεση' is clicked", async () => {
+  it("clicking 'Αποσύνδεση' shows confirmation row, not immediately disconnecting", async () => {
     const onDisconnect = vi.fn();
     renderModal({ profileLinked: true, displayName: "Νίκος", onDisconnect });
     await userEvent.click(screen.getByText("Αποσύνδεση"));
+    expect(onDisconnect).not.toHaveBeenCalled();
+    expect(screen.getByTestId("btn-disconnect-confirm")).toBeInTheDocument();
+  });
+
+  it("calls onDisconnect after confirming 'Ναι' in the confirmation row", async () => {
+    const onDisconnect = vi.fn();
+    renderModal({ profileLinked: true, displayName: "Νίκος", onDisconnect });
+    await userEvent.click(screen.getByText("Αποσύνδεση"));
+    await userEvent.click(screen.getByTestId("btn-disconnect-confirm"));
     expect(onDisconnect).toHaveBeenCalledOnce();
+  });
+
+  it("'Άκυρο' in disconnect confirmation keeps the linked state", async () => {
+    const onDisconnect = vi.fn();
+    renderModal({ profileLinked: true, displayName: "Νίκος", onDisconnect });
+    await userEvent.click(screen.getByText("Αποσύνδεση"));
+    await userEvent.click(screen.getByTestId("btn-disconnect-cancel"));
+    expect(onDisconnect).not.toHaveBeenCalled();
+    expect(screen.getByText(/Νίκος/)).toBeInTheDocument();
   });
 
   it("hides the name editor when profileLinked=true", () => {
@@ -217,7 +260,7 @@ describe("LeaderboardModal — profile restore flow", () => {
   it("shows error when no profiles match", async () => {
     const onProfileRestore = vi.fn().mockResolvedValue([]);
     renderModal({ profileLinked: false, onProfileRestore });
-    await userEvent.click(screen.getByText("Επαναφορά"));
+    await userEvent.click(screen.getByText("Σύνδεση"));
     await userEvent.type(screen.getByPlaceholderText("Όνομα"), "Νίκος");
     await userEvent.type(screen.getByPlaceholderText("PIN (4 ψηφία)"), "9999");
     await userEvent.click(screen.getByRole("button", { name: "Επαναφορά" }));
@@ -231,7 +274,7 @@ describe("LeaderboardModal — profile restore flow", () => {
     ];
     const onProfileRestore = vi.fn().mockResolvedValue(matches);
     renderModal({ profileLinked: false, onProfileRestore });
-    await userEvent.click(screen.getByText("Επαναφορά"));
+    await userEvent.click(screen.getByText("Σύνδεση"));
     await userEvent.type(screen.getByPlaceholderText("Όνομα"), "Νίκος");
     await userEvent.type(screen.getByPlaceholderText("PIN (4 ψηφία)"), "1234");
     await userEvent.click(screen.getByRole("button", { name: "Επαναφορά" }));

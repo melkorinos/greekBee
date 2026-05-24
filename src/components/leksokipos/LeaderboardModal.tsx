@@ -99,6 +99,7 @@ export function LeaderboardModal({
       setRevealedPin("");
       setProfileMatches([]);
       setProfileLoading(false);
+      setConfirmingDisconnect(false);
     }
   }, [isOpen, defaultPuzzleId, profileLinked]);
 
@@ -110,13 +111,14 @@ export function LeaderboardModal({
 
   // ── Profile state ────────────────────────────────────────────────────────────
 
-  const [profileMode,      setProfileMode]      = useState<ProfileMode>(profileLinked ? "linked" : "idle");
-  const [profileNameInput, setProfileNameInput] = useState("");
-  const [profilePinInput,  setProfilePinInput]  = useState("");
-  const [revealedPin,      setRevealedPin]      = useState("");
-  const [profileError,     setProfileError]     = useState<string | null>(null);
-  const [profileMatches,   setProfileMatches]   = useState<ProfileMatch[]>([]);
-  const [profileLoading,   setProfileLoading]   = useState(false);
+  const [profileMode,           setProfileMode]           = useState<ProfileMode>(profileLinked ? "linked" : "idle");
+  const [profileNameInput,      setProfileNameInput]      = useState("");
+  const [profilePinInput,       setProfilePinInput]       = useState("");
+  const [revealedPin,           setRevealedPin]           = useState("");
+  const [profileError,          setProfileError]          = useState<string | null>(null);
+  const [profileMatches,        setProfileMatches]        = useState<ProfileMatch[]>([]);
+  const [profileLoading,        setProfileLoading]        = useState(false);
+  const [confirmingDisconnect,  setConfirmingDisconnect]  = useState(false);
 
   // ── Profile handlers ─────────────────────────────────────────────────────────
 
@@ -175,6 +177,7 @@ export function LeaderboardModal({
     setProfileNameInput("");
     setProfilePinInput("");
     setProfileError(null);
+    setConfirmingDisconnect(false);
   }
 
   function cancelProfile() {
@@ -232,7 +235,7 @@ export function LeaderboardModal({
         <div className="px-5 py-3 border-b border-stone-100">
           <p className={`${labelClass} mb-1.5`}>Συγχρονισμός συσκευών</p>
 
-          {profileMode === "idle" && (
+          {profileMode === "idle" && !confirmingDisconnect && (
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setProfileMode("creating")}
@@ -245,7 +248,14 @@ export function LeaderboardModal({
                 onClick={() => setProfileMode("restoring")}
                 className="text-xs text-stone-500 underline underline-offset-2 hover:text-stone-800 transition-colors"
               >
-                Επαναφορά
+                Σύνδεση
+              </button>
+              <span className="text-stone-300 select-none">|</span>
+              <button
+                onClick={() => setConfirmingDisconnect(true)}
+                className="text-xs text-stone-400 hover:text-red-500 transition-colors"
+              >
+                Αποσύνδεση
               </button>
             </div>
           )}
@@ -383,14 +393,14 @@ export function LeaderboardModal({
             </div>
           )}
 
-          {profileMode === "linked" && (
+          {profileMode === "linked" && !confirmingDisconnect && (
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <span className="text-xs text-green-600 font-semibold">
                   ✓ {displayName || "Ανώνυμος"}
                 </span>
                 <button
-                  onClick={handleDisconnect}
+                  onClick={() => setConfirmingDisconnect(true)}
                   className="text-xs text-stone-400 hover:text-red-500 transition-colors"
                 >
                   Αποσύνδεση
@@ -404,6 +414,25 @@ export function LeaderboardModal({
                   </span>
                 </p>
               )}
+            </div>
+          )}
+          {confirmingDisconnect && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-stone-500">Αποσύνδεση;</span>
+              <button
+                data-testid="btn-disconnect-confirm"
+                onClick={handleDisconnect}
+                className="text-xs font-semibold text-red-600 border border-red-300 rounded-full px-3 py-1 hover:bg-red-50 active:bg-red-100 transition-colors"
+              >
+                Ναι
+              </button>
+              <button
+                data-testid="btn-disconnect-cancel"
+                onClick={() => setConfirmingDisconnect(false)}
+                className="text-xs text-stone-500 border border-stone-200 rounded-full px-3 py-1 hover:bg-stone-100 transition-colors"
+              >
+                Άκυρο
+              </button>
             </div>
           )}
         </div>
