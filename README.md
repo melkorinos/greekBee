@@ -9,8 +9,37 @@ A multi-game browser platform for Greek (and English) word games, built with **N
 | 🌸 Leksokipos | `/leksokipos` | Live | 7-letter flower grid — find words containing the center letter |
 | 🟩 Leksiarxeio | `/leksiarxeio` | Live | Guess a hidden Greek word (4–8 letters) in 6 attempts — switch length in-game |
 | 🔗 Leksindeseis | `/leksindeseis` | Live | Group 16 curated words into 4 categories of 4 |
+| ⚖️ Leksikastirio | `/leksikastirio` | Live | Community word court — vote on words to add or remove from the dictionary |
 
 All games share a common shell (hamburger navigation menu), a unified persistence layer, and a consistent design foundation. Each game's logic, state, and data are fully isolated.
+
+---
+
+## Special pages (developer / admin access)
+
+### Leksikastirio — public voting
+
+`/leksikastirio`
+
+All players can visit this page to see pending nominations (words proposed for addition or removal) and vote for or against them.
+
+### Leksikastirio — admin review
+
+`/leksikastirio?admin=YOUR_ADMIN_SECRET`
+
+Appending `?admin=<secret>` enables admin mode. Each nomination card shows **Έγκριση** (Approve) and **Απόρριψη** (Reject) buttons. The secret is validated server-side against the `ADMIN_SECRET` environment variable — the UI only reveals the buttons when the param is non-empty, but any API call with a wrong secret returns 403.
+
+To apply approved nominations to the live word list, run the CLI script:
+
+```bash
+# Dry-run (no changes)
+node scripts/apply-nominations.mjs --dry-run
+
+# Apply accepted nominations to src/data/words-el.json
+node scripts/apply-nominations.mjs
+```
+
+The script reads `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from `.env.local`.
 
 ---
 

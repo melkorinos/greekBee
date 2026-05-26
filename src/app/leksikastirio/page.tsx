@@ -76,6 +76,7 @@ function LeksikastiríoClient() {
   const c = tabCopy[activeTab];
 
   return (
+    <div className="flex-1 bg-white">
     <main className="max-w-lg mx-auto px-4 py-8 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-stone-800">Λεξικαστήριο</h1>
@@ -146,6 +147,7 @@ function LeksikastiríoClient() {
         onSuccess={handleNominationSuccess}
       />
     </main>
+    </div>
   );
 }
 
