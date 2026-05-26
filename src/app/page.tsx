@@ -65,6 +65,37 @@ const GAMES = (Object.keys(GAME_REGISTRY) as Array<keyof typeof GAME_REGISTRY>).
   (id) => ({ id, ...GAME_REGISTRY[id], ...GAME_RULES[id] }),
 );
 
+const gameList      = GAMES.filter((g) => g.id !== "leksikastirio");
+const communityList = GAMES.filter((g) => g.id === "leksikastirio");
+
+function GameCard({ game }: { game: (typeof GAMES)[number] }) {
+  return (
+    <li className="flex items-stretch rounded-2xl bg-white border border-stone-200 shadow-sm hover:shadow-md hover:border-stone-300 transition-all overflow-hidden">
+      <Link href={game.href} className="flex-1 flex items-start gap-4 p-5">
+        <span className="text-3xl mt-0.5">{game.emoji}</span>
+        <div>
+          <p className="font-semibold text-stone-800 flex items-center gap-2 flex-wrap">
+            {game.title}
+            {game.wip && (
+              <span className="text-xs font-normal text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+                🚧 Υπό κατασκευή
+              </span>
+            )}
+          </p>
+          <p className="text-sm text-stone-500 mt-0.5">{game.description}</p>
+        </div>
+      </Link>
+      <div className="flex items-center px-3 border-l border-stone-100 shrink-0">
+        <HowToPlayModal
+          title={game.rulesTitle}
+          items={game.rules}
+          bulletIcon={game.bulletIcon}
+        />
+      </div>
+    </li>
+  );
+}
+
 export default function HomePage() {
   return (
     <div className="flex flex-col items-center justify-start min-h-screen bg-zinc-50 px-4 py-12">
@@ -72,42 +103,17 @@ export default function HomePage() {
       <p className="text-stone-500 text-sm mb-10">Επίλεξε παιχνίδι για να ξεκινήσεις</p>
 
       <ul className="w-full max-w-sm space-y-4">
-        {GAMES.map((game) => (
-          // Each list item is the card container with the border/shadow styling.
-          // The Link covers the main content area; HowToPlayModal sits as a
-          // sibling in a right-hand column — no button nested inside an <a>.
-          <li
-            key={game.id}
-            className="flex items-stretch rounded-2xl bg-white border border-stone-200 shadow-sm hover:shadow-md hover:border-stone-300 transition-all overflow-hidden"
-          >
-            <Link
-              href={game.href}
-              className="flex-1 flex items-start gap-4 p-5"
-            >
-              <span className="text-3xl mt-0.5">{game.emoji}</span>
-              <div>
-                <p className="font-semibold text-stone-800 flex items-center gap-2 flex-wrap">
-                  {game.title}
-                  {game.wip && (
-                    <span className="text-xs font-normal text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
-                      🚧 Υπό κατασκευή
-                    </span>
-                  )}
-                </p>
-                <p className="text-sm text-stone-500 mt-0.5">{game.description}</p>
-              </div>
-            </Link>
+        {gameList.map((game) => <GameCard key={game.id} game={game} />)}
+      </ul>
 
-            {/* Help button — sibling of Link so it is never nested inside <a> */}
-            <div className="flex items-center px-3 border-l border-stone-100 shrink-0">
-              <HowToPlayModal
-                title={game.rulesTitle}
-                items={game.rules}
-                bulletIcon={game.bulletIcon}
-              />
-            </div>
-          </li>
-        ))}
+      <div className="w-full max-w-sm mt-8 mb-4 flex items-center gap-3">
+        <hr className="flex-1 border-stone-200" />
+        <span className="text-xs font-semibold text-stone-400 uppercase tracking-widest">Κοινότητα</span>
+        <hr className="flex-1 border-stone-200" />
+      </div>
+
+      <ul className="w-full max-w-sm space-y-4">
+        {communityList.map((game) => <GameCard key={game.id} game={game} />)}
       </ul>
     </div>
   );

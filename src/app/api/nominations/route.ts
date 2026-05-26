@@ -38,29 +38,32 @@ export async function GET(req: NextRequest) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: votes, error: voteError } = await (supabase.from("nomination_votes") as any)
-    .select("nomination_id")
+    .select("nomination_id, vote_type")
     .in("nomination_id", ids);
 
   if (voteError) {
     return NextResponse.json({ error: "db_error" }, { status: 500 });
   }
 
-  // Count votes per nomination.
-  const voteCounts: Record<string, number> = {};
+  // Count up/down votes per nomination.
+  const voteCounts: Record<string, { up: number; down: number }> = {};
   for (const v of votes ?? []) {
-    voteCounts[v.nomination_id] = (voteCounts[v.nomination_id] ?? 0) + 1;
+    if (!voteCounts[v.nomination_id]) voteCounts[v.nomination_id] = { up: 0, down: 0 };
+    if (v.vote_type === "down") voteCounts[v.nomination_id].down++;
+    else                        voteCounts[v.nomination_id].up++;
   }
 
   const result = nominations
     .map((n) => ({
-      id:          n.id,
-      word:        n.word,
-      player_name: n.player_name,
-      note:        n.note,
-      vote_count:  voteCounts[n.id] ?? 0,
-      created_at:  n.created_at,
+      id:             n.id,
+      word:           n.word,
+      player_name:    n.player_name,
+      note:           n.note,
+      upvote_count:   voteCounts[n.id]?.up   ?? 0,
+      downvote_count: voteCounts[n.id]?.down ?? 0,
+      created_at:     n.created_at,
     }))
-    .sort((a, b) => b.vote_count - a.vote_count);
+    .sort((a, b) => (b.upvote_count - b.downvote_count) - (a.upvote_count - a.downvote_count));
 
   return NextResponse.json(result);
 }

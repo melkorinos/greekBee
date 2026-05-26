@@ -19,7 +19,7 @@ const tabCopy = {
   remove: {
     label:       "Αφαίρεση",
     emptyState:  "Δεν υπάρχουν ακόμα αναφορές για αφαίρεση.",
-    buttonLabel: "Αναφορά λέξης",
+    buttonLabel: "Πρότεινε λέξη",
   },
 } as const;
 
@@ -33,15 +33,15 @@ function LeksikastiríoClient() {
   const [activeTab, setActiveTab]       = useState<Tab>("add");
   const [nominations, setNominations]   = useState<Nomination[]>([]);
   const [loading, setLoading]           = useState(true);
-  const [votedIds, setVotedIds]         = useState<Set<string>>(new Set());
+  const [votedMap, setVotedMap]         = useState<Map<string, "up" | "down">>(new Map());
   const [modalOpen, setModalOpen]       = useState(false);
 
   const fetchNominations = useCallback(async (tab: Tab) => {
     setLoading(true);
     try {
       const res  = await fetch(`/api/nominations?direction=${tab}`);
-      const data = await res.json() as Nomination[];
-      setNominations(data);
+      const data = await res.json();
+      setNominations(Array.isArray(data) ? data : []);
     } finally {
       setLoading(false);
     }
@@ -56,10 +56,31 @@ function LeksikastiríoClient() {
     setNominations([]);
   }
 
-  function handleVote(id: string) {
-    setVotedIds((prev) => new Set([...prev, id]));
+  function handleVote(id: string, voteType: "up" | "down", action: "added" | "removed" | "switched") {
+    setVotedMap((prev) => {
+      const next = new Map(prev);
+      if (action === "removed") next.delete(id);
+      else next.set(id, voteType);
+      return next;
+    });
     setNominations((prev) =>
-      prev.map((n) => n.id === id ? { ...n, vote_count: n.vote_count + 1 } : n),
+      prev.map((n) => {
+        if (n.id !== id) return n;
+        if (action === "added") {
+          return voteType === "up"
+            ? { ...n, upvote_count: n.upvote_count + 1 }
+            : { ...n, downvote_count: n.downvote_count + 1 };
+        }
+        if (action === "removed") {
+          return voteType === "up"
+            ? { ...n, upvote_count: n.upvote_count - 1 }
+            : { ...n, downvote_count: n.downvote_count - 1 };
+        }
+        // switched
+        return voteType === "up"
+          ? { ...n, upvote_count: n.upvote_count + 1, downvote_count: n.downvote_count - 1 }
+          : { ...n, upvote_count: n.upvote_count - 1, downvote_count: n.downvote_count + 1 };
+      }),
     );
   }
 
@@ -121,21 +142,33 @@ function LeksikastiríoClient() {
       ) : nominations.length === 0 ? (
         <p className="text-sm text-stone-400 text-center py-8">{c.emptyState}</p>
       ) : (
-        <ul className="space-y-3">
-          {nominations.map((nomination) => (
-            <li key={nomination.id}>
-              <NominationCard
-                nomination={nomination}
-                myDeviceId={deviceId}
-                hasVoted={votedIds.has(nomination.id)}
-                isAdmin={isAdmin}
-                adminSecret={adminSecret}
-                onVote={handleVote}
-                onReviewed={handleReviewed}
-              />
-            </li>
-          ))}
-        </ul>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-stone-200 text-left text-xs text-stone-400 font-semibold uppercase tracking-wide">
+                <th className="pb-2 pr-4 font-semibold">Λέξη</th>
+                <th className="pb-2 pr-4 font-semibold">Από</th>
+                <th className="pb-2 pr-4 font-semibold">Σχόλιο</th>
+                <th className="pb-2 pr-4 font-semibold text-center">Ψήφοι</th>
+                {isAdmin && <th className="pb-2 font-semibold">Ενέργειες</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {nominations.map((nomination) => (
+                <NominationCard
+                  key={nomination.id}
+                  nomination={nomination}
+                  myDeviceId={deviceId}
+                  currentVote={votedMap.get(nomination.id) ?? null}
+                  isAdmin={isAdmin}
+                  adminSecret={adminSecret}
+                  onVote={handleVote}
+                  onReviewed={handleReviewed}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       <NominationModal

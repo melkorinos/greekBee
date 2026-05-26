@@ -3,28 +3,29 @@
 import { useState } from "react";
 
 export interface Nomination {
-  id:          string;
-  word:        string;
-  player_name: string | null;
-  note:        string | null;
-  vote_count:  number;
-  created_at:  string;
+  id:             string;
+  word:           string;
+  player_name:    string | null;
+  note:           string | null;
+  upvote_count:   number;
+  downvote_count: number;
+  created_at:     string;
 }
 
 interface NominationCardProps {
-  nomination:  Nomination;
-  myDeviceId:  string;
-  hasVoted:    boolean;
-  isAdmin:     boolean;
-  adminSecret: string;
-  onVote:      (id: string) => void;
-  onReviewed:  (id: string) => void;
+  nomination:   Nomination;
+  myDeviceId:   string;
+  currentVote:  "up" | "down" | null;
+  isAdmin:      boolean;
+  adminSecret:  string;
+  onVote:       (id: string, voteType: "up" | "down", action: "added" | "removed" | "switched") => void;
+  onReviewed:   (id: string) => void;
 }
 
 export function NominationCard({
   nomination,
   myDeviceId,
-  hasVoted,
+  currentVote,
   isAdmin,
   adminSecret,
   onVote,
@@ -33,16 +34,17 @@ export function NominationCard({
   const [voting,    setVoting]    = useState(false);
   const [reviewing, setReviewing] = useState(false);
 
-  async function handleVote() {
-    if (hasVoted || voting) return;
+  async function handleVote(voteType: "up" | "down") {
+    if (voting) return;
     setVoting(true);
     try {
-      await fetch(`/api/nominations/${nomination.id}/vote`, {
+      const res  = await fetch(`/api/nominations/${nomination.id}/vote`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ deviceId: myDeviceId }),
+        body:    JSON.stringify({ deviceId: myDeviceId, voteType }),
       });
-      onVote(nomination.id);
+      const data = await res.json() as { action: "added" | "removed" | "switched" };
+      onVote(nomination.id, voteType, data.action);
     } finally {
       setVoting(false);
     }
@@ -64,60 +66,77 @@ export function NominationCard({
   }
 
   return (
-    <div
+    <tr
       data-testid="nomination-card"
-      className="bg-white rounded-2xl shadow-sm border border-stone-100 p-4 space-y-2"
+      className="border-b border-stone-100 last:border-0 align-top"
     >
-      <div className="flex items-start justify-between gap-3">
-        <span className="text-lg font-bold text-stone-800 uppercase tracking-wide">
-          {nomination.word}
-        </span>
+      <td className="py-3 pr-4 font-bold text-stone-800 uppercase tracking-wide whitespace-nowrap">
+        {nomination.word}
+      </td>
 
-        <button
-          onClick={handleVote}
-          disabled={hasVoted || voting}
-          data-testid="vote-button"
-          aria-label="Ψηφίστε αυτή την πρόταση"
-          className={[
-            "flex items-center gap-1.5 text-sm font-semibold px-3 py-1 rounded-full transition-colors",
-            hasVoted
-              ? "bg-yellow-100 text-yellow-700 cursor-default"
-              : "bg-stone-100 text-stone-600 hover:bg-yellow-100 hover:text-yellow-700",
-          ].join(" ")}
-        >
-          <span>{hasVoted ? "★" : "☆"}</span>
-          <span>{nomination.vote_count}</span>
-        </button>
-      </div>
+      <td className="py-3 pr-4 text-xs text-stone-400 whitespace-nowrap">
+        {nomination.player_name ?? "—"}
+      </td>
 
-      {nomination.player_name && (
-        <p className="text-xs text-stone-400">από {nomination.player_name}</p>
-      )}
+      <td className="py-3 pr-4 text-sm text-stone-600 leading-relaxed">
+        {nomination.note ?? ""}
+      </td>
 
-      {nomination.note && (
-        <p className="text-sm text-stone-600 leading-relaxed">{nomination.note}</p>
-      )}
-
-      {isAdmin && (
-        <div className="flex gap-2 pt-2 border-t border-stone-100">
+      <td className="py-3 pr-4">
+        <div className="flex items-center gap-1">
           <button
-            onClick={() => handleReview("approve")}
-            disabled={reviewing}
-            data-testid="admin-approve"
-            className="flex-1 py-1.5 rounded-xl bg-green-600 text-white text-xs font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
+            onClick={() => handleVote("up")}
+            disabled={voting}
+            data-testid="vote-up-button"
+            aria-label="Υπέρ"
+            className={[
+              "flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full transition-colors",
+              currentVote === "up"
+                ? "bg-green-100 text-green-700"
+                : "bg-stone-100 text-stone-500 hover:bg-green-100 hover:text-green-700",
+            ].join(" ")}
           >
-            Έγκριση
+            ▲ {nomination.upvote_count}
           </button>
           <button
-            onClick={() => handleReview("reject")}
-            disabled={reviewing}
-            data-testid="admin-reject"
-            className="flex-1 py-1.5 rounded-xl bg-red-500 text-white text-xs font-semibold hover:bg-red-600 disabled:opacity-50 transition-colors"
+            onClick={() => handleVote("down")}
+            disabled={voting}
+            data-testid="vote-down-button"
+            aria-label="Κατά"
+            className={[
+              "flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full transition-colors",
+              currentVote === "down"
+                ? "bg-red-100 text-red-600"
+                : "bg-stone-100 text-stone-500 hover:bg-red-100 hover:text-red-600",
+            ].join(" ")}
           >
-            Απόρριψη
+            ▼ {nomination.downvote_count}
           </button>
         </div>
+      </td>
+
+      {isAdmin && (
+        <td className="py-3">
+          <div className="flex gap-1">
+            <button
+              onClick={() => handleReview("approve")}
+              disabled={reviewing}
+              data-testid="admin-approve"
+              className="px-2.5 py-1 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
+            >
+              Έγκριση
+            </button>
+            <button
+              onClick={() => handleReview("reject")}
+              disabled={reviewing}
+              data-testid="admin-reject"
+              className="px-2.5 py-1 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 disabled:opacity-50 transition-colors"
+            >
+              Απόρριψη
+            </button>
+          </div>
+        </td>
       )}
-    </div>
+    </tr>
   );
 }
