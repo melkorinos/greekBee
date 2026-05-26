@@ -6,12 +6,11 @@
 
 import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
 import {
-  getDisplayName,
-  getOrCreateDeviceId,
   migrateLeksiarxeioIdentity,
   readSlice,
   setDisplayName as saveDisplayName,
 } from "@/hooks/useGameStore";
+import { useGameIdentity } from "@/hooks/useGameIdentity";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
@@ -19,7 +18,7 @@ import { GuessGrid } from "./GuessGrid";
 import { Keyboard } from "./Keyboard";
 import { LeksiarxeioLeaderboardModal } from "./LeksiarxeioLeaderboardModal";
 import { normalizeLetters } from "@/games/leksokipos/lib/normalize";
-import { useLeksiarxeioScoreSubmission } from "@/hooks/useLeksiarxeioScoreSubmission";
+import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { useLeksiarxeioState } from "@/games/leksiarxeio/hooks/useLeksiarxeioState";
 
 // Greek letter regex (covers the Greek alphabet range)
@@ -170,10 +169,14 @@ function LengthPanel({
 // ── Main board ────────────────────────────────────────────────────────────────
 
 export function LeksiarxeioBoard({ puzzles, wordLists, today, onOpenLeaderboardRef }: LeksiarxeioBoardProps) {
-  const [activeLength,    setActiveLength]    = useState<LeksiarxeioLength>(4);
-  const [lbOpen,          setLbOpen]          = useState(false);
-  const [deviceId,        setDeviceId]        = useState("");
-  const [displayName,     setDisplayName]     = useState("");
+  const [activeLength, setActiveLength] = useState<LeksiarxeioLength>(4);
+  const [lbOpen, setLbOpen] = useState(false);
+
+  // migrateLeksiarxeioIdentity must run before useGameIdentity reads the device ID,
+  // so that existing players' legacy UUID is promoted before getOrCreateDeviceId
+  // can create a fresh one. The function is idempotent — safe to call on every render.
+  if (typeof window !== "undefined") migrateLeksiarxeioIdentity();
+  const { deviceId, displayName, setDisplayName } = useGameIdentity();
 
   // Expose the open function to the parent via ref callback
   useEffect(() => {
@@ -185,13 +188,6 @@ export function LeksiarxeioBoard({ puzzles, wordLists, today, onOpenLeaderboardR
   // A ref is used alongside state to avoid stale-closure issues inside setTimeout.
   const completedRef = useRef(new Set<LeksiarxeioLength>());
   const [, setCompletedLengths] = useState<Set<LeksiarxeioLength>>(new Set());
-
-  // Hydrate identity on mount — migrate legacy leksiarxeio-identity slice first
-  useEffect(() => {
-    migrateLeksiarxeioIdentity();
-    setDeviceId(getOrCreateDeviceId());
-    setDisplayName(getDisplayName());
-  }, []);
 
   // Restore already-completed lengths from persistence so auto-advance skips them.
   // The Leksiarxeio slice is a SessionMap keyed by puzzle ID (e.g. "2026-05-22-wordle-5").
@@ -217,7 +213,12 @@ export function LeksiarxeioBoard({ puzzles, wordLists, today, onOpenLeaderboardR
   }
 
   // Score submission -- all posting logic lives in the hook.
-  const { submit: postLeksiarxeioScore } = useLeksiarxeioScoreSubmission({ today, deviceId, displayName });
+  const { submitLength: postLeksiarxeioScore } = useScoreSubmission({
+    gameId:     "leksiarxeio",
+    puzzleDate: today,
+    deviceId,
+    displayName,
+  });
 
   // Score submission + auto-advance: called by each LengthPanel when its game ends.
   //

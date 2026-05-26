@@ -185,6 +185,8 @@ src/
       types.ts
   hooks/
     useGameStore.ts        Unified localStorage envelope — the only code that touches localStorage
+    useGameIdentity.ts     SSR-safe DeviceId + DisplayName init; used by all three game boards
+    useScoreSubmission.ts  Unified score-posting for all three games (submit / submitWithName / submitLength)
     useRoundPersistence.ts Generic session persistence hook used by all three games (hydrate/save/clear)
     useGameStateSync.ts    Cross-device sync hook — pushes Leksokipos state on valid word submit
   data/
@@ -274,7 +276,6 @@ Test files are organised under `src/test/` by game and shared utilities:
 | `header.test.tsx` | Header length-picker and stats display |
 | `theme.test.tsx` | Dark theme token propagation |
 | `dataLoader.test.ts` | Word-list loading and length validation |
-| `useLeksiarxeioScoreSubmission.test.ts` | Score submission hook — POST fields, deviceId guard, won/lost penalty, displayName fallback |
 
 **Leksindeseis (`src/test/leksindeseis/`)**
 
@@ -283,13 +284,13 @@ Test files are organised under `src/test/` by game and shared utilities:
 | `leksindeseisReducer.test.ts` | Leksindeseis reducer — guesses, solves, one-away detection |
 | `groupGrid.test.tsx` | GroupGrid rendering and animation states |
 | `dataLoader.test.ts` | Puzzle loading and date resolution |
-| `useLeksindeseisScoreSubmission.test.ts` | Score submission hook — POST fields, deviceId guard, dedup guard, submitWithName |
 
 **Shared (`src/test/shared/` and `src/test/`)**
 
 | File | Covers |
 |------|--------|
 | `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`; `deviceId`, `displayName`, `profileLinked`, `disconnectProfile` helpers |
+| `useGameIdentity.test.ts` | SSR-safe DeviceId + DisplayName init — initial values from store, setter stability |
 | `persistence.test.ts` | `useRoundPersistence` — hydration, saving, `clear()`, session isolation, `shouldSave` guard |
 | `Shell.test.tsx` | Hamburger open/close, navigation links, keyboard dismiss |
 | `leaderboardModal.test.tsx` | Day strip, play link, display-name editor, profile create/restore/linked/disconnect flows |
@@ -298,7 +299,7 @@ Test files are organised under `src/test/` by game and shared utilities:
 | `normalize.test.ts` | Accent stripping, ς→σ normalisation, deduplication |
 | `parseCustomUrl.test.ts` | Custom URL segment parsing |
 | `useLeaderboard.test.ts` | Leaderboard fetch hook — loading, error, refresh |
-| `useScoreSubmission.test.ts` | Generic score submission hook |
+| `useScoreSubmission.test.ts` | Unified score submission — `submit` + `submitWithName` (Leksokipos/Leksindeseis), `submitLength` with won/lost penalty (Leksiarxeio) |
 | `supabase.test.ts` | Supabase client initialisation guard |
 | `gameScoresRoute.test.ts` | `/api/game-scores` edge route |
 | `performance.test.ts` | Validation and scoring hot-path benchmarks |

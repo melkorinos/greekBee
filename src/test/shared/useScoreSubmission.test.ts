@@ -148,7 +148,88 @@ describe("useScoreSubmission — submit()", () => {
   });
 });
 
+describe("useScoreSubmission — submitLength() [leksiarxeio]", () => {
+  const LEXI_BASE = {
+    gameId:      "leksiarxeio" as const,
+    puzzleDate:  "2026-05-26",
+    deviceId:    "device-abc",
+    displayName: "Γιώργος",
+  };
+
+  it("POSTs to /api/leksiarxeio-scores with correct fields on a win", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission(LEXI_BASE));
+
+    await act(async () => { result.current.submitLength(5, 3, true); });
+
+    expect(spy).toHaveBeenCalledOnce();
+    const [url, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/leksiarxeio-scores");
+    const body = JSON.parse(init.body as string);
+    expect(body.puzzle_date).toBe("2026-05-26");
+    expect(body.word_length).toBe(5);
+    expect(body.device_id).toBe("device-abc");
+    expect(body.attempts).toBe(3);
+    expect(body.display_name).toBe("Γιώργος");
+  });
+
+  it("maps a failed game to the 7-attempt penalty", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission(LEXI_BASE));
+
+    await act(async () => { result.current.submitLength(5, 6, false); });
+
+    const body = JSON.parse((spy.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body.attempts).toBe(7);
+  });
+
+  it("does not POST when deviceId is empty", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission({ ...LEXI_BASE, deviceId: "" }));
+
+    await act(async () => { result.current.submitLength(5, 3, true); });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("falls back to 'Ανώνυμος' when displayName is empty", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission({ ...LEXI_BASE, displayName: "" }));
+
+    await act(async () => { result.current.submitLength(5, 3, true); });
+
+    const body = JSON.parse((spy.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body.display_name).toBe("Ανώνυμος");
+  });
+
+  it("uses the latest displayName via ref without re-creating submitLength", async () => {
+    const spy = mockFetch();
+    const { result, rerender } = renderHook(
+      (props: { displayName: string }) => useScoreSubmission({ ...LEXI_BASE, ...props }),
+      { initialProps: { displayName: "Παλιό" } },
+    );
+
+    const submitLengthBefore = result.current.submitLength;
+    rerender({ displayName: "Νέο" });
+
+    await act(async () => { result.current.submitLength(5, 3, true); });
+
+    const body = JSON.parse((spy.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body.display_name).toBe("Νέο");
+    expect(result.current.submitLength).toBe(submitLengthBefore);
+  });
+});
+
 describe("useScoreSubmission — submitWithName()", () => {
+  it("does not POST when deviceId is empty", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission({ ...BASE, deviceId: "" }));
+
+    await act(async () => { result.current.submitWithName(10, "Νέος"); });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("POSTs with the provided name, bypassing the increase guard", async () => {
     const spy = mockFetch();
     const { result } = renderHook(() => useScoreSubmission(BASE));

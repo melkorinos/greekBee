@@ -1,7 +1,7 @@
 # Agent Memory — Greek Word Games Platform
 
-## ⚡ Current State (2026-05-24)
-Three live games + custom puzzle URLs. **704 tests passing.**
+## ⚡ Current State (2026-05-26)
+Three live games + custom puzzle URLs. Run `npm run test -- --run` for current count.
 
 | Game | Route | Status |
 |------|-------|--------|
@@ -60,9 +60,9 @@ src/
     leksiarxeio/     words-{4..8}.json (answer pool + valid guesses, same list), index.ts
     leksindeseis/    puzzles-connections.json, index.ts
     words-el.json    (811k words, normalised — statically imported by buildCustomPuzzle)
-  hooks/             useGameStore.ts, useRoundPersistence.ts, useLeksiarxeioScoreSubmission.ts, useLeksindeseisScoreSubmission.ts
+  hooks/             useGameStore.ts, useGameIdentity.ts, useScoreSubmission.ts, useRoundPersistence.ts, useGameStateSync.ts, useLeaderboard.ts, useProfileVerification.ts
   types/             index.ts
-  test/              45 test files — 704 tests
+  test/              src/test/ — organised by game + shared/
 ```
 
 ---
@@ -114,8 +114,8 @@ Tracked as individual issues in `.claude/issue-tracker/issues/` (7 open items). 
 | `groupGrid.test.tsx` | `GroupGrid` — render, solved groups, selection, onSelect, disabled |
 | `dataLoader.test.ts` (leksindeseis) | `getTodaysLeksindeseisPuzzle` — date match, fallback, uniqueness, shape |
 | `persistence.test.ts` | `useRoundPersistence` — hydration (5 cases), saving (5 cases incl. `shouldSave`), `clear()` (3 cases) |
-| `useLeksiarxeioScoreSubmission.test.ts` | `useLeksiarxeioScoreSubmission` — POST fields, deviceId guard, won/lost penalty, displayName fallback, ref stability |
-| `useLeksindeseisScoreSubmission.test.ts` | `useLeksindeseisScoreSubmission` — POST fields, deviceId guard, score=0 guard, dedup guard, Ανώνυμος fallback; `submitWithName` fields, guards |
+| `useScoreSubmission.test.ts` | Unified hook — `submit`/`submitWithName` (Leksokipos+Leksindeseis) + `submitLength` with won/lost penalty (Leksiarxeio); dedup guard, displayName ref, deviceId guard |
+| `useGameIdentity.test.ts` | SSR-safe identity hook — initial values from store, setter state updates, no cross-contamination between fields |
 | `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`, cross-game isolation |
 | `Shell.test.tsx` | Rendering, hamburger drawer open/close/Escape/backdrop, nav links, theme classes |
 | `letterPickerModal.test.tsx` | Visibility, center/outer selection, deselect, 7-letter cap, Reset, Random (vowel center ×20, ≥2 vowels ×20, ≥2 outer consonants ×20), Generate |

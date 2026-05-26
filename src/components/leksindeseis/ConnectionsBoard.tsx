@@ -3,33 +3,19 @@
 // ConnectionsBoard — client component that owns game state.
 // Imported by the server-rendered leksindeseis/page.tsx.
 
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { LeksindeseisPuzzle }           from "@/games/leksindeseis/types";
 import { ConnectionsLeaderboardModal }      from "@/components/leksindeseis/ConnectionsLeaderboardModal";
 import { FeedbackBanner }                  from "@/components/shared/FeedbackBanner";
 import { GroupGrid }                       from "@/components/leksindeseis/GroupGrid";
-import { getDisplayName, getOrCreateDeviceId, setDisplayName } from "@/hooks/useGameStore";
+import { setDisplayName } from "@/hooks/useGameStore";
+import { useGameIdentity } from "@/hooks/useGameIdentity";
 import { useScoreSubmission }              from "@/hooks/useScoreSubmission";
 import { useLeksindeseisState }            from "@/games/leksindeseis/hooks/useLeksindeseisState";
 
 interface ConnectionsBoardProps {
   puzzle: LeksindeseisPuzzle;
-}
-
-// ── Identity reducer (avoids react-hooks/set-state-in-effect) ─────────────────
-type IdentityAction =
-  | { type: "INIT"; deviceId: string; displayName: string }
-  | { type: "SET_NAME"; name: string };
-
-function identityReducer(
-  state: { deviceId: string; displayName: string },
-  action: IdentityAction,
-) {
-  switch (action.type) {
-    case "INIT":     return { deviceId: action.deviceId, displayName: action.displayName };
-    case "SET_NAME": return { ...state, displayName: action.name };
-  }
 }
 
 // Mistake dots — filled = mistake used, outline = remaining
@@ -67,21 +53,10 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
   } = useLeksindeseisState(puzzle);
 
   // ── Identity ────────────────────────────────────────────────────────────────
-  const [identity, dispatchIdentity] = useReducer(
-    identityReducer,
-    { deviceId: "", displayName: "" },
-  );
-
-  useEffect(() => {
-    dispatchIdentity({
-      type:        "INIT",
-      deviceId:    getOrCreateDeviceId(),
-      displayName: getDisplayName(),
-    });
-  }, []);
+  const { deviceId, displayName, setDisplayName: setDisplayNameState } = useGameIdentity();
 
   function handleSaveName(name: string) {
-    dispatchIdentity({ type: "SET_NAME", name });
+    setDisplayNameState(name);
     setDisplayName(name);
     if (status === "won") {
       submitWithName(mistakesRemaining, name);
@@ -92,8 +67,8 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
   const { submit: postScore, submitWithName } = useScoreSubmission({
     gameId:      "leksindeseis",
     puzzleDate:  puzzle.date,
-    deviceId:    identity.deviceId,
-    displayName: identity.displayName,
+    deviceId:    deviceId,
+    displayName: displayName,
   });
 
   // Fire once when the game transitions to "won"
@@ -201,8 +176,8 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
       <ConnectionsLeaderboardModal
         isOpen={lbOpen}
         date={puzzle.date}
-        deviceId={identity.deviceId}
-        displayName={identity.displayName}
+        deviceId={deviceId}
+        displayName={displayName}
         score={status === "won" ? mistakesRemaining : 0}
         onSaveName={handleSaveName}
         onClose={() => setLbOpen(false)}

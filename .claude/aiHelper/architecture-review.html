@@ -1,299 +1,476 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Architecture Review — Greek Bee Platform</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
-<script>mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });</script>
-<style>
-  body { font-family: system-ui, sans-serif; }
-  .badge-strong { background: #dcfce7; color: #166534; }
-  .badge-worth  { background: #fef9c3; color: #854d0e; }
-  .badge-spec   { background: #f3f4f6; color: #374151; }
-  .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem; background: white; box-shadow: 0 1px 3px rgba(0,0,0,.07); }
-  .card h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: .35rem; }
-  .tag  { font-size: .7rem; font-weight: 600; padding: 2px 8px; border-radius: 9999px; }
-  .before-box { background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 1rem; }
-  .after-box  { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 1rem; }
-  .warn-box   { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: .75rem; font-size: .85rem; }
-  code { background: #f1f5f9; padding: 1px 5px; border-radius: 4px; font-size: .82rem; font-family: monospace; }
-  pre  { background: #1e293b; color: #e2e8f0; border-radius: 8px; padding: 1rem; font-size: .8rem; overflow-x: auto; line-height: 1.55; }
-  pre code { background: none; color: inherit; }
-  .divider { border: none; border-top: 1px solid #e5e7eb; margin: 1.5rem 0; }
-  .mermaid { text-align: center; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Architecture Review — Greek Word Games Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    .badge-strong { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .badge-worth  { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+    .badge-spec   { background: #f3e8ff; color: #6b21a8; border: 1px solid #d8b4fe; }
+    .card { border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; margin-bottom: 2rem; }
+    .card-header { padding: 1.25rem 1.5rem; background: #f9fafb; border-bottom: 1px solid #e5e7eb; }
+    .card-body { padding: 1.5rem; }
+    pre { background: #1e293b; color: #e2e8f0; border-radius: 8px; padding: 1rem; font-size: 0.8rem; overflow-x: auto; line-height: 1.5; }
+    .diagram-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; font-family: monospace; font-size: 0.8rem; }
+    .before-after { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 768px) { .before-after { grid-template-columns: 1fr; } }
+    .label-before { color: #ef4444; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .label-after  { color: #22c55e; font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+    .box-red   { border: 2px solid #fca5a5; border-radius: 6px; }
+    .box-green { border: 2px solid #86efac; border-radius: 6px; }
+    .module-node { display: inline-block; border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; font-weight: 600; }
+    .node-blue   { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+    .node-gray   { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    .node-green  { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .node-yellow { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+    .node-red    { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .arrow { color: #94a3b8; font-size: 0.75rem; }
+    .warn-box { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 0.75rem 1rem; margin-top: 1rem; }
+  </style>
 </head>
-<body class="bg-gray-50 min-h-screen p-6">
+<body class="bg-gray-50 text-gray-900 min-h-screen">
 
-<!-- HEADER -->
-<div class="max-w-4xl mx-auto">
-<div class="mb-8">
-  <p class="text-sm text-gray-400 mb-1 font-mono">greek-bee · 2026-05-25</p>
-  <h1 class="text-3xl font-bold text-gray-900 mb-2">Architecture Review</h1>
-  <p class="text-gray-600 max-w-2xl">Surfacing deepening opportunities — refactors that turn shallow modules into deep ones. Five candidates ranked by leverage and effort.</p>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════ CARD 1 -->
-<div class="card">
-  <div class="flex items-start justify-between mb-3">
-    <div>
-      <h2>1 — Score Submission: Three Shallow Hooks, Two Endpoints</h2>
-      <p class="text-sm text-gray-500">src/hooks/useScoreSubmission.ts · useLeksiarxeioScoreSubmission.ts · useLeksindeseisScoreSubmission.ts · useScorePost.ts</p>
-    </div>
-    <span class="tag badge-strong ml-4 whitespace-nowrap">Strong</span>
-  </div>
-
-  <p class="text-gray-700 mb-4">Three hooks post scores to the server. They share the same structure — get <code>deviceId</code>, guard against empty payload, fire-and-forget POST — but each reinvents the plumbing independently. <code>useScorePost</code> was meant to be a shared base but it's a pass-through: it adds one ref-update pattern around a single <code>postScore()</code> call, so its interface is nearly as complex as its implementation. <strong>Deletion test</strong>: remove <code>useScorePost</code> — complexity reappears inline in three callers. Keep it, but make it earn its depth.</p>
-
-  <div class="grid grid-cols-2 gap-4 mb-4">
-    <div class="before-box">
-      <p class="text-xs font-semibold text-red-700 mb-2">BEFORE — 4 shallow modules, 2 endpoints</p>
-      <div class="mermaid">
-graph TD
-  A[GameBoard] -->|useScoreSubmission| H1[useScorePost]
-  B[LeksiarxeioBoard] -->|useLeksiarxeioScoreSubmission| H1
-  C[ConnectionsBoard] -->|useLeksindeseisScoreSubmission| H1
-  H1 -->|postScore| E1[/api/game-scores]
-  H1 -->|postScore| E2[/api/leksiarxeio-scores]
-  style E1 fill:#fecaca
-  style E2 fill:#fecaca
-      </div>
-    </div>
-    <div class="after-box">
-      <p class="text-xs font-semibold text-green-700 mb-2">AFTER — 1 deep hook, 1 endpoint</p>
-      <div class="mermaid">
-graph TD
-  A[GameBoard] -->|useScoreSubmission game=leksokipos| H[useScoreSubmission]
-  B[LeksiarxeioBoard] -->|useScoreSubmission game=leksiarxeio| H
-  C[ConnectionsBoard] -->|useScoreSubmission game=leksindeseis| H
-  H -->|POST /api/scores| E[/api/scores]
-  style H fill:#bbf7d0
-  style E fill:#bbf7d0
-      </div>
-    </div>
-  </div>
-
-  <hr class="divider" />
-
-  <p class="text-sm font-semibold text-gray-700 mb-2">What changes</p>
-  <ul class="text-sm text-gray-600 space-y-1 list-disc ml-4 mb-4">
-    <li>One <code>useScoreSubmission(config)</code> hook replaces all three; game-specific payload fields live in a config object.</li>
-    <li>Unify <code>/api/game-scores</code> + <code>/api/leksiarxeio-scores</code> into a single <code>/api/scores</code> route; penalty logic (<code>won ? attempts : 7</code>) moves server-side where it belongs.</li>
-    <li><code>useScorePost</code> becomes the single base — or disappears if the new hook inlines the ref pattern directly.</li>
-  </ul>
-
-  <p class="text-sm font-semibold text-gray-700 mb-1">Benefits — locality &amp; leverage</p>
-  <p class="text-sm text-gray-600 mb-4"><strong>Locality:</strong> changes to score-posting (adding a field, changing auth, rate-limiting) happen in one file. Today they must be replicated across three. <strong>Leverage:</strong> callers pass a config object; the hook owns retry, dedup, ref-stability, and display-name injection. Tests assert the payload shape once.</p>
-
-  <div class="warn-box">
-    <strong>Server-side prerequisite:</strong> the endpoint unification requires a small API route migration. The client refactor can precede this by keeping the old endpoints temporarily, but the full gain requires both.
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════ CARD 2 -->
-<div class="card">
-  <div class="flex items-start justify-between mb-3">
-    <div>
-      <h2>2 — Device Identity: Leksiarxeio Diverges From the Platform Envelope</h2>
-      <p class="text-sm text-gray-500">src/components/leksiarxeio/LeksiarxeioBoard.tsx · src/hooks/useGameStore.ts · src/types/index.ts</p>
-    </div>
-    <span class="tag badge-strong ml-4 whitespace-nowrap">Strong</span>
-  </div>
-
-  <p class="text-gray-700 mb-4">Leksokipos and Leksindeseis share one <code>deviceId</code> through the unified <code>wordgames:state</code> persistence envelope. Leksiarxeio hard-codes its own <code>"leksiarxeio-identity"</code> slice and runs a private <code>getOrCreateDeviceId()</code> inside the board component — three functions from the ground up, invisible to the platform's identity layer. The same player therefore has two different device IDs depending on which game they play.</p>
-
-  <div class="grid grid-cols-2 gap-4 mb-4">
-    <div class="before-box">
-      <p class="text-xs font-semibold text-red-700 mb-2">BEFORE — split identity</p>
-      <pre><code>// LeksiarxeioBoard.tsx (lines 30-36)
-function getOrCreateDeviceId() {
-  const existing = readSlice("leksiarxeio-identity");
-  if (existing?.deviceId) return existing.deviceId;
-  const id = crypto.randomUUID();
-  writeSlice("leksiarxeio-identity", { deviceId: id });
-  return id;
-}</code></pre>
-      <p class="text-xs text-red-600 mt-2">Component writes directly to the persistence envelope. Duplicates logic in useGameStore.</p>
-    </div>
-    <div class="after-box">
-      <p class="text-xs font-semibold text-green-700 mb-2">AFTER — unified identity</p>
-      <pre><code>// LeksiarxeioBoard.tsx
-const deviceId = useGameStore(s => s.deviceId);
-
-// useGameStore.ts already provides getOrCreateDeviceId()
-// The "leksiarxeio-identity" slice is removed.
-// PersistenceEnvelope loses the extra key.</code></pre>
-      <p class="text-xs text-green-600 mt-2">One device identity across all games. Leaderboard cross-game player matching works.</p>
-    </div>
-  </div>
-
-  <p class="text-sm font-semibold text-gray-700 mb-1">Benefits</p>
-  <p class="text-sm text-gray-600 mb-3"><strong>Locality:</strong> device identity logic lives once, in <code>useGameStore</code>. <strong>Leverage:</strong> a future "player stats across all games" feature is trivially possible — today it would see two unrelated players. The <code>PersistenceEnvelope</code> type loses an opaque <code>"leksiarxeio-identity"?</code> key.</p>
-
-  <div class="warn-box">
-    <strong>Migration note:</strong> existing Leksiarxeio players have a <code>leksiarxeio-identity</code> slice. On first load after the refactor, <code>useGameStore</code>'s envelope should check for the old key and migrate the ID rather than generating a new one — otherwise leaderboard history disconnects.
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════ CARD 3 -->
-<div class="card">
-  <div class="flex items-start justify-between mb-3">
-    <div>
-      <h2>3 — Leaderboard Modals: ~400 Lines of Structural Duplication</h2>
-      <p class="text-sm text-gray-500">LeaderboardModal.tsx · LeksiarxeioLeaderboardModal.tsx · ConnectionsLeaderboardModal.tsx</p>
-    </div>
-    <span class="tag badge-worth ml-4 whitespace-nowrap">Worth exploring</span>
-  </div>
-
-  <p class="text-gray-700 mb-4">Three leaderboard modals share the same skeleton: a date-pill strip, a name-edit input, a ranked table, and a "pinned player" row. Each runs ~220 lines. The structural differences are thin: which API endpoint to hit, which query parameters to send, and how to format the score cell (<code>score</code> vs <code>attempts</code>). <strong>Deletion test</strong>: remove any one modal and you must reconstruct the entire skeleton in the caller. They're not shallow — they earn their keep — but they're three parallel implementations rather than one deep one.</p>
-
-  <!-- Stacked bar visual -->
-  <div class="mb-4">
-    <p class="text-xs font-semibold text-gray-500 mb-2">Lines shared vs. game-specific (estimated)</p>
-    <div class="space-y-2 text-xs">
+  <!-- Header -->
+  <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
       <div>
-        <span class="inline-block w-32 text-gray-600">LeaderboardModal</span>
-        <span class="inline-block bg-blue-200 rounded" style="width:160px;height:14px;vertical-align:middle"></span>
-        <span class="inline-block bg-orange-300 rounded ml-0.5" style="width:40px;height:14px;vertical-align:middle"></span>
-        <span class="ml-2 text-gray-500">~80% shared · ~20% specific</span>
+        <h1 class="text-xl font-bold text-gray-900">Architecture Review</h1>
+        <p class="text-sm text-gray-500">Greek Word Games Platform · 2026-05-26</p>
       </div>
-      <div>
-        <span class="inline-block w-32 text-gray-600">Leksiarxeio modal</span>
-        <span class="inline-block bg-blue-200 rounded" style="width:160px;height:14px;vertical-align:middle"></span>
-        <span class="inline-block bg-orange-300 rounded ml-0.5" style="width:40px;height:14px;vertical-align:middle"></span>
-        <span class="ml-2 text-gray-500">~80% shared · ~20% specific</span>
-      </div>
-      <div>
-        <span class="inline-block w-32 text-gray-600">Connections modal</span>
-        <span class="inline-block bg-blue-200 rounded" style="width:160px;height:14px;vertical-align:middle"></span>
-        <span class="inline-block bg-orange-300 rounded ml-0.5" style="width:40px;height:14px;vertical-align:middle"></span>
-        <span class="ml-2 text-gray-500">~80% shared · ~20% specific</span>
-      </div>
-      <div class="flex gap-4 mt-1">
-        <span><span class="inline-block bg-blue-200 rounded w-3 h-3 mr-1"></span>Structural skeleton</span>
-        <span><span class="inline-block bg-orange-300 rounded w-3 h-3 mr-1"></span>Game-specific</span>
+      <div class="flex gap-2 text-xs">
+        <span class="badge-strong px-2 py-1 rounded-full font-semibold">Strong</span>
+        <span class="badge-worth px-2 py-1 rounded-full font-semibold">Worth exploring</span>
+        <span class="badge-spec px-2 py-1 rounded-full font-semibold">Speculative</span>
       </div>
     </div>
   </div>
 
-  <p class="text-sm font-semibold text-gray-700 mb-1">What changes</p>
-  <ul class="text-sm text-gray-600 list-disc ml-4 mb-3 space-y-1">
-    <li>Extract a shared <code>&lt;LeaderboardModal&gt;</code> to <code>src/components/shared/</code>; it accepts a <code>fetcher</code> async function and a <code>renderScore</code> render prop for the score cell.</li>
-    <li>Each game keeps a thin wrapper (~20 lines) that supplies the fetcher and render prop.</li>
-    <li>Requires endpoint parity (Card 1) for maximum gain, but the component consolidation can land first.</li>
-  </ul>
+  <div class="max-w-5xl mx-auto px-6 py-10">
 
-  <p class="text-sm font-semibold text-gray-700 mb-1">Benefits</p>
-  <p class="text-sm text-gray-600"><strong>Locality:</strong> modal UX bugs (date pill alignment, name-input focus) fix once for all games. <strong>Leverage:</strong> the fourth game gets a leaderboard with five lines of wiring.</p>
-</div>
+    <!-- Intro -->
+    <p class="text-gray-600 mb-8 text-sm leading-relaxed">
+      Four candidates surfaced by reading the codebase. Game library modules (<code>src/games/*/lib/</code>) are <strong>deep</strong> and well-tested — no friction there.
+      The friction lives in the glue layer: the three GameBoard components and the score-submission hooks.
+    </p>
 
-<!-- ═══════════════════════════════════════════════════════════ CARD 4 -->
-<div class="card">
-  <div class="flex items-start justify-between mb-3">
-    <div>
-      <h2>4 — Leksindeseis Shuffle: State Split Across Reducer and useState</h2>
-      <p class="text-sm text-gray-500">src/games/leksindeseis/hooks/useLeksindeseisState.ts · leksindeseisReducer.ts</p>
+    <!-- ═══════════════════════════════════════════════════════
+         CANDIDATE 1 — Score Submission Hooks
+    ════════════════════════════════════════════════════════ -->
+    <div class="card">
+      <div class="card-header flex items-center justify-between">
+        <div>
+          <span class="text-xs text-gray-400 font-mono uppercase tracking-wide">Candidate 1</span>
+          <h2 class="text-lg font-bold mt-0.5">Score Submission Hooks</h2>
+        </div>
+        <span class="badge-strong px-3 py-1 rounded-full text-sm font-semibold">Strong</span>
+      </div>
+      <div class="card-body">
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Files</p>
+            <ul class="text-sm space-y-1">
+              <li><code>src/hooks/useScoreSubmission.ts</code></li>
+              <li><code>src/hooks/useLeksiarxeioScoreSubmission.ts</code></li>
+              <li><code>src/test/shared/useScoreSubmission.test.ts</code></li>
+              <li><code>src/test/leksindeseis/useLeksindeseisScoreSubmission.test.ts</code></li>
+            </ul>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Problem</p>
+            <p class="text-sm text-gray-700">Two hooks implement nearly the same protocol (dedup guard, displayName ref, POST, error silencing) but diverge only on endpoint and one penalty-mapping rule. Callers must choose which hook to use with no guiding abstraction. Test suites are near-duplicates.</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Deletion test</p>
+            <p class="text-sm text-gray-700">Delete both hooks → the dedup guard (<em>"only POST when score strictly increases"</em>) and the displayName ref pattern reappear in each GameBoard. Complexity concentrates — these hooks have real depth. The divergence is shallow enough to unify.</p>
+          </div>
+        </div>
+
+        <!-- Before / After diagram -->
+        <div class="before-after mb-6">
+          <div class="box-red p-4">
+            <p class="label-before">Before</p>
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="module-node node-blue">GameBoard</span>
+                <span class="arrow">→</span>
+                <span class="module-node node-red">useScoreSubmission</span>
+                <span class="text-xs text-gray-400">(Leksokipos + Leksindeseis)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="module-node node-blue">LeksiarxeioBoard</span>
+                <span class="arrow">→</span>
+                <span class="module-node node-red">useLeksiarxeioScoreSubmission</span>
+                <span class="text-xs text-gray-400">(Leksiarxeio only)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="module-node node-blue">ConnectionsBoard</span>
+                <span class="arrow">→</span>
+                <span class="module-node node-red">useScoreSubmission</span>
+                <span class="text-xs text-gray-400">(re-used, leaks game-specific param)</span>
+              </div>
+              <div class="mt-3 text-xs text-red-700 bg-red-50 rounded p-2">
+                ✗ Callers choose the hook. Nearly-identical test files. Penalty logic lives inside the hook it belongs to, not discoverable.
+              </div>
+            </div>
+          </div>
+          <div class="box-green p-4">
+            <p class="label-after">After</p>
+            <div class="space-y-2">
+              <div class="flex items-center gap-2">
+                <span class="module-node node-green">useScoreSubmission(gameId)</span>
+              </div>
+              <div class="ml-4 space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-gray-400">↳</span>
+                  <span class="module-node node-gray">shared: dedup guard</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-gray-400">↳</span>
+                  <span class="module-node node-gray">shared: displayName ref</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs text-gray-400">↳</span>
+                  <span class="module-node node-yellow">adapter: leksarxeio penalty</span>
+                </div>
+              </div>
+              <div class="mt-3 text-xs text-green-700 bg-green-50 rounded p-2">
+                ✓ One hook, one test file. Adapters plug in game-specific transforms. Callers pass gameId, not a different import.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Solution</p>
+            <p class="text-sm text-gray-700">Merge both hooks into a single <code>useScoreSubmission(gameId, ...)</code>. The shared core handles dedup, displayName ref, fetch, and error silencing. A small game adapter table maps each <code>gameId</code> to its endpoint and any pre-submit transform (e.g. Leksiarxeio's <code>failed → 7</code> penalty). One test file exercises core + both adapters.</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Benefits</p>
+            <ul class="text-sm text-gray-700 space-y-1 list-disc list-inside">
+              <li><strong>Locality:</strong> the dedup invariant lives in one place — one edit, all games benefit.</li>
+              <li><strong>Leverage:</strong> adding a fourth game means adding one adapter entry, not a new hook.</li>
+              <li><strong>Tests:</strong> one test file instead of two near-identical ones; adapter tests are additive.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
-    <span class="tag badge-worth ml-4 whitespace-nowrap">Worth exploring</span>
-  </div>
 
-  <p class="text-gray-700 mb-4">The Leksindeseis state hook stores <code>shuffleOrder</code> in a standalone <code>useState</code> (line 65) rather than in the reducer. The stated reason in a comment: "displayOrder derives from it by filtering out solved words — no setState in effects." This is a clean implementation, but it means the full visual game state requires two sources of truth: the reducer for game logic, and <code>useState</code> for display order. The <code>SHUFFLE</code> action in the reducer is a no-op (<code>return { ...state }</code>) that signals the hook to call <code>setShuffleOrder</code>.</p>
+    <!-- ═══════════════════════════════════════════════════════
+         CANDIDATE 2 — GameBoard Identity Pattern
+    ════════════════════════════════════════════════════════ -->
+    <div class="card">
+      <div class="card-header flex items-center justify-between">
+        <div>
+          <span class="text-xs text-gray-400 font-mono uppercase tracking-wide">Candidate 2</span>
+          <h2 class="text-lg font-bold mt-0.5">GameBoard Identity Initialisation</h2>
+        </div>
+        <span class="badge-strong px-3 py-1 rounded-full text-sm font-semibold">Strong</span>
+      </div>
+      <div class="card-body">
 
-  <div class="grid grid-cols-2 gap-4 mb-4">
-    <div class="before-box">
-      <p class="text-xs font-semibold text-red-700 mb-2">BEFORE — split state</p>
-      <pre><code>// useLeksindeseisState.ts
-const [state, dispatch] = useReducer(...)
-// shuffleOrder lives OUTSIDE the reducer:
-const [shuffleOrder, setShuffleOrder] = useState(allWords)
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Files</p>
+            <ul class="text-sm space-y-1">
+              <li><code>src/components/leksokipos/GameBoard.tsx</code></li>
+              <li><code>src/components/leksiarxeio/LeksiarxeioBoard.tsx</code></li>
+              <li><code>src/components/leksindeseis/ConnectionsBoard.tsx</code></li>
+            </ul>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Problem</p>
+            <p class="text-sm text-gray-700">All three boards initialise <strong>DeviceId</strong> and <strong>DisplayName</strong> on mount — but <em>two use a reducer</em> and <em>one uses <code>useState</code></em>. This is the same concern resolved three different ways. Any future change (e.g., SSR fix, new field) must be applied in three places.</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Deletion test</p>
+            <p class="text-sm text-gray-700">Delete the identity initialisation from all three boards → the SSR guard (<code>typeof window === "undefined"</code>) and the <code>getOrCreateDeviceId()</code> call reappear in each. Not complex per-instance, but the <em>inconsistency</em> means bugs fixed in one board silently persist in the others.</p>
+          </div>
+        </div>
 
-// Reducer SHUFFLE action:
-case "SHUFFLE":
-  return { ...state }  // ← no-op, hook responds</code></pre>
+        <!-- Code comparison -->
+        <div class="before-after mb-6">
+          <div class="box-red p-4">
+            <p class="label-before">Before — 3 different patterns</p>
+            <pre>// GameBoard.tsx (useState)
+const [displayName, setDN] = useState(
+  () => typeof window === "undefined"
+    ? "" : getDisplayName()
+);
+const [deviceId, setDId] = useState(
+  () => typeof window === "undefined"
+    ? "" : getOrCreateDeviceId()
+);
+
+// LeksiarxeioBoard.tsx (reducer)
+const [identity, dispatch] = useReducer(
+  identityReducer, { deviceId:"", displayName:"" }
+);
+useEffect(() => {
+  dispatch({ type:"INIT",
+    deviceId: getOrCreateDeviceId(),
+    displayName: getDisplayName() });
+}, []);
+
+// ConnectionsBoard.tsx (reducer — same as above)
+const [identity, dispatch] = useReducer(
+  identityReducer, { deviceId:"", displayName:"" }
+);
+useEffect(() => {
+  dispatch({ type:"INIT", ... });
+}, []);</pre>
+          </div>
+          <div class="box-green p-4">
+            <p class="label-after">After — one hook</p>
+            <pre>// src/hooks/useGameIdentity.ts
+export function useGameIdentity() {
+  const [deviceId, setDeviceId] = useState(
+    () => typeof window === "undefined"
+      ? "" : getOrCreateDeviceId()
+  );
+  const [displayName, setDisplayName] = useState(
+    () => typeof window === "undefined"
+      ? "" : getDisplayName()
+  );
+  return { deviceId, displayName,
+           setDeviceId, setDisplayName };
+}
+
+// All three boards:
+const { deviceId, displayName,
+        setDeviceId, setDisplayName }
+  = useGameIdentity();</pre>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Solution</p>
+            <p class="text-sm text-gray-700">Extract a <code>useGameIdentity()</code> hook that owns the SSR-safe init pattern and returns <code>{ deviceId, displayName, setDeviceId, setDisplayName }</code>. All three boards call it. The reducer variant can be deleted.</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Benefits</p>
+            <ul class="text-sm text-gray-700 space-y-1 list-disc list-inside">
+              <li><strong>Locality:</strong> one place to fix SSR bugs or add a new identity field.</li>
+              <li><strong>Leverage:</strong> the hook is small (20 lines) but eliminates 60 lines of scattered duplication.</li>
+              <li><strong>Tests:</strong> <code>useGameIdentity.test.ts</code> can cover the SSR path once and for all.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="after-box">
-      <p class="text-xs font-semibold text-green-700 mb-2">AFTER — unified state</p>
-      <pre><code>// leksindeseisReducer.ts
-case "SHUFFLE":
-  return { ...state, shuffleOrder: shuffle(state.shuffleOrder) }
 
-case "SUBMIT_GUESS":
-  // When a group is solved, filter it from shuffleOrder
-  return { ...state, solvedGroups: [...], shuffleOrder: remaining }</code></pre>
+    <!-- ═══════════════════════════════════════════════════════
+         CANDIDATE 3 — GameBoard Shell
+    ════════════════════════════════════════════════════════ -->
+    <div class="card">
+      <div class="card-header flex items-center justify-between">
+        <div>
+          <span class="text-xs text-gray-400 font-mono uppercase tracking-wide">Candidate 3</span>
+          <h2 class="text-lg font-bold mt-0.5">GameBoard Shell — Leaderboard &amp; Score Wiring</h2>
+        </div>
+        <span class="badge-worth px-3 py-1 rounded-full text-sm font-semibold">Worth exploring</span>
+      </div>
+      <div class="card-body">
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Files</p>
+            <ul class="text-sm space-y-1">
+              <li><code>src/components/leksokipos/GameBoard.tsx</code></li>
+              <li><code>src/components/leksiarxeio/LeksiarxeioBoard.tsx</code></li>
+              <li><code>src/components/leksindeseis/ConnectionsBoard.tsx</code></li>
+            </ul>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Problem</p>
+            <p class="text-sm text-gray-700">All three boards wire up: (1) identity init, (2) score submission hook, (3) auto-post effect, (4) leaderboard modal open/close state, (5) 🏆 button visibility rule (daily puzzle only). This is ~50 lines of identical structure per board.</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Deletion test</p>
+            <p class="text-sm text-gray-700">Delete the shared boilerplate → it reappears in all three boards. However, each board has enough game-specific divergence (Leksokipos has sync + verification; Leksiarxeio has 5 length panels) that a full shell component risks becoming a leaky abstraction.</p>
+          </div>
+        </div>
+
+        <!-- Diagram -->
+        <div class="before-after mb-6">
+          <div class="box-red p-4">
+            <p class="label-before">Before — duplicated shell concern</p>
+            <div class="space-y-3 text-sm font-mono">
+              <div class="bg-red-50 rounded p-3 space-y-1">
+                <p class="font-bold text-red-800">GameBoard.tsx</p>
+                <p class="text-xs text-gray-500">useGameIdentity (useState form)</p>
+                <p class="text-xs text-gray-500">useScoreSubmission(...)</p>
+                <p class="text-xs text-gray-500">useEffect → postScore</p>
+                <p class="text-xs text-gray-500">isLeaderboardOpen state</p>
+                <p class="text-xs text-gray-500">isDaily check → 🏆 visibility</p>
+                <p class="text-xs text-gray-500 mt-1 text-orange-600">+ useProfileVerification (only here)</p>
+                <p class="text-xs text-gray-500 text-orange-600">+ useGameStateSync (only here)</p>
+              </div>
+              <div class="bg-red-50 rounded p-3 space-y-1">
+                <p class="font-bold text-red-800">LeksiarxeioBoard.tsx</p>
+                <p class="text-xs text-gray-500">useGameIdentity (reducer form)</p>
+                <p class="text-xs text-gray-500">useLeksiarxeioScoreSubmission(...)</p>
+                <p class="text-xs text-gray-500">useEffect → postScore</p>
+                <p class="text-xs text-gray-500">isLeaderboardOpen state</p>
+                <p class="text-xs text-gray-500">isDaily check → 🏆 visibility</p>
+              </div>
+              <div class="bg-red-50 rounded p-3 space-y-1">
+                <p class="font-bold text-red-800">ConnectionsBoard.tsx</p>
+                <p class="text-xs text-gray-500">useGameIdentity (reducer form)</p>
+                <p class="text-xs text-gray-500">useScoreSubmission(...)</p>
+                <p class="text-xs text-gray-500">useEffect → postScore</p>
+                <p class="text-xs text-gray-500">isLeaderboardOpen state</p>
+                <p class="text-xs text-gray-500">isDaily check → 🏆 visibility</p>
+              </div>
+            </div>
+          </div>
+          <div class="box-green p-4">
+            <p class="label-after">After — hook extracts shared concern</p>
+            <div class="space-y-3 text-sm font-mono">
+              <div class="bg-green-50 rounded p-3">
+                <p class="font-bold text-green-800">useGameShell({ gameId, score, puzzleDate, isDaily })</p>
+                <p class="text-xs text-gray-500 mt-1">Returns: identity, postScore, submitWithName,</p>
+                <p class="text-xs text-gray-500">isLeaderboardOpen, openLeaderboard, closeLeaderboard</p>
+              </div>
+              <div class="flex flex-col gap-2">
+                <div class="bg-gray-50 rounded p-2">
+                  <p class="font-bold text-gray-700 text-xs">GameBoard.tsx</p>
+                  <p class="text-xs text-gray-500">const shell = useGameShell(...)</p>
+                  <p class="text-xs text-orange-600">+ useProfileVerification (opt-in)</p>
+                  <p class="text-xs text-orange-600">+ useGameStateSync (opt-in)</p>
+                </div>
+                <div class="bg-gray-50 rounded p-2">
+                  <p class="font-bold text-gray-700 text-xs">LeksiarxeioBoard.tsx</p>
+                  <p class="text-xs text-gray-500">const shell = useGameShell(...)</p>
+                </div>
+                <div class="bg-gray-50 rounded p-2">
+                  <p class="font-bold text-gray-700 text-xs">ConnectionsBoard.tsx</p>
+                  <p class="text-xs text-gray-500">const shell = useGameShell(...)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Solution</p>
+            <p class="text-sm text-gray-700">Extract <code>useGameShell({ gameId, score, puzzleDate, isDaily })</code> that wires identity + score submission + leaderboard state. Each board calls it and unpacks what it needs. Game-specific hooks (<code>useProfileVerification</code>, <code>useGameStateSync</code>) remain opt-in per board — they are not swallowed by the shell.</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Benefits</p>
+            <ul class="text-sm text-gray-700 space-y-1 list-disc list-inside">
+              <li><strong>Locality:</strong> the "daily puzzle → show 🏆" rule lives in one place.</li>
+              <li><strong>Leverage:</strong> a fourth game gets all platform plumbing from one hook call.</li>
+              <li><strong>Tests:</strong> <code>useGameShell.test.ts</code> covers leaderboard open/close + score post once.</li>
+            </ul>
+            <div class="warn-box mt-3 text-xs text-yellow-800">
+              <strong>Note:</strong> Candidate 1 (unify score submission) and Candidate 2 (useGameIdentity) should land first — useGameShell composes them.
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
 
-  <p class="text-sm font-semibold text-gray-700 mb-1">Benefits</p>
-  <p class="text-sm text-gray-600 mb-3"><strong>Locality:</strong> all game state changes happen in one place (the reducer), making the hook a thin wrapper. <strong>Testability:</strong> the current split means <code>SHUFFLE</code> can't be tested through the reducer alone — the hook's <code>useState</code> response is invisible to reducer tests. Unifying it makes shuffle behavior directly testable in <code>leksindeseisReducer.test.ts</code>.</p>
+    <!-- ═══════════════════════════════════════════════════════
+         CANDIDATE 4 — Platform-wide Profile / Sync
+    ════════════════════════════════════════════════════════ -->
+    <div class="card">
+      <div class="card-header flex items-center justify-between">
+        <div>
+          <span class="text-xs text-gray-400 font-mono uppercase tracking-wide">Candidate 4</span>
+          <h2 class="text-lg font-bold mt-0.5">useProfileVerification &amp; useGameStateSync — Leksokipos-only Leak</h2>
+        </div>
+        <span class="badge-spec px-3 py-1 rounded-full text-sm font-semibold">Speculative</span>
+      </div>
+      <div class="card-body">
 
-  <div class="warn-box">
-    <strong>Low risk:</strong> this is a refactor inside a single hook and its reducer. No public API changes. The test suite already has <code>leksindeseisReducer.test.ts</code> with full coverage — the shuffle tests would move from a hook test to a reducer test.
-  </div>
-</div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Files</p>
+            <ul class="text-sm space-y-1">
+              <li><code>src/hooks/useProfileVerification.ts</code></li>
+              <li><code>src/hooks/useGameStateSync.ts</code></li>
+              <li><code>src/components/leksokipos/GameBoard.tsx</code></li>
+            </ul>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Problem</p>
+            <p class="text-sm text-gray-700">Cross-device profile verification (silently disconnect on 404) and game state sync (push foundWords to server) are only wired into Leksokipos. Leksiarxeio and Leksindeseis don't verify profile staleness — a stale profile is never caught until the player loads Leksokipos. Neither hook has test coverage.</p>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-1">Deletion test</p>
+            <p class="text-sm text-gray-700">Delete both hooks — no other file imports them. This is a sign they're <em>not earning their place as platform abstractions</em>; they are game-specific utilities that incidentally live in <code>src/hooks/</code>.</p>
+          </div>
+        </div>
 
-<!-- ═══════════════════════════════════════════════════════════ CARD 5 -->
-<div class="card">
-  <div class="flex items-start justify-between mb-3">
-    <div>
-      <h2>5 — Scoring Calculation: Reducer-Owned vs. Hook-Derived</h2>
-      <p class="text-sm text-gray-500">src/games/leksokipos/hooks/gameReducer.ts · src/games/leksiarxeio/hooks/useLeksiarxeioState.ts</p>
+        <div class="diagram-box mb-6">
+          <div class="flex gap-4 items-start flex-wrap">
+            <div class="text-center">
+              <span class="module-node node-blue">GameBoard (Leksokipos)</span>
+              <div class="text-xs mt-1 space-y-1">
+                <div><span class="module-node node-yellow">useProfileVerification ✓</span></div>
+                <div><span class="module-node node-yellow">useGameStateSync ✓</span></div>
+              </div>
+            </div>
+            <div class="text-center">
+              <span class="module-node node-blue">LeksiarxeioBoard</span>
+              <div class="text-xs mt-1 space-y-1">
+                <div><span class="module-node node-red">useProfileVerification ✗</span></div>
+                <div><span class="module-node node-red">useGameStateSync ✗</span></div>
+              </div>
+            </div>
+            <div class="text-center">
+              <span class="module-node node-blue">ConnectionsBoard</span>
+              <div class="text-xs mt-1 space-y-1">
+                <div><span class="module-node node-red">useProfileVerification ✗</span></div>
+                <div><span class="module-node node-red">useGameStateSync ✗</span></div>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400 mt-3">A stale cross-device profile is never detected if the player only opens Leksiarxeio or Leksindeseis.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Two options</p>
+            <ol class="text-sm text-gray-700 space-y-2 list-decimal list-inside">
+              <li><strong>Promote to platform:</strong> move profile verification into <code>useGameShell</code> (Candidate 3) so every game checks it on mount.</li>
+              <li><strong>Document as intentional:</strong> if cross-device sync is Leksokipos-only by product decision, record it as an ADR so future reviews don't re-raise it.</li>
+            </ol>
+          </div>
+          <div>
+            <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Why speculative</p>
+            <p class="text-sm text-gray-700">This may be a deliberate product decision (only Leksokipos has sync), not accidental friction. Needs a conversation with the maintainer before acting. Either outcome (promote or ADR) is valid.</p>
+          </div>
+        </div>
+      </div>
     </div>
-    <span class="tag badge-spec ml-4 whitespace-nowrap">Speculative</span>
-  </div>
 
-  <p class="text-gray-700 mb-4">Leksokipos accumulates score inside the reducer as part of game state — every <code>SUBMIT_WORD</code> action updates <code>state.score</code>. Leksiarxeio derives its score in the hook via <code>useMemo</code> after the game ends. Both are valid patterns, but they mean the two games answer "what is the current score?" from different layers. This is a minor inconsistency — neither approach is wrong — but it's worth noting as the platform grows.</p>
-
-  <div class="grid grid-cols-2 gap-4 mb-4">
-    <div class="before-box">
-      <p class="text-xs font-semibold text-red-700 mb-2">Leksokipos — score in reducer</p>
-      <pre><code>// gameReducer.ts line 91
-case "SUBMIT_WORD":
-  const pts = scoreWord(word, puzzle);
-  return { ...state, score: state.score + pts, ... }</code></pre>
+    <!-- ═══════════════════════════════════════════════════════
+         TOP RECOMMENDATION
+    ════════════════════════════════════════════════════════ -->
+    <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-6">
+      <h2 class="text-lg font-bold text-indigo-900 mb-3">Top recommendation</h2>
+      <p class="text-sm text-indigo-800 mb-4">
+        <strong>Candidate 2 first, then Candidate 1.</strong> Start with <code>useGameIdentity()</code> — it is the smallest, most self-contained deepening (20 lines, one new test file, immediate consistency win across all three boards). Once that lands, unify the score submission hooks (Candidate 1): the dedup guard and displayName ref pattern are the right things to protect, and having a single hook makes Candidate 3 (the shell) a natural next step.
+      </p>
+      <ol class="text-sm text-indigo-800 space-y-1 list-decimal list-inside">
+        <li><strong>useGameIdentity()</strong> — extract, test, replace 3 copy-paste patterns</li>
+        <li><strong>useScoreSubmission(gameId)</strong> — unify, delete useLeksiarxeioScoreSubmission, merge test files</li>
+        <li><strong>useGameShell()</strong> — compose the above, test leaderboard + auto-post once</li>
+        <li><strong>Candidate 4</strong> — decide: promote profile verification or write an ADR</li>
+      </ol>
     </div>
-    <div class="before-box">
-      <p class="text-xs font-semibold text-red-700 mb-2">Leksiarxeio — score in hook (useMemo)</p>
-      <pre><code>// useLeksiarxeioState.ts line 84
-const score = useMemo(() =>
-  state.status !== "playing"
-    ? scoreLeksiarxeio(state.guesses.length, state.status === "won")
-    : 0,
-  [state.guesses.length, state.status]
-);</code></pre>
-    </div>
+
   </div>
-
-  <p class="text-sm text-gray-600 mb-3">Leksiarxeio's score is a pure function of end-game state (attempt count + won/lost), so deriving it with <code>useMemo</code> is correct. The inconsistency is cosmetic unless you want a unified "how do I find the score?" rule across all games. <strong>Recommendation: leave as-is</strong> unless a third game introduces a third pattern.</p>
-
-  <div class="warn-box">
-    <strong>Speculative:</strong> Only worth addressing if a new game creates a third scoring pattern, or if a unified "game score API" is needed. Don't fix this speculatively.
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════ TOP RECOMMENDATION -->
-<div class="card" style="border-color:#6366f1;background:linear-gradient(135deg,#eef2ff 0%,#f5f3ff 100%);">
-  <h2 class="text-indigo-800 mb-2">Top Recommendation</h2>
-  <p class="text-gray-700 mb-3"><strong>Start with Card 2 — Device Identity Unification.</strong></p>
-  <p class="text-gray-700 mb-3">It's the smallest change with the largest downstream unlock: once Leksiarxeio uses the shared <code>deviceId</code>, the score-submission hook unification (Card 1) becomes much simpler — all three hooks now share the same identity source. And once the hooks are unified, the leaderboard modal consolidation (Card 3) follows naturally.</p>
-
-  <div class="mermaid">
-graph LR
-  A["Card 2<br/>Device Identity"] --> B["Card 1<br/>Score Hooks"]
-  B --> C["Card 3<br/>Leaderboard Modals"]
-  D["Card 4<br/>Shuffle State"] -.->|independent| B
-  style A fill:#6366f1,color:white
-  style B fill:#8b5cf6,color:white
-  style C fill:#a78bfa,color:white
-  style D fill:#e0e7ff,color:#3730a3
-  </div>
-
-  <p class="text-sm text-gray-500 mt-3">Cards 1 → 2 → 3 form a natural sequence. Card 4 can land any time as an independent refactor. Card 5 is a watch item — do not act speculatively.</p>
-</div>
-
-<!-- FOOTER -->
-<p class="text-xs text-gray-400 text-center pb-6">Generated by /improve-codebase-architecture — Greek Bee Platform — 2026-05-25</p>
-</div>
 </body>
 </html>

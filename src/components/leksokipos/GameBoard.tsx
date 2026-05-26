@@ -3,7 +3,8 @@
 // GameBoard -- the top-level client component that composes all game UI pieces.
 // Receives the initial puzzle as a prop (loaded server-side in page.tsx).
 
-import { disconnectProfile, getDisplayName, getOrCreateDeviceId, getProfilePin, isProfileLinked, setDeviceId, setDisplayName as saveDisplayName, setProfileLinked, setProfilePin } from "@/hooks/useGameStore";
+import { disconnectProfile, getOrCreateDeviceId, getProfilePin, isProfileLinked, setDeviceId, setDisplayName as saveDisplayName, setProfileLinked, setProfilePin } from "@/hooks/useGameStore";
+import { useGameIdentity } from "@/hooks/useGameIdentity";
 import { useProfileVerification } from "@/hooks/useProfileVerification";
 import { getSuggestedWords, markSuggested } from "@/hooks/suggestions";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -59,13 +60,8 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   const [justSuggested, setJustSuggested] = useState<string | null>(null);
 
   // Leaderboard + profile
-  const [leaderboardOpen,   setLeaderboardOpen]   = useState(false);
-  const [displayName,       setDisplayNameState]   = useState<string>(
-    () => typeof window === "undefined" ? "" : getDisplayName()
-  );
-  const [deviceId, setDeviceIdState] = useState<string>(
-    () => typeof window === "undefined" ? "" : getOrCreateDeviceId()
-  );
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const { deviceId, displayName, setDeviceId: setDeviceIdState, setDisplayName: setDisplayNameState } = useGameIdentity();
   const [profileLinkedState, setProfileLinkedState] = useState<boolean>(
     () => typeof window === "undefined" ? false : isProfileLinked()
   );

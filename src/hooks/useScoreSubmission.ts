@@ -1,14 +1,17 @@
 "use client";
 
-// useScoreSubmission — score-posting for games that use /api/game-scores.
-// Covers Leksokipos and Leksindeseis — both share the same endpoint + payload shape.
+// useScoreSubmission — unified score-posting hook for all three games.
 //
-// Interface: submit(score) / submitWithName(score, name) — nothing else to know.
+// Interface:
+//   submit(score)                          — Leksokipos + Leksindeseis
+//   submitWithName(score, name)            — Leksokipos + Leksindeseis
+//   submitLength(length, attempts, won)    — Leksiarxeio only
 //
 // Hides:
-//   - "only POST when score strictly increases" dedup guard
-//   - display-name ref pattern (always reads latest name at call time, stable submit ref)
-//   - fetch URL + JSON field names
+//   - "only POST when score strictly increases" dedup guard (submit/submitWithName)
+//   - failed-game → 7-attempt penalty mapping (submitLength)
+//   - display-name ref pattern (always reads latest name at call time, stable fn refs)
+//   - fetch URL + JSON field names per endpoint
 //   - error silencing (handled by postScore)
 //   - no-op when disabled or deviceId unknown
 
@@ -17,7 +20,7 @@ import { useCallback, useEffect, useRef } from "react";
 
 interface UseScoreSubmissionOptions {
   /** Which game's leaderboard to post to. */
-  gameId:      "leksokipos" | "leksindeseis";
+  gameId:      "leksokipos" | "leksindeseis" | "leksiarxeio";
   /** The puzzle date (YYYY-MM-DD) — used as the leaderboard partition key. */
   puzzleDate:  string;
   /** Stable anonymous device identifier. Empty string = skip posting. */
@@ -39,6 +42,8 @@ export function useScoreSubmission({
   useEffect(() => { displayNameRef.current = displayName; }, [displayName]);
 
   const lastPostedRef = useRef(0);
+
+  // ── Leksokipos + Leksindeseis ──────────────────────────────────────────────
 
   const submit = useCallback(
     (score: number) => {
@@ -71,5 +76,22 @@ export function useScoreSubmission({
     [enabled, gameId, puzzleDate, deviceId],
   );
 
-  return { submit, submitWithName };
+  // ── Leksiarxeio ────────────────────────────────────────────────────────────
+
+  /** Post a per-length result. Maps a failed game (won=false) to a 7-attempt penalty. */
+  const submitLength = useCallback(
+    (length: number, attempts: number, won: boolean) => {
+      if (!deviceId) return;
+      postScore("/api/leksiarxeio-scores", {
+        puzzle_date:  puzzleDate,
+        word_length:  length,
+        device_id:    deviceId,
+        attempts:     won ? attempts : 7,
+        display_name: displayNameRef.current || "Ανώνυμος",
+      });
+    },
+    [puzzleDate, deviceId],
+  );
+
+  return { submit, submitWithName, submitLength };
 }
