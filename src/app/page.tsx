@@ -49,6 +49,16 @@ const GAME_RULES = {
       "Νέο παζλ κάθε μέρα!",
     ],
   },
+  leksikastirio: {
+    rulesTitle: "Πώς λειτουργεί — Λεξικαστήριο",
+    bulletIcon: "⚖️",
+    rules: [
+      "Πρότεινε λέξεις που **λείπουν** από τη λίστα ή που **δεν πρέπει** να είναι εκεί.",
+      "Ψήφισε τις προτάσεις άλλων παικτών.",
+      "Οι εγκεκριμένες λέξεις **προστίθενται** ή **αφαιρούνται** από τη λίστα.",
+      "Μπορείς να αναφέρεις λέξεις και μέσα από το παιχνίδι Leksokipos!",
+    ],
+  },
 } as const satisfies Record<keyof typeof GAME_REGISTRY, { rulesTitle: string; bulletIcon: string; rules: readonly string[] }>;
 
 const GAMES = (Object.keys(GAME_REGISTRY) as Array<keyof typeof GAME_REGISTRY>).map(

@@ -34,24 +34,43 @@ export interface Database {
       };
       word_suggestions: {
         Row: {
-          id:          string;
-          word:        string;
-          player_name: string | null;
-          note:        string | null;
-          device_id:   string;
-          status:      "pending" | "accepted" | "rejected";
-          created_at:  string;
+          id:           string;
+          word:         string;
+          player_name:  string | null;
+          note:         string | null;
+          device_id:    string;
+          direction:    "add" | "remove";
+          status:       "pending" | "accepted" | "rejected";
+          created_at:   string;
+          reviewed_at:  string | null;
         };
         Insert: {
-          id?:          string;
-          word:         string;
-          player_name?: string | null;
-          note?:        string | null;
-          device_id:    string;
-          status?:      "pending" | "accepted" | "rejected";
-          created_at?:  string;
+          id?:           string;
+          word:          string;
+          player_name?:  string | null;
+          note?:         string | null;
+          device_id:     string;
+          direction?:    "add" | "remove";
+          status?:       "pending" | "accepted" | "rejected";
+          created_at?:   string;
+          reviewed_at?:  string | null;
         };
         Update: Partial<Database["public"]["Tables"]["word_suggestions"]["Insert"]>;
+      };
+      nomination_votes: {
+        Row: {
+          id:            string;
+          nomination_id: string;
+          device_id:     string;
+          created_at:    string;
+        };
+        Insert: {
+          id?:            string;
+          nomination_id:  string;
+          device_id:      string;
+          created_at?:    string;
+        };
+        Update: Partial<Database["public"]["Tables"]["nomination_votes"]["Insert"]>;
       };
     };
   };
@@ -59,6 +78,12 @@ export interface Database {
 
 export type WordSuggestionInsert =
   Database["public"]["Tables"]["word_suggestions"]["Insert"];
+
+export type WordSuggestionRow =
+  Database["public"]["Tables"]["word_suggestions"]["Row"];
+
+export type NominationVoteInsert =
+  Database["public"]["Tables"]["nomination_votes"]["Insert"];
 
 // Untyped client — tables are typed at the call site via WordSuggestionInsert.
 // Using the Database generic on createClient requires matching supabase-js

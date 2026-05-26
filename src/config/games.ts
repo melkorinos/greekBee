@@ -28,6 +28,14 @@ export const GAME_REGISTRY = {
     href:        "/leksindeseis",
     wip:         true,
   },
+  leksikastirio: {
+    label:       "⚖️ Λεξικαστήριο",
+    emoji:       "⚖️",
+    title:       "Λεξικαστήριο",
+    description: "Ψηφίστε λέξεις για προσθήκη ή αφαίρεση από τη λίστα.",
+    href:        "/leksikastirio",
+    wip:         false,
+  },
 } as const;
 
 /** The ID of any registered Game. */

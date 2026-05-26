@@ -17,7 +17,7 @@ import { MissedWordsList } from "./MissedWordsList";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import type { ProfileMatch } from "./LeaderboardModal";
 import { ScoreBar } from "./ScoreBar";
-import { SuggestWordModal } from "./SuggestWordModal";
+import { NominationModal } from "@/components/shared/NominationModal";
 import { WordInput } from "./WordInput";
 import { btnSecondary } from "./styles";
 import { useGameState } from "@/games/leksokipos/hooks/useGameState";
@@ -159,12 +159,10 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
     setJustSuggested(null);
   }
 
-  function handleSuggestSuccess() {
-    if (suggestWord) {
-      markSuggested(suggestWord);
-      setSuggestedWords((prev) => new Set([...prev, suggestWord.toLowerCase()]));
-      setJustSuggested(suggestWord.toLowerCase());
-    }
+  function handleSuggestSuccess(word: string) {
+    markSuggested(word);
+    setSuggestedWords((prev) => new Set([...prev, word.toLowerCase()]));
+    setJustSuggested(word.toLowerCase());
     setSuggestWord(null);
   }
 
@@ -230,8 +228,9 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
             />
           )}
 
-          <SuggestWordModal
+          <NominationModal
             word={suggestWord ?? ""}
+            direction="add"
             isOpen={suggestWord !== null}
             onClose={() => setSuggestWord(null)}
             onSuccess={handleSuggestSuccess}

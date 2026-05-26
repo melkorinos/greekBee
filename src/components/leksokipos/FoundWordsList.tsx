@@ -1,13 +1,16 @@
-﻿"use client";
+"use client";
 
 // FoundWordsList — scrollable list of all words the player has found.
 // Pangrams are highlighted in yellow since they're a special achievement.
 // Optionally shows a "Παραίτηση" give-up button right-aligned in the heading row.
+// Each word has a flag icon so the player can nominate it for removal at any time.
 
 import { btnGiveUp, foundWordClass, foundWordPangramClass } from "./styles";
 
+import { NominationModal } from "@/components/shared/NominationModal";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { isPangram } from "@/games/leksokipos/lib/pangram";
+import { getReportedWords, markReported } from "@/hooks/suggestions";
 import { useMemo, useState } from "react";
 
 interface FoundWordsListProps {
@@ -30,27 +33,29 @@ const styles = {
   confirmText: "text-xs text-stone-500",
   confirmYes:  "text-xs font-semibold text-red-600 border border-red-300 rounded-full px-3 py-1 hover:bg-red-50 active:bg-red-100 transition-colors",
   confirmNo:   "text-xs text-stone-500 border border-stone-200 rounded-full px-3 py-1 hover:bg-stone-100 transition-colors",
+  wordRow:     "flex items-center gap-1",
+  flagActive:  "text-red-400 text-xs leading-none hover:text-red-600 transition-colors",
+  flagIdle:    "text-stone-300 text-xs leading-none hover:text-red-400 transition-colors",
 };
 
 export function FoundWordsList({ words, puzzle, onGiveUp, givenUp }: FoundWordsListProps) {
-  // Sort alphabetically for easy scanning — memoised to avoid re-sorting on every
-  // ADD_LETTER render (GameBoard re-renders on each keystroke).
   const sorted = useMemo(() => [...words].sort(), [words]);
 
-  // Inline confirmation state — avoids an extra modal for a simple destructive action
   const [confirming, setConfirming] = useState(false);
+  const [reportWord, setReportWord] = useState<string | null>(null);
+  // Mirror of the localStorage reported set so flag icons update without a page reload.
+  const [reported, setReported] = useState<Set<string>>(() =>
+    new Set(getReportedWords()),
+  );
 
-  function handleGiveUpClick() {
-    setConfirming(true);
+  function handleFlagClick(word: string) {
+    if (!reported.has(word)) setReportWord(word);
   }
 
-  function handleConfirmYes() {
-    setConfirming(false);
-    onGiveUp?.();
-  }
-
-  function handleConfirmNo() {
-    setConfirming(false);
+  function handleReportSuccess(word: string) {
+    markReported(word);
+    setReported((prev) => new Set([...prev, word]));
+    setReportWord(null);
   }
 
   const showGiveUpButton = !!onGiveUp && !givenUp;
@@ -66,7 +71,7 @@ export function FoundWordsList({ words, puzzle, onGiveUp, givenUp }: FoundWordsL
         {showGiveUpButton && !confirming && (
           <button
             data-testid="btn-give-up"
-            onClick={handleGiveUpClick}
+            onClick={() => setConfirming(true)}
             className={btnGiveUp}
           >
             Παραίτηση
@@ -74,20 +79,19 @@ export function FoundWordsList({ words, puzzle, onGiveUp, givenUp }: FoundWordsL
         )}
       </div>
 
-      {/* Inline confirmation row — replaces the button until player decides */}
       {showGiveUpButton && confirming && (
         <div className={styles.confirmRow}>
           <span className={styles.confirmText}>Είσαι σίγουρος/η;</span>
           <button
             data-testid="btn-give-up-confirm"
-            onClick={handleConfirmYes}
+            onClick={() => { setConfirming(false); onGiveUp?.(); }}
             className={styles.confirmYes}
           >
             Ναι, παραιτούμαι
           </button>
           <button
             data-testid="btn-give-up-cancel"
-            onClick={handleConfirmNo}
+            onClick={() => setConfirming(false)}
             className={styles.confirmNo}
           >
             Άκυρο
@@ -102,14 +106,35 @@ export function FoundWordsList({ words, puzzle, onGiveUp, givenUp }: FoundWordsL
           {sorted.map((word) => (
             <li
               key={word}
-              data-testid={isPangram(word, puzzle) ? "found-word-pangram" : "found-word"}
-              className={isPangram(word, puzzle) ? foundWordPangramClass : foundWordClass}
+              className={styles.wordRow}
             >
-              {word}
+              <span
+                data-testid={isPangram(word, puzzle) ? "found-word-pangram" : "found-word"}
+                className={isPangram(word, puzzle) ? foundWordPangramClass : foundWordClass}
+              >
+                {word}
+              </span>
+              <button
+                onClick={() => handleFlagClick(word)}
+                aria-label={`Αναφορά λέξης ${word}`}
+                data-testid="flag-found-word"
+                className={reported.has(word) ? styles.flagActive : styles.flagIdle}
+                title={reported.has(word) ? "Έχεις ήδη αναφέρει αυτή τη λέξη" : "Αναφορά λέξης"}
+              >
+                ⚑
+              </button>
             </li>
           ))}
         </ul>
       )}
+
+      <NominationModal
+        word={reportWord ?? ""}
+        direction="remove"
+        isOpen={reportWord !== null}
+        onClose={() => setReportWord(null)}
+        onSuccess={handleReportSuccess}
+      />
     </div>
   );
 }

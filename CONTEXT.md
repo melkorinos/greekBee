@@ -171,6 +171,42 @@ _Avoid_: lives, errors, chances
 
 ---
 
+### Leksikastirio
+
+**Leksikastirio**:
+The community word-court section of the platform (λεξικό + δικαστήριο). A non-game section where players vote on Nominations and admins triage them. Accessible from the Shell nav alongside the three Games.
+_Avoid_: word review, community section, suggestions page
+
+**Nomination**:
+A player-submitted proposal to either add a word to or remove a word from the master word list (`words-el.json`). Every Nomination has a Direction, a submitter DeviceId, an optional player name, an optional note, and a status. Stored in the `word_suggestions` Supabase table.
+_Avoid_: suggestion (too narrow — add-only), report (too narrow — remove-only), submission (overloaded)
+
+**Direction**:
+The intent of a Nomination — `"add"` (word should enter the word list) or `"remove"` (word should leave it). A column on the `word_suggestions` table.
+_Avoid_: type, kind, action
+
+**Nomination Status**:
+The lifecycle state of a Nomination: `"pending"` (awaiting admin triage), `"accepted"` (approved — CLI will apply the change), `"rejected"` (dismissed by admin).
+_Avoid_: state, result
+
+**Vote**:
+A player's endorsement of a Nomination. Stored in the `nomination_votes` table as `(nomination_id, device_id)`. Counts are visible to all players; a player's own vote is visually highlighted. No unique-per-device constraint is enforced yet — double-vote prevention is deferred.
+_Avoid_: like, upvote
+
+**Nomination Card**:
+The UI unit representing one Nomination in the Leksikastirio tabs. Always shows: word, submitter name (if provided), note, vote count, vote button. In Admin Mode, also shows Approve and Reject buttons.
+_Avoid_: nomination row, item
+
+**Admin Mode**:
+A privileged view of Leksikastirio activated by `?admin=<secret>` in the URL, where `<secret>` matches the `ADMIN_SECRET` environment variable. Renders Approve/Reject controls on each Nomination Card. Not linked from the nav.
+_Avoid_: admin panel, admin page, dashboard
+
+**Flag**:
+The in-game Leksokipos action by which a player nominates a word for removal. A flag icon appears next to each word in the FoundWordsList (live during play) and MissedWordsList (after give-up). Clicking it opens the NominationModal with `direction: "remove"`.
+_Avoid_: report, mark
+
+---
+
 ## Example dialogue
 
 > **Player**: "I got a pangram but my rank didn't change."

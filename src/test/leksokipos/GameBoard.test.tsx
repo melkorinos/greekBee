@@ -178,7 +178,7 @@ describe("Word suggestion flow", () => {
     const { user } = setup();
     await user.keyboard("panda{Enter}");
     await user.click(screen.getByTestId("feedback-suggest-btn"));
-    expect(screen.getByTestId("suggest-modal")).toBeInTheDocument();
+    expect(screen.getByTestId("nomination-modal")).toBeInTheDocument();
   });
 
   it("shows confirmation feedback after a successful suggestion", async () => {
@@ -186,7 +186,7 @@ describe("Word suggestion flow", () => {
     const { user } = setup();
     await user.keyboard("panda{Enter}");
     await user.click(screen.getByTestId("feedback-suggest-btn"));
-    await user.click(screen.getByTestId("suggest-modal-submit"));
+    await user.click(screen.getByTestId("nomination-modal-submit"));
     // modal closes immediately on success; feedback area shows confirmation
     await waitFor(() =>
       expect(screen.getByTestId("feedback-just-suggested")).toBeInTheDocument(),
