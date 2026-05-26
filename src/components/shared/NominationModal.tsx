@@ -70,11 +70,6 @@ export function NominationModal({
         }),
       });
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        if (res.status === 400 && body?.error === "word_not_in_list") {
-          setStatus("error");
-          return;
-        }
         throw new Error("server error");
       }
       setStatus("success");
@@ -187,9 +182,7 @@ export function NominationModal({
 
             {status === "error" && (
               <p className="text-xs text-red-500 mt-2" data-testid="nomination-modal-error">
-                {direction === "remove"
-                  ? "Η λέξη δεν βρέθηκε στη λίστα μας."
-                  : "Κάτι πήγε στραβά. Δοκίμασε ξανά."}
+                Κάτι πήγε στραβά. Δοκίμασε ξανά.
               </p>
             )}
 

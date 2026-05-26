@@ -4,7 +4,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseClient } from "@/lib/supabase";
-import wordsEl from "@/data/words-el.json";
 
 export const runtime = "edge";
 
@@ -97,14 +96,6 @@ export async function POST(req: NextRequest) {
   }
 
   const normalised = word.toLowerCase().trim();
-
-  // Removal nominations must target a word that actually exists in the word list.
-  if (direction === "remove") {
-    const wordList = wordsEl as string[];
-    if (!wordList.includes(normalised)) {
-      return NextResponse.json({ error: "word_not_in_list" }, { status: 400 });
-    }
-  }
 
   const supabase = getSupabaseClient();
 
