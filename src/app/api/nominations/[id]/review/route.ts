@@ -39,7 +39,7 @@ export async function POST(
 
   const newStatus = action === "approve" ? "accepted" : "rejected";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from("word_suggestions") as any)
+  const { error } = await (supabase.from("nominations") as any)
     .update({ status: newStatus })
     .eq("id", id);
 

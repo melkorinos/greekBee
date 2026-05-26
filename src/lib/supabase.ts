@@ -1,7 +1,7 @@
 // supabase.ts — singleton Supabase client for browser usage.
 //
 // Uses the anon (public) key. Row Level Security on each table controls
-// what the anon role is allowed to do — currently insert-only on word_suggestions.
+// what the anon role is allowed to do — currently insert-only on nominations.
 //
 // Environment variables (set in .env.local for local dev; Vercel dashboard for prod):
 //   NEXT_PUBLIC_SUPABASE_URL
@@ -32,7 +32,7 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["scores"]["Insert"]>;
       };
-      word_suggestions: {
+      nominations: {
         Row: {
           id:           string;
           word:         string;
@@ -55,7 +55,7 @@ export interface Database {
           created_at?:   string;
           reviewed_at?:  string | null;
         };
-        Update: Partial<Database["public"]["Tables"]["word_suggestions"]["Insert"]>;
+        Update: Partial<Database["public"]["Tables"]["nominations"]["Insert"]>;
       };
       nomination_votes: {
         Row: {
@@ -77,10 +77,10 @@ export interface Database {
 }
 
 export type WordSuggestionInsert =
-  Database["public"]["Tables"]["word_suggestions"]["Insert"];
+  Database["public"]["Tables"]["nominations"]["Insert"];
 
 export type WordSuggestionRow =
-  Database["public"]["Tables"]["word_suggestions"]["Row"];
+  Database["public"]["Tables"]["nominations"]["Row"];
 
 export type NominationVoteInsert =
   Database["public"]["Tables"]["nomination_votes"]["Insert"];

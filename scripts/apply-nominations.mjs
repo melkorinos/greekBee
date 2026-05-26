@@ -10,7 +10,7 @@
 //   SUPABASE_SERVICE_ROLE_KEY
 //
 // What it does:
-//   1. Fetches all word_suggestions rows where status='accepted' and reviewed_at IS NULL
+//   1. Fetches all nominations rows where status='accepted' and reviewed_at IS NULL
 //   2. For each row:
 //      - direction='add'    → appends the normalised word to src/data/words-el.json
 //      - direction='remove' → removes the word from src/data/words-el.json
@@ -64,7 +64,7 @@ function writeWords(words) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 const { data: nominations, error } = await supabase
-  .from("word_suggestions")
+  .from("nominations")
   .select("id, word, direction")
   .eq("status", "accepted")
   .is("reviewed_at", null);
@@ -120,7 +120,7 @@ if (!isDryRun) {
   // Mark all nominations as reviewed regardless of skip/add/remove.
   const ids = nominations.map((n) => n.id);
   await supabase
-    .from("word_suggestions")
+    .from("nominations")
     .update({ reviewed_at: new Date().toISOString() })
     .in("id", ids);
 

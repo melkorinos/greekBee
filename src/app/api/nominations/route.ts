@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   // Fetch pending nominations for this direction with their vote counts.
   // Supabase doesn't do aggregates inline, so we fetch votes separately and merge.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: nominations, error: nomError } = await (supabase.from("word_suggestions") as any)
+  const { data: nominations, error: nomError } = await (supabase.from("nominations") as any)
     .select("id, word, player_name, note, created_at")
     .eq("direction", direction)
     .eq("status", "pending")
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
   const supabase = getSupabaseClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from("word_suggestions") as any).insert({
+  const { error } = await (supabase.from("nominations") as any).insert({
     word:        normalised,
     direction,
     player_name: playerName ?? null,
