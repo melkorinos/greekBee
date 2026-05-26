@@ -86,7 +86,8 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
 
   // Score submission -- all posting logic lives in the hook.
   const { submit: postScore, submitWithName: postScoreWithName } = useScoreSubmission({
-    puzzleId:    leaderboardPuzzleId,
+    gameId:      "leksokipos",
+    puzzleDate:  leaderboardPuzzleId,
     deviceId,
     displayName,
     enabled:     isDaily,

@@ -1,37 +1,43 @@
 "use client";
 
-// useScoreSubmission — score-posting lifecycle for daily Leksokipos puzzles.
+// useScoreSubmission — score-posting for games that use /api/game-scores.
+// Covers Leksokipos and Leksindeseis — both share the same endpoint + payload shape.
 //
-// Interface: submit(score) — one call, nothing else to know.
+// Interface: submit(score) / submitWithName(score, name) — nothing else to know.
 //
 // Hides:
-//   - "only POST when score strictly increases" guard
-//   - display-name ref pattern (via useScorePost)
+//   - "only POST when score strictly increases" dedup guard
+//   - display-name ref pattern (always reads latest name at call time, stable submit ref)
 //   - fetch URL + JSON field names
 //   - error silencing (handled by postScore)
-//   - no-op when puzzle is not daily or deviceId is unknown
+//   - no-op when disabled or deviceId unknown
 
-import { useCallback, useRef } from "react";
-import { useScorePost } from "./useScorePost";
+import { postScore } from "@/lib/postScore";
+import { useCallback, useEffect, useRef } from "react";
 
 interface UseScoreSubmissionOptions {
-  /** The puzzle date string used as the leaderboard key (YYYY-MM-DD). */
-  puzzleId:    string;
+  /** Which game's leaderboard to post to. */
+  gameId:      "leksokipos" | "leksindeseis";
+  /** The puzzle date (YYYY-MM-DD) — used as the leaderboard partition key. */
+  puzzleDate:  string;
   /** Stable anonymous device identifier. Empty string = skip posting. */
   deviceId:    string;
   /** Current display name — may change when the player saves a new name. */
   displayName: string;
-  /** When false (e.g. custom puzzle) no requests are ever made. */
-  enabled:     boolean;
+  /** When false (e.g. custom puzzle) no requests are ever made. Default: true. */
+  enabled?:    boolean;
 }
 
 export function useScoreSubmission({
-  puzzleId,
+  gameId,
+  puzzleDate,
   deviceId,
   displayName,
-  enabled,
+  enabled = true,
 }: UseScoreSubmissionOptions) {
-  const { post } = useScorePost(displayName);
+  const displayNameRef = useRef(displayName);
+  useEffect(() => { displayNameRef.current = displayName; }, [displayName]);
+
   const lastPostedRef = useRef(0);
 
   const submit = useCallback(
@@ -39,28 +45,30 @@ export function useScoreSubmission({
       if (!enabled || !deviceId) return;
       if (score <= 0 || score <= lastPostedRef.current) return;
       lastPostedRef.current = score;
-      post("/api/game-scores", {
-        game_id:     "leksokipos",
-        puzzle_date: puzzleId,
-        device_id:   deviceId,
+      postScore("/api/game-scores", {
+        game_id:      gameId,
+        puzzle_date:  puzzleDate,
+        device_id:    deviceId,
         score,
+        display_name: displayNameRef.current || "Ανώνυμος",
       });
     },
-    [enabled, puzzleId, deviceId, post],
+    [enabled, gameId, puzzleDate, deviceId],
   );
 
   /** Force-post with a new name, bypassing the strictly-increasing guard. */
   const submitWithName = useCallback(
     (score: number, name: string) => {
       if (!enabled || !deviceId || score <= 0) return;
-      post("/api/game-scores", {
-        game_id:     "leksokipos",
-        puzzle_date: puzzleId,
-        device_id:   deviceId,
+      postScore("/api/game-scores", {
+        game_id:      gameId,
+        puzzle_date:  puzzleDate,
+        device_id:    deviceId,
         score,
-      }, name || "Ανώνυμος");
+        display_name: name || "Ανώνυμος",
+      });
     },
-    [enabled, puzzleId, deviceId, post],
+    [enabled, gameId, puzzleDate, deviceId],
   );
 
   return { submit, submitWithName };

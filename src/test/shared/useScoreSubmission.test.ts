@@ -1,4 +1,5 @@
-// useScoreSubmission.test.ts — unit tests for the Leksokipos score-posting hook.
+// useScoreSubmission.test.ts — unit tests for the unified score-posting hook.
+// Covers both Leksokipos and Leksindeseis game modes.
 //
 // fetch is mocked per-test via vi.spyOn.
 
@@ -17,7 +18,8 @@ function mockFetch() {
 }
 
 const BASE = {
-  puzzleId:    "2026-05-20",
+  gameId:      "leksokipos" as const,
+  puzzleDate:  "2026-05-20",
   deviceId:    "device-abc",
   displayName: "Άννα",
   enabled:     true,
@@ -41,6 +43,19 @@ describe("useScoreSubmission — submit()", () => {
     expect(body.score).toBe(10);
   });
 
+  it("sends game_id leksindeseis when configured for Leksindeseis", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() =>
+      useScoreSubmission({ ...BASE, gameId: "leksindeseis", puzzleDate: "2026-05-22" })
+    );
+
+    await act(async () => { result.current.submit(4); });
+
+    const body = JSON.parse((spy.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body.game_id).toBe("leksindeseis");
+    expect(body.puzzle_date).toBe("2026-05-22");
+  });
+
   it("does not POST when enabled is false", async () => {
     const spy = mockFetch();
     const { result } = renderHook(() => useScoreSubmission({ ...BASE, enabled: false }));
@@ -48,6 +63,21 @@ describe("useScoreSubmission — submit()", () => {
     await act(async () => { result.current.submit(10); });
 
     expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("defaults enabled to true when omitted", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission({
+      gameId:      "leksokipos",
+      puzzleDate:  "2026-05-20",
+      deviceId:    "device-abc",
+      displayName: "Άννα",
+      // enabled intentionally omitted — default is true
+    }));
+
+    await act(async () => { result.current.submit(10); });
+
+    expect(spy).toHaveBeenCalledOnce();
   });
 
   it("does not POST when deviceId is empty", async () => {
@@ -99,6 +129,23 @@ describe("useScoreSubmission — submit()", () => {
     const body = JSON.parse(init.body as string);
     expect(body.display_name).toBe("Ανώνυμος");
   });
+
+  it("uses the latest displayName via ref without re-creating submit", async () => {
+    const spy = mockFetch();
+    const { result, rerender } = renderHook(
+      (props: { displayName: string }) => useScoreSubmission({ ...BASE, ...props }),
+      { initialProps: { displayName: "Παλιό" } },
+    );
+
+    const submitBefore = result.current.submit;
+    rerender({ displayName: "Νέο" });
+
+    await act(async () => { result.current.submit(10); });
+
+    const body = JSON.parse((spy.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body.display_name).toBe("Νέο");
+    expect(result.current.submit).toBe(submitBefore);
+  });
 });
 
 describe("useScoreSubmission — submitWithName()", () => {
@@ -106,7 +153,6 @@ describe("useScoreSubmission — submitWithName()", () => {
     const spy = mockFetch();
     const { result } = renderHook(() => useScoreSubmission(BASE));
 
-    // Don't call submit first — submitWithName should always fire
     await act(async () => { result.current.submitWithName(10, "Νέος"); });
 
     expect(spy).toHaveBeenCalledOnce();

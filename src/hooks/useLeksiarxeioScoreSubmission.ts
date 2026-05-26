@@ -6,13 +6,13 @@
 //
 // Hides:
 //   - failed-game → 7-attempts penalty mapping
-//   - display-name ref pattern (via useScorePost)
+//   - display-name ref pattern (latest name always used, stable submit ref)
 //   - fetch URL + JSON field names
 //   - error silencing (handled by postScore)
 //   - no-op when deviceId is unknown
 
-import { useCallback } from "react";
-import { useScorePost } from "./useScorePost";
+import { postScore } from "@/lib/postScore";
+import { useCallback, useEffect, useRef } from "react";
 
 interface UseLeksiarxeioScoreSubmissionOptions {
   /** The game date (YYYY-MM-DD) — used as the leaderboard partition key. */
@@ -28,19 +28,21 @@ export function useLeksiarxeioScoreSubmission({
   deviceId,
   displayName,
 }: UseLeksiarxeioScoreSubmissionOptions) {
-  const { post } = useScorePost(displayName);
+  const displayNameRef = useRef(displayName);
+  useEffect(() => { displayNameRef.current = displayName; }, [displayName]);
 
   const submit = useCallback(
     (length: number, attempts: number, won: boolean) => {
       if (!deviceId) return;
-      post("/api/leksiarxeio-scores", {
-        puzzle_date: today,
-        word_length: length,
-        device_id:   deviceId,
-        attempts:    won ? attempts : 7,
+      postScore("/api/leksiarxeio-scores", {
+        puzzle_date:  today,
+        word_length:  length,
+        device_id:    deviceId,
+        attempts:     won ? attempts : 7,
+        display_name: displayNameRef.current || "Ανώνυμος",
       });
     },
-    [today, deviceId, post],
+    [today, deviceId],
   );
 
   return { submit };

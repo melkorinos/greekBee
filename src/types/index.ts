@@ -9,7 +9,7 @@ export type Language = "el";
 // ─── Platform ────────────────────────────────────────────────────────────────
 
 /** All games hosted on this platform. */
-export type GameId = "leksokipos" | "leksiarxeio" | "leksiarxeio-identity" | "leksindeseis" | "suggestions";
+export type GameId = "leksokipos" | "leksiarxeio" | "leksindeseis" | "suggestions";
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 

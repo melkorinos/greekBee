@@ -132,6 +132,27 @@ export function setProfilePin(pin: string): void {
 }
 
 /**
+ * One-time migration for existing Leksiarxeio players.
+ * Before the device-identity unification, Leksiarxeio stored its own identity
+ * in a "leksiarxeio-identity" slice separate from the platform deviceId.
+ * If this device has that legacy slice but no unified deviceId yet, this function
+ * promotes the legacy identity to the unified envelope fields.
+ * Safe to call repeatedly — no-op once the unified deviceId exists.
+ */
+export function migrateLeksiarxeioIdentity(): void {
+  if (typeof window === "undefined") return;
+  const envelope = readEnvelope();
+  if (envelope["deviceId"]) return;
+  const legacy = envelope["leksiarxeio-identity"] as { deviceId?: string; displayName?: string } | undefined;
+  if (!legacy?.deviceId) return;
+  writeEnvelope({
+    ...envelope,
+    deviceId:    legacy.deviceId,
+    displayName: envelope["displayName"] ?? legacy.displayName ?? "",
+  });
+}
+
+/**
  * Unlink the cross-device profile from this device.
  * Generates a fresh anonymous deviceId so the player can continue anonymously.
  */

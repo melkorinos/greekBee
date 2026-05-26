@@ -8,6 +8,7 @@ import {
   getDisplayName,
   getOrCreateDeviceId,
   isProfileLinked,
+  migrateLeksiarxeioIdentity,
   readSlice,
   setDeviceId,
   setDisplayName,
@@ -226,6 +227,66 @@ describe("setDeviceId", () => {
     writeSlice("leksokipos", { score: 5 });
     setDeviceId("new-id");
     expect(readSlice("leksokipos")).toEqual({ score: 5 });
+  });
+});
+
+// ── migrateLeksiarxeioIdentity ────────────────────────────────────────────────
+
+describe("migrateLeksiarxeioIdentity", () => {
+  const LEGACY_ID = "11111111-2222-4333-8444-555555555555";
+
+  it("is a no-op when unified deviceId already exists", () => {
+    const existing = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+    localStorage.setItem("wordgames:state", JSON.stringify({ deviceId: existing }));
+    migrateLeksiarxeioIdentity();
+    const envelope = JSON.parse(localStorage.getItem("wordgames:state")!);
+    expect(envelope.deviceId).toBe(existing);
+  });
+
+  it("promotes leksiarxeio-identity.deviceId to unified deviceId", () => {
+    localStorage.setItem("wordgames:state", JSON.stringify({
+      "leksiarxeio-identity": { deviceId: LEGACY_ID, displayName: "" },
+    }));
+    migrateLeksiarxeioIdentity();
+    const envelope = JSON.parse(localStorage.getItem("wordgames:state")!);
+    expect(envelope.deviceId).toBe(LEGACY_ID);
+  });
+
+  it("migrates displayName from legacy slice when no unified displayName exists", () => {
+    localStorage.setItem("wordgames:state", JSON.stringify({
+      "leksiarxeio-identity": { deviceId: LEGACY_ID, displayName: "Νίκος" },
+    }));
+    migrateLeksiarxeioIdentity();
+    const envelope = JSON.parse(localStorage.getItem("wordgames:state")!);
+    expect(envelope.displayName).toBe("Νίκος");
+  });
+
+  it("does not overwrite a pre-existing unified displayName", () => {
+    localStorage.setItem("wordgames:state", JSON.stringify({
+      displayName: "Κώστας",
+      "leksiarxeio-identity": { deviceId: LEGACY_ID, displayName: "Νίκος" },
+    }));
+    migrateLeksiarxeioIdentity();
+    const envelope = JSON.parse(localStorage.getItem("wordgames:state")!);
+    expect(envelope.displayName).toBe("Κώστας");
+  });
+
+  it("is a no-op when no legacy identity exists at all", () => {
+    localStorage.setItem("wordgames:state", JSON.stringify({ "leksiarxeio": {} }));
+    migrateLeksiarxeioIdentity();
+    const envelope = JSON.parse(localStorage.getItem("wordgames:state")!);
+    expect(envelope.deviceId).toBeUndefined();
+  });
+
+  it("does not disturb existing game slices", () => {
+    const gameData = { "2026-05-25-wordle-5": { status: "won" } };
+    localStorage.setItem("wordgames:state", JSON.stringify({
+      "leksiarxeio": gameData,
+      "leksiarxeio-identity": { deviceId: LEGACY_ID, displayName: "" },
+    }));
+    migrateLeksiarxeioIdentity();
+    const envelope = JSON.parse(localStorage.getItem("wordgames:state")!);
+    expect(envelope["leksiarxeio"]).toEqual(gameData);
   });
 });
 

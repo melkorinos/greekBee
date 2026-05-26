@@ -10,7 +10,7 @@ import { ConnectionsLeaderboardModal }      from "@/components/leksindeseis/Conn
 import { FeedbackBanner }                  from "@/components/shared/FeedbackBanner";
 import { GroupGrid }                       from "@/components/leksindeseis/GroupGrid";
 import { getDisplayName, getOrCreateDeviceId, setDisplayName } from "@/hooks/useGameStore";
-import { useLeksindeseisScoreSubmission }  from "@/hooks/useLeksindeseisScoreSubmission";
+import { useScoreSubmission }              from "@/hooks/useScoreSubmission";
 import { useLeksindeseisState }            from "@/games/leksindeseis/hooks/useLeksindeseisState";
 
 interface ConnectionsBoardProps {
@@ -89,7 +89,8 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
   }
 
   // ── Score submission ─────────────────────────────────────────────────────────
-  const { submit: postScore, submitWithName } = useLeksindeseisScoreSubmission({
+  const { submit: postScore, submitWithName } = useScoreSubmission({
+    gameId:      "leksindeseis",
     puzzleDate:  puzzle.date,
     deviceId:    identity.deviceId,
     displayName: identity.displayName,

@@ -5,7 +5,13 @@
 // Wires physical keyboard events and leaderboard score submission.
 
 import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
-import { readSlice, writeSlice } from "@/hooks/useGameStore";
+import {
+  getDisplayName,
+  getOrCreateDeviceId,
+  migrateLeksiarxeioIdentity,
+  readSlice,
+  setDisplayName as saveDisplayName,
+} from "@/hooks/useGameStore";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
@@ -20,20 +26,6 @@ import { useLeksiarxeioState } from "@/games/leksiarxeio/hooks/useLeksiarxeioSta
 const GREEK_LETTER = /^[α-ωά-ώΑ-ΩΆ-Ώ]$/i;
 
 const LENGTHS: LeksiarxeioLength[] = [4, 5, 6, 7, 8];
-
-// ── Persistence slice for identity (device + display name) ────────────────────
-interface LeksiarxeioIdentitySlice {
-  deviceId:    string;
-  displayName: string;
-}
-
-function getOrCreateDeviceId(): string {
-  const existing = readSlice<LeksiarxeioIdentitySlice>("leksiarxeio-identity");
-  if (existing?.deviceId) return existing.deviceId;
-  const id = crypto.randomUUID();
-  writeSlice("leksiarxeio-identity", { deviceId: id, displayName: "" });
-  return id;
-}
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -194,12 +186,11 @@ export function LeksiarxeioBoard({ puzzles, wordLists, today, onOpenLeaderboardR
   const completedRef = useRef(new Set<LeksiarxeioLength>());
   const [, setCompletedLengths] = useState<Set<LeksiarxeioLength>>(new Set());
 
-  // Hydrate identity on mount
+  // Hydrate identity on mount — migrate legacy leksiarxeio-identity slice first
   useEffect(() => {
-    const id   = getOrCreateDeviceId();
-    const sl   = readSlice<LeksiarxeioIdentitySlice>("leksiarxeio-identity");
-    setDeviceId(id);
-    setDisplayName(sl?.displayName ?? "");
+    migrateLeksiarxeioIdentity();
+    setDeviceId(getOrCreateDeviceId());
+    setDisplayName(getDisplayName());
   }, []);
 
   // Restore already-completed lengths from persistence so auto-advance skips them.
@@ -222,7 +213,7 @@ export function LeksiarxeioBoard({ puzzles, wordLists, today, onOpenLeaderboardR
 
   function handleSaveName(name: string) {
     setDisplayName(name);
-    writeSlice<LeksiarxeioIdentitySlice>("leksiarxeio-identity", { deviceId, displayName: name });
+    saveDisplayName(name);
   }
 
   // Score submission -- all posting logic lives in the hook.
