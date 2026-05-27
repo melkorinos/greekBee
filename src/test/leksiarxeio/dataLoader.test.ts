@@ -1,68 +1,137 @@
 // Tests for the Leksiarxeio data loader.
-// Verifies: daily answer is in the word list, determinism, and multi-length support.
+// Verifies: community queue consumption, static fallback, determinism, and multi-length support.
+// Supabase is mocked so tests cover both the community path and the static fallback path.
 
-import {
-  LEKSIARXEIO_LENGTHS,
-  getAllTodaysLeksiarxeioPuzzles,
-  getTodayDateString,
-  getTodaysLeksiarxeioPuzzle,
-  getValidWords,
-} from "@/data/leksiarxeio";
-import { describe, expect, it } from "vitest";
+import { LEKSIARXEIO_LENGTHS, getAllTodaysLeksiarxeioPuzzles, getTodayDateString, getValidWords } from "@/data/leksiarxeio";
+import { describe, expect, it, vi } from "vitest";
 
-describe("getTodaysLeksiarxeioPuzzle", () => {
-  it("returns a puzzle with the correct length", () => {
-    const p = getTodaysLeksiarxeioPuzzle("2026-01-01", 5);
-    expect(p.answer).toHaveLength(5);
-    expect(p.length).toBe(5);
-  });
+// ── Supabase mock (returns error → triggers static fallback by default) ────────
 
-  it("answer is in the valid-words list", () => {
-    const words  = getValidWords(5);
-    const puzzle = getTodaysLeksiarxeioPuzzle("2026-01-01", 5);
-    expect(words).toContain(puzzle.answer);
-  });
+type ChainResult = { data?: unknown; error?: { message: string } | null };
 
-  it("is deterministic — same date always returns the same answer", () => {
-    const a = getTodaysLeksiarxeioPuzzle("2026-05-12", 5);
-    const b = getTodaysLeksiarxeioPuzzle("2026-05-12", 5);
-    expect(a.answer).toBe(b.answer);
-    expect(a.id).toBe(b.id);
-  });
+function makeChain(result: ChainResult) {
+  const chain: Record<string, unknown> = {};
+  const ret = () => chain;
+  chain.select = ret;
+  chain.eq     = ret;
+  chain.order  = ret;
+  chain.limit  = ret;
+  chain.delete = ret;
+  chain.update = ret;
+  chain.single = () => Promise.resolve(result);
+  chain.then   = (resolve: (v: ChainResult) => void) => resolve(result);
+  return chain;
+}
 
-  it("returns a different answer on a different date", () => {
-    const a = getTodaysLeksiarxeioPuzzle("2026-01-01", 5);
-    const b = getTodaysLeksiarxeioPuzzle("2026-01-02", 5);
-    expect(a.id).not.toBe(b.id);
-  });
+let _mockResult: ChainResult = { data: null, error: { message: "no rows" } };
 
-  it("puzzle id encodes the date and length", () => {
-    const p = getTodaysLeksiarxeioPuzzle("2026-03-15", 5);
-    expect(p.id).toBe("2026-03-15-wordle-5");
-    expect(p.date).toBe("2026-03-15");
-  });
+vi.mock("@/lib/supabase", () => ({
+  getSupabaseClient: () => ({
+    from: () => makeChain(_mockResult),
+  }),
+}));
 
-  it("defaults to length 4", () => {
-    const p = getTodaysLeksiarxeioPuzzle("2026-01-01");
-    expect(p.length).toBe(4);
-    expect(p.answer).toHaveLength(4);
-  });
-});
+// ── getAllTodaysLeksiarxeioPuzzles — static fallback ───────────────────────────
 
-describe("getAllTodaysLeksiarxeioPuzzles", () => {
-  it("returns 5 puzzles (lengths 4–8)", () => {
-    const puzzles = getAllTodaysLeksiarxeioPuzzles("2026-01-01");
+describe("getAllTodaysLeksiarxeioPuzzles — static fallback", () => {
+  it("returns 5 puzzles (lengths 4–8)", async () => {
+    const { puzzles } = await getAllTodaysLeksiarxeioPuzzles("2026-01-01");
     expect(puzzles).toHaveLength(5);
     expect(puzzles.map((p) => p.length)).toEqual([4, 5, 6, 7, 8]);
   });
 
-  it("each puzzle answer matches its declared length", () => {
-    const puzzles = getAllTodaysLeksiarxeioPuzzles("2026-01-01");
+  it("each answer is in the valid-words list for that length", async () => {
+    const { puzzles } = await getAllTodaysLeksiarxeioPuzzles("2026-01-01");
+    for (const p of puzzles) {
+      expect(getValidWords(p.length)).toContain(p.answer);
+    }
+  });
+
+  it("each answer has the correct character length", async () => {
+    const { puzzles } = await getAllTodaysLeksiarxeioPuzzles("2026-01-01");
     for (const p of puzzles) {
       expect(p.answer).toHaveLength(p.length);
     }
   });
+
+  it("is deterministic — same date always returns the same answers", async () => {
+    const a = await getAllTodaysLeksiarxeioPuzzles("2026-05-12");
+    const b = await getAllTodaysLeksiarxeioPuzzles("2026-05-12");
+    expect(a.puzzles.map((p) => p.answer)).toEqual(b.puzzles.map((p) => p.answer));
+  });
+
+  it("returns a different answer on a different date", async () => {
+    const a = await getAllTodaysLeksiarxeioPuzzles("2026-01-01");
+    const b = await getAllTodaysLeksiarxeioPuzzles("2026-01-02");
+    // At least one length should differ
+    const differs = a.puzzles.some((p, i) => p.answer !== b.puzzles[i].answer);
+    expect(differs).toBe(true);
+  });
+
+  it("puzzle id encodes the date and length", async () => {
+    const { puzzles } = await getAllTodaysLeksiarxeioPuzzles("2026-03-15");
+    for (const p of puzzles) {
+      expect(p.id).toBe(`2026-03-15-wordle-${p.length}`);
+      expect(p.date).toBe("2026-03-15");
+    }
+  });
+
+  it("submitter_name is null on static fallback", async () => {
+    const { submitter_name } = await getAllTodaysLeksiarxeioPuzzles("2026-01-01");
+    expect(submitter_name).toBeNull();
+  });
 });
+
+// ── getAllTodaysLeksiarxeioPuzzles — community queue path ─────────────────────
+
+describe("getAllTodaysLeksiarxeioPuzzles — community queue", () => {
+  it("uses community puzzle words when a row is found", async () => {
+    _mockResult = {
+      data: {
+        id: 1,
+        submitter_name: "Νίκος",
+        data: { "4": "αγαπ", "5": "αγαπη", "6": "αγαπαω", "7": "αγαπαμε", "8": "αγαπαστε" },
+      },
+      error: null,
+    };
+    const { puzzles, submitter_name } = await getAllTodaysLeksiarxeioPuzzles("2026-06-01");
+    expect(puzzles[0].answer).toBe("αγαπ");
+    expect(puzzles[1].answer).toBe("αγαπη");
+    expect(submitter_name).toBe("Νίκος");
+    // Reset
+    _mockResult = { data: null, error: { message: "no rows" } };
+  });
+
+  it("puzzle ids still use the date format", async () => {
+    _mockResult = {
+      data: {
+        id: 2,
+        submitter_name: "",
+        data: { "4": "αγαπ", "5": "αγαπη", "6": "αγαπαω", "7": "αγαπαμε", "8": "αγαπαστε" },
+      },
+      error: null,
+    };
+    const { puzzles } = await getAllTodaysLeksiarxeioPuzzles("2026-06-02");
+    expect(puzzles[0].id).toBe("2026-06-02-wordle-4");
+    _mockResult = { data: null, error: { message: "no rows" } };
+  });
+
+  it("submitter_name is null when the row has an empty string", async () => {
+    _mockResult = {
+      data: {
+        id: 3,
+        submitter_name: "",
+        data: { "4": "αγαπ", "5": "αγαπη", "6": "αγαπαω", "7": "αγαπαμε", "8": "αγαπαστε" },
+      },
+      error: null,
+    };
+    const { submitter_name } = await getAllTodaysLeksiarxeioPuzzles("2026-06-03");
+    expect(submitter_name).toBeNull();
+    _mockResult = { data: null, error: { message: "no rows" } };
+  });
+});
+
+// ── getValidWords ─────────────────────────────────────────────────────────────
 
 describe("getValidWords", () => {
   it("returns non-empty arrays for all supported lengths", () => {
@@ -87,6 +156,8 @@ describe("getValidWords", () => {
     }
   });
 });
+
+// ── getTodayDateString ────────────────────────────────────────────────────────
 
 describe("getTodayDateString", () => {
   it("returns a valid ISO date string", () => {

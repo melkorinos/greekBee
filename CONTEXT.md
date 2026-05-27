@@ -181,17 +181,19 @@ _Avoid_: share code, sync code, PIN (the old PIN system was removed)
 
 ---
 
-## Database tables (7 total)
+## Database tables (9 total)
 
 | Table | Purpose |
 |---|---|
 | `player_profiles` | Maps `device_uuid` → `display_name`. UNIQUE constraint on `device_uuid`. |
 | `transfer_codes` | Single-use 6-char codes with 24h TTL for cross-device identity migration. |
-| `game_scores` | Daily leaderboard scores for Leksokipos and Leksindeseis. |
-| `leksiarxeio_scores` | Daily leaderboard scores for Leksiarxeio (separate table — different schema). |
+| `game_scores` | Daily leaderboard scores for Leksokipos, Leksindeseis, and Leksiarxeio (unified). |
+| `leksiarxeio_scores` | Legacy Leksiarxeio leaderboard table — migration to `game_scores` pending (human step). |
 | `game_state` | Serialised Session state for cross-device sync (Leksokipos only). |
 | `nominations` | Community word proposals (add/remove). Managed via Leksikastirio. |
 | `nomination_votes` | One row per `(nomination_id, device_id)` vote. |
+| `community_leksiarxeio_puzzles` | Player-submitted Leksiarxeio puzzles awaiting admin approval. One row = all 5 lengths. Deleted immediately on consumption. Schema: `id`, `submitter_name`, `data` (jsonb `{"4":…,"8":…}`), `status` (`pending`\|`approved`), `created_at`. |
+| `community_leksindeseis_puzzles` | Player-submitted Leksindeseis puzzles awaiting admin approval. Deleted immediately on consumption. Schema: `id`, `submitter_name`, `data` (jsonb array of 4 groups), `status` (`pending`\|`approved`), `created_at`. |
 
 ---
 

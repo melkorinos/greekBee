@@ -1,10 +1,11 @@
 // Leksiarxeio — data loader (runs server-side via Next.js App Router).
-// Picks today's answer deterministically by date so every user gets the same word.
+// Primary source: community_leksiarxeio_puzzles (approved FIFO).
+// Fallback: deterministic word-pool rotation by date.
 //
-// One list per length (words-N.json) is used for both the answer pool and
-// valid-guess validation.  No separate curated list — word quality will be
-// addressed later (see .claude/issue-tracker/issues/05-td003-wordle-answer-pool.md).
+// One community puzzle row covers all 5 lengths. The row is deleted immediately
+// on consumption so it is never served again.
 
+import { getSupabaseClient } from "@/lib/supabase";
 import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
 
 import words4 from "./words-4.json";
@@ -15,9 +16,8 @@ import words8 from "./words-8.json";
 
 export const LEKSIARXEIO_LENGTHS: LeksiarxeioLength[] = [4, 5, 6, 7, 8];
 
-/** Single word list per length — same list drives answers AND valid guesses */
 const WORD_LISTS: Record<LeksiarxeioLength, string[]> = {
-  3: [],               // unsupported — kept for type completeness
+  3: [],
   4: words4 as string[],
   5: words5 as string[],
   6: words6 as string[],
@@ -25,53 +25,68 @@ const WORD_LISTS: Record<LeksiarxeioLength, string[]> = {
   8: words8 as string[],
 };
 
-/**
- * Returns a stable index for a given ISO date string (YYYY-MM-DD).
- * The index cycles through the word list so every day has a different word.
- */
 function dateToIndex(dateStr: string, listLength: number): number {
-  // Use the epoch day count for simple, stable, timezone-agnostic rotation
   const epoch = new Date("2025-01-01").getTime();
   const target = new Date(dateStr).getTime();
   const dayOffset = Math.floor((target - epoch) / 86_400_000);
   return ((dayOffset % listLength) + listLength) % listLength;
 }
 
-/**
- * Returns today's Leksiarxeio puzzle for the given word length.
- * `date` should be an ISO date string (YYYY-MM-DD) — pass from the server so
- * all users share the same puzzle regardless of their local timezone.
- */
-export function getTodaysLeksiarxeioPuzzle(
-  date: string,
-  length: LeksiarxeioLength = 4
-): LeksiarxeioPuzzle {
+function buildFallbackPuzzle(date: string, length: LeksiarxeioLength): LeksiarxeioPuzzle {
   const pool = WORD_LISTS[length];
-  if (!pool || pool.length === 0) {
-    throw new Error(`No word list available for length ${length}`);
+  if (!pool || pool.length === 0) throw new Error(`No word list for length ${length}`);
+  const answer = pool[dateToIndex(date, pool.length)];
+  return { id: `${date}-wordle-${length}`, date, answer, length };
+}
+
+interface LeksiarxeioDaily {
+  puzzles: LeksiarxeioPuzzle[];
+  submitter_name: string | null;
+}
+
+/**
+ * Returns all 5 daily Leksiarxeio puzzles for `date`.
+ * Checks the community queue first; falls back to static word pools.
+ */
+export async function getAllTodaysLeksiarxeioPuzzles(date: string): Promise<LeksiarxeioDaily> {
+  try {
+    const supabase = getSupabaseClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from("community_leksiarxeio_puzzles") as any)
+      .select("id, submitter_name, data")
+      .eq("status", "approved")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .single();
+
+    if (!error && data) {
+      const row = data as { id: number; submitter_name: string; data: Record<string, string> };
+
+      // Delete immediately — consumed puzzles are never reused
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from("community_leksiarxeio_puzzles") as any).delete().eq("id", row.id);
+
+      const puzzles = LEKSIARXEIO_LENGTHS.map((len): LeksiarxeioPuzzle => ({
+        id:     `${date}-wordle-${len}`,
+        date,
+        answer: (row.data[String(len)] ?? "").toLowerCase(),
+        length: len,
+      }));
+
+      return { puzzles, submitter_name: row.submitter_name || null };
+    }
+  } catch {
+    // Fall through to static fallback on any error
   }
 
-  const idx    = dateToIndex(date, pool.length);
-  const answer = pool[idx];
-
   return {
-    id:     `${date}-wordle-${length}`,
-    date,
-    answer,
-    length,
+    puzzles: LEKSIARXEIO_LENGTHS.map((l) => buildFallbackPuzzle(date, l)),
+    submitter_name: null,
   };
 }
 
 /**
- * Returns all 5 daily puzzles (lengths 4–8) for a given date.
- */
-export function getAllTodaysLeksiarxeioPuzzles(date: string): LeksiarxeioPuzzle[] {
-  return LEKSIARXEIO_LENGTHS.map((l) => getTodaysLeksiarxeioPuzzle(date, l));
-}
-
-/**
- * Returns the word list for a given length — used for both answer selection
- * and client-side guess validation.
+ * Returns the word list for a given length — used for guess validation.
  */
 export function getValidWords(length: LeksiarxeioLength = 4): string[] {
   return WORD_LISTS[length] ?? [];

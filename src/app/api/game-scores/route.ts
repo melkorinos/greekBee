@@ -1,12 +1,15 @@
 // POST /api/game-scores — upsert a player's score for any game that uses game_scores
 // GET  /api/game-scores?game_id=&puzzle_date=&deviceId= — top 20 + pinned player row
 //
-// Covers: Leksokipos (score = points, higher is better)
-//         Leksindeseis (score = mistakesRemaining 1–4, higher is better)
+// Covers:
+//   Leksokipos   (score = points, higher is better)
+//   Leksindeseis (score = mistakesRemaining 1–4, higher is better)
+//   Leksiarxeio  (score = sum of per-length in-game points 0–30, higher is better)
+//                 POST carries word_length + points; route does a read-modify-write
+//                 so each length result is merged into one row per player per day.
 //
 // RLS: anon INSERT + anon SELECT + anon UPDATE (open leaderboard).
 // Score de-duplication: unique constraint on (game_id, device_id, puzzle_date).
-// The client only sends scores when they increase, so an overwrite upsert is safe.
 
 import { NextRequest, NextResponse } from "next/server";
 
@@ -16,14 +19,31 @@ import { upsertAndClean } from "@/lib/supabasePost";
 
 export const runtime = "edge";
 
+const LEKSIARXEIO_LENGTHS = new Set([4, 5, 6, 7, 8]);
+
 // ── POST ──────────────────────────────────────────────────────────────────────
 
-interface ScorePayload {
+interface StandardScorePayload {
   game_id:      string;
   puzzle_date:  string;
   device_id:    string;
   display_name: string;
   score:        number;
+}
+
+interface LeksiarxeioScorePayload {
+  game_id:      "leksiarxeio";
+  puzzle_date:  string;
+  word_length:  number;
+  device_id:    string;
+  display_name: string;
+  points:       number;
+}
+
+type ScorePayload = StandardScorePayload | LeksiarxeioScorePayload;
+
+function aggregateLeksiarxeioScore(data: Record<string, number>): number {
+  return Object.values(data).reduce((sum, v) => sum + v, 0);
 }
 
 export async function POST(req: NextRequest) {
@@ -34,29 +54,65 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { game_id, puzzle_date: rawDate, device_id, display_name, score } = body;
+  const { game_id, puzzle_date: rawDate, device_id, display_name } = body;
 
   // Strip a trailing locale suffix (e.g. "2026-05-22-el" → "2026-05-22")
   const puzzle_date = rawDate?.replace(/-[a-z]{2}$/i, "") ?? "";
 
-  if (!game_id || !puzzle_date || !device_id || typeof score !== "number") {
+  if (!game_id || !puzzle_date || !device_id) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
   if (!isISODate(puzzle_date)) {
     return NextResponse.json({ error: "Invalid puzzle_date format" }, { status: 400 });
   }
 
+  const name = (display_name ?? "").trim() || "Ανώνυμος";
+
+  // ── Leksiarxeio: read-modify-write one length at a time ────────────────────
+  if (game_id === "leksiarxeio") {
+    const { word_length, points } = body as LeksiarxeioScorePayload;
+    if (!LEKSIARXEIO_LENGTHS.has(word_length)) {
+      return NextResponse.json({ error: "Invalid word_length" }, { status: 400 });
+    }
+    if (typeof points !== "number" || points < 0 || points > 6) {
+      return NextResponse.json({ error: "points must be 0–6" }, { status: 400 });
+    }
+
+    const supabase = getSupabaseClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existing } = await (supabase.from("game_scores") as any)
+      .select("data")
+      .eq("game_id", "leksiarxeio")
+      .eq("device_id", device_id)
+      .eq("puzzle_date", puzzle_date)
+      .single();
+
+    const existingData: Record<string, number> =
+      (existing as { data: Record<string, number> } | null)?.data ?? {};
+    const newData  = { ...existingData, [String(word_length)]: points };
+    const newScore = aggregateLeksiarxeioScore(newData);
+
+    const err = await upsertAndClean(
+      "game_scores",
+      "game_id,device_id,puzzle_date",
+      "puzzle_date",
+      { game_id, puzzle_date, device_id, display_name: name, score: newScore, data: newData },
+    );
+    if (err) return NextResponse.json({ error: err }, { status: 500 });
+    return NextResponse.json({ ok: true });
+  }
+
+  // ── Standard games ──────────────────────────────────────────────────────────
+  const { score } = body as StandardScorePayload;
+  if (typeof score !== "number") {
+    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+
   const err = await upsertAndClean(
     "game_scores",
     "game_id,device_id,puzzle_date",
     "puzzle_date",
-    {
-      game_id,
-      puzzle_date,
-      device_id,
-      display_name: (display_name ?? "").trim() || "Ανώνυμος",
-      score,
-    },
+    { game_id, puzzle_date, device_id, display_name: name, score },
   );
   if (err) return NextResponse.json({ error: err }, { status: 500 });
   return NextResponse.json({ ok: true });

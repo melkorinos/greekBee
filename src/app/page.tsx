@@ -7,8 +7,10 @@
 // Note: rule strings are also defined in each game’s own page.tsx.
 // Extract to src/data/gameRules.ts when a third consumer appears.
 
+import React from "react";
 import { GAME_REGISTRY } from "@/config/games";
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
+import { SubmitPuzzleButton } from "@/components/shared/SubmitPuzzleButton";
 import Link from "next/link";
 
 // Picker-specific content (HowToPlay copy) — not platform metadata, stays here.
@@ -68,7 +70,7 @@ const GAMES = (Object.keys(GAME_REGISTRY) as Array<keyof typeof GAME_REGISTRY>).
 const gameList      = GAMES.filter((g) => g.id !== "leksikastirio");
 const communityList = GAMES.filter((g) => g.id === "leksikastirio");
 
-function GameCard({ game }: { game: (typeof GAMES)[number] }) {
+function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submitButton?: React.ReactNode }) {
   return (
     <li className="flex items-stretch rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm hover:shadow-md hover:border-stone-300 dark:hover:border-stone-700 transition-all overflow-hidden">
       <Link href={game.href} className="flex-1 flex items-start gap-4 p-5">
@@ -85,12 +87,13 @@ function GameCard({ game }: { game: (typeof GAMES)[number] }) {
           <p className="text-sm text-stone-500 dark:text-stone-400 mt-0.5">{game.description}</p>
         </div>
       </Link>
-      <div className="flex items-center px-3 border-l border-stone-100 dark:border-stone-800 shrink-0">
+      <div className="flex flex-col items-center justify-center gap-1 px-3 border-l border-stone-100 dark:border-stone-800 shrink-0">
         <HowToPlayModal
           title={game.rulesTitle}
           items={game.rules}
           bulletIcon={game.bulletIcon}
         />
+        {submitButton}
       </div>
     </li>
   );
@@ -103,7 +106,17 @@ export default function HomePage() {
       <p className="text-stone-500 dark:text-stone-400 text-sm mb-10">Επίλεξε παιχνίδι για να ξεκινήσεις</p>
 
       <ul className="w-full max-w-sm space-y-4">
-        {gameList.map((game) => <GameCard key={game.id} game={game} />)}
+        {gameList.map((game) => (
+          <GameCard
+            key={game.id}
+            game={game}
+            submitButton={
+              (game.id === "leksiarxeio" || game.id === "leksindeseis")
+                ? <SubmitPuzzleButton game={game.id} />
+                : undefined
+            }
+          />
+        ))}
       </ul>
 
       <div className="w-full max-w-sm mt-8 mb-4 flex items-center gap-3">

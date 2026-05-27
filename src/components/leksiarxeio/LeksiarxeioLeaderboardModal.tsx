@@ -28,9 +28,9 @@ function getLast7Dates(today: string): string[] {
 }
 
 const buildUrl: LeaderboardUrlBuilder = (date, deviceId) => {
-  const params = new URLSearchParams({ date });
+  const params = new URLSearchParams({ game_id: "leksiarxeio", puzzle_date: date });
   if (deviceId) params.set("deviceId", deviceId);
-  return `/api/leksiarxeio-scores?${params.toString()}`;
+  return `/api/game-scores?${params.toString()}`;
 };
 
 // ── Props ─────────────────────────────────────────────────────────────────────

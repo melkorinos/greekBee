@@ -5,6 +5,36 @@
 
 ---
 
+## Session 38 — 2026-05-27: Community Puzzles Feature ✅
+
+### Changes
+
+1. **Review routes** (new) — `src/app/api/community-puzzles/leksiarxeio/[id]/review/route.ts` + `…/leksindeseis/[id]/review/route.ts`. `PATCH` only. `X-Admin-Secret` header auth. `approve` → `UPDATE status='approved'`; `reject` → `DELETE` row immediately.
+
+2. **Leksiarxeio data loader** (`src/data/leksiarxeio/index.ts`) — `getAllTodaysLeksiarxeioPuzzles` is now the single async entry point. Queries `community_leksiarxeio_puzzles` (approved FIFO) first; deletes row immediately on consumption; falls back to static word-pool rotation. Returns `{ puzzles, submitter_name }`. `getTodaysLeksiarxeioPuzzle` removed (was per-length sync helper).
+
+3. **Leksindeseis data loader** (`src/data/leksindeseis/index.ts`) — `getTodaysLeksindeseisPuzzle` is now async. Same community-first pattern. Fallback: `dateToIndex(date) % pool.length` (deterministic, replaces "most recent" fallback). Returns `{ puzzle: LeksindeseisPuzzle | null, submitter_name }`.
+
+4. **Leksiarxeio page** (`src/app/leksiarxeio/page.tsx`) — Converted to `async` server component. Destructures `{ puzzles, submitter_name }` from loader. Renders `"Παζλ από {name}"` when non-null.
+
+5. **Leksindeseis page** (`src/app/leksindeseis/page.tsx`) — Converted to `async`. Handles null puzzle with "Δεν υπάρχει παζλ σήμερα." empty state. Renders attribution.
+
+6. **Submission modals** (new) — `CommunityLeksiarxeioSubmitModal.tsx` (5-word form, per-word 422 error + NominationModal link) and `CommunityLeksindeseisSubmitModal.tsx` (4 groups × category + 4 words).
+
+7. **Landing page** (`src/app/page.tsx`) — `GameCard` accepts optional `submitButton?: ReactNode`. Leksiarxeio and Leksindeseis cards get a `SubmitPuzzleButton` (new shared component) that opens the appropriate modal.
+
+8. **Leksikastirio** (`src/app/leksikastirio/page.tsx`) — Tab type extended: `"leksiarxeio"` and `"leksindeseis"` admin tabs visible when `?admin=<secret>`. Each fetches `GET /api/community-puzzles/{game}?status=pending` and renders approve/reject cards.
+
+9. **Tests** — Updated `src/test/leksiarxeio/dataLoader.test.ts` and `src/test/leksindeseis/dataLoader.test.ts` for new async API + community queue paths. New `src/test/shared/communityPuzzlesReviewRoute.test.ts` (auth + approve/reject for both games).
+
+10. **CONTEXT.md** — Database tables section updated: two new community puzzle tables documented (no `used_date` — deleted on consumption).
+
+**Human step still needed:** Create `community_leksiarxeio_puzzles` and `community_leksindeseis_puzzles` tables in Supabase (schemas in `CONTEXT.md`). Run leksiarxeio_scores → game_scores migration (SQL in `.claude/architecture-review-20260527-203039.html`).
+
+**819 tests pass, 2 pre-existing leaderboard failures, 0 lint errors, build clean.**
+
+---
+
 ## Session 37 — 2026-05-27: Dark Mode Implementation ✅
 
 ### Changes

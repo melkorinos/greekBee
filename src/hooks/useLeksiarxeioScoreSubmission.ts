@@ -1,15 +1,17 @@
 "use client";
 
-// useLeksiarxeioScoreSubmission — posts per-length results to /api/leksiarxeio-scores.
+// useLeksiarxeioScoreSubmission — posts per-length results to /api/game-scores.
 //
 // Hides:
-//   - failed-game → 7-attempt penalty mapping
+//   - failed-game → 0-points mapping (via scoreLeksiarxeio)
 //   - display-name ref pattern (always reads latest name at call time, stable fn ref)
 //   - fetch URL + JSON field names
 //   - error silencing — score posting must never crash the game
 //   - no-op when deviceId is unknown
 
 import { useCallback, useEffect, useRef } from "react";
+
+import { scoreLeksiarxeio } from "@/games/leksiarxeio/lib";
 
 function postScore(url: string, body: unknown): void {
   fetch(url, {
@@ -36,15 +38,17 @@ export function useLeksiarxeioScoreSubmission({
   const displayNameRef = useRef(displayName);
   useEffect(() => { displayNameRef.current = displayName; }, [displayName]);
 
-  /** Post a per-length result. Maps a failed game (won=false) to a 7-attempt penalty. */
+  /** Post a per-length result. Converts attempts+won to in-game points (0–6). */
   const submitLength = useCallback(
     (length: number, attempts: number, won: boolean) => {
       if (!deviceId) return;
-      postScore("/api/leksiarxeio-scores", {
+      const points = scoreLeksiarxeio(attempts, won);
+      postScore("/api/game-scores", {
+        game_id:      "leksiarxeio",
         puzzle_date:  puzzleDate,
         word_length:  length,
         device_id:    deviceId,
-        attempts:     won ? attempts : 7,
+        points,
         display_name: displayNameRef.current || "Ανώνυμος",
       });
     },

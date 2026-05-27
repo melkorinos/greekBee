@@ -23,7 +23,7 @@ const BASE = {
 };
 
 describe("useLeksiarxeioScoreSubmission — submitLength()", () => {
-  it("POSTs to /api/leksiarxeio-scores with correct fields on a win", async () => {
+  it("POSTs to /api/game-scores with correct fields on a win", async () => {
     const spy = mockFetch();
     const { result } = renderHook(() => useLeksiarxeioScoreSubmission(BASE));
 
@@ -31,23 +31,34 @@ describe("useLeksiarxeioScoreSubmission — submitLength()", () => {
 
     expect(spy).toHaveBeenCalledOnce();
     const [url, init] = spy.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/leksiarxeio-scores");
+    expect(url).toBe("/api/game-scores");
     const body = JSON.parse(init.body as string);
+    expect(body.game_id).toBe("leksiarxeio");
     expect(body.puzzle_date).toBe("2026-05-26");
     expect(body.word_length).toBe(5);
     expect(body.device_id).toBe("device-abc");
-    expect(body.attempts).toBe(3);
+    expect(body.points).toBe(4); // 3 guesses → 4 pts
     expect(body.display_name).toBe("Γιώργος");
   });
 
-  it("maps a failed game to the 7-attempt penalty", async () => {
+  it("maps a failed game to 0 points (not the old 7-attempt penalty)", async () => {
     const spy = mockFetch();
     const { result } = renderHook(() => useLeksiarxeioScoreSubmission(BASE));
 
     await act(async () => { result.current.submitLength(5, 6, false); });
 
     const body = JSON.parse((spy.mock.calls[0] as [string, RequestInit])[1].body as string);
-    expect(body.attempts).toBe(7);
+    expect(body.points).toBe(0);
+  });
+
+  it("maps a first-try win to 6 points", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useLeksiarxeioScoreSubmission(BASE));
+
+    await act(async () => { result.current.submitLength(4, 1, true); });
+
+    const body = JSON.parse((spy.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body.points).toBe(6);
   });
 
   it("does not POST when deviceId is empty", async () => {

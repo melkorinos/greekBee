@@ -1,8 +1,10 @@
 // leksindeseis/page.tsx — Leksindeseis game page.
 
-import { ConnectionsBoard }           from "./ConnectionsBoard";
-import { HowToPlayModal }             from "@/components/shared/HowToPlayModal";
+import { ConnectionsBoard }            from "./ConnectionsBoard";
+import { HowToPlayModal }              from "@/components/shared/HowToPlayModal";
 import { getTodaysLeksindeseisPuzzle } from "@/data/leksindeseis";
+
+export const dynamic = "force-dynamic";
 
 function getTodayString(): string {
   return new Date().toISOString().slice(0, 10);
@@ -17,9 +19,9 @@ const CONNECTIONS_RULES = [
   "Νέο παζλ κάθε μέρα!",
 ];
 
-export default function LeksindeseisPage() {
-  const today  = getTodayString();
-  const puzzle = getTodaysLeksindeseisPuzzle(today);
+export default async function LeksindeseisPage() {
+  const today = getTodayString();
+  const { puzzle, submitter_name } = await getTodaysLeksindeseisPuzzle(today);
 
   return (
     <main className="flex flex-col items-center min-h-screen bg-zinc-50 dark:bg-stone-950 px-4 py-6">
@@ -31,10 +33,21 @@ export default function LeksindeseisPage() {
           bulletIcon="🔗"
         />
       </div>
-      <p className="text-stone-500 dark:text-stone-400 text-xs mb-6 self-start max-w-sm">
+      <p className="text-stone-500 dark:text-stone-400 text-xs mb-1 self-start max-w-sm">
         Ομαδοποίησε 16 λέξεις σε 4 κατηγορίες των 4
       </p>
-      <ConnectionsBoard puzzle={puzzle} />
+      {submitter_name && (
+        <p className="text-xs text-stone-400 dark:text-stone-500 self-start max-w-sm mb-5">
+          Παζλ από {submitter_name}
+        </p>
+      )}
+      {puzzle ? (
+        <ConnectionsBoard puzzle={puzzle} />
+      ) : (
+        <p className="text-stone-500 dark:text-stone-400 text-sm mt-12">
+          Δεν υπάρχει παζλ σήμερα.
+        </p>
+      )}
     </main>
   );
 }
