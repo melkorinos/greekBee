@@ -6,7 +6,7 @@
 //   - Green colour scheme
 //   - Client-computed 7-day strip
 //   - /api/leksiarxeio-scores endpoint (date= param)
-//   - "Προσπάθειες" score column
+//   - "Σκορ" score column
 //   - Shared ProfileSection (topSlot)
 
 import type { LeaderboardProfileProps } from "@/hooks/useLeaderboardProfile";
@@ -74,8 +74,8 @@ export function LeksiarxeioLeaderboardModal({
       dates={getLast7Dates(today)}
       defaultDate={today}
       buildUrl={buildUrl}
-      subtitle="Άθροισμα προσπαθειών (4–8 γράμματα) · χαμηλότερο = καλύτερο"
-      scoreLabel="Προσπάθειες"
+      subtitle="Άθροισμα σκορ (4–8 γράμματα) · υψηλότερο = καλύτερο"
+      scoreLabel="Σκορ"
       pillActive="bg-green-500 text-white"
       playerMark="text-green-600"
       showNameEditor={true}

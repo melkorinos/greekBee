@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseClient } from "@/lib/supabase";
 import { getValidWords } from "@/data/leksiarxeio";
+import { normalizeLetters } from "@/lib/normalize";
 import type { LeksiarxeioLength } from "@/games/leksiarxeio/types";
 
 export const runtime = "edge";
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
   // Validate all 5 lengths are present and in their Word Pool
   const errors: Record<string, string> = {};
   for (const len of LENGTHS) {
-    const word = (words[String(len)] ?? "").trim().toLowerCase();
+    const word = normalizeLetters((words[String(len)] ?? "").trim());
     if (!word) {
       errors[String(len)] = "Απαιτείται λέξη";
       continue;
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
   }
 
   const data = Object.fromEntries(
-    LENGTHS.map((len) => [String(len), (words[String(len)] ?? "").trim().toLowerCase()])
+    LENGTHS.map((len) => [String(len), normalizeLetters((words[String(len)] ?? "").trim())])
   );
 
   const supabase = getSupabaseClient();
