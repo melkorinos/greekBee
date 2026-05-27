@@ -1,13 +1,13 @@
-﻿// leaderboardModal.test.tsx — unit tests for LeaderboardModal.
+// leaderboardModal.test.tsx — unit tests for LeaderboardModal.
 //
 // Covers:
 //   1. 7-day pill strip renders with the correct pills.
 //   2. Today's pill is labelled "Σήμερα" and selected by default.
 //   3. Clicking a past-day pill switches selectedDate and shows the play link.
 //   4. No play link when today's pill is selected.
-//   5. Display-name save button calls onSaveName with the trimmed value.
+//   5. Display-name editor behaviour — linked vs unlinked.
 //   6. Modal renders nothing when isOpen=false.
-//   7. Profile section — idle, linked, create, restore modes.
+//   7. Profile section — idle, claiming (transfer code), linked, transferring.
 
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -45,20 +45,18 @@ const RECENT_DATES = makeRecentDates(7);
 
 function renderModal(overrides: Partial<React.ComponentProps<typeof LeaderboardModal>> = {}) {
   const defaults: React.ComponentProps<typeof LeaderboardModal> = {
-    isOpen:           true,
-    defaultPuzzleId:  TODAY,
-    recentDates:      RECENT_DATES,
-    deviceId:         "test-device-id",
-    displayName:      "",
-    profileLinked:    false,
-    profilePin:       "",
-    onSaveName:       vi.fn(),
-    onProfileCreate:  vi.fn().mockResolvedValue({ pin: "1234" }),
-    onProfileLinked:  vi.fn(),
-    onProfileRestore: vi.fn().mockResolvedValue([]),
-    onProfileSelect:  vi.fn().mockResolvedValue(undefined),
-    onDisconnect:     vi.fn(),
-    onClose:          vi.fn(),
+    isOpen:              true,
+    defaultPuzzleId:     TODAY,
+    recentDates:         RECENT_DATES,
+    deviceId:            "test-device-id",
+    displayName:         "",
+    profileLinked:       false,
+    onSaveName:          vi.fn(),
+    onProfileCreate:     vi.fn().mockResolvedValue(undefined),
+    onTransferGenerate:  vi.fn().mockResolvedValue("ABCDEF"),
+    onTransferClaim:     vi.fn().mockResolvedValue(undefined),
+    onDisconnect:        vi.fn(),
+    onClose:             vi.fn(),
     ...overrides,
   };
   return render(<LeaderboardModal {...defaults} />);
@@ -78,7 +76,6 @@ describe("LeaderboardModal — closed state", () => {
 describe("LeaderboardModal — day strip", () => {
   it("renders 7 pill buttons", () => {
     renderModal();
-    // Each pill has aria-label = the date string (YYYY-MM-DD)
     RECENT_DATES.forEach((date) => {
       expect(screen.getByRole("button", { name: date })).toBeInTheDocument();
     });
@@ -132,35 +129,24 @@ describe("LeaderboardModal — play link", () => {
   });
 });
 
-// ── Profile section ───────────────────────────────────────────────────────────
+// ── Profile section — idle (unlinked) ────────────────────────────────────────
 
-describe("LeaderboardModal — profile section (idle)", () => {
-  it("shows 'Δημιουργία προφίλ', 'Σύνδεση' and 'Αποσύνδεση' links when not linked", () => {
+describe("LeaderboardModal — profile section (idle, unlinked)", () => {
+  it("shows 'Σύνδεση με κωδικό' and 'Αποσύνδεση' when not linked", () => {
     renderModal({ profileLinked: false });
-    expect(screen.getByText("Δημιουργία προφίλ")).toBeInTheDocument();
-    expect(screen.getByText("Σύνδεση")).toBeInTheDocument();
+    expect(screen.getByText("Σύνδεση με κωδικό")).toBeInTheDocument();
     expect(screen.getByText("Αποσύνδεση")).toBeInTheDocument();
   });
 
-  it("clicking 'Δημιουργία προφίλ' shows the create form", async () => {
+  it("does NOT show a separate 'Δημιουργία προφίλ' button (creation is via name editor)", () => {
     renderModal({ profileLinked: false });
-    await userEvent.click(screen.getByText("Δημιουργία προφίλ"));
-    expect(screen.getByPlaceholderText("Όνομα (προαιρετικό)")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Δημιουργία" })).toBeInTheDocument();
+    expect(screen.queryByText("Δημιουργία προφίλ")).toBeNull();
   });
 
-  it("clicking 'Σύνδεση' shows the restore form", async () => {
+  it("clicking 'Σύνδεση με κωδικό' shows the transfer-code input", async () => {
     renderModal({ profileLinked: false });
-    await userEvent.click(screen.getByText("Σύνδεση"));
-    expect(screen.getByPlaceholderText("Όνομα")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("PIN (4 ψηφία)")).toBeInTheDocument();
-  });
-
-  it("'Άκυρο' in create form returns to idle", async () => {
-    renderModal({ profileLinked: false });
-    await userEvent.click(screen.getByText("Δημιουργία προφίλ"));
-    await userEvent.click(screen.getByText("Άκυρο"));
-    expect(screen.getByText("Δημιουργία προφίλ")).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Σύνδεση με κωδικό"));
+    expect(screen.getByPlaceholderText(/Κωδικός μεταφοράς/)).toBeInTheDocument();
   });
 
   it("clicking 'Αποσύνδεση' shows confirmation row", async () => {
@@ -176,7 +162,7 @@ describe("LeaderboardModal — profile section (idle)", () => {
     await userEvent.click(screen.getByText("Αποσύνδεση"));
     await userEvent.click(screen.getByTestId("btn-disconnect-cancel"));
     expect(onDisconnect).not.toHaveBeenCalled();
-    expect(screen.getByText("Δημιουργία προφίλ")).toBeInTheDocument();
+    expect(screen.getByText("Σύνδεση με κωδικό")).toBeInTheDocument();
   });
 
   it("confirming disconnect calls onDisconnect", async () => {
@@ -188,6 +174,37 @@ describe("LeaderboardModal — profile section (idle)", () => {
   });
 });
 
+// ── Transfer code claim flow ──────────────────────────────────────────────────
+
+describe("LeaderboardModal — transfer code claim flow", () => {
+  it("'Άκυρο' in claiming mode returns to idle", async () => {
+    renderModal({ profileLinked: false });
+    await userEvent.click(screen.getByText("Σύνδεση με κωδικό"));
+    await userEvent.click(screen.getByText("Άκυρο"));
+    expect(screen.getByText("Σύνδεση με κωδικό")).toBeInTheDocument();
+  });
+
+  it("entering a 6-char code and clicking 'Σύνδεση' calls onTransferClaim", async () => {
+    const onTransferClaim = vi.fn().mockResolvedValue(undefined);
+    renderModal({ profileLinked: false, onTransferClaim });
+    await userEvent.click(screen.getByText("Σύνδεση με κωδικό"));
+    await userEvent.type(screen.getByPlaceholderText(/Κωδικός μεταφοράς/), "ABCDEF");
+    await userEvent.click(screen.getByRole("button", { name: "Σύνδεση" }));
+    expect(onTransferClaim).toHaveBeenCalledWith("ABCDEF");
+  });
+
+  it("shows an error message when onTransferClaim rejects", async () => {
+    const onTransferClaim = vi.fn().mockRejectedValue(new Error("Άκυρος κωδικός"));
+    renderModal({ profileLinked: false, onTransferClaim });
+    await userEvent.click(screen.getByText("Σύνδεση με κωδικό"));
+    await userEvent.type(screen.getByPlaceholderText(/Κωδικός μεταφοράς/), "XXXXXX");
+    await userEvent.click(screen.getByRole("button", { name: "Σύνδεση" }));
+    expect(await screen.findByText("Άκυρος κωδικός")).toBeInTheDocument();
+  });
+});
+
+// ── Profile section — linked ──────────────────────────────────────────────────
+
 describe("LeaderboardModal — profile section (linked)", () => {
   it("shows the linked name when profileLinked=true", () => {
     renderModal({ profileLinked: true, displayName: "Νίκος" });
@@ -198,6 +215,19 @@ describe("LeaderboardModal — profile section (linked)", () => {
   it("shows 'Ανώνυμος' when profileLinked=true but displayName is empty", () => {
     renderModal({ profileLinked: true, displayName: "" });
     expect(screen.getByText(/Ανώνυμος/)).toBeInTheDocument();
+  });
+
+  it("shows 'Μεταφορά' button when linked", () => {
+    renderModal({ profileLinked: true, displayName: "Νίκος" });
+    expect(screen.getByText("Μεταφορά")).toBeInTheDocument();
+  });
+
+  it("clicking 'Μεταφορά' calls onTransferGenerate and shows the generated code", async () => {
+    const onTransferGenerate = vi.fn().mockResolvedValue("XYZ123");
+    renderModal({ profileLinked: true, displayName: "Νίκος", onTransferGenerate });
+    await userEvent.click(screen.getByText("Μεταφορά"));
+    expect(onTransferGenerate).toHaveBeenCalledOnce();
+    expect(await screen.findByText("XYZ123")).toBeInTheDocument();
   });
 
   it("clicking 'Αποσύνδεση' shows confirmation row, not immediately disconnecting", async () => {
@@ -225,91 +255,70 @@ describe("LeaderboardModal — profile section (linked)", () => {
     expect(screen.getByText(/Νίκος/)).toBeInTheDocument();
   });
 
-  it("hides the name editor when profileLinked=true", () => {
-    renderModal({ profileLinked: true });
-    expect(screen.queryByPlaceholderText("Ανώνυμος")).toBeNull();
-  });
-
-  it("shows the name editor when profileLinked=false", () => {
-    renderModal({ profileLinked: false });
+  it("shows the name editor when profileLinked=true (name changes always allowed)", () => {
+    renderModal({ profileLinked: true, displayName: "Νίκος" });
     expect(screen.getByPlaceholderText("Ανώνυμος")).toBeInTheDocument();
   });
 });
 
+// ── Profile create flow (triggered from name editor when unlinked) ────────────
+
 describe("LeaderboardModal — profile create flow", () => {
-  it("calls onProfileCreate with the entered name and shows PIN on success", async () => {
-    const onProfileCreate = vi.fn().mockResolvedValue({ pin: "4829" });
-    renderModal({ profileLinked: false, onProfileCreate });
-    await userEvent.click(screen.getByText("Δημιουργία προφίλ"));
-    await userEvent.type(screen.getByPlaceholderText("Όνομα (προαιρετικό)"), "Μαρία");
-    await userEvent.click(screen.getByRole("button", { name: "Δημιουργία" }));
-    expect(onProfileCreate).toHaveBeenCalledWith("Μαρία", "");
-    expect(await screen.findByText("4829")).toBeInTheDocument();
+  it("typing a name and saving when unlinked calls onProfileCreate", async () => {
+    const onProfileCreate = vi.fn().mockResolvedValue(undefined);
+    renderModal({ profileLinked: false, displayName: "", onProfileCreate });
+    await userEvent.type(screen.getByPlaceholderText("Ανώνυμος"), "Μαρία");
+    await userEvent.click(screen.getByRole("button", { name: "Αποθήκευση" }));
+    expect(onProfileCreate).toHaveBeenCalledWith("Μαρία");
   });
 
-  it("shows error message when onProfileCreate throws", async () => {
+  it("shows error in profile section when onProfileCreate throws", async () => {
     const onProfileCreate = vi.fn().mockRejectedValue(new Error("fail"));
-    renderModal({ profileLinked: false, onProfileCreate });
-    await userEvent.click(screen.getByText("Δημιουργία προφίλ"));
-    await userEvent.click(screen.getByRole("button", { name: "Δημιουργία" }));
+    renderModal({ profileLinked: false, displayName: "", onProfileCreate });
+    await userEvent.type(screen.getByPlaceholderText("Ανώνυμος"), "Μαρία");
+    await userEvent.click(screen.getByRole("button", { name: "Αποθήκευση" }));
     expect(await screen.findByText(/σφάλμα/i)).toBeInTheDocument();
-  });
-});
-
-describe("LeaderboardModal — profile restore flow", () => {
-  it("shows error when no profiles match", async () => {
-    const onProfileRestore = vi.fn().mockResolvedValue([]);
-    renderModal({ profileLinked: false, onProfileRestore });
-    await userEvent.click(screen.getByText("Σύνδεση"));
-    await userEvent.type(screen.getByPlaceholderText("Όνομα"), "Νίκος");
-    await userEvent.type(screen.getByPlaceholderText("PIN (4 ψηφία)"), "9999");
-    await userEvent.click(screen.getByRole("button", { name: "Επαναφορά" }));
-    expect(await screen.findByText(/Δεν βρέθηκε/)).toBeInTheDocument();
-  });
-
-  it("shows collision picker when 2+ profiles match", async () => {
-    const matches = [
-      { device_uuid: "uuid-1", display_name: "Νίκος", created_at: "2026-05-01T00:00:00Z", last_active: "2026-05-20T00:00:00Z" },
-      { device_uuid: "uuid-2", display_name: "Νίκος", created_at: "2026-05-10T00:00:00Z", last_active: "2026-05-22T00:00:00Z" },
-    ];
-    const onProfileRestore = vi.fn().mockResolvedValue(matches);
-    renderModal({ profileLinked: false, onProfileRestore });
-    await userEvent.click(screen.getByText("Σύνδεση"));
-    await userEvent.type(screen.getByPlaceholderText("Όνομα"), "Νίκος");
-    await userEvent.type(screen.getByPlaceholderText("PIN (4 ψηφία)"), "1234");
-    await userEvent.click(screen.getByRole("button", { name: "Επαναφορά" }));
-    expect(await screen.findByText(/Βρέθηκαν 2/)).toBeInTheDocument();
   });
 });
 
 // ── Display name editor ───────────────────────────────────────────────────────
 
-describe("LeaderboardModal — display name", () => {
-  it("calls onSaveName with trimmed value when Save is clicked", async () => {
+describe("LeaderboardModal — display name editor (linked)", () => {
+  it("calls onSaveName with trimmed value when Save is clicked while linked", async () => {
     const onSaveName = vi.fn();
-    renderModal({ displayName: "", onSaveName });
+    renderModal({ displayName: "Άννα", profileLinked: true, onSaveName });
     const input = screen.getByPlaceholderText("Ανώνυμος");
-    await userEvent.type(input, "  Άννα  ");
+    await userEvent.clear(input);
+    await userEvent.type(input, "  Βάσος  ");
     await userEvent.click(screen.getByRole("button", { name: "Αποθήκευση" }));
-    expect(onSaveName).toHaveBeenCalledWith("Άννα");
+    expect(onSaveName).toHaveBeenCalledWith("Βάσος");
   });
 
-  it("shows checkmark (not Save text) when name matches saved displayName", () => {
-    renderModal({ displayName: "Άννα" });
-    expect(screen.getByRole("button", { name: "✓" })).toBeInTheDocument();
-  });
-
-  it("save button is disabled when name is unchanged", () => {
-    renderModal({ displayName: "Άννα" });
+  it("shows checkmark and is disabled when name unchanged while linked", () => {
+    renderModal({ displayName: "Άννα", profileLinked: true });
     const btn = screen.getByRole("button", { name: "✓" });
     expect(btn).toBeDisabled();
   });
 
-  it("pressing Enter in the name field triggers save when dirty", async () => {
+  it("pressing Enter in the name field triggers save when dirty (linked)", async () => {
     const onSaveName = vi.fn();
-    renderModal({ displayName: "", onSaveName });
+    renderModal({ displayName: "Άννα", profileLinked: true, onSaveName });
     const input = screen.getByPlaceholderText("Ανώνυμος");
+    await userEvent.clear(input);
     await userEvent.type(input, "Βάσος{Enter}");
     expect(onSaveName).toHaveBeenCalledWith("Βάσος");
+  });
+});
+
+describe("LeaderboardModal — display name editor (unlinked)", () => {
+  it("save button shows 'Αποθήκευση' and is always enabled when not linked", () => {
+    renderModal({ displayName: "Άννα", profileLinked: false });
+    const btn = screen.getByRole("button", { name: "Αποθήκευση" });
+    expect(btn).toBeEnabled();
+  });
+
+  it("save button is enabled even when name is unchanged while unlinked", () => {
+    renderModal({ displayName: "Άννα", profileLinked: false });
+    expect(screen.getByRole("button", { name: "Αποθήκευση" })).toBeEnabled();
   });
 });

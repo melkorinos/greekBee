@@ -5,19 +5,26 @@
 // Wires the shared LeaderboardModalBase with:
 //   - Amber colour scheme
 //   - Server-provided recentDates for the day strip
-//   - Profile section (topSlot)
+//   - Shared ProfileSection (topSlot)
 //   - "Παίξε αυτό το παζλ" footer link for past dates
 
-import type { ProfileMatch, ProfileSectionProps } from "./ProfileSection";
+import type { LeaderboardProfileProps } from "@/hooks/useLeaderboardProfile";
 import { LeaderboardModalBase } from "@/components/shared/LeaderboardModal";
+import { ProfileSection } from "@/components/shared/ProfileSection";
+import type { LeaderboardUrlBuilder } from "@/hooks/useLeaderboard";
 import Link from "next/link";
-import { ProfileSection } from "./ProfileSection";
+import { useLeaderboardProfile } from "@/hooks/useLeaderboardProfile";
 
-export type { ProfileMatch };
+// Module-level constant — no closure deps, prevents a re-fetch on every keystroke.
+const buildUrl: LeaderboardUrlBuilder = (puzzleId, dId) => {
+  const params = new URLSearchParams({ game_id: "leksokipos", puzzle_date: puzzleId });
+  if (dId) params.set("deviceId", dId);
+  return `/api/game-scores?${params.toString()}`;
+};
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
-interface LeaderboardModalProps extends ProfileSectionProps {
+interface LeaderboardModalProps extends LeaderboardProfileProps {
   isOpen:          boolean;
   defaultPuzzleId: string;
   recentDates:     string[];
@@ -36,16 +43,19 @@ export function LeaderboardModal({
   deviceId,
   displayName,
   profileLinked,
-  profilePin,
   onSaveName,
   onProfileCreate,
-  onProfileLinked,
-  onProfileRestore,
-  onProfileSelect,
+  onTransferGenerate,
+  onTransferClaim,
   onDisconnect,
   onClose,
 }: LeaderboardModalProps) {
   const today = new Date().toISOString().split("T")[0];
+  const { createError, handleSave } = useLeaderboardProfile({
+    profileLinked,
+    onProfileCreate,
+    onSaveName,
+  });
 
   return (
     <LeaderboardModalBase
@@ -55,23 +65,18 @@ export function LeaderboardModal({
       displayName={displayName}
       dates={recentDates}
       defaultDate={defaultPuzzleId}
-      buildUrl={(puzzleId, dId) => {
-        const params = new URLSearchParams({ game_id: "leksokipos", puzzle_date: puzzleId });
-        if (dId) params.set("deviceId", dId);
-        return `/api/game-scores?${params.toString()}`;
-      }}
+      buildUrl={buildUrl}
       pillActive="bg-amber-400 text-amber-900"
       playerMark="text-amber-500"
-      showNameEditor={!profileLinked}
+      showNameEditor={true}
+      saveButtonAlwaysActive={!profileLinked}
       topSlot={
         <ProfileSection
           profileLinked={profileLinked}
-          profilePin={profilePin}
           displayName={displayName}
-          onProfileCreate={onProfileCreate}
-          onProfileLinked={onProfileLinked}
-          onProfileRestore={onProfileRestore}
-          onProfileSelect={onProfileSelect}
+          createError={createError ?? undefined}
+          onTransferGenerate={onTransferGenerate}
+          onTransferClaim={onTransferClaim}
           onDisconnect={onDisconnect}
         />
       }
@@ -96,7 +101,7 @@ export function LeaderboardModal({
           </Link>
         ) : null
       }
-      onSaveName={onSaveName}
+      onSaveName={(name) => void handleSave(name)}
       onClose={onClose}
     />
   );

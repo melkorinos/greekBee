@@ -57,6 +57,8 @@ export interface LeaderboardModalBaseProps {
   topSlot?:        React.ReactNode;
   /** When false, the name editor is hidden. Defaults to true. */
   showNameEditor?: boolean;
+  /** When true, the save button is always active and always labelled "Αποθήκευση". Used when saving triggers profile creation. */
+  saveButtonAlwaysActive?: boolean;
   /** Rendered inside the empty-state block for game-specific CTAs. */
   emptySlot?:      (selectedDate: string) => React.ReactNode;
   /** Rendered in the footer when viewing a past date. */
@@ -82,7 +84,8 @@ export function LeaderboardModalBase({
   pillActive,
   playerMark,
   topSlot,
-  showNameEditor = true,
+  showNameEditor          = true,
+  saveButtonAlwaysActive  = false,
   emptySlot,
   footerSlot,
   onSaveName,
@@ -109,7 +112,7 @@ export function LeaderboardModalBase({
 
   function handleSaveName() {
     const trimmed = nameInput.trim();
-    if (!trimmed) return;
+    if (!saveButtonAlwaysActive && !trimmed) return;
     onSaveName(trimmed);
   }
 
@@ -119,6 +122,8 @@ export function LeaderboardModalBase({
 
   const { top20, playerRow } = data;
   const nameDirty            = nameInput.trim() !== displayName && nameInput.trim() !== "";
+  const saveDisabled         = saveButtonAlwaysActive ? false : !nameDirty;
+  const saveLabel            = saveButtonAlwaysActive ? "Αποθήκευση" : (!nameDirty && displayName ? "✓" : "Αποθήκευση");
   const footer               = footerSlot?.(selectedDate);
 
   if (!isOpen) return null;
@@ -175,10 +180,10 @@ export function LeaderboardModalBase({
               />
               <button
                 onClick={handleSaveName}
-                disabled={!nameDirty}
+                disabled={saveDisabled}
                 className={btnPrimaryCompact}
               >
-                {!nameDirty && displayName ? "✓" : "Αποθήκευση"}
+                {saveLabel}
               </button>
             </div>
           </div>

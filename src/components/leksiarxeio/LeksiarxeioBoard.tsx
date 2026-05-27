@@ -11,6 +11,7 @@ import {
   setDisplayName as saveDisplayName,
 } from "@/hooks/useGameStore";
 import { useGameIdentity } from "@/hooks/useGameIdentity";
+import { useProfile } from "@/hooks/useProfile";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
@@ -175,7 +176,13 @@ export function LeksiarxeioBoard({ puzzles, wordLists, today, onOpenLeaderboardR
   // so that existing players' legacy UUID is promoted before getOrCreateDeviceId
   // can create a fresh one. The function is idempotent — safe to call on every render.
   if (typeof window !== "undefined") migrateLeksiarxeioIdentity();
-  const { deviceId, displayName, setDisplayName } = useGameIdentity();
+  const { deviceId, displayName, setDeviceId, setDisplayName } = useGameIdentity();
+  const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } =
+    useProfile({
+      deviceId,
+      onDeviceIdChange:    setDeviceId,
+      onDisplayNameChange: (name) => { setDisplayName(name); saveDisplayName(name); },
+    });
 
   // Expose the open function to the parent via ref callback
   useEffect(() => {
@@ -205,11 +212,6 @@ export function LeksiarxeioBoard({ puzzles, wordLists, today, onOpenLeaderboardR
   // Intentionally runs once on mount — puzzles is stable (server-provided)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  function handleSaveName(name: string) {
-    setDisplayName(name);
-    saveDisplayName(name);
-  }
 
   // Score submission -- all posting logic lives in the hook.
   const { submitLength: postLeksiarxeioScore } = useScoreSubmission({
@@ -299,7 +301,12 @@ export function LeksiarxeioBoard({ puzzles, wordLists, today, onOpenLeaderboardR
         today={today}
         deviceId={deviceId}
         displayName={displayName}
-        onSaveName={handleSaveName}
+        profileLinked={profileLinked}
+        onSaveName={(name) => { setDisplayName(name); saveDisplayName(name); }}
+        onProfileCreate={createProfile}
+        onTransferGenerate={generateTransferCode}
+        onTransferClaim={claimTransferCode}
+        onDisconnect={disconnect}
         onClose={() => setLbOpen(false)}
       />
     </>

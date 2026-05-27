@@ -6,9 +6,13 @@
 //   - Purple colour scheme
 //   - Single-date strip (Connections has no rolling history UI)
 //   - Score formatted as "X/4" (mistakesRemaining; higher = better)
+//   - Shared ProfileSection (topSlot)
 
+import type { LeaderboardProfileProps } from "@/hooks/useLeaderboardProfile";
 import type { LeaderboardUrlBuilder } from "@/hooks/useLeaderboard";
 import { LeaderboardModalBase } from "@/components/shared/LeaderboardModal";
+import { ProfileSection } from "@/components/shared/ProfileSection";
+import { useLeaderboardProfile } from "@/hooks/useLeaderboardProfile";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -20,7 +24,7 @@ const buildUrl: LeaderboardUrlBuilder = (date, deviceId) => {
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
-interface ConnectionsLeaderboardModalProps {
+interface ConnectionsLeaderboardModalProps extends LeaderboardProfileProps {
   isOpen:      boolean;
   date:        string;   // YYYY-MM-DD
   deviceId:    string;
@@ -38,9 +42,20 @@ export function ConnectionsLeaderboardModal({
   deviceId,
   displayName,
   score,
+  profileLinked,
   onSaveName,
+  onProfileCreate,
+  onTransferGenerate,
+  onTransferClaim,
+  onDisconnect,
   onClose,
 }: ConnectionsLeaderboardModalProps) {
+  const { createError, handleSave } = useLeaderboardProfile({
+    profileLinked,
+    onProfileCreate,
+    onSaveName,
+  });
+
   return (
     <LeaderboardModalBase
       isOpen={isOpen}
@@ -56,7 +71,19 @@ export function ConnectionsLeaderboardModal({
       formatScore={(n) => `${n}/4`}
       pillActive="bg-purple-500 text-white"
       playerMark="text-purple-600 dark:text-purple-400"
-      onSaveName={onSaveName}
+      showNameEditor={true}
+      saveButtonAlwaysActive={!profileLinked}
+      topSlot={
+        <ProfileSection
+          profileLinked={profileLinked}
+          displayName={displayName}
+          createError={createError ?? undefined}
+          onTransferGenerate={onTransferGenerate}
+          onTransferClaim={onTransferClaim}
+          onDisconnect={onDisconnect}
+        />
+      }
+      onSaveName={(name) => void handleSave(name)}
       onClose={onClose}
     />
   );

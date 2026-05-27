@@ -7,9 +7,13 @@
 //   - Client-computed 7-day strip
 //   - /api/leksiarxeio-scores endpoint (date= param)
 //   - "Προσπάθειες" score column
+//   - Shared ProfileSection (topSlot)
 
+import type { LeaderboardProfileProps } from "@/hooks/useLeaderboardProfile";
 import type { LeaderboardUrlBuilder } from "@/hooks/useLeaderboard";
 import { LeaderboardModalBase } from "@/components/shared/LeaderboardModal";
+import { ProfileSection } from "@/components/shared/ProfileSection";
+import { useLeaderboardProfile } from "@/hooks/useLeaderboardProfile";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -31,13 +35,13 @@ const buildUrl: LeaderboardUrlBuilder = (date, deviceId) => {
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
-interface LeksiarxeioLeaderboardModalProps {
-  isOpen:       boolean;
-  today:        string;
-  deviceId:     string;
-  displayName:  string;
-  onSaveName:   (name: string) => void;
-  onClose:      () => void;
+interface LeksiarxeioLeaderboardModalProps extends LeaderboardProfileProps {
+  isOpen:      boolean;
+  today:       string;
+  deviceId:    string;
+  displayName: string;
+  onSaveName:  (name: string) => void;
+  onClose:     () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -47,9 +51,20 @@ export function LeksiarxeioLeaderboardModal({
   today,
   deviceId,
   displayName,
+  profileLinked,
   onSaveName,
+  onProfileCreate,
+  onTransferGenerate,
+  onTransferClaim,
+  onDisconnect,
   onClose,
 }: LeksiarxeioLeaderboardModalProps) {
+  const { createError, handleSave } = useLeaderboardProfile({
+    profileLinked,
+    onProfileCreate,
+    onSaveName,
+  });
+
   return (
     <LeaderboardModalBase
       isOpen={isOpen}
@@ -63,7 +78,19 @@ export function LeksiarxeioLeaderboardModal({
       scoreLabel="Προσπάθειες"
       pillActive="bg-green-500 text-white"
       playerMark="text-green-600"
-      onSaveName={onSaveName}
+      showNameEditor={true}
+      saveButtonAlwaysActive={!profileLinked}
+      topSlot={
+        <ProfileSection
+          profileLinked={profileLinked}
+          displayName={displayName}
+          createError={createError ?? undefined}
+          onTransferGenerate={onTransferGenerate}
+          onTransferClaim={onTransferClaim}
+          onDisconnect={onDisconnect}
+        />
+      }
+      onSaveName={(name) => void handleSave(name)}
       onClose={onClose}
     />
   );

@@ -111,24 +111,12 @@ export function setProfileLinked(value: boolean): void {
 }
 
 /**
- * Overwrite the deviceId. Used during profile restore — the restored profile's
+ * Overwrite the deviceId. Used during profile transfer — the source device's
  * device_uuid becomes this device's identity for both leaderboard and sync.
  */
 export function setDeviceId(id: string): void {
   const envelope = readEnvelope();
   writeEnvelope({ ...envelope, deviceId: id });
-}
-
-/** Returns the stored PIN for this device's cross-device profile, or "". */
-export function getProfilePin(): string {
-  if (typeof window === "undefined") return "";
-  return readEnvelope()["profilePin"] ?? "";
-}
-
-/** Store the 4-digit PIN after profile creation. */
-export function setProfilePin(pin: string): void {
-  const envelope = readEnvelope();
-  writeEnvelope({ ...envelope, profilePin: pin });
 }
 
 /**
@@ -158,11 +146,6 @@ export function migrateLeksiarxeioIdentity(): void {
  */
 export function disconnectProfile(): void {
   const envelope = readEnvelope();
-  writeEnvelope({
-    ...envelope,
-    deviceId:      crypto.randomUUID(),
-    profileLinked: false,
-    profilePin:    undefined,
-  });
+  writeEnvelope({ ...envelope, deviceId: crypto.randomUUID(), profileLinked: false });
 }
 

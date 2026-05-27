@@ -1,13 +1,12 @@
-// POST /api/profile  — create a cross-device profile
-// GET  /api/profile?name=&pin= — look up profiles by display name + PIN
+// POST /api/profile  — create or update a cross-device profile (upsert by device_uuid)
+// GET  /api/profile?device_uuid= — existence check (startup profile verification)
 //
 // Identity model: the client supplies its own device_uuid (= the existing
-// anonymous deviceId). The server never generates a UUID — it only generates
-// the 4-digit PIN. See handoff-phase4.md for the full identity rationale.
+// anonymous deviceId). No PIN — cross-device transfer uses the separate
+// /api/transfer flow instead. See docs/adr/ for the identity rationale.
 //
 // RLS: anon INSERT + anon SELECT + anon UPDATE (open profiles table).
-// (name, pin) is NOT unique — multiple rows can share the same pair.
-// device_uuid is the stable profile identifier; never updated after creation.
+// device_uuid is the stable profile identifier; has a UNIQUE constraint.
 
 import { NextRequest, NextResponse } from "next/server";
 
@@ -15,21 +14,11 @@ import { getSupabaseClient } from "@/lib/supabase";
 
 export const runtime = "edge";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/** Returns a zero-padded 4-digit PIN string, e.g. "0419". */
-function generatePin(): string {
-  return Math.floor(Math.random() * 10_000)
-    .toString()
-    .padStart(4, "0");
-}
-
-// ── POST — create profile ─────────────────────────────────────────────────────
+// ── POST — create / update profile ───────────────────────────────────────────
 
 interface CreateProfilePayload {
   display_name: string;
   device_uuid:  string;
-  pin?:         string;
 }
 
 export async function POST(req: NextRequest) {
@@ -40,20 +29,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { display_name: rawName, device_uuid, pin: clientPin } = body;
+  const { display_name: rawName, device_uuid } = body;
 
   if (!device_uuid) {
     return NextResponse.json({ error: "device_uuid is required" }, { status: 400 });
   }
 
   const display_name = (rawName ?? "").trim() || "Ανώνυμος";
-  // Use the player's chosen PIN if it's exactly 4 digits, otherwise auto-generate.
-  const pin = /^\d{4}$/.test(clientPin ?? "") ? clientPin! : generatePin();
   const supabase     = getSupabaseClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase.from("player_profiles") as any).upsert(
-    { display_name, pin, device_uuid },
+    { display_name, device_uuid },
     { onConflict: "device_uuid" }
   );
 
@@ -61,56 +48,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ pin });
+  return NextResponse.json({ ok: true });
 }
 
-// ── GET — look up profiles by name + PIN ──────────────────────────────────────
-
-export interface ProfileMatch {
-  device_uuid:  string;
-  display_name: string;
-  created_at:   string;
-  last_active:  string;
-}
+// ── GET — existence check by device_uuid (startup profile verification) ──────
 
 export async function GET(req: NextRequest) {
-  const name       = req.nextUrl.searchParams.get("name")        ?? "";
-  const pin        = req.nextUrl.searchParams.get("pin")         ?? "";
   const deviceUuid = req.nextUrl.searchParams.get("device_uuid") ?? "";
+
+  if (!deviceUuid) {
+    return NextResponse.json({ error: "device_uuid is required" }, { status: 400 });
+  }
 
   const supabase = getSupabaseClient();
 
-  // ── Existence check by device_uuid (startup profile verification) ───────────
-  if (deviceUuid) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from("player_profiles") as any)
-      .select("device_uuid")
-      .eq("device_uuid", deviceUuid)
-      .single();
-
-    if (error && error.message !== "JSON object requested, multiple (or no) rows returned") {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ exists: data !== null });
-  }
-
-  // ── Name + PIN lookup (cross-device restore) ─────────────────────────────────
-  if (!name || !pin) {
-    return NextResponse.json({ error: "name and pin are required" }, { status: 400 });
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.from("player_profiles") as any)
-    .select("device_uuid, display_name, created_at, last_active")
-    .eq("display_name", name)
-    .eq("pin", pin)
-    .order("last_active", { ascending: false });
+    .select("device_uuid")
+    .eq("device_uuid", deviceUuid)
+    .single();
 
-  if (error) {
+  if (error && error.message !== "JSON object requested, multiple (or no) rows returned") {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const profiles: ProfileMatch[] = (data ?? []) as ProfileMatch[];
-  return NextResponse.json({ profiles });
+  return NextResponse.json({ exists: data !== null });
 }

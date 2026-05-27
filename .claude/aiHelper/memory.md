@@ -25,7 +25,8 @@ Three live games + custom puzzle URLs. Run `npm run test -- --run` for current c
 | **Custom puzzle ID** | `custom-{center}-{sortedOuter}` — not date-scoped. |
 | **No Greek accents** | Zero accents in URLs, stored state, puzzle letters, valid-word output. `normalizeLetters()` is the single normalisation point. |
 | **Custom URL** | Greeklish bijective codec (`src/lib/greeklish.ts`). Canonical 301 redirect on unnormalised params. |
-| **Supabase** | Singleton in `src/lib/supabase.ts`. `getOrCreateDeviceId()` generates stable UUID stored under `deviceId` in the envelope. |
+| **Supabase** | Singleton in `src/lib/supabase.ts`. `getOrCreateDeviceId()` generates stable UUID stored under `deviceId` in the envelope. 7 tables: `player_profiles`, `transfer_codes`, `game_scores`, `leksiarxeio_scores`, `game_state`, `nominations`, `nomination_votes`. |
+| **Profile identity** | No PIN. Profile = device_uuid row in `player_profiles`. Cross-device: generate 6-char transfer code via `POST /api/transfer`, claim on other device via `POST /api/transfer/claim`. `useProfile` hook shared across all 3 games. `ProfileSection` component shared in `src/components/shared/`. |
 | **Leaderboard** | Per-puzzle daily only. Silent upsert on score increase. 7-day rolling window. Custom puzzles excluded. |
 | **Leaderboard navigation** | Rolling 7-day pill strip. `getRecentPuzzleDates(7)` server-side. |
 | **Future renames** | UI strings only — never directories, types, or routes. |
@@ -41,7 +42,7 @@ src/
   components/   shared/ · leksokipos/ · leksiarxeio/ · leksindeseis/
   games/        Pure logic: leksokipos/lib+hooks · leksiarxeio/lib+hooks · leksindeseis/hooks
   data/         leksokipos/puzzles-el.json · leksiarxeio/words-{4..8}.json · leksindeseis/puzzles-connections.json · words-el.json
-  hooks/        useGameStore · useGameIdentity · useScoreSubmission · useRoundPersistence · useGameStateSync · useLeaderboard · useProfileVerification · useTheme
+  hooks/        useGameStore · useGameIdentity · useScoreSubmission · useRoundPersistence · useGameStateSync · useLeaderboard · useProfileVerification · useProfile · useLeaderboardProfile · useTheme
   lib/          greeklish.ts · postScore.ts
   types/        index.ts
   test/         organised by game + shared/
@@ -94,3 +95,6 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `suggestions.test.ts` | `getSuggestedWords`, `markSuggested`, `isSuggested` |
 | `wordInput.test.tsx` | Letter display, center-letter highlight, inline submit visibility |
 | `deploymentReadiness.test.ts` | Statically imported data files exist and are not gitignored |
+| `profileRoute.test.ts` | `GET /api/profile?device_uuid=` (exists/not/error) + `POST /api/profile` (upsert, 400 missing uuid) |
+| `transferRoute.test.ts` | `POST /api/transfer` (code format, 400, 500) + `POST /api/transfer/claim` (valid, 404/410 used/expired, empty profile) |
+| `leaderboardModal.test.tsx` | Day strip, play link, ProfileSection (idle/claiming/linked/transfer), name editor |

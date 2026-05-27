@@ -3,8 +3,9 @@
 // GameBoard -- the top-level client component that composes all game UI pieces.
 // Receives the initial puzzle as a prop (loaded server-side in page.tsx).
 
-import { disconnectProfile, getOrCreateDeviceId, getProfilePin, isProfileLinked, setDeviceId, setDisplayName as saveDisplayName, setProfileLinked, setProfilePin } from "@/hooks/useGameStore";
+import { setDisplayName as saveDisplayName } from "@/hooks/useGameStore";
 import { useGameIdentity } from "@/hooks/useGameIdentity";
+import { useProfile } from "@/hooks/useProfile";
 import { useProfileVerification } from "@/hooks/useProfileVerification";
 import { getSuggestedWords, markSuggested } from "@/hooks/suggestions";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -15,7 +16,6 @@ import { FlowerGridPlayground as FlowerGrid } from "./FlowerGridPlayground";
 import { LeaderboardModal } from "./LeaderboardModal";
 import { MissedWordsList } from "./MissedWordsList";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
-import type { ProfileMatch } from "./LeaderboardModal";
 import { ScoreBar } from "./ScoreBar";
 import { NominationModal } from "@/components/shared/NominationModal";
 import { WordInput } from "./WordInput";
@@ -49,7 +49,6 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
     shuffleLetters,
     handleKeyboardLetter,
     giveUp,
-    restoreFromSync,
   } = useGameState(puzzle);
 
   // Word suggestion
@@ -62,19 +61,6 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   // Leaderboard + profile
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
   const { deviceId, displayName, setDeviceId: setDeviceIdState, setDisplayName: setDisplayNameState } = useGameIdentity();
-  const [profileLinkedState, setProfileLinkedState] = useState<boolean>(
-    () => typeof window === "undefined" ? false : isProfileLinked()
-  );
-  const [profilePin, setProfilePinState] = useState<string>(
-    () => typeof window === "undefined" ? "" : getProfilePin()
-  );
-
-  // Auto-heal stale linked profile — silently disconnects if the DB row is gone.
-  useProfileVerification({
-    profileLinked: profileLinkedState,
-    deviceId,
-    onDisconnect:  handleDisconnect,
-  });
 
   // Only daily puzzles participate in the leaderboard.
   const isDaily          = isDailyPuzzle(activePuzzle);
@@ -95,63 +81,23 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   // Cross-device sync — pushes state on every valid word, daily puzzles only.
   useGameStateSync({ puzzleDate: leaderboardPuzzleId, isDaily, foundWords, score, currentInput });
 
-  // ── Profile callbacks ────────────────────────────────────────────────────────
+  const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } = useProfile({
+    deviceId,
+    onDeviceIdChange:    setDeviceIdState,
+    onDisplayNameChange: (name) => { setDisplayNameState(name); postScoreWithName(score, name); },
+  });
 
-  async function handleProfileCreate(name: string, pin: string): Promise<{ pin: string }> {
-    const res = await fetch("/api/profile", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ display_name: name, device_uuid: deviceId, pin }),
-    });
-    if (!res.ok) throw new Error("profile create failed");
-    const data = (await res.json()) as { pin: string };
-    // Save name + PIN now — but do NOT flip profileLinked yet.
-    // profileLinked is set only after the user acknowledges the PIN (handleProfileLinked).
-    // Flipping it here would cause the modal's useEffect to wipe pin-reveal before it renders.
-    handleSaveName(name || "Ανώνυμος");
-    setProfilePin(data.pin);
-    setProfilePinState(data.pin);
-    return data;
-  }
+  // Auto-heal stale linked profile — silently disconnects if the DB row is gone.
+  useProfileVerification({
+    profileLinked,
+    deviceId,
+    onDisconnect: disconnect,
+  });
 
-  function handleProfileLinked(): void {
-    setProfileLinked(true);
-    setProfileLinkedState(true);
-  }
-
-  async function handleProfileRestore(name: string, pin: string): Promise<ProfileMatch[]> {
-    const res = await fetch(
-      `/api/profile?name=${encodeURIComponent(name)}&pin=${encodeURIComponent(pin)}`
-    );
-    if (!res.ok) throw new Error("profile lookup failed");
-    const data = (await res.json()) as { profiles: ProfileMatch[] };
-    return data.profiles;
-  }
-
-  async function handleProfileSelect(selectedUuid: string, selectedName: string): Promise<void> {
-    setDeviceId(selectedUuid);
-    setDeviceIdState(selectedUuid);
-    setProfileLinked(true);
-    setProfileLinkedState(true);
-    handleSaveName(selectedName);
-
-    const res = await fetch(
-      `/api/game-state?device_uuid=${encodeURIComponent(selectedUuid)}&game_id=leksokipos&puzzle_date=${encodeURIComponent(leaderboardPuzzleId)}`
-    );
-    if (res.ok) {
-      const { state } = (await res.json()) as {
-        state: { foundWords: string[]; score: number; currentInput: string } | null;
-      };
-      if (state) restoreFromSync(state);
-    }
-    setLeaderboardOpen(false);
-  }
-
-  function handleDisconnect(): void {
-    disconnectProfile();
-    setDeviceIdState(getOrCreateDeviceId());
-    setProfileLinkedState(false);
-    setProfilePinState("");
+  function handleSaveName(name: string) {
+    saveDisplayName(name);
+    setDisplayNameState(name);
+    postScoreWithName(score, name);
   }
 
   function handleSuggest(word: string) {
@@ -164,12 +110,6 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
     setSuggestedWords((prev) => new Set([...prev, word.toLowerCase()]));
     setJustSuggested(word.toLowerCase());
     setSuggestWord(null);
-  }
-
-  function handleSaveName(name: string) {
-    saveDisplayName(name);
-    setDisplayNameState(name);
-    postScoreWithName(score, name);
   }
 
   // Stable ref keyboard pattern -- listener registered once, handler updated via layoutEffect.
@@ -317,14 +257,12 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
           recentDates={recentPuzzleDates}
           deviceId={deviceId}
           displayName={displayName}
-          profileLinked={profileLinkedState}
-          profilePin={profilePin}
+          profileLinked={profileLinked}
           onSaveName={handleSaveName}
-          onProfileCreate={handleProfileCreate}
-          onProfileLinked={handleProfileLinked}
-          onProfileRestore={handleProfileRestore}
-          onProfileSelect={handleProfileSelect}
-          onDisconnect={handleDisconnect}
+          onProfileCreate={createProfile}
+          onTransferGenerate={generateTransferCode}
+          onTransferClaim={claimTransferCode}
+          onDisconnect={disconnect}
           onClose={() => setLeaderboardOpen(false)}
         />
       )}

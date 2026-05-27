@@ -1,8 +1,7 @@
 // profileRoute.test.ts — unit tests for GET /api/profile and POST /api/profile
 //
 // Covers:
-//   GET ?name=&pin=        — existing lookup by name + PIN
-//   GET ?device_uuid=      — new: existence check for startup verification
+//   GET ?device_uuid=      — existence check for startup verification
 //   POST                   — idempotent upsert by device_uuid
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -81,6 +80,11 @@ describe("GET /api/profile?device_uuid — existence check", () => {
     expect(json.exists).toBe(false);
   });
 
+  it("returns 400 when device_uuid is absent", async () => {
+    const res = await GET(makeGetReq({}));
+    expect(res.status).toBe(400);
+  });
+
   it("returns 500 when Supabase returns an error", async () => {
     enqueue({ data: null, error: { message: "DB error" } });
 
@@ -89,35 +93,16 @@ describe("GET /api/profile?device_uuid — existence check", () => {
   });
 });
 
-// ── GET ?name=&pin= — existing name+PIN lookup (regression) ──────────────────
-
-describe("GET /api/profile?name&pin — name+PIN lookup (unchanged)", () => {
-  it("returns 400 when both device_uuid and name+pin are absent", async () => {
-    const res = await GET(makeGetReq({}));
-    expect(res.status).toBe(400);
-  });
-
-  it("returns matching profiles when name+pin are provided", async () => {
-    const rows = [{ device_uuid: "uuid-1", display_name: "Νίκος", created_at: "2026-01-01", last_active: "2026-05-01" }];
-    enqueue({ data: rows, error: null });
-
-    const res = await GET(makeGetReq({ name: "Νίκος", pin: "1234" }));
-    expect(res.status).toBe(200);
-    const json = await res.json() as { profiles: unknown[] };
-    expect(json.profiles).toHaveLength(1);
-  });
-});
-
 // ── POST — idempotent upsert ──────────────────────────────────────────────────
 
 describe("POST /api/profile — idempotent upsert", () => {
-  it("returns { pin } on success", async () => {
+  it("returns { ok: true } on success", async () => {
     enqueue({ data: null, error: null });
 
-    const res = await makePostReq({ display_name: "Μαρία", device_uuid: "uuid-new" });
-    const json = await (await POST(res)).json() as { pin: string };
-    expect(typeof json.pin).toBe("string");
-    expect(json.pin).toHaveLength(4);
+    const res = await POST(makePostReq({ display_name: "Μαρία", device_uuid: "uuid-new" }));
+    expect(res.status).toBe(200);
+    const json = await res.json() as { ok: boolean };
+    expect(json.ok).toBe(true);
   });
 
   it("calling POST twice with same device_uuid succeeds (upsert, not duplicate error)", async () => {

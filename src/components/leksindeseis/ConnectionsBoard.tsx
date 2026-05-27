@@ -11,6 +11,7 @@ import { FeedbackBanner }                  from "@/components/shared/FeedbackBan
 import { GroupGrid }                       from "@/components/leksindeseis/GroupGrid";
 import { setDisplayName } from "@/hooks/useGameStore";
 import { useGameIdentity } from "@/hooks/useGameIdentity";
+import { useProfile } from "@/hooks/useProfile";
 import { useScoreSubmission }              from "@/hooks/useScoreSubmission";
 import { useLeksindeseisState }            from "@/games/leksindeseis/hooks/useLeksindeseisState";
 
@@ -53,15 +54,7 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
   } = useLeksindeseisState(puzzle);
 
   // ── Identity ────────────────────────────────────────────────────────────────
-  const { deviceId, displayName, setDisplayName: setDisplayNameState } = useGameIdentity();
-
-  function handleSaveName(name: string) {
-    setDisplayNameState(name);
-    setDisplayName(name);
-    if (status === "won") {
-      submitWithName(mistakesRemaining, name);
-    }
-  }
+  const { deviceId, displayName, setDeviceId: setDeviceIdState, setDisplayName: setDisplayNameState } = useGameIdentity();
 
   // ── Score submission ─────────────────────────────────────────────────────────
   const { submit: postScore, submitWithName } = useScoreSubmission({
@@ -70,6 +63,21 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
     deviceId:    deviceId,
     displayName: displayName,
   });
+
+  const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } = useProfile({
+    deviceId,
+    onDeviceIdChange:    setDeviceIdState,
+    onDisplayNameChange: (name) => {
+      setDisplayNameState(name);
+      if (status === "won") submitWithName(mistakesRemaining, name);
+    },
+  });
+
+  function handleSaveName(name: string) {
+    setDisplayNameState(name);
+    setDisplayName(name);
+    if (status === "won") submitWithName(mistakesRemaining, name);
+  }
 
   // Fire once when the game transitions to "won"
   const prevStatusRef = useRef(status);
@@ -179,7 +187,12 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
         deviceId={deviceId}
         displayName={displayName}
         score={status === "won" ? mistakesRemaining : 0}
+        profileLinked={profileLinked}
         onSaveName={handleSaveName}
+        onProfileCreate={createProfile}
+        onTransferGenerate={generateTransferCode}
+        onTransferClaim={claimTransferCode}
+        onDisconnect={disconnect}
         onClose={() => setLbOpen(false)}
       />
     </div>
