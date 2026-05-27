@@ -1,17 +1,12 @@
 "use client";
 
-// useScoreSubmission — unified score-posting hook for all three games.
-//
-// Interface:
-//   submit(score)                          — Leksokipos + Leksindeseis
-//   submitWithName(score, name)            — Leksokipos + Leksindeseis
-//   submitLength(length, attempts, won)    — Leksiarxeio only
+// useScoreSubmission — score-posting hook for Leksokipos and Leksindeseis.
+// For Leksiarxeio use useLeksiarxeioScoreSubmission instead.
 //
 // Hides:
-//   - "only POST when score strictly increases" dedup guard (submit/submitWithName)
-//   - failed-game → 7-attempt penalty mapping (submitLength)
+//   - "only POST when score strictly increases" dedup guard (submit)
 //   - display-name ref pattern (always reads latest name at call time, stable fn refs)
-//   - fetch URL + JSON field names per endpoint
+//   - fetch URL + JSON field names
 //   - error silencing — score posting must never crash the game
 //   - no-op when disabled or deviceId unknown
 
@@ -27,7 +22,7 @@ function postScore(url: string, body: unknown): void {
 
 interface UseScoreSubmissionOptions {
   /** Which game's leaderboard to post to. */
-  gameId:      "leksokipos" | "leksindeseis" | "leksiarxeio";
+  gameId:      "leksokipos" | "leksindeseis";
   /** The puzzle date (YYYY-MM-DD) — used as the leaderboard partition key. */
   puzzleDate:  string;
   /** Stable anonymous device identifier. Empty string = skip posting. */
@@ -83,22 +78,5 @@ export function useScoreSubmission({
     [enabled, gameId, puzzleDate, deviceId],
   );
 
-  // ── Leksiarxeio ────────────────────────────────────────────────────────────
-
-  /** Post a per-length result. Maps a failed game (won=false) to a 7-attempt penalty. */
-  const submitLength = useCallback(
-    (length: number, attempts: number, won: boolean) => {
-      if (!deviceId) return;
-      postScore("/api/leksiarxeio-scores", {
-        puzzle_date:  puzzleDate,
-        word_length:  length,
-        device_id:    deviceId,
-        attempts:     won ? attempts : 7,
-        display_name: displayNameRef.current || "Ανώνυμος",
-      });
-    },
-    [puzzleDate, deviceId],
-  );
-
-  return { submit, submitWithName, submitLength };
+  return { submit, submitWithName };
 }

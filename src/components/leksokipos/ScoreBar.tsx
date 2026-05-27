@@ -8,7 +8,7 @@ import { scoreBarFill, scoreBarTrack } from "./styles";
 import { useEffect, useRef, useState } from "react";
 
 import type { RankName } from "@/games/leksokipos/types";
-import { rankProgress } from "@/games/leksokipos/lib/ranking";
+import { rankProgress } from "./rankDisplay";
 
 interface ScoreBarProps {
   score: number;

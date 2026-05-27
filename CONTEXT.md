@@ -50,11 +50,11 @@ _Avoid_: today's puzzle (unless informal context)
 
 **Pre-built Puzzle** _(Leksokipos)_:
 A Leksokipos Puzzle that was batch-generated offline (via `npm run batch-generate`), passed quality filters (≥1 pangram, vowel centre, ≥2 vowels, ≥2 outer consonants), and stored in `puzzles-el.json`. Every Daily Leksokipos Puzzle is a Pre-built Puzzle. Has a real date-scoped ID and appears on the Leaderboard.
-_Avoid_: curated (reserved for hand-authored Leksindeseis puzzles), pre-generated
+_Avoid_: curated, pre-generated
 
-**Curated Puzzle** _(Leksindeseis)_:
-A Leksindeseis Puzzle authored entirely by hand. The Category labels, word groupings, and Difficulty assignments require human editorial judgment and cannot be generated automatically. Stored in `puzzles-connections.json`.
-_Avoid_: hand-made, editorial, pre-built (reserved for batch-generated Leksokipos puzzles)
+**Community Puzzle**:
+A Puzzle submitted by any player (including the maintainer) through the in-app submission form, reviewed and approved by an admin, and queued for use as the Daily Puzzle for Leksiarxeio or Leksindeseis. Community Puzzles are the primary source for daily Leksiarxeio and Leksindeseis puzzles; the static fallback pools (`words-N.json`, `puzzles-connections.json`) are used only when the community queue is empty. A Community Puzzle carries an optional `submitter_name` shown on the game board during play. The legacy hand-authored puzzles in `puzzles-connections.json` are treated as a fallback pool — not a separate type.
+_Avoid_: curated puzzle (retired), player puzzle, user puzzle
 
 **Custom Puzzle** _(Leksokipos only)_:
 A Puzzle constructed from a player-chosen or randomly-generated 7-letter combination. ID format: `custom-{center}-{sortedOuter}`. Never appears on the Leaderboard.

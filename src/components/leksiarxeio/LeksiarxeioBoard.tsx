@@ -19,7 +19,7 @@ import { GuessGrid } from "./GuessGrid";
 import { Keyboard } from "./Keyboard";
 import { LeksiarxeioLeaderboardModal } from "./LeksiarxeioLeaderboardModal";
 import { normalizeLetters } from "@/lib/normalize";
-import { useScoreSubmission } from "@/hooks/useScoreSubmission";
+import { useLeksiarxeioScoreSubmission } from "@/hooks/useLeksiarxeioScoreSubmission";
 import { useLeksiarxeioState } from "@/games/leksiarxeio/hooks/useLeksiarxeioState";
 
 // Greek letter regex (covers the Greek alphabet range)
@@ -214,8 +214,7 @@ export function LeksiarxeioBoard({ puzzles, wordLists, today, onOpenLeaderboardR
   }, []);
 
   // Score submission -- all posting logic lives in the hook.
-  const { submitLength: postLeksiarxeioScore } = useScoreSubmission({
-    gameId:     "leksiarxeio",
+  const { submitLength: postLeksiarxeioScore } = useLeksiarxeioScoreSubmission({
     puzzleDate: today,
     deviceId,
     displayName,
