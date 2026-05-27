@@ -68,17 +68,17 @@ export function NominationCard({
   return (
     <tr
       data-testid="nomination-card"
-      className="border-b border-stone-100 last:border-0 align-top"
+      className="border-b border-stone-100 dark:border-stone-800 last:border-0 align-top"
     >
-      <td className="py-3 pr-4 font-bold text-stone-800 uppercase tracking-wide whitespace-nowrap">
+      <td className="py-3 pr-4 font-bold text-stone-800 dark:text-stone-100 uppercase tracking-wide whitespace-nowrap">
         {nomination.word}
       </td>
 
-      <td className="py-3 pr-4 text-xs text-stone-400 whitespace-nowrap">
+      <td className="py-3 pr-4 text-xs text-stone-400 dark:text-stone-500 whitespace-nowrap">
         {nomination.player_name ?? "—"}
       </td>
 
-      <td className="py-3 pr-4 text-sm text-stone-600 leading-relaxed">
+      <td className="py-3 pr-4 text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
         {nomination.note ?? ""}
       </td>
 
@@ -92,8 +92,8 @@ export function NominationCard({
             className={[
               "flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full transition-colors",
               currentVote === "up"
-                ? "bg-green-100 text-green-700"
-                : "bg-stone-100 text-stone-500 hover:bg-green-100 hover:text-green-700",
+                ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300"
+                : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-green-100 dark:hover:bg-green-900 hover:text-green-700 dark:hover:text-green-300",
             ].join(" ")}
           >
             ▲ {nomination.upvote_count}
@@ -106,8 +106,8 @@ export function NominationCard({
             className={[
               "flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full transition-colors",
               currentVote === "down"
-                ? "bg-red-100 text-red-600"
-                : "bg-stone-100 text-stone-500 hover:bg-red-100 hover:text-red-600",
+                ? "bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300"
+                : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-red-100 dark:hover:bg-red-900 hover:text-red-600 dark:hover:text-red-300",
             ].join(" ")}
           >
             ▼ {nomination.downvote_count}
@@ -122,17 +122,19 @@ export function NominationCard({
               onClick={() => handleReview("approve")}
               disabled={reviewing}
               data-testid="admin-approve"
-              className="px-2.5 py-1 rounded-lg bg-green-600 text-white text-xs font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
+              aria-label="Έγκριση"
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-green-600 text-white text-sm font-bold hover:bg-green-700 disabled:opacity-50 transition-colors"
             >
-              Έγκριση
+              ✓
             </button>
             <button
               onClick={() => handleReview("reject")}
               disabled={reviewing}
               data-testid="admin-reject"
-              className="px-2.5 py-1 rounded-lg bg-red-500 text-white text-xs font-semibold hover:bg-red-600 disabled:opacity-50 transition-colors"
+              aria-label="Απόρριψη"
+              className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500 text-white text-sm font-bold hover:bg-red-600 disabled:opacity-50 transition-colors"
             >
-              Απόρριψη
+              ✕
             </button>
           </div>
         </td>

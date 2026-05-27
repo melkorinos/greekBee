@@ -13,8 +13,8 @@ export const GAME_REGISTRY = {
     wip:         false,
   },
   leksiarxeio: {
-    label:       "🟩 Leksiarxeio",
-    emoji:       "🟩",
+    label:       "✏️ Leksiarxeio",
+    emoji:       "✏️",
     title:       "Leksiarxeio",
     description: "Μάντεψε τη λέξη σε 6 προσπάθειες — 5 γράμματα.",
     href:        "/leksiarxeio",
@@ -29,9 +29,9 @@ export const GAME_REGISTRY = {
     wip:         true,
   },
   leksikastirio: {
-    label:       "⚖️ Λεξικαστήριο",
+    label:       "⚖️ Leksikastirio",
     emoji:       "⚖️",
-    title:       "Λεξικαστήριο",
+    title:       "Leksikastirio",
     description: "Ψηφίστε λέξεις για προσθήκη ή αφαίρεση από τη λίστα.",
     href:        "/leksikastirio",
     wip:         false,

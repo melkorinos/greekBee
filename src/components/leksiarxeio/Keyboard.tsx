@@ -24,7 +24,7 @@ const STATE_CLASSES: Record<string, string> = {
   correct: "bg-green-600  text-white border-green-600",
   present: "bg-yellow-500 text-white border-yellow-500",
   absent:  "bg-stone-500  text-white border-stone-500",
-  unknown: "bg-stone-700  text-stone-100 border-stone-600",
+  unknown: "bg-stone-200  text-stone-800 border-stone-200 dark:bg-stone-700 dark:text-stone-100 dark:border-stone-700",
 };
 
 export function Keyboard({
@@ -57,7 +57,7 @@ export function Keyboard({
   ].join(" ");
 
   const enterClass  = `${actionBase} px-1 text-base bg-emerald-600 border-emerald-500 text-white`;
-  const deleteClass = `${actionBase} px-1 text-sm  bg-stone-600  border-stone-500  text-stone-100`;
+  const deleteClass = `${actionBase} px-1 text-sm  bg-stone-300  border-stone-200   text-stone-700 dark:bg-stone-700 dark:border-stone-700 dark:text-stone-300`;
 
   return (
     <div className="flex flex-col items-center gap-1.5 w-full" aria-label="Keyboard">

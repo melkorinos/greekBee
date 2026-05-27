@@ -56,12 +56,11 @@ describe("MissedWordsList", () => {
 
   it("sorts missed words alphabetically", () => {
     render(<MissedWordsList puzzle={puzzle} foundWords={[]} />);
-    // Collect all word chips in order
-    const chips = [
-      ...screen.getAllByTestId("missed-word"),
-      ...screen.getAllByTestId("missed-word-pangram"),
-    ].map((el) => el.textContent ?? "").sort(); // sort for stable comparison
-    const expected = [...puzzle.validWords].sort();
-    expect(chips).toEqual(expected);
+    // Query in DOM order (pangrams and regular words are interleaved in one sorted list).
+    const list     = screen.getByTestId("missed-words-list");
+    const allChips = Array.from(
+      list.querySelectorAll('[data-testid="missed-word"], [data-testid="missed-word-pangram"]'),
+    ).map((el) => el.textContent ?? "");
+    expect(allChips).toEqual([...puzzle.validWords].sort());
   });
 });

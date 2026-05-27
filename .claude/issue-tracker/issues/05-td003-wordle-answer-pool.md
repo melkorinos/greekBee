@@ -1,4 +1,4 @@
-# TD-003 — Wordle answer pool quality (lengths 4, 6, 7, 8)
+# TD-003 — Leksiarxeio answer pool quality (lengths 4, 6, 7, 8)
 
 Status: ready-for-agent
 
@@ -8,16 +8,16 @@ Status: ready-for-agent
 
 ## Affected files
 
-- `src/data/wordle/words-4.json` — no curated answers file
-- `src/data/wordle/words-6.json` — no curated answers file
-- `src/data/wordle/words-7.json` — no curated answers file
-- `src/data/wordle/words-8.json` — no curated answers file
-- `src/data/wordle/index.ts` — falls back to full word list when no answers file exists
+- `src/data/leksiarxeio/words-4.json` — no curated answers file
+- `src/data/leksiarxeio/words-6.json` — no curated answers file
+- `src/data/leksiarxeio/words-7.json` — no curated answers file
+- `src/data/leksiarxeio/words-8.json` — no curated answers file
+- `src/data/leksiarxeio/index.ts` — falls back to full word list when no answers file exists
 
 ## Acceptance criteria
 
 - Separate `answers-{4,6,7,8}.json` files created, each filtered against a high-frequency lemma list (or manually curated).
-- `src/data/wordle/index.ts` updated to use `answers-N.json` as the answer pool when it exists, falling back to `words-N.json` only for valid-guess validation.
+- `src/data/leksiarxeio/index.ts` updated to use `answers-N.json` as the answer pool when it exists, falling back to `words-N.json` only for valid-guess validation.
 - Existing tests still pass; add a test asserting `getAnswerPool(N)` returns a subset of `getValidWords(N)`.
 
 ## Comments

@@ -12,11 +12,18 @@
 //   - failed-game → 7-attempt penalty mapping (submitLength)
 //   - display-name ref pattern (always reads latest name at call time, stable fn refs)
 //   - fetch URL + JSON field names per endpoint
-//   - error silencing (handled by postScore)
+//   - error silencing — score posting must never crash the game
 //   - no-op when disabled or deviceId unknown
 
-import { postScore } from "@/lib/postScore";
 import { useCallback, useEffect, useRef } from "react";
+
+function postScore(url: string, body: unknown): void {
+  fetch(url, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify(body),
+  }).catch(() => {});
+}
 
 interface UseScoreSubmissionOptions {
   /** Which game's leaderboard to post to. */

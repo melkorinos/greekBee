@@ -133,19 +133,19 @@ export function LeaderboardModalBase({
     >
       <div className="absolute inset-0 bg-black/40" />
 
-      <div className="relative bg-white rounded-t-2xl w-full max-w-sm max-h-[82vh] flex flex-col shadow-2xl">
+      <div className="relative bg-white dark:bg-stone-900 rounded-t-2xl w-full max-w-sm max-h-[82vh] flex flex-col shadow-2xl">
 
         {/* ── Header ─────────────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-stone-100">
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-stone-100 dark:border-stone-800">
           <div>
-            <h2 className="text-base font-bold text-stone-800">{title}</h2>
+            <h2 className="text-base font-bold text-stone-800 dark:text-stone-100">{title}</h2>
             {subtitle && (
-              <p className="text-xs text-stone-400 mt-0.5">{subtitle}</p>
+              <p className="text-xs text-stone-400 dark:text-stone-500 mt-0.5">{subtitle}</p>
             )}
           </div>
           <button
             onClick={onClose}
-            className="text-stone-400 hover:text-stone-600 transition-colors text-2xl leading-none w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-100"
+            className="text-stone-400 hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300 transition-colors text-2xl leading-none w-8 h-8 flex items-center justify-center rounded-full hover:bg-stone-100 dark:hover:bg-stone-800"
             aria-label="Κλείσιμο"
           >
             ×
@@ -154,14 +154,14 @@ export function LeaderboardModalBase({
 
         {/* ── Top slot (e.g. profile section) ────────────────────────────────── */}
         {topSlot && (
-          <div className="border-b border-stone-100">
+          <div className="border-b border-stone-100 dark:border-stone-800">
             {topSlot}
           </div>
         )}
 
         {/* ── Display name ───────────────────────────────────────────────────── */}
         {showNameEditor && (
-          <div className="px-5 py-3 border-b border-stone-100">
+          <div className="px-5 py-3 border-b border-stone-100 dark:border-stone-800">
             <label className={`${labelClass} mb-1.5`}>Το όνομά σου</label>
             <div className="flex gap-2">
               <input
@@ -186,7 +186,7 @@ export function LeaderboardModalBase({
 
         {/* ── Day strip ──────────────────────────────────────────────────────── */}
         {dates.length > 0 && (
-          <div className="px-4 py-3 border-b border-stone-100">
+          <div className="px-4 py-3 border-b border-stone-100 dark:border-stone-800">
             <div className="flex gap-1.5 overflow-x-auto pb-1">
               {dates.map((date) => {
                 const isSelected = date === selectedDate;
@@ -200,7 +200,7 @@ export function LeaderboardModalBase({
                     className={`shrink-0 flex flex-col items-center px-2.5 py-1.5 rounded-lg transition-colors ${
                       isSelected
                         ? pillActive
-                        : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                        : "bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700"
                     }`}
                   >
                     <span className="text-[0.6rem] font-semibold leading-tight">
@@ -215,7 +215,7 @@ export function LeaderboardModalBase({
             </div>
             <button
               onClick={() => void refresh()}
-              className="mt-1.5 text-xs text-stone-400 hover:text-stone-700 transition-colors"
+              className="mt-1.5 text-xs text-stone-400 dark:text-stone-500 hover:text-stone-700 dark:hover:text-stone-300 transition-colors"
               aria-label="Ανανέωση"
             >
               ↻ Ανανέωση
@@ -227,7 +227,7 @@ export function LeaderboardModalBase({
         <div className="overflow-y-auto flex-1 px-5 py-3">
 
           {isLoading && (
-            <p className="text-center text-stone-400 text-sm py-10">Φόρτωση…</p>
+            <p className="text-center text-stone-400 dark:text-stone-500 text-sm py-10">Φόρτωση…</p>
           )}
 
           {!isLoading && error && (
@@ -236,7 +236,7 @@ export function LeaderboardModalBase({
 
           {!isLoading && !error && top20.length === 0 && (
             <div className="text-center py-10">
-              <p className="text-stone-400 text-sm mb-3">
+              <p className="text-stone-400 dark:text-stone-500 text-sm mb-3">
                 Κανείς δεν έχει παίξει αυτή την ημέρα ακόμα.
               </p>
               {emptySlot?.(selectedDate)}
@@ -246,7 +246,7 @@ export function LeaderboardModalBase({
           {!isLoading && !error && top20.length > 0 && (
             <table className="w-full">
               <thead>
-                <tr className="text-stone-400 text-xs uppercase tracking-wide">
+                <tr className="text-stone-400 dark:text-stone-500 text-xs uppercase tracking-wide">
                   <th className="text-left pb-2 pr-2 w-6">#</th>
                   <th className="text-left pb-2">Όνομα</th>
                   <th className="text-right pb-2 pl-4">{scoreLabel}</th>
@@ -274,7 +274,7 @@ export function LeaderboardModalBase({
 
           {!isLoading && playerRow && (
             <>
-              <div className="border-t-2 border-dashed border-stone-200 my-3" />
+              <div className="border-t-2 border-dashed border-stone-200 dark:border-stone-700 my-3" />
               <table className="w-full">
                 <tbody>
                   <tr className={`${lbRowBase} ${lbRowPlayer}`}>
@@ -293,7 +293,7 @@ export function LeaderboardModalBase({
 
         {/* ── Footer slot ────────────────────────────────────────────────────── */}
         {footer && (
-          <div className="px-5 py-3 border-t border-stone-100 text-center">
+          <div className="px-5 py-3 border-t border-stone-100 dark:border-stone-800 text-center">
             {footer}
           </div>
         )}

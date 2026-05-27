@@ -17,7 +17,7 @@ export default function LeksiarxeioPage() {
   ) as Record<LeksiarxeioLength, string[]>;
 
   return (
-    <main className="flex flex-col items-center gap-2 px-4 pt-4 bg-zinc-900 text-stone-100">
+    <main className="flex flex-1 flex-col items-center gap-2 px-4 pt-4 bg-white dark:bg-stone-950 text-stone-900 dark:text-stone-100">
       <LeksiarxeioPageClient puzzles={puzzles} wordLists={wordLists} today={today} />
     </main>
   );

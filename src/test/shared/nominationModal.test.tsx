@@ -69,6 +69,16 @@ describe("NominationModal — word field", () => {
     const wordInput = screen.getByTestId("nomination-modal-word-input") as HTMLInputElement;
     expect(wordInput.readOnly).toBeFalsy();
   });
+
+  it("submit posts the typed word when wordEditable is true", async () => {
+    const fetchSpy = mockFetch(true);
+    const { user } = setup({ wordEditable: true });
+    await user.type(screen.getByTestId("nomination-modal-word-input"), "νεολογισμος");
+    await user.click(screen.getByTestId("nomination-modal-submit"));
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledOnce());
+    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
+    expect(body.word).toBe("νεολογισμος");
+  });
 });
 
 // ── Copy by direction ──────────────────────────────────────────────────────────

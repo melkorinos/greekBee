@@ -96,7 +96,7 @@ export function NominationModal({
       data-testid="nomination-modal-backdrop"
     >
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative"
+        className="bg-white dark:bg-stone-900 rounded-2xl shadow-xl w-full max-w-sm p-6 relative"
         onClick={(e) => e.stopPropagation()}
         data-testid="nomination-modal"
       >
@@ -104,7 +104,7 @@ export function NominationModal({
           onClick={handleClose}
           aria-label="Close"
           data-testid="nomination-modal-close"
-          className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 text-xl leading-none"
+          className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300 text-xl leading-none"
         >
           ✕
         </button>
@@ -112,19 +112,19 @@ export function NominationModal({
         {status === "success" ? (
           <div className="text-center py-4" data-testid="nomination-modal-success">
             <p className="text-3xl mb-3">🙏</p>
-            <p className="font-semibold text-stone-800 mb-1">Ευχαριστούμε!</p>
-            <p className="text-sm text-stone-500">{c.success(word.trim())}</p>
+            <p className="font-semibold text-stone-800 dark:text-stone-100 mb-1">Ευχαριστούμε!</p>
+            <p className="text-sm text-stone-500 dark:text-stone-400">{c.success(word.trim())}</p>
             <button
               onClick={handleClose}
-              className="mt-5 px-6 py-2 rounded-xl bg-stone-800 text-white text-sm font-semibold hover:bg-stone-700 transition-colors"
+              className="mt-5 px-6 py-2 rounded-xl bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 text-sm font-semibold hover:bg-stone-700 dark:hover:bg-stone-100 transition-colors"
             >
               Κλείσιμο
             </button>
           </div>
         ) : (
           <>
-            <h2 className="text-lg font-bold text-stone-800 mb-1">{c.title}</h2>
-            <p className="text-xs text-stone-500 mb-5 leading-relaxed">
+            <h2 className="text-lg font-bold text-stone-800 dark:text-stone-100 mb-1">{c.title}</h2>
+            <p className="text-xs text-stone-500 dark:text-stone-400 mb-5 leading-relaxed">
               {c.body(word.trim() || "…")}
             </p>
 

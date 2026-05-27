@@ -6,7 +6,7 @@ import type { Language } from "@/types";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { computeValidWords } from "@/games/leksokipos/lib/computeValidWords";
 import greekPuzzles from "./puzzles-el.json";
-import { normalizeLetters } from "@/games/leksokipos/lib/normalize";
+import { normalizeLetters } from "@/lib/normalize";
 import wordListEl from "../words-el.json";
 
 // Cast the imported JSON to the typed Puzzle array.

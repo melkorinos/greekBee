@@ -4,7 +4,7 @@
 // handles Greek text depends on it being correct.
 
 import { describe, expect, it } from "vitest";
-import { normalizeLetters } from "@/games/leksokipos/lib/normalize";
+import { normalizeLetters } from "@/lib/normalize";
 
 describe("normalizeLetters", () => {
   // ── Case folding ────────────────────────────────────────────────────────────

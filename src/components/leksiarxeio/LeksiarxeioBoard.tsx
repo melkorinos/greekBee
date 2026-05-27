@@ -17,7 +17,7 @@ import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { GuessGrid } from "./GuessGrid";
 import { Keyboard } from "./Keyboard";
 import { LeksiarxeioLeaderboardModal } from "./LeksiarxeioLeaderboardModal";
-import { normalizeLetters } from "@/games/leksokipos/lib/normalize";
+import { normalizeLetters } from "@/lib/normalize";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { useLeksiarxeioState } from "@/games/leksiarxeio/hooks/useLeksiarxeioState";
 
@@ -110,7 +110,6 @@ function LengthPanel({
         <FeedbackBanner
           message={lastMessage}
           variant={status === "won" ? "success" : status === "lost" ? "error" : "neutral"}
-          theme="dark"
         />
       </div>
 
@@ -135,17 +134,17 @@ function LengthPanel({
         <div className="flex items-center gap-4">
           <button
             onClick={onPrev}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-700 hover:bg-zinc-600 text-stone-100 text-lg font-bold transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-stone-200 hover:bg-stone-300 text-stone-800 dark:bg-stone-700 dark:hover:bg-stone-600 dark:text-stone-100 text-lg font-bold transition-colors"
             aria-label="Μικρότερο μήκος"
           >
             −
           </button>
-          <span className="text-stone-100 font-bold text-lg w-6 text-center tabular-nums">
+          <span className="text-stone-800 dark:text-stone-100 font-bold text-lg w-6 text-center tabular-nums">
             {activeLength}
           </span>
           <button
             onClick={onNext}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-zinc-700 hover:bg-zinc-600 text-stone-100 text-lg font-bold transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-stone-200 hover:bg-stone-300 text-stone-800 dark:bg-stone-700 dark:hover:bg-stone-600 dark:text-stone-100 text-lg font-bold transition-colors"
             aria-label="Μεγαλύτερο μήκος"
           >
             +

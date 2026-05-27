@@ -12,7 +12,6 @@
 import { useEffect, useRef } from "react";
 
 import { getOrCreateDeviceId, isProfileLinked } from "@/hooks/useGameStore";
-import { postScore } from "@/lib/postScore";
 
 interface UseGameStateSyncOptions {
   puzzleDate:   string;
@@ -48,12 +47,16 @@ export function useGameStateSync({
     const deviceUuid = getOrCreateDeviceId();
     if (!deviceUuid) return;
 
-    postScore("/api/game-state", {
-      device_uuid:  deviceUuid,
-      game_id:      "leksokipos",
-      puzzle_date:  puzzleDate,
-      state: { foundWords, score, currentInput },
-    });
+    fetch("/api/game-state", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        device_uuid:  deviceUuid,
+        game_id:      "leksokipos",
+        puzzle_date:  puzzleDate,
+        state: { foundWords, score, currentInput },
+      }),
+    }).catch(() => {});
   // foundWords (array ref) changes on every valid submit — that's our trigger.
   // score and currentInput are included so the state blob is always fresh.
   // eslint-disable-next-line react-hooks/exhaustive-deps

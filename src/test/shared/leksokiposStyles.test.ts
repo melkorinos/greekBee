@@ -52,6 +52,8 @@ import {
   // Score bar
   scoreBarFill,
   scoreBarTrack,
+  // Give-up
+  btnGiveUp,
 } from "@/components/leksokipos/styles";
 
 // ── Helper ────────────────────────────────────────────────────────────────────
@@ -101,6 +103,7 @@ describe("styles.ts — every token is a non-empty string", () => {
     [lbTdRank,                     "lbTdRank"],
     [lbTdName,                     "lbTdName"],
     [lbTdScore,                    "lbTdScore"],
+    [btnGiveUp,                    "btnGiveUp"],
   ];
 
   it.each(tokens)("'%s' is a non-empty string (%s)", (token, name) => {
@@ -170,5 +173,67 @@ describe("styles.ts — visual design contracts", () => {
     it("lbRowPlayer is bold",             () => expect(lbRowPlayer).toContain("font-semibold"));
     it("lbTdScore is monospace",          () => expect(lbTdScore).toContain("font-mono"));
     it("lbTdRank uses tabular-nums",      () => expect(lbTdRank).toContain("tabular-nums"));
+  });
+});
+
+// ── Dark-mode contract: key tokens carry dark: variants ───────────────────────
+// Guards against accidentally stripping dark: suffixes during a styles.ts refactor.
+// Only a representative sample is checked — full token coverage is in the light-
+// mode contract tests above.
+
+describe("styles.ts — dark: variant presence (ADR 0002)", () => {
+  it("inputClass has dark bg and text variants", () => {
+    expect(inputClass).toContain("dark:bg-stone-800");
+    expect(inputClass).toContain("dark:text-stone-100");
+  });
+
+  it("btnPrimary inverts to a light fill in dark mode", () => {
+    expect(btnPrimary).toContain("dark:bg-stone-200");
+    expect(btnPrimary).toContain("dark:text-stone-900");
+  });
+
+  it("btnPrimaryCompact inverts in dark mode", () => {
+    expect(btnPrimaryCompact).toContain("dark:bg-stone-200");
+  });
+
+  it("btnModalSubmit inverts in dark mode", () => {
+    expect(btnModalSubmit).toContain("dark:bg-stone-200");
+  });
+
+  it("btnSecondary has dark border and text variants", () => {
+    expect(btnSecondary).toContain("dark:border-stone-600");
+    expect(btnSecondary).toContain("dark:text-stone-300");
+  });
+
+  it("btnCancel has dark variants", () => {
+    expect(btnCancel).toContain("dark:border-stone-600");
+  });
+
+  it("btnGiveUp has dark border variant", () => {
+    expect(btnGiveUp).toContain("dark:border-red-800");
+  });
+
+  it("colorWordChipBg has a dark variant", () => {
+    expect(colorWordChipBg).toContain("dark:");
+  });
+
+  it("colorPangramBg has a dark variant", () => {
+    expect(colorPangramBg).toContain("dark:");
+  });
+
+  it("feedbackValidClass has dark green text variant", () => {
+    expect(feedbackValidClass).toContain("dark:text-green-400");
+  });
+
+  it("feedbackErrorClass has dark red text variant", () => {
+    expect(feedbackErrorClass).toContain("dark:text-red-400");
+  });
+
+  it("lbRowBase has dark border variant", () => {
+    expect(lbRowBase).toContain("dark:border-stone-800");
+  });
+
+  it("lbTdScore has dark text variant", () => {
+    expect(lbTdScore).toContain("dark:text-stone-200");
   });
 });

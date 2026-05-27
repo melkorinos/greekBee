@@ -16,6 +16,8 @@
 
 import { useCallback, useState } from "react";
 
+import { pickRandom7 } from "@/games/leksokipos/lib/randomPuzzle";
+
 // ── Letter layout ─────────────────────────────────────────────────────────────
 // Same three rows as the Wordle on-screen keyboard so the layout is familiar.
 
@@ -24,53 +26,6 @@ const KEYBOARD_ROWS = [
   ["α", "σ", "δ", "φ", "γ", "η", "ξ", "κ", "λ"],
   ["ζ", "χ", "ψ", "ω", "β", "ν", "μ"],
 ];
-
-const ALL_LETTERS = KEYBOARD_ROWS.flat(); // 24 letters
-
-// Greek vowels — used to enforce puzzle quality in random selection.
-const VOWELS = new Set(["α", "ε", "η", "ι", "ο", "υ", "ω"]);
-/**
- * Pick 7 unique random Greek letters that meet minimum quality rules:
- *   - Center letter is always a vowel (mandatory center = more valid words).
- *   - At least 1 additional vowel among the 6 outer letters (≥ 2 vowels total).
- *   - At least 2 consonants among the 6 outer letters — avoids all-vowel grids.
- *
- * Implementation: pick center from vowels, guarantee 1 extra vowel + 2 consonants
- * in outer, fill remaining 3 slots randomly, then shuffle the outer ring.
- */
-function pickRandom7(): { center: string; outer: string[] } {
-  // Shuffle helper
-  function shuffle<T>(arr: T[]): T[] {
-    const a = [...arr];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  }
-
-  // 1. Pick center from vowels
-  const shuffledVowels = shuffle([...VOWELS]);
-  const center = shuffledVowels[0];
-
-  // 2. Remaining letters (all letters except center)
-  const remaining = ALL_LETTERS.filter((l) => l !== center);
-  const remainingVowels     = remaining.filter((l) =>  VOWELS.has(l));
-  const remainingConsonants = remaining.filter((l) => !VOWELS.has(l));
-
-  // 3. Guarantee at least 1 more vowel and at least 2 consonants in the outer ring
-  const [extraVowel, ...restVowels]         = shuffle(remainingVowels);
-  const [cons1, cons2, ...restConsonants]   = shuffle(remainingConsonants);
-
-  // 4. Fill the remaining 3 outer slots from the leftover pool
-  const pool   = shuffle([...restVowels, ...restConsonants]);
-  const filler = pool.slice(0, 3);
-
-  // 5. Shuffle the outer ring so the guaranteed letters aren't always in the same slots
-  const outer = shuffle([extraVowel, cons1, cons2, ...filler]);
-
-  return { center, outer };
-}
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -146,7 +101,7 @@ export function LetterPickerModal({
       data-testid="letter-picker-backdrop"
     >
       <div
-        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative"
+        className="bg-white dark:bg-stone-900 rounded-2xl shadow-xl w-full max-w-sm p-6 relative"
         onClick={(e) => e.stopPropagation()}
         data-testid="letter-picker-modal"
       >
@@ -154,23 +109,23 @@ export function LetterPickerModal({
         <button
           onClick={handleClose}
           aria-label="Close"
-          className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 text-xl leading-none"
+          className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300 text-xl leading-none"
           data-testid="letter-picker-close"
         >
           ✕
         </button>
 
-        <h2 className="text-lg font-bold text-stone-800 mb-1">Επιλογή Γραμμάτων</h2>
+        <h2 className="text-lg font-bold text-stone-800 dark:text-stone-100 mb-1">Επιλογή Γραμμάτων</h2>
 
         {/* Instructions */}
-        <p className="text-xs text-stone-500 mb-1 leading-relaxed">
+        <p className="text-xs text-stone-500 dark:text-stone-400 mb-1 leading-relaxed">
           Επίλεξε <strong>7 γράμματα</strong>. Το πρώτο που θα πατήσεις γίνεται το{" "}
           <span className="text-yellow-600 font-semibold">κεντρικό (υποχρεωτικό)</span> γράμμα.
           Για να το αλλάξεις χρησιμοποίησε <strong>Επαναφορά</strong>.
         </p>
 
         {/* Progress */}
-        <p className="text-xs text-stone-400 mb-4 text-center" data-testid="letter-picker-count">
+        <p className="text-xs text-stone-400 dark:text-stone-500 mb-4 text-center" data-testid="letter-picker-count">
           {selectedCount} / 7 γράμματα επιλεγμένα
         </p>
 
@@ -196,10 +151,10 @@ export function LetterPickerModal({
                       isCenter
                         ? "bg-yellow-400 border-yellow-400 text-white cursor-default"
                         : isOuter
-                        ? "bg-stone-700 border-stone-700 text-white hover:bg-stone-600 active:bg-stone-500"
+                        ? "bg-stone-700 border-stone-700 text-white hover:bg-stone-600 active:bg-stone-500 dark:bg-stone-500 dark:border-stone-500 dark:hover:bg-stone-400"
                         : isFull
-                        ? "bg-stone-100 border-stone-200 text-stone-300 cursor-not-allowed"
-                        : "bg-stone-200 border-stone-300 text-stone-700 hover:bg-stone-300 active:bg-stone-400",
+                        ? "bg-stone-100 border-stone-200 text-stone-300 cursor-not-allowed dark:bg-stone-800 dark:border-stone-700 dark:text-stone-600"
+                        : "bg-stone-200 border-stone-300 text-stone-700 hover:bg-stone-300 active:bg-stone-400 dark:bg-stone-700 dark:border-stone-700 dark:text-stone-100 dark:hover:bg-stone-600",
                     ].join(" ")}
                   >
                     {letter.toUpperCase()}
@@ -215,14 +170,14 @@ export function LetterPickerModal({
           <button
             onClick={reset}
             data-testid="letter-picker-reset"
-            className="flex-1 py-2 rounded-xl border border-stone-300 text-stone-600 text-sm font-medium hover:bg-stone-50 active:bg-stone-100 transition-colors"
+            className="flex-1 py-2 rounded-xl border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-300 text-sm font-medium hover:bg-stone-50 dark:hover:bg-stone-800 active:bg-stone-100 transition-colors"
           >
             Επαναφορά
           </button>
           <button
             onClick={handleRandom}
             data-testid="letter-picker-random"
-            className="flex-1 py-2 rounded-xl border border-stone-300 text-stone-600 text-sm font-medium hover:bg-stone-50 active:bg-stone-100 transition-colors"
+            className="flex-1 py-2 rounded-xl border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-300 text-sm font-medium hover:bg-stone-50 dark:hover:bg-stone-800 active:bg-stone-100 transition-colors"
           >
             🎲 Τυχαίο
           </button>
@@ -241,7 +196,7 @@ export function LetterPickerModal({
               "flex-1 py-2 rounded-xl text-sm font-bold border transition-colors",
               canGenerate
                 ? "bg-yellow-400 border-yellow-400 text-white hover:bg-yellow-500 active:bg-yellow-600"
-                : "bg-stone-100 border-stone-200 text-stone-300 cursor-not-allowed",
+                : "bg-stone-100 border-stone-200 text-stone-300 cursor-not-allowed dark:bg-stone-800 dark:border-stone-700 dark:text-stone-600",
             ].join(" ")}
           >
             Δημιουργία

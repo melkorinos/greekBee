@@ -1,6 +1,7 @@
-﻿// wordleTheme.test.tsx — smoke tests for Wordle dark-theme classes.
-// Tests render Tile and Keyboard in isolation (no game state needed)
-// to verify that unconditional dark-theme classes are present.
+﻿// theme.test.tsx — light-theme class assertions for Leksiarxeio Tile and Keyboard.
+// Renders each component in isolation (no game state needed) and confirms the
+// unconditional light-mode classes are present. Dark variants (dark:*) are not
+// asserted here — they activate only when .dark is on <html> (see ADR 0002).
 
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -10,17 +11,17 @@ import { Tile } from "@/components/leksiarxeio/Tile";
 
 // ── Tile ──────────────────────────────────────────────────────────────────────
 
-describe("Tile dark theme classes", () => {
-  it('empty tile has border-stone-600 (dark border)', () => {
+describe("Tile light theme classes", () => {
+  it('empty tile has border-stone-300 (light border)', () => {
     const { container } = render(<Tile state="empty" />);
     const div = container.firstElementChild as HTMLElement;
-    expect(div.className).toContain("border-stone-600");
+    expect(div.className).toContain("border-stone-300");
   });
 
-  it('empty tile has text-stone-100 (dark foreground)', () => {
+  it('empty tile has text-stone-800 (dark foreground on white bg)', () => {
     const { container } = render(<Tile state="empty" />);
     const div = container.firstElementChild as HTMLElement;
-    expect(div.className).toContain("text-stone-100");
+    expect(div.className).toContain("text-stone-800");
   });
 
   it('pending tile has border-stone-500', () => {
@@ -38,11 +39,11 @@ describe("Tile dark theme classes", () => {
 
 // ── Keyboard ──────────────────────────────────────────────────────────────────
 
-describe("Keyboard dark theme classes", () => {
+describe("Keyboard light theme classes", () => {
   const noop = () => {};
   const emptyStates = {};
 
-  it("unknown key has bg-stone-700 (dark key background)", () => {
+  it("unknown key has bg-stone-200 (light key background)", () => {
     render(
       <Keyboard
         letterStates={emptyStates}
@@ -55,10 +56,10 @@ describe("Keyboard dark theme classes", () => {
     const buttons = screen.getAllByRole("button");
     const letterButton = buttons.find((b) => b.textContent && b.textContent.trim().length === 1);
     expect(letterButton).toBeDefined();
-    expect(letterButton!.className).toContain("bg-stone-700");
+    expect(letterButton!.className).toContain("bg-stone-200");
   });
 
-  it("unknown key has text-stone-100", () => {
+  it("unknown key has text-stone-800", () => {
     render(
       <Keyboard
         letterStates={emptyStates}
@@ -69,7 +70,7 @@ describe("Keyboard dark theme classes", () => {
     );
     const buttons = screen.getAllByRole("button");
     const letterButton = buttons.find((b) => b.textContent && b.textContent.trim().length === 1);
-    expect(letterButton!.className).toContain("text-stone-100");
+    expect(letterButton!.className).toContain("text-stone-800");
   });
 
   it("correct key has bg-green-600", () => {

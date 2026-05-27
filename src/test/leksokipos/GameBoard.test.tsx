@@ -131,7 +131,6 @@ describe("Word submission", () => {
     expect(screen.getByTestId("feedback-pangram")).toBeInTheDocument();
   });
 
-  // was skipped due to localStorage bleed — fixed by beforeEach(localStorage.clear()) in setup.ts
   it("updates the score after a valid word", async () => {
     const { user } = setup();
     await user.keyboard("paint{Enter}"); // 5 pts
@@ -149,7 +148,6 @@ describe("Button interactions", () => {
     expect(screen.getAllByTestId("word-input-letter")).toHaveLength(2);
   });
 
-  // was skipped due to localStorage bleed — fixed by beforeEach(localStorage.clear()) in setup.ts
   it("Enter button submits the current word", async () => {
     const { user } = setup();
     await user.keyboard("anti"); // use a different word than other tests

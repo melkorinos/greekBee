@@ -22,16 +22,16 @@ export default function LeksindeseisPage() {
   const puzzle = getTodaysLeksindeseisPuzzle(today);
 
   return (
-    <main className="flex flex-col items-center min-h-screen bg-zinc-50 px-4 py-6">
+    <main className="flex flex-col items-center min-h-screen bg-zinc-50 dark:bg-stone-950 px-4 py-6">
       <div className="flex items-center justify-between w-full max-w-sm mb-1">
-        <h1 className="text-2xl font-bold text-stone-800">🔗 Leksindeseis</h1>
+        <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">🔗 Leksindeseis</h1>
         <HowToPlayModal
           title="Πώς να παίξεις — Leksindeseis"
           items={CONNECTIONS_RULES}
           bulletIcon="🔗"
         />
       </div>
-      <p className="text-stone-500 text-xs mb-6 self-start max-w-sm">
+      <p className="text-stone-500 dark:text-stone-400 text-xs mb-6 self-start max-w-sm">
         Ομαδοποίησε 16 λέξεις σε 4 κατηγορίες των 4
       </p>
       <ConnectionsBoard puzzle={puzzle} />

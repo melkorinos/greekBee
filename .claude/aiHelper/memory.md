@@ -18,7 +18,7 @@ Three live games + custom puzzle URLs. Run `npm run test -- --run` for current c
 | **Routing** | `/leksokipos`, `/leksiarxeio`, `/leksindeseis`, `/` picker. Custom: `/leksokipos/[center]/[outer]` |
 | **Persistence** | Single `wordgames:state` key. `useGameStore` is the ONLY localStorage writer. Exception: `leksokipos-variant` standalone key (display pref, not game state). |
 | **Types** | Root `src/types/index.ts` = `Language`, `GameId`, `PersistenceEnvelope` only. Game types in `src/games/*/types.ts`. |
-| **Theming** | Leksiarxeio + Shell = dark. Leksokipos + picker = light. No `dark:` classes. Style tokens in `src/components/leksokipos/styles.ts`. |
+| **Theming** | All pages = white/light mode by default. Manual dark/light toggle in Shell header (☀️/🌙). `.dark` class on `<html>` drives all dark styles — `prefers-color-scheme` NOT used. `dark:` Tailwind prefix is enabled via `@custom-variant dark` in `globals.css` (see ADR 0002). Preference stored in `localStorage` key `"theme-preference"`. Style tokens in `src/components/leksokipos/styles.ts`. Feedback colours (green/yellow tile states, difficulty colours) unchanged in dark mode. |
 | **Game logic** | Pure functions in `src/games/*/lib/` — zero React imports. |
 | **Shared components** | Graduate to `src/components/shared/` only when 2 games genuinely need it. |
 | **Leksindeseis** | No `language` field on `LeksindeseisPuzzle`; identified by `date` alone. |
@@ -41,7 +41,7 @@ src/
   components/   shared/ · leksokipos/ · leksiarxeio/ · leksindeseis/
   games/        Pure logic: leksokipos/lib+hooks · leksiarxeio/lib+hooks · leksindeseis/hooks
   data/         leksokipos/puzzles-el.json · leksiarxeio/words-{4..8}.json · leksindeseis/puzzles-connections.json · words-el.json
-  hooks/        useGameStore · useGameIdentity · useScoreSubmission · useRoundPersistence · useGameStateSync · useLeaderboard · useProfileVerification
+  hooks/        useGameStore · useGameIdentity · useScoreSubmission · useRoundPersistence · useGameStateSync · useLeaderboard · useProfileVerification · useTheme
   lib/          greeklish.ts · postScore.ts
   types/        index.ts
   test/         organised by game + shared/
@@ -65,7 +65,7 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `gameLogic.test.ts` (leksiarxeio) | `scoreLeksiarxeio`, `buildLetterStateMap` |
 | `guessGrid.test.tsx` | Tile rendering, max-width per length |
 | `header.test.tsx` | LeksiarxeioPageClient — 🏆, HowToPlay, scoring note |
-| `theme.test.tsx` | Tile + Keyboard dark theme classes |
+| `theme.test.tsx` | Tile + Keyboard **light** theme classes (empty/pending/unknown states) |
 | `dataLoader.test.ts` (leksiarxeio) | `getTodaysLeksiarxeioPuzzle`, `getAllTodaysLeksiarxeioPuzzles`, `getValidWords` |
 | `gameLogic.test.ts` (leksokipos) | `isPangram`, `scoreWord`, `maxScore`, `calculateRank`, `validateWord` |
 | `gameReducer.test.ts` | All reducer actions incl. SUBMIT_WORD, RESTORE_STATE |
@@ -87,10 +87,10 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `useScoreSubmission.test.ts` | Unified hook — submit/submitWithName (Leksokipos+Leksindeseis) + submitLength with penalty (Leksiarxeio) |
 | `useGameIdentity.test.ts` | SSR-safe DeviceId + DisplayName init, setter state updates |
 | `useGameStore.test.ts` | readSlice, writeSlice, clearSlice, deviceId, displayName, profileLinked, migration |
-| `Shell.test.tsx` | Hamburger open/close/Escape, nav links, theme |
+| `Shell.test.tsx` | Hamburger open/close/Escape, nav links, theme toggle (aria-label, `.dark` class on `documentElement`) |
 | `letterPickerModal.test.tsx` | Center/outer selection, quality rules (vowel center, ≥2 vowels, consonants) |
 | `feedbackMessage.test.tsx` | Valid/pangram/error statuses, suggest button |
-| `suggestWordModal.test.tsx` | POST payload, success/error states |
+| `nominationModal.test.tsx` | NominationModal — visibility, word field (readonly + editable), direction copy, close, POST payload, success/error states |
 | `suggestions.test.ts` | `getSuggestedWords`, `markSuggested`, `isSuggested` |
 | `wordInput.test.tsx` | Letter display, center-letter highlight, inline submit visibility |
 | `deploymentReadiness.test.ts` | Statically imported data files exist and are not gitignored |

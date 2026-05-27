@@ -97,17 +97,17 @@ function LeksikastiríoClient() {
   const c = tabCopy[activeTab];
 
   return (
-    <div className="flex-1 bg-white">
+    <div className="flex-1 bg-white dark:bg-stone-950">
     <main className="max-w-lg mx-auto px-4 py-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-stone-800">Λεξικαστήριο</h1>
-        <p className="text-sm text-stone-500 mt-1">
+        <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">Leksikastirio</h1>
+        <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">
           Ψηφίστε λέξεις που πιστεύετε ότι πρέπει να προστεθούν ή να αφαιρεθούν.
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-stone-200">
+      <div className="flex border-b border-stone-200 dark:border-stone-800">
         {(["add", "remove"] as Tab[]).map((tab) => (
           <button
             key={tab}
@@ -116,8 +116,8 @@ function LeksikastiríoClient() {
             className={[
               "px-5 py-2.5 text-sm font-semibold transition-colors",
               activeTab === tab
-                ? "border-b-2 border-stone-800 text-stone-800"
-                : "text-stone-400 hover:text-stone-600",
+                ? "border-b-2 border-stone-800 dark:border-stone-300 text-stone-800 dark:text-stone-100"
+                : "text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300",
             ].join(" ")}
           >
             {tabCopy[tab].label}
@@ -130,7 +130,7 @@ function LeksikastiríoClient() {
         <button
           onClick={() => setModalOpen(true)}
           data-testid="open-nomination-modal"
-          className="px-4 py-2 rounded-full bg-stone-800 text-white text-sm font-semibold hover:bg-stone-700 transition-colors"
+          className="px-4 py-2 rounded-full bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 text-sm font-semibold hover:bg-stone-700 dark:hover:bg-stone-100 transition-colors"
         >
           {c.buttonLabel}
         </button>
@@ -138,14 +138,14 @@ function LeksikastiríoClient() {
 
       {/* List */}
       {loading ? (
-        <p className="text-sm text-stone-400 text-center py-8">Φόρτωση…</p>
+        <p className="text-sm text-stone-400 dark:text-stone-500 text-center py-8">Φόρτωση…</p>
       ) : nominations.length === 0 ? (
-        <p className="text-sm text-stone-400 text-center py-8">{c.emptyState}</p>
+        <p className="text-sm text-stone-400 dark:text-stone-500 text-center py-8">{c.emptyState}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-stone-200 text-left text-xs text-stone-400 font-semibold uppercase tracking-wide">
+              <tr className="border-b border-stone-200 dark:border-stone-800 text-left text-xs text-stone-400 dark:text-stone-500 font-semibold uppercase tracking-wide">
                 <th className="pb-2 pr-4 font-semibold">Λέξη</th>
                 <th className="pb-2 pr-4 font-semibold">Από</th>
                 <th className="pb-2 pr-4 font-semibold">Σχόλιο</th>

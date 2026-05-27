@@ -1,11 +1,19 @@
 // Shell.test.tsx — component tests for the shared navigation shell.
-// Verifies hamburger open/close, drawer content, Escape dismissal, and backdrop click.
+// Verifies hamburger open/close, drawer content, Escape dismissal, backdrop click,
+// and the dark/light theme toggle button.
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 
 import { Shell } from "@/components/shared/Shell";
 import userEvent from "@testing-library/user-event";
+
+// ── cleanup ───────────────────────────────────────────────────────────────────
+// Theme toggle modifies document.documentElement and localStorage; reset between tests.
+afterEach(() => {
+  document.documentElement.classList.remove("dark");
+  localStorage.clear();
+});
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -27,11 +35,11 @@ describe("Shell rendering", () => {
     expect(screen.getByRole("link", { name: /leksarxeia/i })).toBeInTheDocument();
   });
 
-  it("header has dark bg-stone-900 background", () => {
+  it("header has light bg-white background", () => {
     setup();
     const header = document.querySelector("header");
     expect(header).not.toBeNull();
-    expect(header!.className).toContain("bg-stone-900");
+    expect(header!.className).toContain("bg-white");
   });
 
   it("renders the hamburger button", () => {
@@ -105,5 +113,55 @@ describe("Drawer game links", () => {
     await user.click(leksokiposLink);
 
     expect(screen.queryByRole("navigation", { name: /game navigation/i })).not.toBeInTheDocument();
+  });
+
+  it("lists leksikastirio in the community section", async () => {
+    const { user } = setup();
+    await user.click(getHamburger());
+    const nav   = screen.getByRole("navigation", { name: /game navigation/i });
+    const hrefs = within(nav).getAllByRole("link").map((l) => l.getAttribute("href"));
+    expect(hrefs).toContain("/leksikastirio");
+  });
+
+  it("community section is separated from games section by a divider", async () => {
+    const { user } = setup();
+    await user.click(getHamburger());
+    const nav = screen.getByRole("navigation", { name: /game navigation/i });
+    expect(nav.querySelector("hr")).toBeInTheDocument();
+  });
+});
+
+// ── theme toggle ──────────────────────────────────────────────────────────────
+
+describe("Theme toggle", () => {
+  it("renders the theme toggle button in light mode by default", () => {
+    setup();
+    expect(screen.getByRole("button", { name: /switch to dark mode/i })).toBeInTheDocument();
+  });
+
+  it("clicking the toggle switches to dark mode", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: /switch to dark mode/i }));
+    expect(screen.getByRole("button", { name: /switch to light mode/i })).toBeInTheDocument();
+  });
+
+  it("clicking the toggle adds .dark class to documentElement", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: /switch to dark mode/i }));
+    expect(document.documentElement.classList.contains("dark")).toBe(true);
+  });
+
+  it("clicking the toggle twice returns to light mode and removes .dark class", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: /switch to dark mode/i }));
+    await user.click(screen.getByRole("button", { name: /switch to light mode/i }));
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+    expect(screen.getByRole("button", { name: /switch to dark mode/i })).toBeInTheDocument();
+  });
+
+  it("persists the theme preference to localStorage", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: /switch to dark mode/i }));
+    expect(localStorage.getItem("theme-preference")).toBe("dark");
   });
 });

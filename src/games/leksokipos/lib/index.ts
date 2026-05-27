@@ -8,3 +8,4 @@ export { isPangram } from "./pangram";
 export { calculateRank, RANKS, rankProgress } from "./ranking";
 export { normalizeLetters } from "./normalize";
 export { isDailyPuzzle, isISODate } from "./puzzle";
+export { pickRandom7, GREEK_VOWELS } from "./randomPuzzle";

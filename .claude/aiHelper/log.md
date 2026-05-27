@@ -5,6 +5,58 @@
 
 ---
 
+## Session 37 — 2026-05-27: Dark Mode Implementation ✅
+
+### Changes
+
+1. **`src/app/globals.css`** — Added `@custom-variant dark (&:where(.dark, .dark *))`. Removed `@media (prefers-color-scheme: dark)` block entirely. Dark mode now fires only on manual `.dark` class on `<html>`, never from OS preference.
+
+2. **`src/hooks/useTheme.ts`** (new) — `useTheme()` hook: lazy-initialises from `localStorage["theme-preference"]`, applies `.dark` class via `useLayoutEffect` on mount, `toggle()` updates both state + class + storage. Cross-tab sync via `storage` event.
+
+3. **`src/components/shared/Shell.tsx`** — Added ☀️/🌙 toggle button between brand and hamburger. Header: `bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800`.
+
+4. **`src/components/leksiarxeio/`** — Tile.tsx, Keyboard.tsx, LeksiarxeioBoard.tsx, LeksiarxeioHeader.tsx, page.tsx: all dark: variants added to empty/pending/unknown states.
+
+5. **`src/components/leksokipos/styles.ts`** — All shared tokens (inputClass, btnPrimary, etc.) now carry inline `dark:` suffixes.
+
+6. **`src/components/leksokipos/LeksokiposLayout.tsx`** — Dark header/content bg added.
+
+7. **`src/app/page.tsx`** — Home page: dark bg/text/card variants.
+
+8. **`src/app/leksindeseis/page.tsx`** + **`ConnectionsBoard.tsx`** + **`WordCard.tsx`** — Full dark variants.
+
+9. **`src/app/leksikastirio/page.tsx`** + **`NominationCard.tsx`** — Full dark variants.
+
+10. **Modals** — `LeaderboardModal.tsx`, `ConnectionsLeaderboardModal.tsx`, `HowToPlayModal.tsx`, `NominationModal.tsx`, `LetterPickerModal.tsx` — all containers, text, and interactive elements got dark: variants.
+
+11. **`docs/adr/0002-dark-mode-via-tailwind-custom-variant.md`** (new) — ADR documenting the `@custom-variant` decision.
+
+12. **`CONTEXT.md`** — Added "Theme" glossary term.
+
+13. **All 762 tests pass, 0 lint errors, build clean.**
+
+---
+
+## Session 36 — 2026-05-27: UI Polish — White Mode + Sidebar ✅
+
+### Changes
+
+1. **`src/components/leksikastirio/NominationCard.tsx`** — Admin Approve/Reject buttons replaced with compact ✓/✕ icon buttons (`w-7 h-7`) to save table row width.
+
+2. **`src/config/games.ts`** — Leksikastirio label/title changed to Greeklish ("Leksikastirio"). Leksiarxeio emoji changed from 🟩 (boring colour square) to ✏️ (pencil).
+
+3. **`src/app/leksikastirio/page.tsx`** — h1 heading updated to "Leksikastirio".
+
+4. **`src/components/shared/Shell.tsx`** — Header lightened (`bg-white border-stone-200`, stone-700 text). Drawer now has two sections: "Παιχνίδια" (3 games) + divider + "Κοινότητα" (leksikastirio). `GAME_IDS` / `COMMUNITY_IDS` constants control the split.
+
+5. **Leksiarxeio white mode** — Six files updated: `page.tsx` (`bg-white`), `LeksiarxeioHeader.tsx` (stone-800 text, removed `lightTrigger`), `LeksiarxeioBoard.tsx` (stone-200 switcher buttons, removed `theme="dark"` from FeedbackBanner), `Tile.tsx` (empty→border-stone-300/text-stone-800, pending→text-stone-800), `Keyboard.tsx` (unknown keys→stone-200/text-stone-800, delete→stone-300).
+
+6. **Tests** — `theme.test.tsx` updated to assert light-theme classes. `Shell.test.tsx` updated from `bg-stone-900` to `bg-white`.
+
+7. **`memory.md`** — Theming decision updated: all pages now white/light mode.
+
+---
+
 ## Session 35 — 2026-05-26: Architecture Refactoring (Candidates 1 + 2) ✅
 
 ### Changes

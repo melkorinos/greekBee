@@ -28,12 +28,12 @@ function MistakeDots({ remaining, max = 4 }: { remaining: number; max?: number }
           className={[
             "w-3 h-3 rounded-full border-2",
             i < remaining
-              ? "bg-stone-600 border-stone-600"
-              : "border-stone-400 bg-transparent",
+              ? "bg-stone-600 border-stone-600 dark:bg-stone-400 dark:border-stone-400"
+              : "border-stone-400 dark:border-stone-600 bg-transparent",
           ].join(" ")}
         />
       ))}
-      <span className="text-xs text-stone-500 ml-1">λάθη απομένουν</span>
+      <span className="text-xs text-stone-500 dark:text-stone-400 ml-1">λάθη απομένουν</span>
     </div>
   );
 }
@@ -106,7 +106,7 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
         <div className="flex justify-end">
           <button
             onClick={() => setLbOpen(true)}
-            className="text-stone-500 hover:text-stone-700 text-sm font-medium transition-colors"
+            className="text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200 text-sm font-medium transition-colors"
             aria-label="Άνοιγμα κατάταξης"
           >
             🏆 Κατάταξη
@@ -140,7 +140,7 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
         <div className="flex gap-2 justify-center">
           <button
             onClick={shuffleWords}
-            className="px-4 py-2 rounded border border-stone-300 text-stone-600 text-sm font-medium hover:bg-stone-100 transition-colors"
+            className="px-4 py-2 rounded border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-300 text-sm font-medium hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
           >
             Ανακάτεμα
           </button>
@@ -150,8 +150,8 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
             className={[
               "px-4 py-2 rounded text-sm font-semibold transition-colors",
               currentSelection.length === 4
-                ? "bg-stone-800 text-white hover:bg-stone-700"
-                : "bg-stone-200 text-stone-400 cursor-not-allowed",
+                ? "bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 hover:bg-stone-700 dark:hover:bg-stone-100"
+                : "bg-stone-200 dark:bg-stone-800 text-stone-400 dark:text-stone-600 cursor-not-allowed",
             ].join(" ")}
           >
             Υποβολή
@@ -161,14 +161,14 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
 
       {/* End state message */}
       {status === "won" && (
-        <p className="text-center text-green-700 font-bold text-lg">
+        <p className="text-center text-green-700 dark:text-green-400 font-bold text-lg">
           Συγχαρητήρια! 🎉
         </p>
       )}
       {status === "lost" && (
-        <div className="text-center text-red-600">
+        <div className="text-center text-red-600 dark:text-red-400">
           <p className="font-bold">Δεν τα κατάφερες αυτή τη φορά 😔</p>
-          <p className="text-xs text-stone-500 mt-1">Ξαναπαίξε αύριο!</p>
+          <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">Ξαναπαίξε αύριο!</p>
         </div>
       )}
 

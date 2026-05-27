@@ -161,4 +161,21 @@ describe("NominationCard — admin controls", () => {
     await user.click(screen.getByTestId("admin-approve"));
     await waitFor(() => expect(onReviewed).toHaveBeenCalledWith("abc-123"));
   });
+
+  it("calls onReviewed after clicking reject", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, json: async () => ({}) } as Response);
+    const { user, onReviewed } = setup({ isAdmin: true, adminSecret: "secret" });
+    await user.click(screen.getByTestId("admin-reject"));
+    await waitFor(() => expect(onReviewed).toHaveBeenCalledWith("abc-123"));
+  });
+
+  it("sends action=reject in the POST body for the reject button", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, json: async () => ({}) } as Response);
+    const { user } = setup({ isAdmin: true, adminSecret: "topsecret" });
+    await user.click(screen.getByTestId("admin-reject"));
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledOnce());
+    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
+    expect(body.action).toBe("reject");
+    expect(body.adminSecret).toBe("topsecret");
+  });
 });

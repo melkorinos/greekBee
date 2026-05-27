@@ -42,7 +42,6 @@ function renderHeader() {
 describe("LeksiarxeioPageClient — header", () => {
   it("renders the page title", () => {
     renderHeader();
-    expect(screen.getByRole("heading", { level: 1 })).toBeDefined();
     expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Leksiarxeio");
   });
 

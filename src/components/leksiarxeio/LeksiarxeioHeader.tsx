@@ -37,13 +37,13 @@ export function LeksiarxeioPageClient({ puzzles, wordLists, today }: Leksiarxeio
   return (
     <>
       <div className="flex items-center justify-between w-full max-w-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-stone-100">
-          🟩 Leksiarxeio
+        <h1 className="text-2xl font-bold tracking-tight text-stone-800 dark:text-stone-100">
+          ✏️ Leksiarxeio
         </h1>
         <div className="flex items-center gap-2">
           <button
             onClick={() => openLbRef.current?.()}
-            className="text-stone-300 hover:text-stone-100 transition-colors text-xl"
+            className="text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100 transition-colors text-xl"
             aria-label="Πίνακας σκορ"
             title="Πίνακας σκορ"
           >
@@ -53,7 +53,6 @@ export function LeksiarxeioPageClient({ puzzles, wordLists, today }: Leksiarxeio
             title="Πώς να παίξεις — Leksiarxeio"
             items={LEKSIARXEIO_RULES}
             bulletIcon="▸"
-            lightTrigger
           />
         </div>
       </div>

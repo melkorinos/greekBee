@@ -103,6 +103,10 @@ _Avoid_: level, tier, badge
 The ordered list of Valid Words a player has successfully submitted in the current Session.
 _Avoid_: guessed words, solved words
 
+**Theme**:
+The platform-wide light/dark display mode, controlled by a manual toggle in the Shell header. Two values: `"light"` (default) and `"dark"`. Persisted in `localStorage` under `"theme-preference"`. Applied by toggling the `.dark` CSS class on `<html>`. Does not follow OS preference (`prefers-color-scheme` is not used).
+_Avoid_: skin, colour scheme, dark mode (use only as informal shorthand)
+
 **Grid Variant**:
 The visual theme of the Leksokipos flower grid. Two options: **Pie Slice** (wedge-shaped SVG sectors arranged radially) and **Flower** (elliptical SVG petals arranged radially). The player's choice is a display preference stored in `localStorage` under the key `leksokipos-variant`. It does not affect puzzle data, Valid Words, Scoring, or Rank.
 _Avoid_: skin, theme (use "theme" for the platform-wide light/dark concept, not for grid variants), design

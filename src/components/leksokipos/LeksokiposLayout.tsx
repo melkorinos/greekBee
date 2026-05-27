@@ -45,7 +45,7 @@ function VariantToggleButton({
       <button
         onClick={onToggle}
         aria-label={`Εναλλαγή σε ${nextLabel}`}
-        className="w-8 h-8 flex items-center justify-center rounded-full border border-stone-300 hover:bg-stone-100 active:bg-stone-200 transition-colors text-base"
+        className="w-8 h-8 flex items-center justify-center rounded-full border border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 active:bg-stone-200 dark:active:bg-stone-700 transition-colors text-base"
       >
         {variant === "pie" ? "🌸" : "🥧"}
       </button>
@@ -79,9 +79,9 @@ export function LeksokiposLayout({
 
   return (
     <>
-      <header className="w-full border-b border-stone-200 bg-white px-4 py-3">
+      <header className="w-full border-b border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-4 py-3">
         <div className="flex items-center justify-between max-w-sm mx-auto">
-          <h1 className="text-xl font-bold tracking-tight text-stone-800">🌸 Leksokipos</h1>
+          <h1 className="text-xl font-bold tracking-tight text-stone-800 dark:text-stone-100">🌸 Leksokipos</h1>
           <div className="flex items-center gap-2">
             <VariantToggleButton variant={variant} onToggle={toggleVariant} />
             <ShareButton canonicalPath={canonicalPath} />
@@ -97,7 +97,7 @@ export function LeksokiposLayout({
           </p>
         </div>
       )}
-      <div className="flex flex-1 w-full flex-col items-center bg-white">
+      <div className="flex flex-1 w-full flex-col items-center bg-white dark:bg-stone-950">
         <GameBoard puzzle={puzzle} recentPuzzleDates={recentPuzzleDates} variant={variant} />
       </div>
     </>
