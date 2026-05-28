@@ -29,6 +29,7 @@ export default function RootLayout({
     <html
       lang="el"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <head>
         {/* Runs synchronously before first paint — prevents dark-mode flash on all pages. */}

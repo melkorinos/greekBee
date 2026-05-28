@@ -9,7 +9,7 @@ export type Language = "el";
 // ─── Platform ────────────────────────────────────────────────────────────────
 
 /** All games hosted on this platform. */
-export type GameId = "leksokipos" | "leksiarxeio" | "leksindeseis" | "suggestions" | "reports";
+export type GameId = "leksokipos" | "leksiarxeio" | "leksindeseis" | "vrestifrasi" | "suggestions" | "reports";
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 
@@ -24,6 +24,7 @@ export interface PersistenceEnvelope {
   "leksiarxeio"?:          unknown;
   "leksiarxeio-identity"?: unknown;
   "leksindeseis"?:         unknown;
+  "vrestifrasi"?:          unknown;
   /** Words already suggested by this device — string[] of normalised words. */
   "suggestions"?:          unknown;
   /** Words already flagged for removal by this device — string[] of normalised words. */

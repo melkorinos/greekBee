@@ -5,65 +5,53 @@
 
 ---
 
-## Session 38 — 2026-05-27: Community Puzzles Feature ✅
+## Session 40 — 2026-05-28: Vres Tin Frasi — 4th Game, Full Implementation ✅
 
 ### Changes
 
-1. **Review routes** (new) — `src/app/api/community-puzzles/leksiarxeio/[id]/review/route.ts` + `…/leksindeseis/[id]/review/route.ts`. `PATCH` only. `X-Admin-Secret` header auth. `approve` → `UPDATE status='approved'`; `reject` → `DELETE` row immediately.
+1. **New game: `/vres-tin-frasi`** — Wordle-style with 3–4 word Greek phrases, 6 guesses, 4 tile states (correct/present/misplaced-word/absent).
 
-2. **Leksiarxeio data loader** (`src/data/leksiarxeio/index.ts`) — `getAllTodaysLeksiarxeioPuzzles` is now the single async entry point. Queries `community_leksiarxeio_puzzles` (approved FIFO) first; deletes row immediately on consumption; falls back to static word-pool rotation. Returns `{ puzzles, submitter_name }`. `getTodaysLeksiarxeioPuzzle` removed (was per-length sync helper).
+2. **Pure logic** — `src/games/vrestifrasi/`: `types.ts`, `lib/evaluatePhraseGuess.ts` (2-pass cross-word algo), `lib/letterState.ts` (priority map), `lib/scoring.ts`, `lib/functionWordAllowlist.ts` (~50 short function words), `hooks/vresTinFrasiReducer.ts`, `hooks/useVresTinFrasiState.ts`.
 
-3. **Leksindeseis data loader** (`src/data/leksindeseis/index.ts`) — `getTodaysLeksindeseisPuzzle` is now async. Same community-first pattern. Fallback: `dateToIndex(date) % pool.length` (deterministic, replaces "most recent" fallback). Returns `{ puzzle: LeksindeseisPuzzle | null, submitter_name }`.
+3. **Data layer** — `src/data/vrestifrasi/phrases-el.json` (~80 starter phrases), `src/data/vrestifrasi/index.ts` (community-first FIFO loader), `src/app/api/community-puzzles/vrestifrasi/route.ts` + `[id]/review/route.ts`.
 
-4. **Leksiarxeio page** (`src/app/leksiarxeio/page.tsx`) — Converted to `async` server component. Destructures `{ puzzles, submitter_name }` from loader. Renders `"Παζλ από {name}"` when non-null.
+4. **Components** — `src/components/vrestifrasi/`: `Tile.tsx`, `PhraseGrid.tsx` (flat flex row, `flex-1 aspect-square min-w-0`), `Keyboard.tsx` (4 states + Σβήσε button), `HowToPlayModal.tsx`, `CommunityVresTinFrasiSubmitModal.tsx`, `VresTinFrasiLeaderboardModal.tsx` (sort=asc), `VresTinFrasiBoard.tsx`, `VresTinFrasiHeader.tsx`.
 
-5. **Leksindeseis page** (`src/app/leksindeseis/page.tsx`) — Converted to `async`. Handles null puzzle with "Δεν υπάρχει παζλ σήμερα." empty state. Renders attribution.
+5. **App page** — `src/app/vres-tin-frasi/page.tsx` (`force-dynamic`, loads puzzle + merged word pools).
 
-6. **Submission modals** (new) — `CommunityLeksiarxeioSubmitModal.tsx` (5-word form, per-word 422 error + NominationModal link) and `CommunityLeksindeseisSubmitModal.tsx` (4 groups × category + 4 words).
+6. **Platform wiring** — `src/config/games.ts` (vrestifrasi entry), `src/types/index.ts` (GameId + PersistenceEnvelope), `src/components/shared/Shell.tsx` (GAME_IDS), `src/hooks/useScoreSubmission.ts` (gameId union), `/api/game-scores` GET now supports `sort=asc` param.
 
-7. **Landing page** (`src/app/page.tsx`) — `GameCard` accepts optional `submitButton?: ReactNode`. Leksiarxeio and Leksindeseis cards get a `SubmitPuzzleButton` (new shared component) that opens the appropriate modal.
+7. **Admin** — Leksikastirio 5th tab "Φράσεις" for community phrase review.
 
-8. **Leksikastirio** (`src/app/leksikastirio/page.tsx`) — Tab type extended: `"leksiarxeio"` and `"leksindeseis"` admin tabs visible when `?admin=<secret>`. Each fetches `GET /api/community-puzzles/{game}?status=pending` and renders approve/reject cards.
+8. **Tests** — `src/test/vrestifrasi/`: `evaluatePhraseGuess.test.ts` (9 tests), `letterState.test.ts` (7 tests), `vresTinFrasiReducer.test.ts` (13 tests).
 
-9. **Tests** — Updated `src/test/leksiarxeio/dataLoader.test.ts` and `src/test/leksindeseis/dataLoader.test.ts` for new async API + community queue paths. New `src/test/shared/communityPuzzlesReviewRoute.test.ts` (auth + approve/reject for both games).
+9. **Fixes during implementation** — HowToPlayModal: inline quotes escaped (`&quot;`); `ExTile` type aligned to `PhraseTileState` names; homepage `GAME_RULES` extended with vrestifrasi entry.
 
-10. **CONTEXT.md** — Database tables section updated: two new community puzzle tables documented (no `used_date` — deleted on consumption).
-
-**Human step still needed:** Create `community_leksiarxeio_puzzles` and `community_leksindeseis_puzzles` tables in Supabase (schemas in `CONTEXT.md`). Run leksiarxeio_scores → game_scores migration (SQL in `.claude/architecture-review-20260527-203039.html`).
-
-**819 tests pass, 2 pre-existing leaderboard failures, 0 lint errors, build clean.**
+**861 tests pass, 0 lint errors, build clean.**
 
 ---
 
-## Session 37 — 2026-05-27: Dark Mode Implementation ✅
+## Session 39 — 2026-05-28: Bug Fixes + Game State Restore (Leksokipos) ✅
 
 ### Changes
 
-1. **`src/app/globals.css`** — Added `@custom-variant dark (&:where(.dark, .dark *))`. Removed `@media (prefers-color-scheme: dark)` block entirely. Dark mode now fires only on manual `.dark` class on `<html>`, never from OS preference.
+1. **Community puzzle word validation** — `normalizeLetters()` added to validation and storage loops in `src/app/api/community-puzzles/leksiarxeio/route.ts`. Fixes false-negative on words with final sigma ς (e.g. "κηπος" rejected because list stores "κηποσ").
 
-2. **`src/hooks/useTheme.ts`** (new) — `useTheme()` hook: lazy-initialises from `localStorage["theme-preference"]`, applies `.dark` class via `useLayoutEffect` on mount, `toggle()` updates both state + class + storage. Cross-tab sync via `storage` event.
+2. **Leksiarxeio scoreboard labels** — Score column "Προσπάθειες" → "Σκορ"; subtitle corrected to "higher is better"; `LeksiarxeioHeader.tsx` how-to-play updated with correct formula (6 pts 1st guess → 1 pt 6th).
 
-3. **`src/components/shared/Shell.tsx`** — Added ☀️/🌙 toggle button between brand and hamburger. Header: `bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800`.
+3. **Dark mode FOUC fix** — Missing `dark:bg-stone-950` added to Leksokipos custom-puzzle page. Synchronous inline `<script>` added to `src/app/layout.tsx` `<head>` to apply `.dark` class before first paint on all pages.
 
-4. **`src/components/leksiarxeio/`** — Tile.tsx, Keyboard.tsx, LeksiarxeioBoard.tsx, LeksiarxeioHeader.tsx, page.tsx: all dark: variants added to empty/pending/unknown states.
+4. **Word click to report** — `FoundWordsList.tsx`: clicking the word span now triggers the report modal (in addition to the ⚑ icon).
 
-5. **`src/components/leksokipos/styles.ts`** — All shared tokens (inputClass, btnPrimary, etc.) now carry inline `dark:` suffixes.
+5. **`useGameStateSync` simplified** — Push payload reduced to `{ foundWords }` only; `score` and `currentInput` dropped (score is derivable, currentInput is ephemeral).
 
-6. **`src/components/leksokipos/LeksokiposLayout.tsx`** — Dark header/content bg added.
+6. **Game state restore (Leksokipos)** — `useGameState.ts` rewritten: mount-time server fetch gated on (daily + profileLinked + no local session). Restores `foundWords`, recomputes `score`/`currentRank`. Silent on network errors. Reads localStorage directly (not `state.foundWords`) to avoid race with `useRoundPersistence`'s own mount effect.
 
-7. **`src/app/page.tsx`** — Home page: dark bg/text/card variants.
+7. **Tests** — `src/test/leksokipos/useGameState.test.ts` (new): gate checks, API param shape, score recompute, empty/null server state, givenUp always false, network error silent. Pre-existing failures fixed: `getAllByText` for bold-split "Σκορ" in `header.test.tsx`; `/μεταφορά/i` regex in `leaderboardModal.test.tsx`.
 
-8. **`src/app/leksindeseis/page.tsx`** + **`ConnectionsBoard.tsx`** + **`WordCard.tsx`** — Full dark variants.
+8. **`CONTEXT.md` + `docs/adr/0003-game-state-cross-device-sync.md`** — `game_state` entry updated; ADR 0003 created (server-wins, no-merge decision).
 
-9. **`src/app/leksikastirio/page.tsx`** + **`NominationCard.tsx`** — Full dark variants.
-
-10. **Modals** — `LeaderboardModal.tsx`, `ConnectionsLeaderboardModal.tsx`, `HowToPlayModal.tsx`, `NominationModal.tsx`, `LetterPickerModal.tsx` — all containers, text, and interactive elements got dark: variants.
-
-11. **`docs/adr/0002-dark-mode-via-tailwind-custom-variant.md`** (new) — ADR documenting the `@custom-variant` decision.
-
-12. **`CONTEXT.md`** — Added "Theme" glossary term.
-
-13. **All 762 tests pass, 0 lint errors, build clean.**
+**830 tests pass, 0 lint errors, build clean.**
 
 ---
 
@@ -125,6 +113,8 @@
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 38 | 2026-05-27 | Community puzzles: review routes, async data loaders (community-first FIFO), submission modals, admin tabs in Leksikastirio, CONTEXT.md updated. |
+| 37 | 2026-05-27 | Dark mode: `@custom-variant dark` in globals.css, `useTheme` hook, ☀️/🌙 toggle in Shell, dark variants across all games and modals, ADR 0002. |
 | 33 | 2026-05-23 | Internal identifier rebranding: `useWordleScoreSubmission` → `useLeksiarxeioScoreSubmission`, `useConnectionsScoreSubmission` → `useLeksindeseisScoreSubmission`, all component/hook/type renames to match Greek game names. Puzzle ID strings intentionally unchanged (localStorage compat). |
 | 32 | 2026-05-23 | `FlowerGrid.tsx` — SVG flower grid (teardrop petals, arc-join to center circle, `active:scale-95` press feedback). Replaced `HoneycombGrid` in GameBoard. |
 | 31 | 2026-05-22 | Platform rebrand: Spelling Bee → Leksokipos, Wordle GR → Leksiarxeio, Connections → Leksindeseis. Greek rank names. All routes, slices, and components renamed. |

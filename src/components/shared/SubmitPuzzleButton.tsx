@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { CommunityLeksiarxeioSubmitModal } from "@/components/leksiarxeio/CommunityLeksiarxeioSubmitModal";
 import { CommunityLeksindeseisSubmitModal } from "@/components/leksindeseis/CommunityLeksindeseisSubmitModal";
+import { CommunityVresTinFrasiSubmitModal } from "@/components/vrestifrasi/CommunityVresTinFrasiSubmitModal";
 
 interface Props {
-  game: "leksiarxeio" | "leksindeseis";
+  game: "leksiarxeio" | "leksindeseis" | "vrestifrasi";
 }
 
 export function SubmitPuzzleButton({ game }: Props) {
@@ -27,6 +28,9 @@ export function SubmitPuzzleButton({ game }: Props) {
       )}
       {game === "leksindeseis" && (
         <CommunityLeksindeseisSubmitModal isOpen={open} onClose={() => setOpen(false)} />
+      )}
+      {game === "vrestifrasi" && (
+        <CommunityVresTinFrasiSubmitModal isOpen={open} onClose={() => setOpen(false)} />
       )}
     </>
   );

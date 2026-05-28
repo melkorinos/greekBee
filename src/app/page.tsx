@@ -51,6 +51,18 @@ const GAME_RULES = {
       "Νέο παζλ κάθε μέρα!",
     ],
   },
+  vrestifrasi: {
+    rulesTitle: "Πώς να παίξεις — Vres Tin Frasi",
+    bulletIcon: "💬",
+    rules: [
+      "Μάντεψε τη φράση της ημέρας σε **6 προσπάθειες**.",
+      "Η φράση έχει 2–4 λέξεις. Γράψε κάθε λέξη ξεχωριστά.",
+      "🟩 **Πράσινο** = σωστό γράμμα, σωστή θέση.",
+      "🟨 **Κίτρινο** = σωστό γράμμα, λάθος θέση (ίδια λέξη).",
+      "🟪 **Μοβ** = το γράμμα ανήκει σε **άλλη λέξη** της φράσης.",
+      "⬛ **Γκρι** = το γράμμα δεν υπάρχει πουθενά στη φράση.",
+    ],
+  },
   leksikastirio: {
     rulesTitle: "Πώς λειτουργεί — Λεξικαστήριο",
     bulletIcon: "⚖️",
@@ -111,7 +123,7 @@ export default function HomePage() {
             key={game.id}
             game={game}
             submitButton={
-              (game.id === "leksiarxeio" || game.id === "leksindeseis")
+              (game.id === "leksiarxeio" || game.id === "leksindeseis" || game.id === "vrestifrasi")
                 ? <SubmitPuzzleButton game={game.id} />
                 : undefined
             }

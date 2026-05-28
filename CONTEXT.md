@@ -8,19 +8,19 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Platform** — The entire application: shell, navigation, persistence, and all games. (Not: app, site)
 
-**Game** — A distinct word-game mode. Currently: Leksokipos, Leksiarxeio, Leksindeseis.
+**Game** — A distinct word-game mode. Currently: Leksokipos, Leksiarxeio, Leksindeseis, Vres Tin Frasi.
 
-**Session** — One continuous play of a Puzzle on a given device. Persists across refreshes until the Puzzle changes. Each game persists different fields (Leksokipos: score + found words; Leksiarxeio: guesses per length; Leksindeseis: solved groups + mistakes). Leksokipos daily Sessions are also synced to the server (see `game_state` table) for cross-device restore via TransferCode.
+**Session** — One continuous play of a Puzzle on a given device. Persists across refreshes until the Puzzle changes. Each game persists different fields (Leksokipos: score + found words; Leksiarxeio: guesses per length; Leksindeseis: solved groups + mistakes; Vres Tin Frasi: guesses + status). Leksokipos daily Sessions are also synced to the server (see `game_state` table) for cross-device restore via TransferCode.
 
 **DeviceId** — Stable anonymous UUID generated once per browser. Shared across all games, never tied to a user account. (Not: userId, playerId)
 
 **DisplayName** — Player-chosen name shown on leaderboards. Optional. (Not: username)
 
-**Guess** — A player's submitted attempt: one word in Leksiarxeio, four words in Leksindeseis. (Not: attempt, submission)
+**Guess** — A player's submitted attempt: one word in Leksiarxeio, four words in Leksindeseis, one full phrase in Vres Tin Frasi. (Not: attempt, submission)
 
 **Leaderboard** — Ranked Scores for a specific Daily Puzzle, 7-day rolling window. Only Daily Puzzles have one. (Not: rankings)
 
-**Puzzle** — A single playable instance of a Game on a given date. Types: `LeksokiposPuzzle`, `LeksiarxeioPuzzle`, `LeksindeseisPuzzle`. (Not: board, level)
+**Puzzle** — A single playable instance of a Game on a given date. Types: `LeksokiposPuzzle`, `LeksiarxeioPuzzle`, `LeksindeseisPuzzle`, `VresTinFrasiPuzzle`. (Not: board, level)
 
 **Daily Puzzle** — A Puzzle shared by all players on a given day (date-scoped ID).
 
@@ -30,7 +30,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Custom Puzzle** *(Leksokipos only)* — Player-constructed from a 7-letter combination. ID: `custom-{center}-{sortedOuter}`. Never on the Leaderboard.
 
-**Puzzle ID** — `YYYY-MM-DD-{language}` for Leksokipos Daily; `YYYY-MM-DD-wordle-{length}` for Leksiarxeio (frozen — renaming wipes localStorage sessions); `custom-{center}-{sortedOuter}` for Custom. Leksindeseis has no `id` field — `date` is the effective ID.
+**Puzzle ID** — `YYYY-MM-DD-{language}` for Leksokipos Daily; `YYYY-MM-DD-wordle-{length}` for Leksiarxeio (frozen — renaming wipes localStorage sessions); `custom-{center}-{sortedOuter}` for Custom; `YYYY-MM-DD-vresi` for Vres Tin Frasi. Leksindeseis has no `id` field — `date` is the effective ID.
 
 **Normalised Word** *(Leksokipos)* — Lowercased, accent-stripped, final ς → σ via `normalizeLetters()`. All stored words are normalised; raw input is normalised on arrival. (Not: cleaned, sanitised)
 
@@ -66,6 +66,20 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Attempt Total** *(Leksiarxeio leaderboard)* — Sum of raw attempts across all 5 Lengths. Lower is better. Failed/unplayed = 7 penalty. API field named `score` for interface compatibility — semantically it is an Attempt Total.
 
+**Phrase** *(Vres Tin Frasi)* — The daily answer: a 3–4 word Greek saying or common expression. Each word is 2–8 letters. The phrase must have cultural/linguistic coherence — not random words. Stored as display form (accented, natural case); normalised at runtime for evaluation. (Not: sentence, expression)
+
+**Phrase Pool** *(Vres Tin Frasi)* — Source of daily Phrases. Community-approved phrases take priority; static JSON of ~500 pre-computed Greek phrases is the fallback. Stored in `community_vrestifrasi_puzzles` (community) and `phrases-el.json` (static).
+
+**Phrase Guess** *(Vres Tin Frasi)* — A player's submitted attempt: a sequence of words exactly matching the answer Phrase's word count and each word's length. Each word must exist in the word pool or the Function Word Allowlist. (Not: attempt)
+
+**Phrase Tile** *(Vres Tin Frasi)* — One letter cell in the Vres Tin Frasi grid. States: `correct` (green), `present` (yellow), `misplaced-word` (purple), `absent` (grey), `empty`, `pending`.
+
+**Misplaced-Word** *(Vres Tin Frasi)* — Tile state (purple): the guessed letter appears in the answer Phrase but in a different word than the one it was guessed in. Evaluated after greens are resolved: remaining answer letters form a cross-phrase pool; a letter not in its own word's pool but present in another word's pool → misplaced-word. Keyboard priority: `correct` > `present` > `misplaced-word` > `absent`. (Not: present — that is yellow, wrong position within the same word)
+
+**Function Word Allowlist** *(Vres Tin Frasi)* — Hardcoded list of ~50 short Greek function words (articles, prepositions, conjunctions, ≤ 3 letters) accepted as valid Phrase Guess words regardless of the word pool. Examples: με, για, στο, ένα, και.
+
+**Attempt Count** *(Vres Tin Frasi leaderboard)* — Number of Guesses used (1–6). Lower is better. Failed = 7 penalty. Stored in `game_scores` with `game = "vrestifrasi"`. API field named `score` for interface compatibility.
+
 **Category** *(Leksindeseis)* — Label naming a Group of 4 words. Hidden until the Group is solved. (Not: theme, topic)
 
 **Group** *(Leksindeseis)* — Exactly 4 words sharing a Category. A Puzzle has 4 Groups. (Not: category — use only for the label)
@@ -96,21 +110,35 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Flag** — In-game Leksokipos action that opens NominationModal with `direction: "remove"`.
 
+**Stavrolekso** — Community crossword game (σταυρόλεξο). Crosswords are community-submitted, admin-approved, and never deleted — players browse the full approved pool. Not auto-generated. (Not: crossword)
+
+**Stavrolekso Puzzle** — A single crossword: a grid with black squares, numbered cells, and a clue per slot (Across + Down). Optional title. Grid is always square; supported sizes: 9×9, 13×13, 15×15. Lifecycle: `pending` → `approved` (permanent) or deleted on rejection. Unlike other Community Puzzles, rows are never consumed. Stored as slot-based JSONB: `{ width, height, blackSquares: [row,col][], slots: [{ number, direction, startRow, startCol, answer, clue }][] }`. Validated against `words-el.json` (soft warning on unknown words).
+
+**Edit PIN** — Creator-chosen alphanumeric code (4–8 chars) set at Stavrolekso Puzzle submission. Stored plain on the row. Combined with the puzzle's unique ID to authenticate edit access. Only valid while the puzzle is `pending`. (Not: edit token, edit code)
+
+**Slot** — A contiguous horizontal or vertical run of white cells in a Stavrolekso grid, bounded by black squares or the grid edge. Each Slot has a direction (Οριζόντια/Κάθετα), an auto-assigned number, and one plain-text clue (letter count appended by the UI). Minimum length: 3. (Not: word, entry)
+
+**Οριζόντια** — Across direction in a Stavrolekso Puzzle. (Not: horizontal, across)
+
+**Κάθετα** — Down direction in a Stavrolekso Puzzle. (Not: vertical, down)
+
 ---
 
-## Database tables (9 → 8 after drop)
+## Database tables (9 → 8 after drop, +1 for Vres Tin Frasi)
 
 | Table | Purpose |
 |---|---|
 | `player_profiles` | `device_uuid` → `display_name`. UNIQUE on `device_uuid`. |
 | `transfer_codes` | Single-use 6-char codes, 24h TTL. |
-| `game_scores` | Leaderboard scores for all three games (unified). |
+| `game_scores` | Leaderboard scores for all games (unified). `game` column: `"leksokipos"`, `"leksiarxeio"`, `"leksindeseis"`, `"vrestifrasi"`. |
 | `leksiarxeio_scores` | **Legacy** — data migrated to `game_scores`. **Pending drop.** |
 | `game_state` | Serialised Session for cross-device sync (Leksokipos daily puzzles only). Keyed on `(device_uuid, game_id, puzzle_date)`. Blob stores `{ foundWords: string[] }`. Pushed after every valid word (requires ProfileLinked). Pulled on mount when local foundWords is empty (requires ProfileLinked + daily puzzle). |
 | `nominations` | Community word proposals. |
 | `nomination_votes` | `(nomination_id, device_id)` votes. |
 | `community_leksiarxeio_puzzles` | Player-submitted Leksiarxeio puzzles. One row = all 5 lengths. Deleted on consumption. Cols: `id`, `submitter_name`, `data` (jsonb `{"4":…,"8":…}`), `status`, `created_at`. |
 | `community_leksindeseis_puzzles` | Player-submitted Leksindeseis puzzles. Deleted on consumption. Cols: `id`, `submitter_name`, `data` (jsonb 4-group array), `status`, `created_at`. |
+| `community_vrestifrasi_puzzles` | Player-submitted Vres Tin Frasi phrases. Deleted on consumption. Cols: `id`, `submitter_name`, `data` (jsonb `{ "phrase": "Κάνε υπομονή" }`), `status`, `created_at`. |
+| `community_stavrolekso_puzzles` | Community-submitted crosswords. **Never deleted after approval.** Cols: `id` (serial), `title` (text, nullable), `submitter_name` (text), `edit_pin` (text), `data` (jsonb slot-based schema), `status` (`pending`\|`approved`), `created_at`. |
 
 ---
 

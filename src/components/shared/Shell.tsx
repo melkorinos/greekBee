@@ -44,7 +44,7 @@ interface ShellProps {
 }
 
 // Games shown in the main nav section; leksikastirio is in its own community section.
-const GAME_IDS      = ["leksokipos", "leksiarxeio", "leksindeseis"] as const;
+const GAME_IDS      = ["leksokipos", "leksiarxeio", "leksindeseis", "vrestifrasi"] as const;
 const COMMUNITY_IDS = ["leksikastirio"] as const;
 
 export function Shell({ children }: ShellProps) {

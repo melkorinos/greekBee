@@ -1,6 +1,6 @@
 "use client";
 
-// useScoreSubmission — score-posting hook for Leksokipos and Leksindeseis.
+// useScoreSubmission — score-posting hook for Leksokipos, Leksindeseis, and Vres Tin Frasi.
 // For Leksiarxeio use useLeksiarxeioScoreSubmission instead.
 //
 // Hides:
@@ -22,7 +22,7 @@ function postScore(url: string, body: unknown): void {
 
 interface UseScoreSubmissionOptions {
   /** Which game's leaderboard to post to. */
-  gameId:      "leksokipos" | "leksindeseis";
+  gameId:      "leksokipos" | "leksindeseis" | "vrestifrasi";
   /** The puzzle date (YYYY-MM-DD) — used as the leaderboard partition key. */
   puzzleDate:  string;
   /** Stable anonymous device identifier. Empty string = skip posting. */

@@ -1,44 +1,42 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 type Theme = "light" | "dark";
 
 const KEY = "theme-preference";
 
 function readStored(): Theme {
-  if (typeof localStorage === "undefined") return "light";
-  return localStorage.getItem(KEY) === "dark" ? "dark" : "light";
+  try {
+    return localStorage.getItem(KEY) === "dark" ? "dark" : "light";
+  } catch {
+    return "light";
+  }
+}
+
+// Module-level listener set — notified on toggle and on storage events from other tabs.
+const themeListeners = new Set<() => void>();
+
+function subscribeTheme(callback: () => void): () => void {
+  themeListeners.add(callback);
+  const onStorage = (e: StorageEvent) => { if (e.key === KEY) callback(); };
+  window.addEventListener("storage", onStorage);
+  return () => {
+    themeListeners.delete(callback);
+    window.removeEventListener("storage", onStorage);
+  };
 }
 
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>(readStored);
-
-  // Apply class on mount (and after hydration).
-  useLayoutEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Keep class in sync with external storage changes (e.g. another tab).
-  useEffect(() => {
-    function onStorage(e: StorageEvent) {
-      if (e.key !== KEY) return;
-      const next: Theme = e.newValue === "dark" ? "dark" : "light";
-      setTheme(next);
-      document.documentElement.classList.toggle("dark", next === "dark");
-    }
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  // Server snapshot always "light" → server and initial client render agree → no hydration mismatch.
+  // Client snapshot reads localStorage → correct value after hydration.
+  const theme = useSyncExternalStore(subscribeTheme, readStored, () => "light" as Theme);
 
   function toggle() {
-    setTheme((prev) => {
-      const next: Theme = prev === "light" ? "dark" : "light";
-      localStorage.setItem(KEY, next);
-      document.documentElement.classList.toggle("dark", next === "dark");
-      return next;
-    });
+    const next: Theme = theme === "light" ? "dark" : "light";
+    localStorage.setItem(KEY, next);
+    document.documentElement.classList.toggle("dark", next === "dark");
+    themeListeners.forEach((fn) => fn());
   }
 
   return { theme, toggle };

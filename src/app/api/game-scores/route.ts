@@ -124,6 +124,8 @@ export async function GET(req: NextRequest) {
   const gameId    = req.nextUrl.searchParams.get("game_id") ?? "";
   const puzzleDate = req.nextUrl.searchParams.get("puzzle_date") ?? "";
   const deviceId  = req.nextUrl.searchParams.get("deviceId") ?? "";
+  // sort=asc for games where lower score is better (e.g. vrestifrasi attempt count)
+  const sortAsc   = req.nextUrl.searchParams.get("sort") === "asc";
 
   if (!gameId || !puzzleDate) {
     return NextResponse.json({ error: "game_id and puzzle_date are required" }, { status: 400 });
@@ -136,7 +138,7 @@ export async function GET(req: NextRequest) {
     .select("device_id, display_name, score")
     .eq("game_id", gameId)
     .eq("puzzle_date", puzzleDate)
-    .order("score", { ascending: false })
+    .order("score", { ascending: sortAsc })
     .limit(20);
 
   if (error) {
@@ -172,12 +174,15 @@ export async function GET(req: NextRequest) {
       .single();
 
     if (playerData) {
+      // Count players who rank ahead of this player.
+      // For ascending sort (lower=better), count those with a lower score.
+      // For descending sort (higher=better), count those with a higher score.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { count } = await (supabase.from("game_scores") as any)
         .select("*", { count: "exact", head: true })
         .eq("game_id", gameId)
         .eq("puzzle_date", puzzleDate)
-        .gt("score", playerData.score as number);
+        [sortAsc ? "lt" : "gt"]("score", playerData.score as number);
 
       playerRow = {
         rank:         (count ?? 0) + 1,

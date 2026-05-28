@@ -28,6 +28,14 @@ export const GAME_REGISTRY = {
     href:        "/leksindeseis",
     wip:         true,
   },
+  vrestifrasi: {
+    label:       "💬 Vres Tin Frasi",
+    emoji:       "💬",
+    title:       "Vres Tin Frasi",
+    description: "Βρες τη φράση της ημέρας σε 6 προσπάθειες.",
+    href:        "/vres-tin-frasi",
+    wip:         false,
+  },
   leksikastirio: {
     label:       "⚖️ Leksikastirio",
     emoji:       "⚖️",
