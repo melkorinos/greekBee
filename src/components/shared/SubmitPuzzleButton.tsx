@@ -20,7 +20,7 @@ export function SubmitPuzzleButton({ game }: Props) {
         title="Υποβολή Παζλ"
         className="p-1.5 rounded-lg text-stone-400 hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-base leading-none"
       >
-        ✏️
+        ➕
       </button>
 
       {game === "leksiarxeio" && (

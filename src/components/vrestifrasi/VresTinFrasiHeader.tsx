@@ -4,7 +4,6 @@
 
 import { VresTinFrasiBoard } from "./VresTinFrasiBoard";
 import { HowToPlayModal } from "./HowToPlayModal";
-import { CommunityVresTinFrasiSubmitModal } from "./CommunityVresTinFrasiSubmitModal";
 import type { VresTinFrasiPuzzle } from "@/games/vrestifrasi/types";
 import { useRef, useState } from "react";
 
@@ -19,9 +18,8 @@ export function VresTinFrasiPageClient({
   validWords,
   today,
 }: VresTinFrasiPageClientProps) {
-  const openLbRef    = useRef<(() => void) | null>(null);
-  const [htpOpen, setHtpOpen]       = useState(false);
-  const [submitOpen, setSubmitOpen] = useState(false);
+  const openLbRef = useRef<(() => void) | null>(null);
+  const [htpOpen, setHtpOpen] = useState(false);
 
   return (
     <>
@@ -31,14 +29,6 @@ export function VresTinFrasiPageClient({
           💬 Vres Tin Frasi
         </h1>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setSubmitOpen(true)}
-            className="text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100 transition-colors text-base"
-            aria-label="Υποβολή φράσης"
-            title="Υποβολή φράσης"
-          >
-            ✏️
-          </button>
           <button
             onClick={() => openLbRef.current?.()}
             className="text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100 transition-colors text-xl"
@@ -70,11 +60,6 @@ export function VresTinFrasiPageClient({
       />
 
       <HowToPlayModal isOpen={htpOpen} onClose={() => setHtpOpen(false)} />
-
-      <CommunityVresTinFrasiSubmitModal
-        isOpen={submitOpen}
-        onClose={() => setSubmitOpen(false)}
-      />
     </>
   );
 }
