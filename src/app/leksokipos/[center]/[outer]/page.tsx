@@ -82,7 +82,7 @@ export default async function CustomLeksokiposPage({
   const tooFewWords = puzzle.validWords.length < 5;
 
   return (
-    <div className="flex flex-col flex-1 items-center justify-start bg-zinc-50 font-sans min-h-screen">
+    <div className="flex flex-col flex-1 items-center justify-start bg-zinc-50 dark:bg-stone-950 font-sans min-h-screen">
       <LeksokiposLayout
         puzzle={puzzle}
         recentPuzzleDates={recentPuzzleDates}

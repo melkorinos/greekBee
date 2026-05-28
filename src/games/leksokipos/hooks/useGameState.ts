@@ -2,13 +2,21 @@
 
 // useGameState — the main React hook for the Leksokipos game.
 // Wires up the pure reducer with useReducer and exposes a clean API to components.
+//
+// Cross-device restore: on mount, when the player has a linked profile and no
+// local progress exists yet, the hook fetches today's found words from the
+// server (game_state table) and dispatches RESTORE_STATE. This covers the
+// "just claimed a transfer code on a new device" case.
 
 import { buildInitialState, gameReducer } from "./gameReducer";
-import { useCallback, useMemo, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer } from "react";
 
 import type { LeksokiposPuzzle, LeksokiposRoundSnapshot } from "../types";
 import { calculateRank } from "../lib/ranking";
+import { isDailyPuzzle } from "../lib/puzzle";
+import { maxScore, scoreWord } from "../lib/scoring";
 import { normalizeLetters } from "../lib/normalize";
+import { getOrCreateDeviceId, isProfileLinked, readSlice } from "@/hooks/useGameStore";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 
 /**
@@ -41,6 +49,51 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     snapshot,
     useCallback((saved) => dispatch({ type: "RESTORE_STATE", saved }), []),
   );
+
+  // Restore found words from the server on the first open of a daily puzzle
+  // when no local progress exists. Gates: ProfileLinked + daily + no local session.
+  // Server wins — no merge. If devices have diverged, generate a fresh
+  // transfer code from the device with more progress (see ADR 0003).
+  useEffect(() => {
+    if (!isDailyPuzzle(initialPuzzle)) return;
+    if (!isProfileLinked()) return;
+
+    // Skip when localStorage already holds progress for this puzzle.
+    // Checked directly (not via state) to avoid a race with useRoundPersistence's
+    // own mount effect, which fires in the same render pass.
+    const localStore = readSlice<Record<string, unknown>>("leksokipos");
+    if (localStore?.[initialPuzzle.id]) return;
+
+    const deviceId = getOrCreateDeviceId();
+    if (!deviceId) return;
+
+    // Puzzle IDs are "YYYY-MM-DD-el"; the API expects plain "YYYY-MM-DD".
+    const puzzleDate = initialPuzzle.id.replace(/-[a-z]{2}$/i, "");
+
+    fetch(
+      `/api/game-state?device_uuid=${encodeURIComponent(deviceId)}&game_id=leksokipos&puzzle_date=${encodeURIComponent(puzzleDate)}`
+    )
+      .then((r) => r.json())
+      .then((data: { state?: { foundWords?: string[] } | null }) => {
+        const foundWords = data.state?.foundWords;
+        if (!Array.isArray(foundWords) || foundWords.length === 0) return;
+
+        const score = foundWords.reduce((sum, w) => sum + scoreWord(w, initialPuzzle), 0);
+        dispatch({
+          type: "RESTORE_STATE",
+          saved: {
+            foundWords,
+            score,
+            currentRank: calculateRank(score, maxScore(initialPuzzle)),
+            startedAt:   Date.now(),
+            givenUp:     false,
+          },
+        });
+      })
+      .catch(() => {}); // never block gameplay
+  // initialPuzzle is stable for the lifetime of this hook instance.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Pre-compute the allowed letter set once per puzzle.
   const allowedLetters = useMemo(
@@ -89,21 +142,6 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     []
   );
 
-  const restoreFromSync = useCallback(
-    (blob: { foundWords: string[]; score: number; currentInput: string }) => {
-      dispatch({
-        type: "RESTORE_STATE",
-        saved: {
-          foundWords:   blob.foundWords,
-          score:        blob.score,
-          currentInput: blob.currentInput,
-          currentRank:  calculateRank(blob.score, state.puzzleMaxScore),
-        },
-      });
-    },
-    [state.puzzleMaxScore]
-  );
-
   const newGame = useCallback(
     (puzzle: LeksokiposPuzzle) => {
       clearRound();
@@ -130,6 +168,5 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     handleKeyboardLetter,
     newGame,
     giveUp,
-    restoreFromSync,
   };
 }

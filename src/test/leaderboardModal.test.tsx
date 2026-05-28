@@ -219,13 +219,13 @@ describe("LeaderboardModal — profile section (linked)", () => {
 
   it("shows 'Μεταφορά' button when linked", () => {
     renderModal({ profileLinked: true, displayName: "Νίκος" });
-    expect(screen.getByText("Μεταφορά")).toBeInTheDocument();
+    expect(screen.getByText(/μεταφορά/i)).toBeInTheDocument();
   });
 
   it("clicking 'Μεταφορά' calls onTransferGenerate and shows the generated code", async () => {
     const onTransferGenerate = vi.fn().mockResolvedValue("XYZ123");
     renderModal({ profileLinked: true, displayName: "Νίκος", onTransferGenerate });
-    await userEvent.click(screen.getByText("Μεταφορά"));
+    await userEvent.click(screen.getByText(/μεταφορά/i));
     expect(onTransferGenerate).toHaveBeenCalledOnce();
     expect(await screen.findByText("XYZ123")).toBeInTheDocument();
   });

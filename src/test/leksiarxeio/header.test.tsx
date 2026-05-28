@@ -73,8 +73,10 @@ describe("LeksiarxeioPageClient — rules scoring note", () => {
     renderHeader();
     const helpBtn = screen.getByRole("button", { name: /how to play/i });
     await userEvent.click(helpBtn);
-    // The scoring note contains the word "Σκορ"
-    const scoreNote = screen.getByText(/σκορ/i);
-    expect(scoreNote).toBeDefined();
+    // At least one element in the modal contains the word "Σκορ".
+    // getAllByText is used because the bold-split rendering produces multiple
+    // DOM nodes that each match the pattern.
+    const scoreNotes = screen.getAllByText(/σκορ/i);
+    expect(scoreNotes.length).toBeGreaterThan(0);
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-// useGameStateSync — pushes Leksokipos game state to the server after each
+// useGameStateSync — pushes Leksokipos found words to the server after each
 // valid word submission so the player can restore progress on another device.
 //
 // Rules:
@@ -14,19 +14,15 @@ import { useEffect, useRef } from "react";
 import { getOrCreateDeviceId, isProfileLinked } from "@/hooks/useGameStore";
 
 interface UseGameStateSyncOptions {
-  puzzleDate:   string;
-  isDaily:      boolean;
-  foundWords:   string[];
-  score:        number;
-  currentInput: string;
+  puzzleDate: string;
+  isDaily:    boolean;
+  foundWords: string[];
 }
 
 export function useGameStateSync({
   puzzleDate,
   isDaily,
   foundWords,
-  score,
-  currentInput,
 }: UseGameStateSyncOptions): void {
   // Initialised to the current length so that mount (or a state restore that
   // pre-populates foundWords) does not trigger an unnecessary push.
@@ -54,7 +50,7 @@ export function useGameStateSync({
         device_uuid:  deviceUuid,
         game_id:      "leksokipos",
         puzzle_date:  puzzleDate,
-        state: { foundWords, score, currentInput },
+        state: { foundWords },
       }),
     }).catch(() => {});
   // foundWords (array ref) changes on every valid submit — that's our trigger.

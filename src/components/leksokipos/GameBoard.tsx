@@ -79,7 +79,7 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   useEffect(() => { postScore(score); }, [score, postScore]);
 
   // Cross-device sync — pushes state on every valid word, daily puzzles only.
-  useGameStateSync({ puzzleDate: leaderboardPuzzleId, isDaily, foundWords, score, currentInput });
+  useGameStateSync({ puzzleDate: leaderboardPuzzleId, isDaily, foundWords });
 
   const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } = useProfile({
     deviceId,

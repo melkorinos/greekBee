@@ -110,7 +110,12 @@ export function FoundWordsList({ words, puzzle, onGiveUp, givenUp }: FoundWordsL
             >
               <span
                 data-testid={isPangram(word, puzzle) ? "found-word-pangram" : "found-word"}
-                className={isPangram(word, puzzle) ? foundWordPangramClass : foundWordClass}
+                className={[
+                  isPangram(word, puzzle) ? foundWordPangramClass : foundWordClass,
+                  !reported.has(word) ? "cursor-pointer" : "",
+                ].join(" ")}
+                onClick={() => handleFlagClick(word)}
+                title={reported.has(word) ? "Έχεις ήδη αναφέρει αυτή τη λέξη" : "Αναφορά λέξης"}
               >
                 {word}
               </span>

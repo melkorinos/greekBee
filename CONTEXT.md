@@ -10,7 +10,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Game** — A distinct word-game mode. Currently: Leksokipos, Leksiarxeio, Leksindeseis.
 
-**Session** — One continuous play of a Puzzle on a given device. Persists across refreshes until the Puzzle changes. Each game persists different fields (Leksokipos: score + found words; Leksiarxeio: guesses per length; Leksindeseis: solved groups + mistakes).
+**Session** — One continuous play of a Puzzle on a given device. Persists across refreshes until the Puzzle changes. Each game persists different fields (Leksokipos: score + found words; Leksiarxeio: guesses per length; Leksindeseis: solved groups + mistakes). Leksokipos daily Sessions are also synced to the server (see `game_state` table) for cross-device restore via TransferCode.
 
 **DeviceId** — Stable anonymous UUID generated once per browser. Shared across all games, never tied to a user account. (Not: userId, playerId)
 
@@ -106,7 +106,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 | `transfer_codes` | Single-use 6-char codes, 24h TTL. |
 | `game_scores` | Leaderboard scores for all three games (unified). |
 | `leksiarxeio_scores` | **Legacy** — data migrated to `game_scores`. **Pending drop.** |
-| `game_state` | Serialised Session for cross-device sync (Leksokipos only). |
+| `game_state` | Serialised Session for cross-device sync (Leksokipos daily puzzles only). Keyed on `(device_uuid, game_id, puzzle_date)`. Blob stores `{ foundWords: string[] }`. Pushed after every valid word (requires ProfileLinked). Pulled on mount when local foundWords is empty (requires ProfileLinked + daily puzzle). |
 | `nominations` | Community word proposals. |
 | `nomination_votes` | `(nomination_id, device_id)` votes. |
 | `community_leksiarxeio_puzzles` | Player-submitted Leksiarxeio puzzles. One row = all 5 lengths. Deleted on consumption. Cols: `id`, `submitter_name`, `data` (jsonb `{"4":…,"8":…}`), `status`, `created_at`. |
