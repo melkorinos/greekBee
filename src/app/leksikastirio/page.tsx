@@ -11,7 +11,7 @@ import { useSearchParams } from "next/navigation";
 // ── Tab types ─────────────────────────────────────────────────────────────────
 
 type NominationTab = "add" | "remove";
-type CommunityTab  = "leksiarxeio" | "leksindeseis" | "vrestifrasi";
+type CommunityTab  = "leksiarxeio" | "leksindeseis" | "vrestifrasi" | "stavrolekso";
 type Tab           = NominationTab | CommunityTab;
 
 function isNominationTab(t: Tab): t is NominationTab {
@@ -41,6 +41,14 @@ interface VresTinFrasiCommunityPuzzle {
   created_at: string;
 }
 
+interface StavroleksoCommunityPuzzle {
+  id: number;
+  title: string | null;
+  submitter_name: string;
+  data: { width: number; height: number; blackSquares: [number, number][]; slots: unknown[] };
+  created_at: string;
+}
+
 // ── Static copy ───────────────────────────────────────────────────────────────
 
 const nominationTabCopy = {
@@ -60,6 +68,7 @@ const communityTabCopy = {
   leksiarxeio:  { label: "Παζλ Leksiarxeio",      emptyState: "Δεν υπάρχουν παζλ σε αναμονή." },
   leksindeseis: { label: "Παζλ Leksindeseis",     emptyState: "Δεν υπάρχουν παζλ σε αναμονή." },
   vrestifrasi:  { label: "Φράσεις Vres Tin Frasi", emptyState: "Δεν υπάρχουν φράσεις σε αναμονή." },
+  stavrolekso:  { label: "Παζλ Stavrolekso",       emptyState: "Δεν υπάρχουν παζλ σε αναμονή." },
 } as const;
 
 // ── Community puzzle cards ────────────────────────────────────────────────────
@@ -219,6 +228,68 @@ function LeksindeseisQueueCard({
   );
 }
 
+function StavroleksoQueueCard({
+  puzzle,
+  adminSecret,
+  onReviewed,
+}: {
+  puzzle: StavroleksoCommunityPuzzle;
+  adminSecret: string;
+  onReviewed: (id: number) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  async function review(action: "approve" | "reject") {
+    setBusy(true);
+    await fetch(`/api/community-puzzles/stavrolekso/${puzzle.id}/review`, {
+      method:  "PATCH",
+      headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+      body:    JSON.stringify({ action }),
+    });
+    onReviewed(puzzle.id);
+  }
+
+  const slotCount  = puzzle.data.slots.length;
+  const created    = new Date(puzzle.created_at).toLocaleDateString("el-GR");
+
+  return (
+    <div className="border border-stone-200 dark:border-stone-700 rounded-xl p-4 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          {puzzle.title && (
+            <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">{puzzle.title}</p>
+          )}
+          <p className="text-xs text-stone-400 dark:text-stone-500">
+            {puzzle.data.width}×{puzzle.data.height} · {slotCount} slots · {created}
+          </p>
+          {puzzle.submitter_name && (
+            <p className="text-xs text-stone-400 dark:text-stone-500">από {puzzle.submitter_name}</p>
+          )}
+        </div>
+      </div>
+      <pre className="text-[10px] text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-900 rounded-lg p-2 overflow-x-auto max-h-40">
+        {JSON.stringify(puzzle.data, null, 2)}
+      </pre>
+      <div className="flex gap-2 pt-1">
+        <button
+          disabled={busy}
+          onClick={() => review("approve")}
+          className="flex-1 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+        >
+          Έγκριση
+        </button>
+        <button
+          disabled={busy}
+          onClick={() => review("reject")}
+          className="flex-1 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+        >
+          Απόρριψη
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Main client component ─────────────────────────────────────────────────────
 
 function LeksikastiríoClient() {
@@ -229,9 +300,10 @@ function LeksikastiríoClient() {
 
   const [activeTab, setActiveTab]     = useState<Tab>("add");
   const [nominations, setNominations] = useState<Nomination[]>([]);
-  const [leksiarxeioQueue, setLeksiarxeioQueue] = useState<LeksiarxeioCommunityPuzzle[]>([]);
+  const [leksiarxeioQueue, setLeksiarxeioQueue]   = useState<LeksiarxeioCommunityPuzzle[]>([]);
   const [leksindeseisQueue, setLeksindeseisQueue] = useState<LeksindeseisCommunityPuzzle[]>([]);
   const [vresTinFrasiQueue, setVresTinFrasiQueue] = useState<VresTinFrasiCommunityPuzzle[]>([]);
+  const [stavroleksoQueue, setStavroleksoQueue]   = useState<StavroleksoCommunityPuzzle[]>([]);
   const [loading, setLoading]         = useState(true);
   const [votedMap, setVotedMap]       = useState<Map<string, "up" | "down">>(new Map());
   const [modalOpen, setModalOpen]     = useState(false);
@@ -258,8 +330,10 @@ function LeksikastiríoClient() {
         setLeksiarxeioQueue((data.puzzles ?? []) as LeksiarxeioCommunityPuzzle[]);
       } else if (game === "leksindeseis") {
         setLeksindeseisQueue((data.puzzles ?? []) as LeksindeseisCommunityPuzzle[]);
-      } else {
+      } else if (game === "vrestifrasi") {
         setVresTinFrasiQueue((data.puzzles ?? []) as VresTinFrasiCommunityPuzzle[]);
+      } else {
+        setStavroleksoQueue((data.puzzles ?? []) as StavroleksoCommunityPuzzle[]);
       }
     } finally {
       setLoading(false);
@@ -311,9 +385,10 @@ function LeksikastiríoClient() {
   }
 
   function handleCommunityReviewed(id: number, game: CommunityTab) {
-    if (game === "leksiarxeio") setLeksiarxeioQueue((prev) => prev.filter((p) => p.id !== id));
+    if (game === "leksiarxeio")  setLeksiarxeioQueue((prev) => prev.filter((p) => p.id !== id));
     else if (game === "leksindeseis") setLeksindeseisQueue((prev) => prev.filter((p) => p.id !== id));
-    else setVresTinFrasiQueue((prev) => prev.filter((p) => p.id !== id));
+    else if (game === "vrestifrasi")  setVresTinFrasiQueue((prev) => prev.filter((p) => p.id !== id));
+    else setStavroleksoQueue((prev) => prev.filter((p) => p.id !== id));
   }
 
   function handleNominationSuccess(word: string) {
@@ -323,7 +398,7 @@ function LeksikastiríoClient() {
   }
 
   const nominationTabs: NominationTab[] = ["add", "remove"];
-  const communityTabs: CommunityTab[]   = ["leksiarxeio", "leksindeseis", "vrestifrasi"];
+  const communityTabs: CommunityTab[]   = ["leksiarxeio", "leksindeseis", "vrestifrasi", "stavrolekso"];
 
   return (
     <div className="flex-1 bg-white dark:bg-stone-950">
@@ -447,7 +522,7 @@ function LeksikastiríoClient() {
             ))}
           </div>
         )
-      ) : (
+      ) : activeTab === "vrestifrasi" ? (
         vresTinFrasiQueue.length === 0 ? (
           <p className="text-sm text-stone-400 dark:text-stone-500 text-center py-8">{communityTabCopy.vrestifrasi.emptyState}</p>
         ) : (
@@ -458,6 +533,21 @@ function LeksikastiríoClient() {
                 puzzle={p}
                 adminSecret={adminSecret}
                 onReviewed={(id) => handleCommunityReviewed(id, "vrestifrasi")}
+              />
+            ))}
+          </div>
+        )
+      ) : (
+        stavroleksoQueue.length === 0 ? (
+          <p className="text-sm text-stone-400 dark:text-stone-500 text-center py-8">{communityTabCopy.stavrolekso.emptyState}</p>
+        ) : (
+          <div className="space-y-4">
+            {stavroleksoQueue.map((p) => (
+              <StavroleksoQueueCard
+                key={p.id}
+                puzzle={p}
+                adminSecret={adminSecret}
+                onReviewed={(id) => handleCommunityReviewed(id, "stavrolekso")}
               />
             ))}
           </div>

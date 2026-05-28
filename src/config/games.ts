@@ -36,6 +36,14 @@ export const GAME_REGISTRY = {
     href:        "/vres-tin-frasi",
     wip:         false,
   },
+  stavrolekso: {
+    label:       "♟️ Stavrolekso",
+    emoji:       "♟️",
+    title:       "Stavrolekso",
+    description: "Λύσε και δημιούργησε σταυρόλεξα της κοινότητας.",
+    href:        "/stavrolekso",
+    wip:         false,
+  },
   leksikastirio: {
     label:       "⚖️ Leksikastirio",
     emoji:       "⚖️",

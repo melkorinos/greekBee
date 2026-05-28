@@ -13,6 +13,19 @@ import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
 import { SubmitPuzzleButton } from "@/components/shared/SubmitPuzzleButton";
 import Link from "next/link";
 
+function StavroleksoMakerButton() {
+  return (
+    <Link
+      href="/stavrolekso/maker"
+      aria-label="Δημιούργησε σταυρόλεξο"
+      title="Δημιούργησε σταυρόλεξο"
+      className="p-1.5 rounded-lg text-stone-400 hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-base leading-none"
+    >
+      ✏️
+    </Link>
+  );
+}
+
 // Picker-specific content (HowToPlay copy) — not platform metadata, stays here.
 // Extract to src/data/gameRules.ts when a third consumer appears.
 const GAME_RULES = {
@@ -61,6 +74,16 @@ const GAME_RULES = {
       "🟨 **Κίτρινο** = σωστό γράμμα, λάθος θέση (ίδια λέξη).",
       "🟪 **Μοβ** = το γράμμα ανήκει σε **άλλη λέξη** της φράσης.",
       "⬛ **Γκρι** = το γράμμα δεν υπάρχει πουθενά στη φράση.",
+    ],
+  },
+  stavrolekso: {
+    rulesTitle: "Πώς να παίξεις — Stavrolekso",
+    bulletIcon: "♟️",
+    rules: [
+      "Επίλεξε ένα παζλ από τη λίστα εγκεκριμένων σταυρόλεξων.",
+      "Πάτησε ένα κελί για να επιλέξεις **Slot** (Οριζόντια ή Κάθετα).",
+      "Πληκτρολόγησε τη λέξη — το slot **πρασινίζει** αν απαντήσεις σωστά!",
+      "Μπορείς και να **δημιουργήσεις** το δικό σου σταυρόλεξο για υποβολή.",
     ],
   },
   leksikastirio: {
@@ -125,7 +148,9 @@ export default function HomePage() {
             submitButton={
               (game.id === "leksiarxeio" || game.id === "leksindeseis" || game.id === "vrestifrasi")
                 ? <SubmitPuzzleButton game={game.id} />
-                : undefined
+                : game.id === "stavrolekso"
+                  ? <StavroleksoMakerButton />
+                  : undefined
             }
           />
         ))}

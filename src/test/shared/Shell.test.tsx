@@ -91,7 +91,7 @@ describe("Hamburger drawer", () => {
 // ── drawer content ────────────────────────────────────────────────────────────
 
 describe("Drawer game links", () => {
-  it("lists all three games in the drawer", async () => {
+  it("lists all games in the drawer", async () => {
     const { user } = setup();
     await user.click(getHamburger());
 
@@ -102,6 +102,7 @@ describe("Drawer game links", () => {
     expect(hrefs).toContain("/leksokipos");
     expect(hrefs).toContain("/leksiarxeio");
     expect(hrefs).toContain("/leksindeseis");
+    expect(hrefs).toContain("/stavrolekso");
   });
 
   it("closes the drawer when a game link is clicked", async () => {
