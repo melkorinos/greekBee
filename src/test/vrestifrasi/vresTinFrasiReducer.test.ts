@@ -139,7 +139,7 @@ describe("vresTinFrasiReducer — SUBMIT_GUESS", () => {
     expect(s.status).toBe("lost");
   });
 
-  it("function word allowlist words are accepted (e.g. 'και')", () => {
+  it("short words (2–3 letters) are accepted (e.g. 'και')", () => {
     const puzzle3: VresTinFrasiPuzzle = {
       id:             "2026-05-28-vresi",
       date:           "2026-05-28",
@@ -151,8 +151,8 @@ describe("vresTinFrasiReducer — SUBMIT_GUESS", () => {
     for (const l of ["α", "ρ", "ε", "τ", "η"]) s = vresTinFrasiReducer(s, { type: "ADD_LETTER", letter: l });
     for (const l of ["κ", "α", "ι"])            s = vresTinFrasiReducer(s, { type: "ADD_LETTER", letter: l });
     for (const l of ["α", "ρ", "ε", "τ", "η"]) s = vresTinFrasiReducer(s, { type: "ADD_LETTER", letter: l });
-    s = vresTinFrasiReducer(s, { type: "SUBMIT_GUESS", validWords: new Set(["αρετη"]) });
-    expect(s.guesses).toHaveLength(1); // accepted — "και" is in allowlist
+    s = vresTinFrasiReducer(s, { type: "SUBMIT_GUESS", validWords: new Set(["αρετη", "και"]) });
+    expect(s.guesses).toHaveLength(1); // accepted — "και" is in words-el-short.json
   });
 });
 

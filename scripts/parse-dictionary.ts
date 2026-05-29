@@ -6,7 +6,7 @@
  *
  * Usage:
  *   npm run parse-dict -- --input=path/to/el.dic --output=src/data/words-el.json
- *   npm run parse-dict -- --input=path/to/el.dic --output=src/data/words-el.json --merge=src/data/words-el-extra.json
+ *   npm run parse-dict -- --input=path/to/el.dic --output=src/data/words-el.json --merge=src/data/some-extras.json
  *
  * The .dic format is:
  *   123456          ← first line is the word count (ignored)

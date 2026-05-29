@@ -1,12 +1,13 @@
 // normalize-wordlist.mjs
-// Reads words-el.raw.json (the original accented Greek dictionary — immutable
-// source of truth), normalises each word (strip accents, ς→σ, lowercase),
+// Reads words-el.json (the unified normalised Greek dictionary — 2+ letters),
 // filters to a target letter length, deduplicates, and writes the result to
 // src/data/leksiarxeio/words-<length>.json.
 //
 // Usage: node scripts/normalize-wordlist.mjs --length=5
+//        node scripts/normalize-wordlist.mjs --length=2   (short words for VresTinFrasi)
+//        node scripts/normalize-wordlist.mjs --length=3   (short words for VresTinFrasi)
 //
-// words-el.raw.json is NEVER modified by this script.
+// words-el.json is the single source of truth. Never modify it here.
 
 import { dirname, join } from "path";
 import { mkdirSync, readFileSync, writeFileSync } from "fs";
@@ -20,8 +21,8 @@ const root = join(__dirname, "..");
 const lengthArg = process.argv.find((a) => a.startsWith("--length="));
 const targetLength = lengthArg ? parseInt(lengthArg.split("=")[1], 10) : 5;
 
-if (isNaN(targetLength) || targetLength < 3 || targetLength > 8) {
-  console.error("Usage: node scripts/normalize-wordlist.mjs --length=5  (3–8)");
+if (isNaN(targetLength) || targetLength < 2 || targetLength > 8) {
+  console.error("Usage: node scripts/normalize-wordlist.mjs --length=5  (2–8)");
   process.exit(1);
 }
 
@@ -34,10 +35,10 @@ function normalize(text) {
     .replace(/ς/g, "σ");             // final sigma → regular sigma
 }
 
-// ── Read source (original accented dictionary) ────────────────────────────────
-const sourcePath = join(root, "src/data/words-el.raw.json");
+// ── Read source (unified normalised dictionary, 2+ letters) ──────────────────
+const sourcePath = join(root, "src/data/words-el.json");
 const raw = JSON.parse(readFileSync(sourcePath, "utf8"));
-console.log(`Source: ${raw.length.toLocaleString()} words in words-el.raw.json`);
+console.log(`Source: ${raw.length.toLocaleString()} words in words-el.json`);
 
 // ── Normalize, filter to target length, deduplicate ───────────────────────────
 const unique = [...new Set(raw.map(normalize).filter((w) => w.length === targetLength))].sort();

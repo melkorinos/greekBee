@@ -70,13 +70,11 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Phrase Pool** *(Vres Tin Frasi)* — Source of daily Phrases. Community-approved phrases take priority; static JSON of ~500 pre-computed Greek phrases is the fallback. Stored in `community_vrestifrasi_puzzles` (community) and `phrases-el.json` (static).
 
-**Phrase Guess** *(Vres Tin Frasi)* — A player's submitted attempt: a sequence of words exactly matching the answer Phrase's word count and each word's length. Each word must exist in the word pool or the Function Word Allowlist. (Not: attempt)
+**Phrase Guess** *(Vres Tin Frasi)* — A player's submitted attempt: a sequence of words exactly matching the answer Phrase's word count and each word's length. Each word must exist in the word pool (2–8 letters). (Not: attempt)
 
 **Phrase Tile** *(Vres Tin Frasi)* — One letter cell in the Vres Tin Frasi grid. States: `correct` (green), `present` (yellow), `misplaced-word` (purple), `absent` (grey), `empty`, `pending`.
 
 **Misplaced-Word** *(Vres Tin Frasi)* — Tile state (purple): the guessed letter appears in the answer Phrase but in a different word than the one it was guessed in. Evaluated after greens are resolved: remaining answer letters form a cross-phrase pool; a letter not in its own word's pool but present in another word's pool → misplaced-word. Keyboard priority: `correct` > `present` > `misplaced-word` > `absent`. (Not: present — that is yellow, wrong position within the same word)
-
-**Function Word Allowlist** *(Vres Tin Frasi)* — Hardcoded list of ~50 short Greek function words (articles, prepositions, conjunctions, ≤ 3 letters) accepted as valid Phrase Guess words regardless of the word pool. Examples: με, για, στο, ένα, και.
 
 **Attempt Count** *(Vres Tin Frasi leaderboard)* — Number of Guesses used (1–6). Lower is better. Failed = 7 penalty. Stored in `game_scores` with `game = "vrestifrasi"`. API field named `score` for interface compatibility.
 

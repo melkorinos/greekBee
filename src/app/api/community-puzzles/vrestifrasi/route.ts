@@ -10,7 +10,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseClient } from "@/lib/supabase";
 import { normalizeLetters } from "@/lib/normalize";
-import { FUNCTION_WORD_ALLOWLIST } from "@/games/vrestifrasi/lib/functionWordAllowlist";
+import words2 from "@/data/leksiarxeio/words-2.json";
+import words3 from "@/data/leksiarxeio/words-3.json";
 import words4 from "@/data/leksiarxeio/words-4.json";
 import words5 from "@/data/leksiarxeio/words-5.json";
 import words6 from "@/data/leksiarxeio/words-6.json";
@@ -20,6 +21,8 @@ import words8 from "@/data/leksiarxeio/words-8.json";
 export const runtime = "edge";
 
 const WORD_POOL: Record<number, Set<string>> = {
+  2: new Set(words2 as string[]),
+  3: new Set(words3 as string[]),
   4: new Set(words4 as string[]),
   5: new Set(words5 as string[]),
   6: new Set(words6 as string[]),
@@ -29,7 +32,6 @@ const WORD_POOL: Record<number, Set<string>> = {
 
 function isValidPhraseWord(word: string): boolean {
   if (word.length < 2 || word.length > 8) return false;
-  if (FUNCTION_WORD_ALLOWLIST.has(word)) return true;
   return WORD_POOL[word.length]?.has(word) ?? false;
 }
 

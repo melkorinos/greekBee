@@ -3,7 +3,7 @@
 // MissedWordsList — shown after the player gives up.
 // Displays every valid word they failed to find, sorted alphabetically.
 // Pangrams are highlighted in gold, consistent with FoundWordsList.
-// Each word has a flag icon so the player can nominate it for removal.
+// Each word is clickable to nominate it for removal.
 
 import { foundWordClass, foundWordPangramClass } from "./styles";
 
@@ -19,14 +19,13 @@ interface MissedWordsListProps {
 }
 
 const styles = {
-  container: "w-full space-y-2",
-  heading:   "text-sm font-semibold text-stone-500 tracking-wide",
-  count:     "text-stone-800 font-bold",
-  empty:     "text-sm text-stone-400 italic",
-  list:      "flex flex-wrap gap-2 max-h-48 overflow-y-auto",
-  wordRow:   "flex items-center gap-1",
-  flagActive: "text-red-400 text-xs leading-none hover:text-red-600 transition-colors",
-  flagIdle:   "text-stone-300 text-xs leading-none hover:text-red-400 transition-colors",
+  container:    "w-full space-y-2",
+  heading:      "text-sm font-semibold text-stone-500 tracking-wide",
+  count:        "text-stone-800 font-bold",
+  empty:        "text-sm text-stone-400 italic",
+  list:         "flex flex-wrap gap-2 max-h-48 overflow-y-auto",
+  wordReported: "opacity-50 cursor-default",
+  wordReport:   "cursor-pointer hover:opacity-75 transition-opacity",
 };
 
 export function MissedWordsList({ puzzle, foundWords }: MissedWordsListProps) {
@@ -58,22 +57,18 @@ export function MissedWordsList({ puzzle, foundWords }: MissedWordsListProps) {
       ) : (
         <ul className={styles.list}>
           {missed.map((word) => (
-            <li key={word} className={styles.wordRow}>
+            <li key={word}>
               <span
                 data-testid={isPangram(word, puzzle) ? "missed-word-pangram" : "missed-word"}
-                className={isPangram(word, puzzle) ? foundWordPangramClass : foundWordClass}
+                className={[
+                  isPangram(word, puzzle) ? foundWordPangramClass : foundWordClass,
+                  reported.has(word) ? styles.wordReported : styles.wordReport,
+                ].join(" ")}
+                onClick={() => { if (!reported.has(word)) setReportWord(word); }}
+                title={reported.has(word) ? "Έχεις ήδη αναφέρει αυτή τη λέξη" : "Κλικ για αναφορά λέξης"}
               >
                 {word}
               </span>
-              <button
-                onClick={() => { if (!reported.has(word)) setReportWord(word); }}
-                aria-label={`Αναφορά λέξης ${word}`}
-                data-testid="flag-missed-word"
-                className={reported.has(word) ? styles.flagActive : styles.flagIdle}
-                title={reported.has(word) ? "Έχεις ήδη αναφέρει αυτή τη λέξη" : "Αναφορά λέξης"}
-              >
-                ⚑
-              </button>
             </li>
           ))}
         </ul>

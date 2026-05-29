@@ -5,6 +5,8 @@ import { getTodaysVresTinFrasiPuzzle, getTodayDateString } from "@/data/vrestifr
 import { VresTinFrasiPageClient } from "@/components/vrestifrasi/VresTinFrasiPageClient";
 import { getValidWords } from "@/data/leksiarxeio";
 import type { LeksiarxeioLength } from "@/games/leksiarxeio/types";
+import words2 from "@/data/leksiarxeio/words-2.json";
+import words3 from "@/data/leksiarxeio/words-3.json";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +14,11 @@ export default async function VresTinFrasiPage() {
   const today = getTodayDateString();
   const { puzzle, submitter_name } = await getTodaysVresTinFrasiPuzzle(today);
 
-  // Supply all word pools (4–8) to validate phrase guess words.
-  // Merge into a single array — each word's pool is looked up by length in the reducer.
+  // Supply all word pools (2–8) to validate phrase guess words.
+  // Short words (2–3 letters) cover particles, articles, prepositions used in phrases.
   const allWords = [
+    ...(words2 as string[]),
+    ...(words3 as string[]),
     ...getValidWords(4 as LeksiarxeioLength),
     ...getValidWords(5 as LeksiarxeioLength),
     ...getValidWords(6 as LeksiarxeioLength),

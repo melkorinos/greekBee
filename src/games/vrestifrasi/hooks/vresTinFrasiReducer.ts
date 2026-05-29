@@ -3,7 +3,6 @@
 
 import type { PhraseGuessResult, VresTinFrasiState } from "../types";
 import { evaluatePhraseGuess } from "../lib/evaluatePhraseGuess";
-import { FUNCTION_WORD_ALLOWLIST } from "../lib/functionWordAllowlist";
 
 const MAX_GUESSES = 6;
 
@@ -113,10 +112,10 @@ export function vresTinFrasiReducer(
         }
       }
 
-      // Each word must be in the word pool or function word allowlist
+      // Each word must be in the word pool (which now includes 2–3 letter words)
       for (let i = 0; i < currentWords.length; i++) {
         const word = currentWords[i];
-        if (!action.validWords.has(word) && !FUNCTION_WORD_ALLOWLIST.has(word)) {
+        if (!action.validWords.has(word)) {
           return {
             ...state,
             currentWordIndex: i,

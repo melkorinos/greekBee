@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// apply-nominations.mjs — applies accepted Leksikastirio nominations to the word list files.
+// apply-nominations.mjs — applies accepted Leksikastirio nominations to all word-list files.
 //
 // Usage:
 //   node scripts/apply-nominations.mjs
@@ -9,13 +9,10 @@
 //   NEXT_PUBLIC_SUPABASE_URL
 //   SUPABASE_SERVICE_ROLE_KEY
 //
-// What it does:
-//   1. Fetches all nominations rows where status='accepted' and reviewed_at IS NULL
-//   2. For each row:
-//      - direction='add'    → appends the normalised word to src/data/words-el.json
-//      - direction='remove' → removes the word from src/data/words-el.json
-//   3. Marks each processed row with reviewed_at = now()
-//   4. Prints a summary — then run `npm run build` and deploy.
+// Routing by word length:
+//   len ≤ 3  →  words-el.json only
+//   len 4–8  →  words-el.json  AND  src/data/leksiarxeio/words-{N}.json
+//   remove   →  cascades to all files the word appears in
 
 import { readFileSync, writeFileSync } from "fs";
 import { createClient } from "@supabase/supabase-js";
@@ -51,14 +48,28 @@ function normalise(word) {
 
 // ── Word list helpers ─────────────────────────────────────────────────────────
 
-const wordsPath = join(__dirname, "../src/data/words-el.json");
+const wordsElPath = join(__dirname, "../src/data/words-el.json");
 
-function readWords() {
-  return JSON.parse(readFileSync(wordsPath, "utf8"));
+function readWordsEl() {
+  return JSON.parse(readFileSync(wordsElPath, "utf8"));
 }
 
-function writeWords(words) {
-  writeFileSync(wordsPath, JSON.stringify(words, null, 2) + "\n", "utf8");
+function writeWordsEl(words) {
+  writeFileSync(wordsElPath, JSON.stringify(words.sort()), "utf8");
+}
+
+const LEKSIARXEIO_LENGTHS = [4, 5, 6, 7, 8];
+
+function leksiarxeioPath(n) {
+  return join(__dirname, `../src/data/leksiarxeio/words-${n}.json`);
+}
+
+function readLeksiarxeioWords(n) {
+  return JSON.parse(readFileSync(leksiarxeioPath(n), "utf8"));
+}
+
+function writeLeksiarxeioWords(n, words) {
+  writeFileSync(leksiarxeioPath(n), JSON.stringify(words.sort()), "utf8");
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
@@ -81,43 +92,69 @@ if (!nominations || nominations.length === 0) {
 
 console.log(`Found ${nominations.length} accepted nomination(s)${isDryRun ? " [DRY RUN]" : ""}:\n`);
 
-let words = readWords();
+// Load all files once upfront
+let wordsEl = readWordsEl();
+const leksiarxeio = {};
+for (const n of LEKSIARXEIO_LENGTHS) {
+  leksiarxeio[n] = readLeksiarxeioWords(n);
+}
+
 const added   = [];
 const removed = [];
 const skipped = [];
 
 for (const nom of nominations) {
   const word = normalise(nom.word);
+  const len  = word.length;
 
   if (nom.direction === "add") {
-    if (words.includes(word)) {
+    if (wordsEl.includes(word)) {
       console.log(`  SKIP  (already exists) → ${word}`);
       skipped.push(word);
     } else {
-      console.log(`  ADD   → ${word}`);
+      console.log(`  ADD   (len ${len}) → ${word}`);
       added.push(word);
-      if (!isDryRun) words.push(word);
+      if (!isDryRun) {
+        wordsEl.push(word);
+        if (LEKSIARXEIO_LENGTHS.includes(len)) {
+          leksiarxeio[len].push(word);
+        }
+      }
     }
   } else if (nom.direction === "remove") {
-    if (!words.includes(word)) {
+    if (!wordsEl.includes(word)) {
       console.log(`  SKIP  (not in list)    → ${word}`);
       skipped.push(word);
     } else {
-      console.log(`  REMOVE → ${word}`);
+      console.log(`  REMOVE (len ${len}) → ${word}`);
       removed.push(word);
-      if (!isDryRun) words = words.filter((w) => w !== word);
+      if (!isDryRun) {
+        wordsEl = wordsEl.filter((w) => w !== word);
+        if (LEKSIARXEIO_LENGTHS.includes(len)) {
+          leksiarxeio[len] = leksiarxeio[len].filter((w) => w !== word);
+        }
+      }
     }
   }
 }
 
 if (!isDryRun) {
   if (added.length > 0 || removed.length > 0) {
-    words.sort();
-    writeWords(words);
+    writeWordsEl(wordsEl);
     console.log(`\nUpdated src/data/words-el.json`);
+
+    // Write only leksiarxeio files that were actually touched
+    const touchedLengths = [...new Set(
+      [...added, ...removed]
+        .map((w) => w.length)
+        .filter((n) => LEKSIARXEIO_LENGTHS.includes(n))
+    )];
+    for (const n of touchedLengths) {
+      writeLeksiarxeioWords(n, leksiarxeio[n]);
+      console.log(`Updated src/data/leksiarxeio/words-${n}.json`);
+    }
   }
 
-  // Mark all nominations as reviewed regardless of skip/add/remove.
   const ids = nominations.map((n) => n.id);
   await supabase
     .from("nominations")

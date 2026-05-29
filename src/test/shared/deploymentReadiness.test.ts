@@ -61,6 +61,9 @@ function isIgnored(filePath: string, patterns: string[]): boolean {
 
 const STATICALLY_IMPORTED_DATA_FILES = [
   // Leksiarxeio — one list per length (answers + valid guesses, same file)
+  // words-2 and words-3 are also used by VresTinFrasi for short-word validation
+  "src/data/leksiarxeio/words-2.json",
+  "src/data/leksiarxeio/words-3.json",
   "src/data/leksiarxeio/words-4.json",
   "src/data/leksiarxeio/words-5.json",
   "src/data/leksiarxeio/words-6.json",

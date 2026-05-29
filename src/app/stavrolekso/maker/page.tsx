@@ -525,7 +525,22 @@ export default function StavroleksoMakerPage() {
           </p>
         )}
 
-        {/* Phase 3: clue bar — above the grid */}
+        {/* Grid */}
+        <div className="relative" style={{ containerType: "inline-size" }}>
+          <StavroleksoGrid
+            width={size}
+            height={size}
+            blackSquares={blackSquares}
+            slots={slots}
+            cellValues={cells}
+            highlightedCells={phase === 3 ? highlightedCells : undefined}
+            activeCellKey={phase === 3 ? activeCellKey : undefined}
+            warnedCells={phase === 3 ? warnedCells : undefined}
+            onCellClick={phase === 2 ? handlePhase2CellClick : handlePhase3CellClick}
+          />
+        </div>
+
+        {/* Phase 3: clue bar — below the grid */}
         {phase === 3 && (
           <div className="border border-stone-200 dark:border-stone-700 rounded-xl px-3 py-2.5 flex items-center gap-3">
             <p className="text-xs font-semibold text-stone-500 dark:text-stone-400 shrink-0 min-w-[90px]">
@@ -546,21 +561,6 @@ export default function StavroleksoMakerPage() {
             />
           </div>
         )}
-
-        {/* Grid */}
-        <div className="relative" style={{ containerType: "inline-size" }}>
-          <StavroleksoGrid
-            width={size}
-            height={size}
-            blackSquares={blackSquares}
-            slots={slots}
-            cellValues={cells}
-            highlightedCells={phase === 3 ? highlightedCells : undefined}
-            activeCellKey={phase === 3 ? activeCellKey : undefined}
-            warnedCells={phase === 3 ? warnedCells : undefined}
-            onCellClick={phase === 2 ? handlePhase2CellClick : handlePhase3CellClick}
-          />
-        </div>
 
         {/* Phase 3: slot list below grid */}
         {phase === 3 && (
