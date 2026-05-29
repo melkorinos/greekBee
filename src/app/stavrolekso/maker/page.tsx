@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StavroleksoGrid, computeHighlightedCells } from "@/games/stavrolekso/StavroleksoGrid";
 import { autoNumberSlots, isConnected, makeBlackSet, getSlotCells, getSlotLength } from "@/games/stavrolekso/lib";
 import type { Direction, SlotDef } from "@/games/stavrolekso/types";
@@ -151,7 +151,8 @@ export default function StavroleksoMakerPage() {
   const [size, setSize]                 = useState<GridSize>(9);
   const [title, setTitle]               = useState("");
   const [submitterName, setSubmitterName] = useState("");
-  const [editPin, setEditPin]           = useState("");
+  const [editPin, setEditPin]           = useState(() => randomPin());
+  const [copiedPin, setCopiedPin]       = useState(false);
   const [blackSquares, setBlackSquares] = useState<[number, number][]>([]);
   const [cells, setCells]               = useState<Record<string, string>>({});
   const [clues, setClues]               = useState<Record<string, string>>({});
@@ -164,12 +165,13 @@ export default function StavroleksoMakerPage() {
   const [resumePin, setResumePin]       = useState<string>("");
   const clueInputRef = useRef<HTMLInputElement>(null);
 
-  // Focus the clue input whenever the selected slot changes in Phase 3
-  useLayoutEffect(() => {
-    if (phase === 3 && selectedSlot) {
-      clueInputRef.current?.focus();
-    }
-  }, [phase, selectedSlot]);
+  function handleCopyPin() {
+    navigator.clipboard.writeText(editPin).then(() => {
+      setCopiedPin(true);
+      setTimeout(() => setCopiedPin(false), 2000);
+    });
+  }
+
 
   const slots = useMemo(
     () => autoNumberSlots(size, size, blackSquares),
@@ -224,6 +226,7 @@ export default function StavroleksoMakerPage() {
   function handlePhase3CellClick(row: number, col: number) {
     const key = `${row}_${col}`;
     if (blackSet.has(key)) return;
+    clueInputRef.current?.blur();
 
     // Find slots that contain this cell
     const cellSlots = slots.filter((s) => {
@@ -254,6 +257,8 @@ export default function StavroleksoMakerPage() {
   // Keyboard handler for Phase 3
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (phase !== 3 || !selectedSlot || !activeCellKey) return;
+    // Let the clue input handle its own keystrokes
+    if (document.activeElement === clueInputRef.current) return;
 
     const slot = slots.find((s) => s.number === selectedSlot.number && s.direction === selectedSlot.direction);
     if (!slot) return;
@@ -455,23 +460,9 @@ export default function StavroleksoMakerPage() {
               onChange={(e) => setSubmitterName(e.target.value)}
               className="w-full border border-stone-300 dark:border-stone-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
             />
-            <div className="flex gap-2">
-              <input type="text" placeholder="Edit PIN (4–8 χαρακτήρες)" value={editPin}
-                onChange={(e) => setEditPin(e.target.value)}
-                className="flex-1 border border-stone-300 dark:border-stone-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
-              />
-              <button onClick={() => setEditPin(randomPin())}
-                className="px-3 py-2 rounded-lg border border-stone-300 dark:border-stone-600 text-xs text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors">
-                Τυχαίο
-              </button>
-            </div>
-            {editPin && !/^[a-zA-Z0-9]{4,8}$/.test(editPin) && (
-              <p className="text-xs text-red-500">4–8 αλφαριθμητικοί χαρακτήρες (γράμματα/αριθμοί).</p>
-            )}
           </div>
 
           <button
-            disabled={!editPin || !/^[a-zA-Z0-9]{4,8}$/.test(editPin)}
             onClick={() => setPhase(2)}
             className="w-full py-3 rounded-xl bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 font-semibold disabled:opacity-40 hover:bg-stone-700 dark:hover:bg-stone-100 transition-colors"
           >
@@ -516,6 +507,18 @@ export default function StavroleksoMakerPage() {
               </button>
             )}
           </div>
+        </div>
+
+        {/* PIN display */}
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-stone-400 dark:text-stone-500">Edit PIN:</span>
+          <code className="font-mono font-semibold text-stone-700 dark:text-stone-200 bg-stone-100 dark:bg-stone-800 px-1.5 py-0.5 rounded">{editPin}</code>
+          <button
+            onClick={handleCopyPin}
+            className="px-2 py-0.5 rounded border border-stone-300 dark:border-stone-600 text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
+          >
+            {copiedPin ? "✓ Αντιγράφηκε" : "Αντιγραφή"}
+          </button>
         </div>
 
         {/* Connectivity warning */}
