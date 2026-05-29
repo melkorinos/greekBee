@@ -5,6 +5,20 @@
 
 ---
 
+## Session 41 — 2026-05-29: Bug Fixes (FOUC + Stavrolekso Server Error) ✅
+
+### Changes
+
+1. **Dark mode FOUC fix (Leksokipos)** — `globals.css`: added `.dark { --background: var(--color-stone-950) }` so `body` has the correct dark background during client-side navigation redirect (`/leksokipos` → `/leksokipos/[center]/[outer]`). The existing inline `<script>` in `layout.tsx` sets `.dark` on `<html>` before first paint; this change makes the body follow that class.
+
+2. **Stavrolekso server component crash** — `src/app/stavrolekso/page.tsx` and `src/app/stavrolekso/[id]/page.tsx` were making self-referential `fetch()` calls without `try/catch`. If `NEXT_PUBLIC_BASE_URL` was unset (falls back to `http://localhost:3000`), the fetch threw `ECONNREFUSED` in production → "An error occurred in the Server Components render" error + Next.js error overlay (which uses Radix Dialog internally, causing the `DialogContent` accessibility warning as a secondary symptom). Fixed by replacing both fetches with direct Supabase calls.
+
+3. **Vercel edge runtime warning** — Benign Next.js 16 Turbopack false positive. All `export const runtime = "edge"` declarations are in API routes only (confirmed by grep). The warning fires once per build whenever any API route uses edge runtime. No code fix possible or needed.
+
+**892 tests pass, 0 lint errors, build clean.**
+
+---
+
 ## Session 40 — 2026-05-28: Vres Tin Frasi — 4th Game, Full Implementation ✅
 
 ### Changes

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getSupabaseClient } from "@/lib/supabase";
 import type { StavroleksoPuzzleData } from "@/games/stavrolekso/types";
 
 export const dynamic = "force-dynamic";
@@ -12,13 +13,18 @@ interface PuzzleRow {
 }
 
 async function getApprovedPuzzles(): Promise<PuzzleRow[]> {
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-  const res  = await fetch(`${base}/api/community-puzzles/stavrolekso?status=approved`, {
-    cache: "no-store",
-  });
-  if (!res.ok) return [];
-  const json = await res.json() as { puzzles: PuzzleRow[] };
-  return json.puzzles ?? [];
+  try {
+    const supabase = getSupabaseClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from("community_stavrolekso_puzzles") as any)
+      .select("id, title, submitter_name, data, created_at")
+      .eq("status", "approved")
+      .order("created_at", { ascending: false });
+    if (error) return [];
+    return (data ?? []) as PuzzleRow[];
+  } catch {
+    return [];
+  }
 }
 
 function formatDate(iso: string): string {

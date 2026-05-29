@@ -6,7 +6,11 @@
       "PowerShell(Remove-Item -Path \"e:\\\\desktop\\\\bee\\\\greekBee\\\\.agents\\\\skills\" -Recurse -Force -Confirm:$false)",
       "Bash(git -C \"e:/desktop/bee/greekBee\" ls-files --deleted)",
       "PowerShell(cd \"e:\\\\desktop\\\\bee\\\\greekBee\"; \\(Get-Content \".agents\\\\aiHelper\\\\log.md\"\\).Count)",
-      "Bash(git mv *)"
+      "Bash(git mv *)",
+      "Bash(python -c \"import sys; lines=[l.strip\\(\\) for l in sys.stdin]; [print\\(l\\) for l in lines if 'radix' in l.lower\\(\\) or 'shadcn' in l.lower\\(\\) or 'headless' in l.lower\\(\\)]\")",
+      "Bash(ls -la .env*)",
+      "Bash(cat .env.local)",
+      "Bash(cat .env)"
     ]
   }
 }

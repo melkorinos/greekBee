@@ -8,6 +8,10 @@
   --foreground: #171717;
 }
 
+.dark {
+  --background: var(--color-stone-950);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

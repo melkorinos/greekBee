@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { StavroleksoPlayer } from "./StavroleksoPlayer";
+import { getSupabaseClient } from "@/lib/supabase";
 import type { StavroleksoPuzzleData } from "@/games/stavrolekso/types";
 
 interface PuzzleRow {
@@ -11,13 +12,18 @@ interface PuzzleRow {
 }
 
 async function getPuzzle(id: string): Promise<PuzzleRow | null> {
-  const base = process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000";
-  const res  = await fetch(`${base}/api/community-puzzles/stavrolekso/${id}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) return null;
-  const json = await res.json() as { puzzle: PuzzleRow };
-  return json.puzzle;
+  try {
+    const supabase = getSupabaseClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from("community_stavrolekso_puzzles") as any)
+      .select("id, title, submitter_name, data, status")
+      .eq("id", id)
+      .single();
+    if (error || !data) return null;
+    return data as PuzzleRow;
+  } catch {
+    return null;
+  }
 }
 
 export default async function StavroleksoPuzzlePage({
