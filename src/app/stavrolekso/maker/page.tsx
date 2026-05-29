@@ -551,7 +551,7 @@ export default function StavroleksoMakerPage() {
             <input
               ref={clueInputRef}
               type="text"
-              placeholder="Γράψε υπόδειξη…"
+              placeholder="Γράψε ερώτηση…"
               disabled={!selectedSlotDef}
               value={selectedClueKey ? (clues[selectedClueKey] ?? "") : ""}
               onChange={(e) => {
