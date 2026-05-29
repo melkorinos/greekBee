@@ -25,7 +25,7 @@ Three live games + custom puzzle URLs. Run `npm run test -- --run` for current c
 | **Custom puzzle ID** | `custom-{center}-{sortedOuter}` — not date-scoped. |
 | **No Greek accents** | Zero accents in URLs, stored state, puzzle letters, valid-word output. `normalizeLetters()` is the single normalisation point. |
 | **Custom URL** | Greeklish bijective codec (`src/lib/greeklish.ts`). Canonical 301 redirect on unnormalised params. |
-| **Supabase** | Singleton in `src/lib/supabase.ts`. `getOrCreateDeviceId()` generates stable UUID stored under `deviceId` in the envelope. 7 tables: `player_profiles`, `transfer_codes`, `game_scores`, `leksiarxeio_scores`, `game_state`, `nominations`, `nomination_votes`. |
+| **Supabase** | Singleton in `src/lib/supabase.ts`. `getOrCreateDeviceId()` generates stable UUID stored under `deviceId` in the envelope. See `CONTEXT.md` for current DB schema (table list grows as games are added). |
 | **Profile identity** | No PIN. Profile = device_uuid row in `player_profiles`. Cross-device: generate 6-char transfer code via `POST /api/transfer`, claim on other device via `POST /api/transfer/claim`. `useProfile` hook shared across all 3 games. `ProfileSection` component shared in `src/components/shared/`. |
 | **Leaderboard** | Per-puzzle daily only. Silent upsert on score increase. 7-day rolling window. Custom puzzles excluded. |
 | **Leaderboard navigation** | Rolling 7-day pill strip. `getRecentPuzzleDates(7)` server-side. |

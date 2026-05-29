@@ -48,11 +48,5 @@ Priority order (work top-down):
 
 ---
 
-## Constraints (never violate)
-- Game logic stays pure functions — zero React imports in `src/games/*/lib/`
-- Each game only reads/writes its own `useGameStore` slice
-- No component graduates to `shared/` speculatively — only when two games need it
-- `npm run test -- --run`, `npm run build`, `npx eslint .` must all pass (0 errors) after every change
-- No inline styles — Tailwind utility classes only
-- Do not install new dependencies without explicit approval
-- Keep `.agents/aiHelper/log.md` under 250 lines — condense older entries before adding new ones
+## Constraints
+See `CLAUDE.md` standing rules — authoritative source.
