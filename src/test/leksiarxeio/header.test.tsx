@@ -6,17 +6,13 @@ import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/t
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
-import { LeksiarxeioPageClient } from "@/components/leksiarxeio/LeksiarxeioHeader";
+import { LeksiarxeioPageClient } from "@/components/leksiarxeio/LeksiarxeioPageClient";
 import userEvent from "@testing-library/user-event";
 
 // ── Minimal stubs ──────────────────────────────────────────────────────────────
 
 vi.mock("@/components/leksiarxeio/LeksiarxeioBoard", () => ({
-  LeksiarxeioBoard: ({ onOpenLeaderboardRef }: { onOpenLeaderboardRef?: (fn: () => void) => void }) => {
-    // Immediately register a no-op so the ref is populated on mount
-    onOpenLeaderboardRef?.(() => {});
-    return <div data-testid="leksiarxeio-board" />;
-  },
+  LeksiarxeioBoard: () => <div data-testid="leksiarxeio-board" />,
 }));
 
 const PUZZLE: LeksiarxeioPuzzle = {

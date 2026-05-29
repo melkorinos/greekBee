@@ -5,7 +5,7 @@
 import { LEKSIARXEIO_LENGTHS, getAllTodaysLeksiarxeioPuzzles, getTodayDateString, getValidWords } from "@/data/leksiarxeio";
 
 import type { LeksiarxeioLength } from "@/games/leksiarxeio/types";
-import { LeksiarxeioPageClient } from "@/components/leksiarxeio/LeksiarxeioHeader";
+import { LeksiarxeioPageClient } from "@/components/leksiarxeio/LeksiarxeioPageClient";
 
 export const dynamic = "force-dynamic";
 

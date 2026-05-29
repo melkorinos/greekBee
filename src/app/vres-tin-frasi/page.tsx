@@ -2,7 +2,7 @@
 // Loads today's phrase puzzle and word pools, then passes them to the client board.
 
 import { getTodaysVresTinFrasiPuzzle, getTodayDateString } from "@/data/vrestifrasi";
-import { VresTinFrasiPageClient } from "@/components/vrestifrasi/VresTinFrasiHeader";
+import { VresTinFrasiPageClient } from "@/components/vrestifrasi/VresTinFrasiPageClient";
 import { getValidWords } from "@/data/leksiarxeio";
 import type { LeksiarxeioLength } from "@/games/leksiarxeio/types";
 

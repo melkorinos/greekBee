@@ -1,14 +1,10 @@
 "use client";
 
-// Header row for the Leksiarxeio page: title, rules ?, and leaderboard 🏆 button.
-// Lives in a client component so it can hold the open-leaderboard callback ref
-// that LeksiarxeioBoard exposes.
-
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
 import { LeksiarxeioBoard } from "./LeksiarxeioBoard";
 import type { LeksiarxeioLength } from "@/games/leksiarxeio/types";
 import type { LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
-import { useRef } from "react";
+import { useState } from "react";
 
 const LEKSIARXEIO_RULES = [
   "Μάντεψε τη λέξη της ημέρας σε **6 προσπάθειες**.",
@@ -28,11 +24,7 @@ interface LeksiarxeioPageClientProps {
 }
 
 export function LeksiarxeioPageClient({ puzzles, wordLists, today }: LeksiarxeioPageClientProps) {
-  const openLbRef = useRef<(() => void) | null>(null);
-
-  function handleOpenLeaderboardRef(fn: () => void) {
-    openLbRef.current = fn;
-  }
+  const [lbOpen, setLbOpen] = useState(false);
 
   return (
     <>
@@ -42,7 +34,7 @@ export function LeksiarxeioPageClient({ puzzles, wordLists, today }: Leksiarxeio
         </h1>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => openLbRef.current?.()}
+            onClick={() => setLbOpen(true)}
             className="text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100 transition-colors text-xl"
             aria-label="Πίνακας σκορ"
             title="Πίνακας σκορ"
@@ -60,7 +52,9 @@ export function LeksiarxeioPageClient({ puzzles, wordLists, today }: Leksiarxeio
         puzzles={puzzles}
         wordLists={wordLists}
         today={today}
-        onOpenLeaderboardRef={handleOpenLeaderboardRef}
+        isLeaderboardOpen={lbOpen}
+        onOpenLeaderboard={() => setLbOpen(true)}
+        onCloseLeaderboard={() => setLbOpen(false)}
       />
     </>
   );

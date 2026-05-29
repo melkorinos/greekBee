@@ -1,11 +1,9 @@
 "use client";
 
-// Header row for Vres Tin Frasi: title, info (?) button, leaderboard (🏆) button.
-
 import { VresTinFrasiBoard } from "./VresTinFrasiBoard";
 import { HowToPlayModal } from "./HowToPlayModal";
 import type { VresTinFrasiPuzzle } from "@/games/vrestifrasi/types";
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 interface VresTinFrasiPageClientProps {
   puzzle:     VresTinFrasiPuzzle;
@@ -18,7 +16,7 @@ export function VresTinFrasiPageClient({
   validWords,
   today,
 }: VresTinFrasiPageClientProps) {
-  const openLbRef = useRef<(() => void) | null>(null);
+  const [lbOpen,  setLbOpen]  = useState(false);
   const [htpOpen, setHtpOpen] = useState(false);
 
   return (
@@ -30,7 +28,7 @@ export function VresTinFrasiPageClient({
         </h1>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => openLbRef.current?.()}
+            onClick={() => setLbOpen(true)}
             className="text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100 transition-colors text-xl"
             aria-label="Πίνακας σκορ"
             title="Πίνακας σκορ"
@@ -56,7 +54,9 @@ export function VresTinFrasiPageClient({
         puzzle={puzzle}
         validWords={validWords}
         today={today}
-        onOpenLeaderboardRef={(fn) => { openLbRef.current = fn; }}
+        isLeaderboardOpen={lbOpen}
+        onOpenLeaderboard={() => setLbOpen(true)}
+        onCloseLeaderboard={() => setLbOpen(false)}
       />
 
       <HowToPlayModal isOpen={htpOpen} onClose={() => setHtpOpen(false)} />

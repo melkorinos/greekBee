@@ -30,11 +30,12 @@ const LENGTHS: LeksiarxeioLength[] = [4, 5, 6, 7, 8];
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface LeksiarxeioBoardProps {
-  puzzles:   LeksiarxeioPuzzle[];                      // one per length 4–8, server-provided
-  wordLists: Record<LeksiarxeioLength, string[]>;
-  today:     string;                                   // YYYY-MM-DD
-  /** Ref callback so the page can inject a leaderboard-open trigger */
-  onOpenLeaderboardRef?: (fn: () => void) => void;
+  puzzles:             LeksiarxeioPuzzle[];                      // one per length 4–8, server-provided
+  wordLists:           Record<LeksiarxeioLength, string[]>;
+  today:               string;                                   // YYYY-MM-DD
+  isLeaderboardOpen:   boolean;
+  onOpenLeaderboard:   () => void;
+  onCloseLeaderboard:  () => void;
 }
 
 // ── Inner game panel — one per length ────────────────────────────────────────
@@ -168,9 +169,15 @@ function LengthPanel({
 
 // ── Main board ────────────────────────────────────────────────────────────────
 
-export function LeksiarxeioBoard({ puzzles, wordLists, today, onOpenLeaderboardRef }: LeksiarxeioBoardProps) {
+export function LeksiarxeioBoard({
+  puzzles,
+  wordLists,
+  today,
+  isLeaderboardOpen,
+  onOpenLeaderboard,
+  onCloseLeaderboard,
+}: LeksiarxeioBoardProps) {
   const [activeLength, setActiveLength] = useState<LeksiarxeioLength>(4);
-  const [lbOpen, setLbOpen] = useState(false);
 
   // migrateLeksiarxeioIdentity must run before useGameIdentity reads the device ID,
   // so that existing players' legacy UUID is promoted before getOrCreateDeviceId
@@ -183,12 +190,6 @@ export function LeksiarxeioBoard({ puzzles, wordLists, today, onOpenLeaderboardR
       onDeviceIdChange:    setDeviceId,
       onDisplayNameChange: (name) => { setDisplayName(name); saveDisplayName(name); },
     });
-
-  // Expose the open function to the parent via ref callback
-  useEffect(() => {
-    onOpenLeaderboardRef?.(() => setLbOpen(true));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Track which lengths are finished (won or lost) so auto-advance can skip them.
   // A ref is used alongside state to avoid stale-closure issues inside setTimeout.
@@ -257,11 +258,11 @@ export function LeksiarxeioBoard({ puzzles, wordLists, today, onOpenLeaderboardR
           setActiveLength(next);
         } else {
           // All lengths finished — surface the leaderboard.
-          setLbOpen(true);
+          onOpenLeaderboard();
         }
       }, 1500);
     },
-    [postLeksiarxeioScore]
+    [postLeksiarxeioScore, onOpenLeaderboard]
   );
 
   // Length switcher — wraps around
@@ -296,7 +297,7 @@ export function LeksiarxeioBoard({ puzzles, wordLists, today, onOpenLeaderboardR
 
       {/* ── Leaderboard modal ─────────────────────────────────────────────── */}
       <LeksiarxeioLeaderboardModal
-        isOpen={lbOpen}
+        isOpen={isLeaderboardOpen}
         today={today}
         deviceId={deviceId}
         displayName={displayName}
@@ -306,7 +307,7 @@ export function LeksiarxeioBoard({ puzzles, wordLists, today, onOpenLeaderboardR
         onTransferGenerate={generateTransferCode}
         onTransferClaim={claimTransferCode}
         onDisconnect={disconnect}
-        onClose={() => setLbOpen(false)}
+        onClose={onCloseLeaderboard}
       />
     </>
   );

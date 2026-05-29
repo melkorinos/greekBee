@@ -1,9 +1,5 @@
 "use client";
 
-// VresTinFrasiBoard — top-level board component.
-// Wires the hook to PhraseGrid + Keyboard, handles physical keyboard events,
-// score submission, and leaderboard open trigger.
-
 import type { VresTinFrasiPuzzle } from "@/games/vrestifrasi/types";
 import {
   migrateLeksiarxeioIdentity,
@@ -11,7 +7,7 @@ import {
 } from "@/hooks/useGameStore";
 import { useGameIdentity } from "@/hooks/useGameIdentity";
 import { useProfile } from "@/hooks/useProfile";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { Keyboard } from "./Keyboard";
@@ -24,20 +20,22 @@ import { useVresTinFrasiState } from "@/games/vrestifrasi/hooks/useVresTinFrasiS
 const GREEK_LETTER = /^[α-ωά-ώΑ-ΩΆ-Ώ]$/i;
 
 interface VresTinFrasiBoardProps {
-  puzzle:     VresTinFrasiPuzzle;
-  validWords: string[];
-  today:      string;
-  onOpenLeaderboardRef?: (fn: () => void) => void;
+  puzzle:              VresTinFrasiPuzzle;
+  validWords:          string[];
+  today:               string;
+  isLeaderboardOpen:   boolean;
+  onOpenLeaderboard:   () => void;
+  onCloseLeaderboard:  () => void;
 }
 
 export function VresTinFrasiBoard({
   puzzle,
   validWords,
   today,
-  onOpenLeaderboardRef,
+  isLeaderboardOpen,
+  onOpenLeaderboard,
+  onCloseLeaderboard,
 }: VresTinFrasiBoardProps) {
-  const [lbOpen, setLbOpen] = useState(false);
-
   if (typeof window !== "undefined") migrateLeksiarxeioIdentity();
   const { deviceId, displayName, setDeviceId, setDisplayName } = useGameIdentity();
   const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } =
@@ -47,12 +45,6 @@ export function VresTinFrasiBoard({
       onDisplayNameChange: (name) => { setDisplayName(name); saveDisplayName(name); },
     });
 
-  useEffect(() => {
-    onOpenLeaderboardRef?.(() => setLbOpen(true));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Attempt count (1–6, or 7 for fail) stored as `score` for leaderboard compatibility.
   const { submit: postScore } = useScoreSubmission({
     gameId:     "vrestifrasi",
     puzzleDate: today,
@@ -64,9 +56,9 @@ export function VresTinFrasiBoard({
     (attempts: number, won: boolean) => {
       const attemptCount = won ? attempts : 7;
       postScore(attemptCount);
-      setTimeout(() => setLbOpen(true), 1500);
+      setTimeout(() => onOpenLeaderboard(), 1500);
     },
-    [postScore],
+    [postScore, onOpenLeaderboard],
   );
 
   const {
@@ -136,7 +128,7 @@ export function VresTinFrasiBoard({
       </div>
 
       <VresTinFrasiLeaderboardModal
-        isOpen={lbOpen}
+        isOpen={isLeaderboardOpen}
         today={today}
         deviceId={deviceId}
         displayName={displayName}
@@ -146,7 +138,7 @@ export function VresTinFrasiBoard({
         onTransferGenerate={generateTransferCode}
         onTransferClaim={claimTransferCode}
         onDisconnect={disconnect}
-        onClose={() => setLbOpen(false)}
+        onClose={onCloseLeaderboard}
       />
     </>
   );

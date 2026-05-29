@@ -1,2 +1,2 @@
-export { VresTinFrasiPageClient } from "./VresTinFrasiHeader";
+export { VresTinFrasiPageClient } from "./VresTinFrasiPageClient";
 export { VresTinFrasiBoard } from "./VresTinFrasiBoard";

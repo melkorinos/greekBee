@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useState } from "react";
 
 import { NominationCard, type Nomination } from "@/components/leksikastirio/NominationCard";
 import { NominationModal } from "@/components/shared/NominationModal";
@@ -290,6 +290,21 @@ function StavroleksoQueueCard({
   );
 }
 
+// ── Card registry ─────────────────────────────────────────────────────────────
+
+type CardRenderer = (
+  puzzle:      unknown,
+  adminSecret: string,
+  onReviewed:  (id: number) => void,
+) => React.ReactNode;
+
+const CARD: Record<CommunityTab, CardRenderer> = {
+  leksiarxeio:  (p, as, or) => <LeksiarxeioQueueCard  puzzle={p as LeksiarxeioCommunityPuzzle}  adminSecret={as} onReviewed={or} />,
+  leksindeseis: (p, as, or) => <LeksindeseisQueueCard puzzle={p as LeksindeseisCommunityPuzzle} adminSecret={as} onReviewed={or} />,
+  vrestifrasi:  (p, as, or) => <VresTinFrasiQueueCard  puzzle={p as VresTinFrasiCommunityPuzzle}  adminSecret={as} onReviewed={or} />,
+  stavrolekso:  (p, as, or) => <StavroleksoQueueCard  puzzle={p as StavroleksoCommunityPuzzle}  adminSecret={as} onReviewed={or} />,
+};
+
 // ── Main client component ─────────────────────────────────────────────────────
 
 function LeksikastiríoClient() {
@@ -300,10 +315,8 @@ function LeksikastiríoClient() {
 
   const [activeTab, setActiveTab]     = useState<Tab>("add");
   const [nominations, setNominations] = useState<Nomination[]>([]);
-  const [leksiarxeioQueue, setLeksiarxeioQueue]   = useState<LeksiarxeioCommunityPuzzle[]>([]);
-  const [leksindeseisQueue, setLeksindeseisQueue] = useState<LeksindeseisCommunityPuzzle[]>([]);
-  const [vresTinFrasiQueue, setVresTinFrasiQueue] = useState<VresTinFrasiCommunityPuzzle[]>([]);
-  const [stavroleksoQueue, setStavroleksoQueue]   = useState<StavroleksoCommunityPuzzle[]>([]);
+  type QueueMap = Partial<Record<CommunityTab, unknown[]>>;
+  const [queues, setQueues]           = useState<QueueMap>({});
   const [loading, setLoading]         = useState(true);
   const [votedMap, setVotedMap]       = useState<Map<string, "up" | "down">>(new Map());
   const [modalOpen, setModalOpen]     = useState(false);
@@ -326,15 +339,7 @@ function LeksikastiríoClient() {
         headers: { "X-Admin-Secret": adminSecret },
       });
       const data = await res.json() as { puzzles: unknown[] };
-      if (game === "leksiarxeio") {
-        setLeksiarxeioQueue((data.puzzles ?? []) as LeksiarxeioCommunityPuzzle[]);
-      } else if (game === "leksindeseis") {
-        setLeksindeseisQueue((data.puzzles ?? []) as LeksindeseisCommunityPuzzle[]);
-      } else if (game === "vrestifrasi") {
-        setVresTinFrasiQueue((data.puzzles ?? []) as VresTinFrasiCommunityPuzzle[]);
-      } else {
-        setStavroleksoQueue((data.puzzles ?? []) as StavroleksoCommunityPuzzle[]);
-      }
+      setQueues(prev => ({ ...prev, [game]: data.puzzles ?? [] }));
     } finally {
       setLoading(false);
     }
@@ -385,16 +390,35 @@ function LeksikastiríoClient() {
   }
 
   function handleCommunityReviewed(id: number, game: CommunityTab) {
-    if (game === "leksiarxeio")  setLeksiarxeioQueue((prev) => prev.filter((p) => p.id !== id));
-    else if (game === "leksindeseis") setLeksindeseisQueue((prev) => prev.filter((p) => p.id !== id));
-    else if (game === "vrestifrasi")  setVresTinFrasiQueue((prev) => prev.filter((p) => p.id !== id));
-    else setStavroleksoQueue((prev) => prev.filter((p) => p.id !== id));
+    setQueues(prev => ({
+      ...prev,
+      [game]: (prev[game] ?? []).filter((p) => (p as { id: number }).id !== id),
+    }));
   }
 
   function handleNominationSuccess(word: string) {
     if (activeTab === "add") markSuggested(word);
     setModalOpen(false);
     if (isNominationTab(activeTab)) fetchNominations(activeTab);
+  }
+
+  function renderCommunityTab() {
+    const queue = queues[activeTab as CommunityTab] ?? [];
+    const copy  = communityTabCopy[activeTab as CommunityTab];
+    if (queue.length === 0) {
+      return (
+        <p className="text-sm text-stone-400 dark:text-stone-500 text-center py-8">{copy.emptyState}</p>
+      );
+    }
+    return (
+      <div className="space-y-4">
+        {queue.map((p: unknown) => (
+          <React.Fragment key={(p as { id: number }).id}>
+            {CARD[activeTab as CommunityTab](p, adminSecret, (id) => handleCommunityReviewed(id, activeTab as CommunityTab))}
+          </React.Fragment>
+        ))}
+      </div>
+    );
   }
 
   const nominationTabs: NominationTab[] = ["add", "remove"];
@@ -492,66 +516,8 @@ function LeksikastiríoClient() {
             </table>
           </div>
         )
-      ) : activeTab === "leksiarxeio" ? (
-        leksiarxeioQueue.length === 0 ? (
-          <p className="text-sm text-stone-400 dark:text-stone-500 text-center py-8">{communityTabCopy.leksiarxeio.emptyState}</p>
-        ) : (
-          <div className="space-y-4">
-            {leksiarxeioQueue.map((p) => (
-              <LeksiarxeioQueueCard
-                key={p.id}
-                puzzle={p}
-                adminSecret={adminSecret}
-                onReviewed={(id) => handleCommunityReviewed(id, "leksiarxeio")}
-              />
-            ))}
-          </div>
-        )
-      ) : activeTab === "leksindeseis" ? (
-        leksindeseisQueue.length === 0 ? (
-          <p className="text-sm text-stone-400 dark:text-stone-500 text-center py-8">{communityTabCopy.leksindeseis.emptyState}</p>
-        ) : (
-          <div className="space-y-4">
-            {leksindeseisQueue.map((p) => (
-              <LeksindeseisQueueCard
-                key={p.id}
-                puzzle={p}
-                adminSecret={adminSecret}
-                onReviewed={(id) => handleCommunityReviewed(id, "leksindeseis")}
-              />
-            ))}
-          </div>
-        )
-      ) : activeTab === "vrestifrasi" ? (
-        vresTinFrasiQueue.length === 0 ? (
-          <p className="text-sm text-stone-400 dark:text-stone-500 text-center py-8">{communityTabCopy.vrestifrasi.emptyState}</p>
-        ) : (
-          <div className="space-y-4">
-            {vresTinFrasiQueue.map((p) => (
-              <VresTinFrasiQueueCard
-                key={p.id}
-                puzzle={p}
-                adminSecret={adminSecret}
-                onReviewed={(id) => handleCommunityReviewed(id, "vrestifrasi")}
-              />
-            ))}
-          </div>
-        )
       ) : (
-        stavroleksoQueue.length === 0 ? (
-          <p className="text-sm text-stone-400 dark:text-stone-500 text-center py-8">{communityTabCopy.stavrolekso.emptyState}</p>
-        ) : (
-          <div className="space-y-4">
-            {stavroleksoQueue.map((p) => (
-              <StavroleksoQueueCard
-                key={p.id}
-                puzzle={p}
-                adminSecret={adminSecret}
-                onReviewed={(id) => handleCommunityReviewed(id, "stavrolekso")}
-              />
-            ))}
-          </div>
-        )
+        renderCommunityTab()
       )}
 
       {isNominationTab(activeTab) && (
