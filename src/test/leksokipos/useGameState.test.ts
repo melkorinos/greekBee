@@ -89,6 +89,19 @@ describe("useGameState — server restore gates", () => {
 
     expect(spy).not.toHaveBeenCalled();
   });
+
+  it("fetches even when local session exists if needs-restore flag is set", async () => {
+    vi.mocked(isProfileLinked).mockReturnValue(true);
+    vi.mocked(readSlice).mockReturnValue({ "2026-01-01-el": { foundWords: ["αντι"] } });
+    localStorage.setItem("leksokipos-needs-restore", "true");
+    const spy = mockFetchState(["αντι", "παιδι"]);
+
+    const { result } = await act(async () => renderHook(() => useGameState(DAILY_PUZZLE)));
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(result.current.foundWords).toEqual(["αντι", "παιδι"]);
+    expect(localStorage.getItem("leksokipos-needs-restore")).toBeNull();
+  });
 });
 
 describe("useGameState — server restore success", () => {
@@ -172,5 +185,48 @@ describe("useGameState — server restore error handling", () => {
 
     expect(result.current.foundWords).toEqual([]);
     expect(result.current.score).toBe(0);
+  });
+});
+
+describe("useGameState — restoreFromServer", () => {
+  beforeEach(() => {
+    vi.mocked(isProfileLinked).mockReturnValue(true);
+    vi.mocked(readSlice).mockReturnValue({ "2026-01-01-el": { foundWords: ["αντι"] } });
+    vi.mocked(getOrCreateDeviceId).mockReturnValue("device-abc");
+  });
+
+  it("fetches and restores even when local session exists", async () => {
+    const spy = mockFetchState(["αντι", "παιδι", "παιδια"]);
+
+    const { result } = await act(async () => renderHook(() => useGameState(DAILY_PUZZLE)));
+    // mount fetch is skipped (local session exists, no flag)
+    expect(spy).not.toHaveBeenCalled();
+
+    await act(async () => { await result.current.restoreFromServer(); });
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(result.current.foundWords).toEqual(["αντι", "παιδι", "παιδια"]);
+  });
+
+  it("clears the needs-restore flag when called", async () => {
+    localStorage.setItem("leksokipos-needs-restore", "true");
+    mockFetchState([]);
+
+    const { result } = await act(async () => renderHook(() => useGameState(DAILY_PUZZLE)));
+    // flag caused mount fetch to fire and clear the flag
+    expect(localStorage.getItem("leksokipos-needs-restore")).toBeNull();
+
+    // calling restoreFromServer again should not re-set the flag
+    await act(async () => { await result.current.restoreFromServer(); });
+    expect(localStorage.getItem("leksokipos-needs-restore")).toBeNull();
+  });
+
+  it("does nothing when puzzle is not daily", async () => {
+    const spy = mockFetchState(["αντι"]);
+
+    const { result } = await act(async () => renderHook(() => useGameState(CUSTOM_PUZZLE)));
+    await act(async () => { await result.current.restoreFromServer(); });
+
+    expect(spy).not.toHaveBeenCalled();
   });
 });

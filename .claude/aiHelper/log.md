@@ -5,6 +5,44 @@
 
 ---
 
+## Session 42 — 2026-05-30: Google OAuth Auth Integration ✅
+
+### Changes
+
+1. **`src/lib/supabase.ts`** — added `signInWithGoogle`, `signOut`, `getAuthUser` auth helpers.
+
+2. **`src/types/index.ts`** — added `authLinked?: boolean` to `PersistenceEnvelope`.
+
+3. **`src/hooks/useGameStore.ts`** — added `isAuthLinked()`, `setAuthLinked(value)`. `disconnectProfile()` now also clears `authLinked`.
+
+4. **`src/hooks/useAuth.ts`** (new) — auth state hook: reads Supabase session on mount, subscribes to `onAuthStateChange`, keeps `authLinked` in store in sync. Exposes `authLinked`, `authUserName`, `signInWithGoogle`, `signOut`, `isLoading`.
+
+5. **`src/app/auth/callback/page.tsx`** (new) — client component handling Google OAuth PKCE redirect: exchanges code → calls `POST /api/auth/link` → redirects back to saved referrer path.
+
+6. **`src/app/api/auth/link/route.ts`** (new) — edge route that upserts `auth_user_id` on `player_profiles`, pre-populates `display_name` from Google only when blank, back-fills `auth_user_id` on `game_scores`.
+
+7. **`src/components/shared/ProfileSection.tsx`** — added optional `authLinked`, `authUserName`, `onSignIn`, `onSignOut` props. When `authLinked`: shows "✓ [name] · Αποσύνδεση Google", hides TransferCode block. Idle mode: shows Google sign-in button above TransferCode link.
+
+8. **`src/hooks/useLeaderboardProfile.ts`** — added optional auth props to `LeaderboardProfileProps`.
+
+9. **All 4 LeaderboardModal components** — threaded auth props through to `ProfileSection`.
+
+10. **`src/components/shared/HomeTrophyButton.tsx`** (new) — client component rendering 🏆 per applicable game card on landing page. Manages modal open/close + wires identity/profile/auth hooks.
+
+11. **`src/app/page.tsx`** — added `HomeTrophyButton` to Leksokipos, Leksiarxeio, Leksindeseis, Vres Tin Frasi game cards.
+
+12. **CONTEXT.md** — fixed "In-game Points" (now stored), retired "Attempt Total", added "Leaderboard Score (Leksiarxeio)" (sum of In-game Points, higher is better), added `AuthLinked` term, removed `leksiarxeio_scores` (already dropped), updated table count to 10, fixed "Score overloaded" ambiguity note.
+
+13. **`docs/adr/0007-oauth-augments-device-identity.md`** (new) — documents the augment decision, merge behaviour, RLS model, TransferCode fate.
+
+14. **`src/test/shared/useAuth.test.ts`** (new) — 8 tests: no session, session present, store init, sign-out.
+
+**DB migration SQL** provided for user to run in Supabase dashboard (adds `auth_user_id` columns + RLS to `player_profiles` and `game_scores`).
+
+**900 tests pass, 0 lint errors, build clean.**
+
+---
+
 ## Session 41 — 2026-05-29: Bug Fixes (FOUC + Stavrolekso Server Error) ✅
 
 ### Changes

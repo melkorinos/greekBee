@@ -165,7 +165,7 @@ export function LeaderboardModalBase({
         )}
 
         {/* ── Display name ───────────────────────────────────────────────────── */}
-        {showNameEditor && (
+        {showNameEditor && !saveButtonAlwaysActive && (
           <div className="px-5 py-3 border-b border-stone-100 dark:border-stone-800">
             <label className={`${labelClass} mb-1.5`}>Το όνομά σου</label>
             <div className="flex gap-2">

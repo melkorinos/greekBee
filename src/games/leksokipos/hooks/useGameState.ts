@@ -3,10 +3,14 @@
 // useGameState — the main React hook for the Leksokipos game.
 // Wires up the pure reducer with useReducer and exposes a clean API to components.
 //
-// Cross-device restore: on mount, when the player has a linked profile and no
-// local progress exists yet, the hook fetches today's found words from the
-// server (game_state table) and dispatches RESTORE_STATE. This covers the
-// "just claimed a transfer code on a new device" case.
+// Cross-device restore — two paths:
+//   Mount-time: fetches found words when the player has a linked profile and no
+//   local progress exists. Also fires when "leksokipos-needs-restore" is set in
+//   localStorage (transfer code claimed in another game while this was unmounted).
+//   Explicit: restoreFromServer() is called by GameBoard immediately after a
+//   transfer code claim while the game is already mounted.
+
+const NEEDS_RESTORE_KEY = "leksokipos-needs-restore";
 
 import { buildInitialState, gameReducer } from "./gameReducer";
 import { useCallback, useEffect, useMemo, useReducer } from "react";
@@ -50,19 +54,19 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     useCallback((saved) => dispatch({ type: "RESTORE_STATE", saved }), []),
   );
 
-  // Restore found words from the server on the first open of a daily puzzle
-  // when no local progress exists. Gates: ProfileLinked + daily + no local session.
-  // Server wins — no merge. If devices have diverged, generate a fresh
-  // transfer code from the device with more progress (see ADR 0003).
+  // Mount-time restore. Skipped when local session already exists, unless
+  // "leksokipos-needs-restore" is set — which means a transfer code was claimed
+  // from another game while this component was unmounted.
   useEffect(() => {
-    if (!isDailyPuzzle(initialPuzzle)) return;
-    if (!isProfileLinked()) return;
+    if (!isDailyPuzzle(initialPuzzle) || !isProfileLinked()) return;
 
-    // Skip when localStorage already holds progress for this puzzle.
-    // Checked directly (not via state) to avoid a race with useRoundPersistence's
-    // own mount effect, which fires in the same render pass.
+    const needsRestore = localStorage.getItem(NEEDS_RESTORE_KEY) === "true";
+    // Skip when localStorage already holds progress for this puzzle, unless a
+    // transfer code claim explicitly requests an overwrite.
     const localStore = readSlice<Record<string, unknown>>("leksokipos");
-    if (localStore?.[initialPuzzle.id]) return;
+    if (!needsRestore && localStore?.[initialPuzzle.id]) return;
+
+    localStorage.removeItem(NEEDS_RESTORE_KEY);
 
     const deviceId = getOrCreateDeviceId();
     if (!deviceId) return;
@@ -77,7 +81,6 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
       .then((data: { state?: { foundWords?: string[] } | null }) => {
         const foundWords = data.state?.foundWords;
         if (!Array.isArray(foundWords) || foundWords.length === 0) return;
-
         const score = foundWords.reduce((sum, w) => sum + scoreWord(w, initialPuzzle), 0);
         dispatch({
           type: "RESTORE_STATE",
@@ -90,8 +93,39 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
           },
         });
       })
-      .catch(() => {}); // never block gameplay
+      .catch(() => {});
   // initialPuzzle is stable for the lifetime of this hook instance.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Explicit restore — called by GameBoard immediately after a transfer code is
+  // claimed while the game is already mounted. Always fetches; no local-state guard.
+  const restoreFromServer = useCallback((): Promise<void> => {
+    if (!isDailyPuzzle(initialPuzzle) || !isProfileLinked()) return Promise.resolve();
+    localStorage.removeItem(NEEDS_RESTORE_KEY);
+    const deviceId = getOrCreateDeviceId();
+    if (!deviceId) return Promise.resolve();
+    const puzzleDate = initialPuzzle.id.replace(/-[a-z]{2}$/i, "");
+    return fetch(
+      `/api/game-state?device_uuid=${encodeURIComponent(deviceId)}&game_id=leksokipos&puzzle_date=${encodeURIComponent(puzzleDate)}`
+    )
+      .then((r) => r.json())
+      .then((data: { state?: { foundWords?: string[] } | null }) => {
+        const foundWords = data.state?.foundWords;
+        if (!Array.isArray(foundWords) || foundWords.length === 0) return;
+        const score = foundWords.reduce((sum, w) => sum + scoreWord(w, initialPuzzle), 0);
+        dispatch({
+          type: "RESTORE_STATE",
+          saved: {
+            foundWords,
+            score,
+            currentRank: calculateRank(score, maxScore(initialPuzzle)),
+            startedAt:   Date.now(),
+            givenUp:     false,
+          },
+        });
+      })
+      .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -168,5 +202,6 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     handleKeyboardLetter,
     newGame,
     giveUp,
+    restoreFromServer,
   };
 }

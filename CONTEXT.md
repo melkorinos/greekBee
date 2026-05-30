@@ -62,9 +62,9 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Length** *(Leksiarxeio)* — Letters in the Answer. Supported: 4–8. Each Length is a separate Puzzle with its own Session.
 
-**In-game Points** *(Leksiarxeio)* — Per-length score from `scoreLeksiarxeio()`: 6 pts (1 guess) … 1 pt (6 guesses). Display only, not stored.
+**In-game Points** *(Leksiarxeio)* — Per-length score from `scoreLeksiarxeio()`: 6 pts (1 guess) … 1 pt (6 guesses). Stored per Length in `game_scores` (`word_length` column). Summed for the Leaderboard Score.
 
-**Attempt Total** *(Leksiarxeio leaderboard)* — Sum of raw attempts across all 5 Lengths. Lower is better. Failed/unplayed = 7 penalty. API field named `score` for interface compatibility — semantically it is an Attempt Total.
+**Leaderboard Score** *(Leksiarxeio)* — Sum of In-game Points across all 5 Lengths for a given date. Higher is better. Failed/unplayed length = 0 pts. API field named `score`. Display label: "Σκορ".
 
 **Phrase** *(Vres Tin Frasi)* — The daily answer: a 3–4 word Greek saying or common expression. Each word is 2–8 letters. The phrase must have cultural/linguistic coherence — not random words. Stored as display form (accented, natural case); normalised at runtime for evaluation. (Not: sentence, expression)
 
@@ -91,6 +91,8 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 **Profile** — Named identity linking a DisplayName to a DeviceId in `player_profiles`. Shared across games. (Not: account, login)
 
 **ProfileLinked** — Boolean in PersistenceEnvelope: true when this device has a Profile row. (Not: logged in)
+
+**AuthLinked** — Boolean: true when this device's Profile has an associated Google account (`auth_user_id` set on its `player_profiles` row). `AuthLinked` always implies `ProfileLinked`. (Not: logged in — use AuthLinked)
 
 **TransferCode** — 6-char alphanumeric code (no I/1/O/0) for cross-device identity migration. 24h TTL, single-use.
 
@@ -122,14 +124,13 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 ---
 
-## Database tables (9 → 8 after drop, +1 for Vres Tin Frasi)
+## Database tables (10)
 
 | Table | Purpose |
 |---|---|
-| `player_profiles` | `device_uuid` → `display_name`. UNIQUE on `device_uuid`. |
+| `player_profiles` | `device_uuid` → `display_name`. Nullable `auth_user_id` (Supabase auth). UNIQUE on `device_uuid`. |
 | `transfer_codes` | Single-use 6-char codes, 24h TTL. |
-| `game_scores` | Leaderboard scores for all games (unified). `game` column: `"leksokipos"`, `"leksiarxeio"`, `"leksindeseis"`, `"vrestifrasi"`. |
-| `leksiarxeio_scores` | **Legacy** — data migrated to `game_scores`. **Pending drop.** |
+| `game_scores` | Leaderboard scores for all games (unified). `game` column: `"leksokipos"`, `"leksiarxeio"`, `"leksindeseis"`, `"vrestifrasi"`. Nullable `auth_user_id` for cross-device leaderboard queries. |
 | `game_state` | Serialised Session for cross-device sync (Leksokipos daily puzzles only). Keyed on `(device_uuid, game_id, puzzle_date)`. Blob stores `{ foundWords: string[] }`. Pushed after every valid word (requires ProfileLinked). Pulled on mount when local foundWords is empty (requires ProfileLinked + daily puzzle). |
 | `nominations` | Community word proposals. |
 | `nomination_votes` | `(nomination_id, device_id)` votes. |
@@ -142,7 +143,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 ## Flagged ambiguities
 
-**"Score" is overloaded** — Leksokipos Score = accumulated word points (higher = better). Leksiarxeio leaderboard metric = Attempt Total (lower = better). API field is named `score` for interface compatibility only.
+**"Score" is overloaded** — Leksokipos Score = accumulated word points (higher = better). Leksiarxeio Leaderboard Score = sum of In-game Points across 5 Lengths (higher = better). API field is named `score` for interface compatibility only.
 
 **"Valid words" is context-dependent** — In Leksokipos it's the accepted-answer list. In Leksiarxeio it's the guess-validation pool (same file as the Answer pool).
 

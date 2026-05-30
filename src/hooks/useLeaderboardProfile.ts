@@ -16,6 +16,11 @@ export interface LeaderboardProfileProps {
   onTransferGenerate:   () => Promise<string>;
   onTransferClaim:      (code: string) => Promise<void>;
   onDisconnect:         () => void;
+  /** Optional Google auth — passed through to ProfileSection. */
+  authLinked?:          boolean;
+  authUserName?:        string | null;
+  onSignIn?:            () => Promise<void>;
+  onSignOut?:           () => Promise<void>;
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────

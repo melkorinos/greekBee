@@ -57,6 +57,10 @@ export function LeksiarxeioLeaderboardModal({
   onTransferGenerate,
   onTransferClaim,
   onDisconnect,
+  authLinked,
+  authUserName,
+  onSignIn,
+  onSignOut,
   onClose,
 }: LeksiarxeioLeaderboardModalProps) {
   const { createError, handleSave } = useLeaderboardProfile({
@@ -88,6 +92,11 @@ export function LeksiarxeioLeaderboardModal({
           onTransferGenerate={onTransferGenerate}
           onTransferClaim={onTransferClaim}
           onDisconnect={onDisconnect}
+          authLinked={authLinked}
+          authUserName={authUserName}
+          onSignIn={onSignIn}
+          onSignOut={onSignOut}
+          onSaveName={(name) => void handleSave(name)}
         />
       }
       onSaveName={(name) => void handleSave(name)}

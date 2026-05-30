@@ -48,6 +48,10 @@ export function ConnectionsLeaderboardModal({
   onTransferGenerate,
   onTransferClaim,
   onDisconnect,
+  authLinked,
+  authUserName,
+  onSignIn,
+  onSignOut,
   onClose,
 }: ConnectionsLeaderboardModalProps) {
   const { createError, handleSave } = useLeaderboardProfile({
@@ -81,6 +85,11 @@ export function ConnectionsLeaderboardModal({
           onTransferGenerate={onTransferGenerate}
           onTransferClaim={onTransferClaim}
           onDisconnect={onDisconnect}
+          authLinked={authLinked}
+          authUserName={authUserName}
+          onSignIn={onSignIn}
+          onSignOut={onSignOut}
+          onSaveName={(name) => void handleSave(name)}
         />
       }
       onSaveName={(name) => void handleSave(name)}

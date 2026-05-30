@@ -10,6 +10,7 @@
 import React from "react";
 import { GAME_REGISTRY } from "@/config/games";
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
+import { HomeTrophyButton } from "@/components/shared/HomeTrophyButton";
 import { SubmitPuzzleButton } from "@/components/shared/SubmitPuzzleButton";
 import Link from "next/link";
 
@@ -147,10 +148,12 @@ export default function HomePage() {
             game={game}
             submitButton={
               (game.id === "leksiarxeio" || game.id === "leksindeseis" || game.id === "vrestifrasi")
-                ? <SubmitPuzzleButton game={game.id} />
+                ? <><SubmitPuzzleButton game={game.id} /><HomeTrophyButton gameId={game.id} /></>
                 : game.id === "stavrolekso"
                   ? <StavroleksoMakerButton />
-                  : undefined
+                  : game.id === "leksokipos"
+                    ? <HomeTrophyButton gameId={game.id} />
+                    : undefined
             }
           />
         ))}

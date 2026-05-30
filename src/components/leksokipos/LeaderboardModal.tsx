@@ -48,6 +48,10 @@ export function LeaderboardModal({
   onTransferGenerate,
   onTransferClaim,
   onDisconnect,
+  authLinked,
+  authUserName,
+  onSignIn,
+  onSignOut,
   onClose,
 }: LeaderboardModalProps) {
   const today = new Date().toISOString().split("T")[0];
@@ -78,6 +82,11 @@ export function LeaderboardModal({
           onTransferGenerate={onTransferGenerate}
           onTransferClaim={onTransferClaim}
           onDisconnect={onDisconnect}
+          authLinked={authLinked}
+          authUserName={authUserName}
+          onSignIn={onSignIn}
+          onSignOut={onSignOut}
+          onSaveName={(name) => void handleSave(name)}
         />
       }
       emptySlot={(date) =>

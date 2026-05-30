@@ -111,3 +111,37 @@ export function getSupabaseClient(): ReturnType<typeof createClient> {
   _client = createClient(url, key);
   return _client;
 }
+
+// ── Auth helpers (browser-only) ──────────────────────────────────────────────
+
+/** Initiates Google OAuth. Saves the current path so the callback can redirect back. */
+export async function signInWithGoogle(): Promise<void> {
+  if (typeof window !== "undefined") {
+    sessionStorage.setItem("auth-redirect", window.location.pathname);
+  }
+  const supabase = getSupabaseClient();
+  await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback`,
+    },
+  });
+}
+
+/** Signs the current user out. */
+export async function signOut(): Promise<void> {
+  const supabase = getSupabaseClient();
+  await supabase.auth.signOut();
+}
+
+/** Returns the current auth user, or null if not signed in. */
+export async function getAuthUser(): Promise<{ id: string; email?: string; name?: string } | null> {
+  const supabase = getSupabaseClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  return {
+    id:    user.id,
+    email: user.email,
+    name:  user.user_metadata?.["full_name"] as string | undefined,
+  };
+}

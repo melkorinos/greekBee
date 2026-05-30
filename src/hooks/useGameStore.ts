@@ -146,6 +146,22 @@ export function migrateLeksiarxeioIdentity(): void {
  */
 export function disconnectProfile(): void {
   const envelope = readEnvelope();
-  writeEnvelope({ ...envelope, deviceId: crypto.randomUUID(), profileLinked: false });
+  writeEnvelope({ ...envelope, deviceId: crypto.randomUUID(), profileLinked: false, authLinked: false });
+}
+
+// ── Google auth identity ─────────────────────────────────────────────────────
+// authLinked = true means this device's profile is linked to a Google account.
+// AuthLinked always implies ProfileLinked (sign-in creates or merges a profile).
+
+/** Returns true if this device is linked to a Google account. */
+export function isAuthLinked(): boolean {
+  if (typeof window === "undefined") return false;
+  return readEnvelope()["authLinked"] === true;
+}
+
+/** Set or clear the authLinked flag. */
+export function setAuthLinked(value: boolean): void {
+  const envelope = readEnvelope();
+  writeEnvelope({ ...envelope, authLinked: value });
 }
 

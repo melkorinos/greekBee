@@ -88,6 +88,9 @@ export function useProfile({
     }
     setProfileLinked(true);
     setProfileLinkedState(true);
+    // Signal leksokipos to restore found words on the next mount or immediately
+    // if the game is already open (GameBoard wraps claimTransferCode to handle that).
+    localStorage.setItem("leksokipos-needs-restore", "true");
   }
 
   function disconnect(): void {

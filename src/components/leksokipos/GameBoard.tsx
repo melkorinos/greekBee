@@ -8,7 +8,7 @@ import { useGameIdentity } from "@/hooks/useGameIdentity";
 import { useProfile } from "@/hooks/useProfile";
 import { useProfileVerification } from "@/hooks/useProfileVerification";
 import { getSuggestedWords, markSuggested } from "@/hooks/suggestions";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { FeedbackMessage } from "./FeedbackMessage";
 import { FoundWordsList } from "./FoundWordsList";
@@ -49,6 +49,7 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
     shuffleLetters,
     handleKeyboardLetter,
     giveUp,
+    restoreFromServer,
   } = useGameState(puzzle);
 
   // Word suggestion
@@ -86,6 +87,13 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
     onDeviceIdChange:    setDeviceIdState,
     onDisplayNameChange: (name) => { setDisplayNameState(name); postScoreWithName(score, name); },
   });
+
+  // Wraps claim so that found words restore immediately if the modal is opened
+  // while the game is already mounted (the common case on the leksokipos page).
+  const handleTransferClaim = useCallback(async (code: string): Promise<void> => {
+    await claimTransferCode(code);
+    await restoreFromServer();
+  }, [claimTransferCode, restoreFromServer]);
 
   // Auto-heal stale linked profile — silently disconnects if the DB row is gone.
   useProfileVerification({
@@ -261,7 +269,7 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
           onSaveName={handleSaveName}
           onProfileCreate={createProfile}
           onTransferGenerate={generateTransferCode}
-          onTransferClaim={claimTransferCode}
+          onTransferClaim={handleTransferClaim}
           onDisconnect={disconnect}
           onClose={() => setLeaderboardOpen(false)}
         />

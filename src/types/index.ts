@@ -35,4 +35,6 @@ export interface PersistenceEnvelope {
   "displayName"?:          string;
   /** True once a cross-device profile has been created or claimed via transfer code. */
   "profileLinked"?:        boolean;
+  /** True when this device's profile is linked to a Google account (AuthLinked). */
+  "authLinked"?:           boolean;
 }
