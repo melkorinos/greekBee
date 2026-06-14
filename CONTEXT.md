@@ -28,6 +28,8 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Community Puzzle** — A Puzzle submitted by a player, admin-approved, and queued as the Daily Puzzle for Leksiarxeio or Leksindeseis. Primary source for both games; static pools are fallback only. Carries optional `submitter_name` shown during play. Row is deleted immediately on consumption. (Not: curated puzzle — retired)
 
+**Community Puzzle Lifecycle** — The shared state machine behind every `/api/community-puzzles/*` route: submit → `pending` → approve (UPDATE status) or reject (DELETE row). One module (`src/lib/communityPuzzleLifecycle.ts`) owns auth, parsing, insert, list, and review; per-game variation (table, validation adapter, list shape, public approved list) enters as config declared in each game's route file. (Not: submission flow, community puzzle API)
+
 **Custom Puzzle** *(Leksokipos only)* — Player-constructed from a 7-letter combination. ID: `custom-{center}-{sortedOuter}`. Never on the Leaderboard.
 
 **Puzzle ID** — `YYYY-MM-DD-{language}` for Leksokipos Daily; `YYYY-MM-DD-wordle-{length}` for Leksiarxeio (frozen — renaming wipes localStorage sessions); `custom-{center}-{sortedOuter}` for Custom; `YYYY-MM-DD-vresi` for Vres Tin Frasi. Leksindeseis has no `id` field — `date` is the effective ID.

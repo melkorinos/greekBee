@@ -79,14 +79,16 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   // Auto-post whenever the score increases.
   useEffect(() => { postScore(score); }, [score, postScore]);
 
-  // Cross-device sync — pushes state on every valid word, daily puzzles only.
-  useGameStateSync({ puzzleDate: leaderboardPuzzleId, isDaily, foundWords });
-
   const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } = useProfile({
     deviceId,
     onDeviceIdChange:    setDeviceIdState,
     onDisplayNameChange: (name) => { setDisplayNameState(name); postScoreWithName(score, name); },
   });
+
+  // Cross-device sync — pushes state on every valid word, daily puzzles only.
+  // Also backfills already-found words when profileLinked flips true (the
+  // pre-transfer flow: play first, then link to generate a transfer code).
+  useGameStateSync({ puzzleDate: leaderboardPuzzleId, isDaily, foundWords, profileLinked });
 
   // Wraps claim so that found words restore immediately if the modal is opened
   // while the game is already mounted (the common case on the leksokipos page).

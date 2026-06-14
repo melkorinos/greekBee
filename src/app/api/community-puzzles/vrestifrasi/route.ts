@@ -2,13 +2,14 @@
 // GET  /api/community-puzzles/vrestifrasi?status=pending — list (admin only).
 //
 // Submission: one phrase string. Validated: 3–4 words, each word 2–8 letters,
-// each word in the word pool or function word allowlist.
+// each word in the word pool.
 //
-// Admin auth: GET requires X-Admin-Secret header matching ADMIN_SECRET env var.
+// Auth, insert, and list live in the Community Puzzle Lifecycle module —
+// this file owns only the Vres Tin Frasi validation adapter (and with it the
+// word-pool imports, which therefore stay out of the other games' bundles).
 
-import { NextRequest, NextResponse } from "next/server";
-
-import { getSupabaseClient } from "@/lib/supabase";
+import { createListHandler, createSubmitHandler } from "@/lib/communityPuzzleLifecycle";
+import type { SubmissionValidation } from "@/lib/communityPuzzleLifecycle";
 import { normalizeLetters } from "@/lib/normalize";
 import words2 from "@/data/leksiarxeio/words-2.json";
 import words3 from "@/data/leksiarxeio/words-3.json";
@@ -35,25 +36,16 @@ function isValidPhraseWord(word: string): boolean {
   return WORD_POOL[word.length]?.has(word) ?? false;
 }
 
-// ── POST ──────────────────────────────────────────────────────────────────────
-
 interface SubmitPayload {
   submitter_name?: string;
   phrase: string;
 }
 
-export async function POST(req: NextRequest) {
-  let body: SubmitPayload;
-  try {
-    body = (await req.json()) as SubmitPayload;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-
-  const { submitter_name = "", phrase } = body;
+function validate(body: unknown): SubmissionValidation {
+  const { submitter_name = "", phrase } = (body ?? {}) as SubmitPayload;
 
   if (!phrase || typeof phrase !== "string") {
-    return NextResponse.json({ error: "phrase is required" }, { status: 400 });
+    return { ok: false, status: 400, body: { error: "phrase is required" } };
   }
 
   const normalizedPhrase = phrase.trim();
@@ -61,10 +53,7 @@ export async function POST(req: NextRequest) {
   const words    = rawWords.map((w) => normalizeLetters(w));
 
   if (words.length < 3 || words.length > 4) {
-    return NextResponse.json(
-      { error: "Η φράση πρέπει να έχει 3–4 λέξεις" },
-      { status: 422 },
-    );
+    return { ok: false, status: 422, body: { error: "Η φράση πρέπει να έχει 3–4 λέξεις" } };
   }
 
   const wordErrors: Record<string, string> = {};
@@ -78,38 +67,20 @@ export async function POST(req: NextRequest) {
   }
 
   if (Object.keys(wordErrors).length > 0) {
-    return NextResponse.json({ errors: wordErrors }, { status: 422 });
+    return { ok: false, status: 422, body: { errors: wordErrors } };
   }
 
   // Store in display form (original casing with accents)
-  const supabase = getSupabaseClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from("community_vrestifrasi_puzzles") as any).insert({
-    submitter_name: (submitter_name ?? "").trim(),
-    data:           { phrase: normalizedPhrase },
-    status:         "pending",
-  });
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+  return {
+    ok:  true,
+    row: {
+      submitter_name: (submitter_name ?? "").trim(),
+      data:           { phrase: normalizedPhrase },
+    },
+  };
 }
 
-// ── GET (admin) ───────────────────────────────────────────────────────────────
+const config = { table: "community_vrestifrasi_puzzles", validate };
 
-export async function GET(req: NextRequest) {
-  const secret = req.headers.get("x-admin-secret") ?? "";
-  if (!secret || secret !== process.env.ADMIN_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const status   = req.nextUrl.searchParams.get("status") ?? "pending";
-  const supabase = getSupabaseClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from("community_vrestifrasi_puzzles") as any)
-    .select("id, submitter_name, data, status, created_at")
-    .eq("status", status)
-    .order("created_at", { ascending: true });
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ puzzles: data ?? [] });
-}
+export const POST = createSubmitHandler(config);
+export const GET  = createListHandler(config);

@@ -50,3 +50,10 @@ Priority order (work top-down):
 
 ## Constraints
 See `CLAUDE.md` standing rules — authoritative source.
+
+---
+
+## Future / Experimental Ideas
+
+### Final Build Evaluation System (action/roguelite game concept)
+At the end of a run, drop the player into an unbeatable scenario (infinite wave, unkillable boss, or fixed-time gauntlet). Score on two axes: **survival time** and **total damage dealt**. This creates a pure expression of how broken the build actually is — the better the build, the longer you last / more DPS you squeeze out before dying. Could show a post-run breakdown: peak DPS, damage by source, time alive, compared to a baseline "average build" curve. No win state — the evaluation is the ending.

@@ -1,5 +1,6 @@
 {
   "permissions": {
+    "deny": [],
     "allow": [
       "Bash(npx skills@latest add mattpocock/skills)",
       "PowerShell(Get-ChildItem \"e:\\\\desktop\\\\bee\\\\greekBee\\\\.claude\\\\skills\" | ForEach-Object { \"$\\($_.Name\\) -> $\\($_.Target\\)\" })",
@@ -10,7 +11,33 @@
       "Bash(python -c \"import sys; lines=[l.strip\\(\\) for l in sys.stdin]; [print\\(l\\) for l in lines if 'radix' in l.lower\\(\\) or 'shadcn' in l.lower\\(\\) or 'headless' in l.lower\\(\\)]\")",
       "Bash(ls -la .env*)",
       "Bash(cat .env.local)",
-      "Bash(cat .env)"
+      "Bash(cat .env)",
+      "Edit(CLAUDE.md)",
+      "Edit(CONTEXT.md)",
+      "Write(CLAUDE.md)",
+      "Write(CONTEXT.md)",
+      "PowerShell(godot --headless *)",
+      "PowerShell(godot *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(*Get-ChildItem*)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-Command *)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(Select-String *)",
+      "PowerShell(Select-Object *)",
+      "PowerShell(Out-File *)",
+      "PowerShell(Measure-Object *)",
+      "PowerShell(Start-Process *)",
+      "PowerShell(Invoke-Item *)",
+      "PowerShell(*New-Item*)",
+      "PowerShell(New-Item *)",
+      "PowerShell(*)",
+      "Bash(pnpm:*)",
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(mkdir *)",
+      "Bash(start *)"
     ]
   }
 }

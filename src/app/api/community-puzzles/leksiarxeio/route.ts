@@ -5,11 +5,11 @@
 // All 5 lengths are required; if any word is not in its pool the whole submission
 // is rejected with per-word errors so the player can fix or nominate the word.
 //
-// Admin authentication: GET requires X-Admin-Secret header matching ADMIN_SECRET env var.
+// Auth, insert, and list live in the Community Puzzle Lifecycle module —
+// this file owns only the Leksiarxeio validation adapter.
 
-import { NextRequest, NextResponse } from "next/server";
-
-import { getSupabaseClient } from "@/lib/supabase";
+import { createListHandler, createSubmitHandler } from "@/lib/communityPuzzleLifecycle";
+import type { SubmissionValidation } from "@/lib/communityPuzzleLifecycle";
 import { getValidWords } from "@/data/leksiarxeio";
 import { normalizeLetters } from "@/lib/normalize";
 import type { LeksiarxeioLength } from "@/games/leksiarxeio/types";
@@ -18,25 +18,16 @@ export const runtime = "edge";
 
 const LENGTHS: LeksiarxeioLength[] = [4, 5, 6, 7, 8];
 
-// ── POST ──────────────────────────────────────────────────────────────────────
-
 interface SubmitPayload {
   submitter_name?: string;
   words: Record<string, string>; // {"4": "word", "5": "word", ...}
 }
 
-export async function POST(req: NextRequest) {
-  let body: SubmitPayload;
-  try {
-    body = (await req.json()) as SubmitPayload;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
-
-  const { submitter_name = "", words } = body;
+function validate(body: unknown): SubmissionValidation {
+  const { submitter_name = "", words } = (body ?? {}) as SubmitPayload;
 
   if (!words || typeof words !== "object") {
-    return NextResponse.json({ error: "words is required" }, { status: 400 });
+    return { ok: false, status: 400, body: { error: "words is required" } };
   }
 
   // Validate all 5 lengths are present and in their Word Pool
@@ -54,41 +45,17 @@ export async function POST(req: NextRequest) {
   }
 
   if (Object.keys(errors).length > 0) {
-    return NextResponse.json({ errors }, { status: 422 });
+    return { ok: false, status: 422, body: { errors } };
   }
 
   const data = Object.fromEntries(
     LENGTHS.map((len) => [String(len), normalizeLetters((words[String(len)] ?? "").trim())])
   );
 
-  const supabase = getSupabaseClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from("community_leksiarxeio_puzzles") as any).insert({
-    submitter_name: submitter_name.trim(),
-    data,
-    status: "pending",
-  });
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+  return { ok: true, row: { submitter_name: submitter_name.trim(), data } };
 }
 
-// ── GET (admin) ───────────────────────────────────────────────────────────────
+const config = { table: "community_leksiarxeio_puzzles", validate };
 
-export async function GET(req: NextRequest) {
-  const secret = req.headers.get("x-admin-secret") ?? "";
-  if (!secret || secret !== process.env.ADMIN_SECRET) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const status = req.nextUrl.searchParams.get("status") ?? "pending";
-  const supabase = getSupabaseClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from("community_leksiarxeio_puzzles") as any)
-    .select("id, submitter_name, data, status, created_at")
-    .eq("status", status)
-    .order("created_at", { ascending: true });
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ puzzles: data ?? [] });
-}
+export const POST = createSubmitHandler(config);
+export const GET  = createListHandler(config);
