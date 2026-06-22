@@ -1,4 +1,4 @@
-﻿// wordleGuessGrid.test.tsx
+﻿// leksiarxeioGuessGrid.test.tsx
 // Tests for GuessGrid: tile sizing and layout consistency across word lengths.
 
 import { describe, expect, it } from "vitest";

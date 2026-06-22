@@ -4,7 +4,7 @@
 //
 // Wires the shared LeaderboardModalBase with:
 //   - Purple colour scheme
-//   - Single-date strip (Connections has no rolling history UI)
+//   - Single-date strip (Leksindeseis has no rolling history UI)
 //   - Score formatted as "X/4" (mistakesRemaining; higher = better)
 //   - Shared ProfileSection (topSlot)
 

@@ -2,7 +2,7 @@ import "./globals.css";
 
 import { Geist, Geist_Mono } from "next/font/google";
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Shell } from "@/components/shared/Shell";
 
 const geistSans = Geist({
@@ -18,6 +18,14 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Leksarxeia",
   description: "Ελληνικά παιχνίδια λέξεων: Leksokipos, Leksiarxeio, Leksindeseis",
+};
+
+// Lock the viewport so pinch-to-zoom can't push the game UI out of the layout on mobile.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

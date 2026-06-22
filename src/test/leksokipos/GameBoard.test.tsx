@@ -8,6 +8,11 @@ import { GameBoard } from "@/components/leksokipos/GameBoard";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import userEvent from "@testing-library/user-event";
 
+// GameBoard calls useDayChange → useRouter; provide a stub so it doesn't throw.
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+}));
+
 // ── Test fixture ───────────────────────────────────────────────────────────────
 
 const puzzle: LeksokiposPuzzle = {

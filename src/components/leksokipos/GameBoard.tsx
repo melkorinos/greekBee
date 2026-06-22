@@ -20,6 +20,7 @@ import { ScoreBar } from "./ScoreBar";
 import { NominationModal } from "@/components/shared/NominationModal";
 import { WordInput } from "./WordInput";
 import { btnSecondary } from "./styles";
+import { useDayChange } from "@/games/leksokipos/hooks/useDayChange";
 import { useGameState } from "@/games/leksokipos/hooks/useGameState";
 import { useGameStateSync } from "@/hooks/useGameStateSync";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
@@ -51,6 +52,9 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
     giveUp,
     restoreFromServer,
   } = useGameState(puzzle);
+
+  // Redirect to today's puzzle if this page is a stale daily puzzle (day rolled over).
+  useDayChange(puzzle);
 
   // Word suggestion
   const [suggestWord,    setSuggestWord]    = useState<string | null>(null);

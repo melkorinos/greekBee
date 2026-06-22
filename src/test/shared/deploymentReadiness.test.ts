@@ -28,7 +28,7 @@ function loadGitignorePatterns(): string[] {
 /**
  * Minimal gitignore matcher — handles:
  *   - Exact paths:           src/data/words-en.json
- *   - Glob suffix:           src/data/wordle/words-*.json
+ *   - Glob suffix:           src/data/leksiarxeio/words-*.json
  *   - Leading slash (root):  /node_modules
  */
 function isIgnored(filePath: string, patterns: string[]): boolean {

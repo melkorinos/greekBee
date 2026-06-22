@@ -1,5 +1,5 @@
 // FeedbackBanner — shared toast-style feedback banner.
-// Used by Wordle (dark theme) and Connections (light theme).
+// Used by Leksiarxeio (dark theme) and Leksindeseis (light theme).
 
 interface FeedbackBannerProps {
   message:  string | null;

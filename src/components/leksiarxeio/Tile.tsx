@@ -1,6 +1,6 @@
 ﻿"use client";
 
-// A single Wordle letter tile.
+// A single Leksiarxeio letter tile.
 
 import type { TileState } from "@/games/leksiarxeio/types";
 

@@ -6,9 +6,9 @@
 /** Supported word lengths for Leksiarxeio. Currently only 5 is active. */
 export type LeksiarxeioLength = 3 | 4 | 5 | 6 | 7 | 8;
 
-/** A single daily Wordle puzzle. */
+/** A single daily Leksiarxeio puzzle. */
 export interface LeksiarxeioPuzzle {
-  /** Unique identifier, e.g. "2026-05-12-wordle-5" */
+  /** Unique identifier, e.g. "2026-05-12-wordle-5" (frozen — renaming breaks localStorage) */
   id: string;
   /** ISO date string this puzzle is intended for */
   date: string;
@@ -38,7 +38,7 @@ export interface GuessResult {
 
 export type LeksiarxeioStatus = "playing" | "won" | "lost";
 
-/** The full Wordle game state */
+/** The full Leksiarxeio game state */
 export interface LeksiarxeioState {
   puzzle: LeksiarxeioPuzzle;
   /** All submitted and evaluated guesses */

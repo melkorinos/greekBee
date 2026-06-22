@@ -1,7 +1,7 @@
 ﻿"use client";
 
 // On-screen Greek keyboard for Leksiarxeio.
-// Layout mirrors a standard Greek soft keyboard, adapted for Wordle.
+// Layout mirrors a standard Greek soft keyboard, adapted for Leksiarxeio.
 
 import type { LetterStateMap } from "@/games/leksiarxeio/types";
 

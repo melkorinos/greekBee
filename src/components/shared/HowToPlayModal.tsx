@@ -9,7 +9,7 @@ interface HowToPlayModalProps {
   title:        string;
   items:        readonly string[];
   bulletIcon?:  string;
-  /** Use a light-coloured trigger button (for dark-background pages like Wordle) */
+  /** Use a light-coloured trigger button (for dark-background pages like Leksiarxeio) */
   lightTrigger?: boolean;
 }
 

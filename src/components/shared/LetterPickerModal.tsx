@@ -3,7 +3,7 @@
 // LetterPickerModal — shared modal for picking a set of Greek letters.
 //
 // Currently used by the Leksokipos "New Puzzle" flow.  Designed to be
-// reusable by other games (e.g. Wordle custom-word sharer) via props.
+// reusable by other games (e.g. Leksiarxeio custom-word sharer) via props.
 //
 // UX rules (Leksokipos mode):
 //  - The FIRST letter tapped becomes the center (mandatory) letter — shown in yellow.
@@ -19,7 +19,7 @@ import { useCallback, useState } from "react";
 import { pickRandom7 } from "@/games/leksokipos/lib/randomPuzzle";
 
 // ── Letter layout ─────────────────────────────────────────────────────────────
-// Same three rows as the Wordle on-screen keyboard so the layout is familiar.
+// Same three rows as the Leksiarxeio on-screen keyboard so the layout is familiar.
 
 const KEYBOARD_ROWS = [
   ["ε", "ρ", "τ", "υ", "θ", "ι", "ο", "π"],

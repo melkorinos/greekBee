@@ -1,4 +1,4 @@
-// WordCard — a single selectable word tile in the Connections grid.
+// WordCard — a single selectable word tile in the Leksindeseis grid.
 
 interface WordCardProps {
   word:       string;

@@ -192,7 +192,7 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
 src/
   app/              Next.js App Router — shell layout, game picker, per-game routes
     leksokipos/     Daily puzzle + custom /[center]/[outer] dynamic route (server component delegates to LeksokiposLayout)
-    leksiarxeio/    4–8 letter Greek Wordle (multi-length)
+    leksiarxeio/    4–8 letter Greek word game (multi-length)
     leksindeseis/   Group 16 words into 4 categories
     api/            Edge routes: game-scores, game-state, profile, suggest-word, leksiarxeio-scores
   components/

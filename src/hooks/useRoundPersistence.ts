@@ -5,7 +5,7 @@
 // Leksokipos, Leksiarxeio, and Leksindeseis with one consistent seam.
 //
 // Storage format: { [sessionKey]: TSnapshot } under the game's slice.
-// Multiple sessions co-exist (e.g. different Wordle word lengths on the same day).
+// Multiple sessions co-exist (e.g. different Leksiarxeio word lengths on the same day).
 
 import { clearSlice, readSlice, writeSlice } from "./useGameStore";
 import { useCallback, useEffect, useRef } from "react";

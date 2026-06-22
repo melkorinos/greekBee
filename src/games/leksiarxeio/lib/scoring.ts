@@ -3,7 +3,7 @@
 import { LEKSIARXEIO_SCORES } from "../types";
 
 /**
- * Returns the score for a completed Wordle game.
+ * Returns the score for a completed Leksiarxeio game.
  * @param guessCount - Number of guesses used (1–6)
  * @param won        - Whether the player guessed correctly
  */

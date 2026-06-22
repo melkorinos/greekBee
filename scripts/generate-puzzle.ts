@@ -1,7 +1,7 @@
 /**
  * generate-puzzle.ts
  *
- * Generates a Spelling Bee puzzle from a word list JSON file.
+ * Generates a Leksokipos puzzle from a word list JSON file.
  * Finds all valid words for the given letter set, then appends the puzzle
  * to the appropriate puzzles-{lang}.json file.
  *

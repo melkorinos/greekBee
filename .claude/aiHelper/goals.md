@@ -1,7 +1,7 @@
 # Agent Goals — Greek Word Games Platform
 
 ## North Star
-Ship a polished multi-game Greek word game platform where Spelling Bee, Wordle GR, and Connections coexist cleanly — sharing a shell, persistence layer, and design foundation — without any game's logic bleeding into another's.
+Ship a polished multi-game Greek word game platform where Leksokipos, Leksiarxeio, and Leksindeseis coexist cleanly — sharing a shell, persistence layer, and design foundation — without any game's logic bleeding into another's.
 
 ---
 
@@ -10,9 +10,9 @@ Ship a polished multi-game Greek word game platform where Spelling Bee, Wordle G
 | Phase | Summary | Final tests |
 |---|---|---|
 | 1 — Foundation | Folder structure, Shell + routing, `useGameStore`, types split | ~50 |
-| 2 — Wordle GR | `evaluateGuess`, reducer, daily answer, curated answer pool | 143 |
-| 2.5 — Theming | Dark Wordle + Shell, light SB + picker, no `dark:` classes | 151 | *(superseded by session 36–37: full white mode + manual dark toggle via ADR 0002)* |
-| 3 — Connections | Full game, reducer, GroupGrid, FeedbackBanner graduated | 167 |
+| 2 — Leksiarxeio | `evaluateGuess`, reducer, daily answer, curated answer pool | 143 |
+| 2.5 — Theming | Dark Leksiarxeio + Shell, light Leksokipos + picker, no `dark:` classes | 151 | *(superseded by session 36–37: full white mode + manual dark toggle via ADR 0002)* |
+| 3 — Leksindeseis | Full game, reducer, GroupGrid, FeedbackBanner graduated | 167 |
 
 ---
 
@@ -34,16 +34,16 @@ Ship a polished multi-game Greek word game platform where Spelling Bee, Wordle G
 
 ---
 
-## 🎯 Current Focus — Spelling Bee Polish
+## 🎯 Current Focus — Leksokipos Polish
 
 Priority order (work top-down):
 
 1. **Rank badge on ScoreBar** — render the current rank label (Αρχάριος → Βασίλισσα) as a styled badge inside the score bar, not just plain text.
 2. **Share score** — after completing the game, offer a shareable score card (rank + score + date) that copies to clipboard.
 3. **Home page "played today" badge** — read `useGameStore` to show ✓ on each game card if played today.
-4. **Spelling Bee stats modal** — device-local all-time stats: games played, best rank, total words. Read from localStorage.
-5. **E2E test (Playwright)** — at least one Spelling Bee happy-path: load today's puzzle → type valid word → see it in found list.
-6. ~~**Wordle length variants (3–8)**~~ ✅ — 4–8 live; `words-N.json` + `answers-N.json` generated; length switcher in UI.
+4. **Leksokipos stats modal** — device-local all-time stats: games played, best rank, total words. Read from localStorage.
+5. **E2E test (Playwright)** — at least one Leksokipos happy-path: load today's puzzle → type valid word → see it in found list.
+6. ~~**Leksiarxeio length variants (3–8)**~~ ✅ — 4–8 live; `words-N.json` + `answers-N.json` generated; length switcher in UI.
 7. **Visual rebrand** — Tailwind theme config or further polish beyond existing dark-mode toggle.
 
 ---

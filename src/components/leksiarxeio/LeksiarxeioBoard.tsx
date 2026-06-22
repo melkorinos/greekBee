@@ -197,7 +197,8 @@ export function LeksiarxeioBoard({
   const [, setCompletedLengths] = useState<Set<LeksiarxeioLength>>(new Set());
 
   // Restore already-completed lengths from persistence so auto-advance skips them.
-  // The Leksiarxeio slice is a SessionMap keyed by puzzle ID (e.g. "2026-05-22-wordle-5").
+  // The Leksiarxeio slice is a SessionMap keyed by puzzle ID (e.g. "2026-05-22-wordle-5")
+  // (frozen — renaming breaks localStorage).
   useEffect(() => {
     const store = readSlice<Record<string, { status: string }>>("leksiarxeio");
     if (!store) return;

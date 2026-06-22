@@ -1,4 +1,4 @@
-﻿// connectionsGroupGrid.test.tsx — RTL smoke test for GroupGrid component.
+﻿// leksindeseisGroupGrid.test.tsx — RTL smoke test for GroupGrid component.
 
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";

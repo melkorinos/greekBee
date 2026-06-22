@@ -1,4 +1,4 @@
-﻿// Unit tests for evaluateGuess — the core Wordle algorithm.
+﻿// Unit tests for evaluateGuess — the core Leksiarxeio algorithm.
 // Covers: exact matches, present letters, absent, and duplicate-letter edge cases.
 
 import { describe, expect, it } from "vitest";
