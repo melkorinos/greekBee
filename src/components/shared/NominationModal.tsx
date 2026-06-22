@@ -3,7 +3,13 @@
 import { btnCancel, btnModalSubmit, inputClass, inputReadonlyClass, labelClass, labelOptionalClass } from "@/components/leksokipos/styles";
 
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+interface LookupResult {
+  word:     string; // the lowercase+trim word this result applies to
+  rejected: number;
+  pending:  number;
+}
 
 interface NominationModalProps {
   word: string;
@@ -47,15 +53,67 @@ export function NominationModal({
   const [playerName,   setPlayerName]   = useState("");
   const [note,         setNote]         = useState("");
   const [status,       setStatus]       = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [lookup,       setLookup]       = useState<LookupResult | null>(null);
+  const [noteMissing,  setNoteMissing]  = useState(false);
 
   const word = wordEditable ? editableWord : wordProp;
   const c    = copy[direction];
+  const key  = word.trim().toLowerCase();
+
+  // Look up prior rejections / pending duplicates for `target` (lowercase+trim).
+  const runLookup = useCallback(
+    async (target: string): Promise<LookupResult | null> => {
+      if (target.length < 2) {
+        setLookup(null);
+        return null;
+      }
+      try {
+        const res = await fetch(
+          `/api/nominations/lookup?word=${encodeURIComponent(target)}&direction=${direction}`,
+        );
+        if (!res.ok) return null;
+        const data = (await res.json()) as { rejected?: number; pending?: number };
+        const result: LookupResult = {
+          word:     target,
+          rejected: data.rejected ?? 0,
+          pending:  data.pending  ?? 0,
+        };
+        setLookup(result);
+        return result;
+      } catch {
+        return null; // network failure → no warning, never blocks submission
+      }
+    },
+    [direction],
+  );
+
+  // Non-editable word (e.g. in-game flag) has no blur moment — check on open.
+  useEffect(() => {
+    if (!isOpen || wordEditable) return;
+    const target = wordProp.trim().toLowerCase();
+    if (target) runLookup(target);
+  }, [isOpen, wordEditable, wordProp, runLookup]);
 
   if (!isOpen) return null;
+
+  // A warning applies only while the looked-up word still matches the input.
+  const rejectedHit = !!lookup && lookup.word === key && lookup.rejected > 0;
+  const pendingHit  = !!lookup && lookup.word === key && lookup.rejected === 0 && lookup.pending > 0;
+  // Previously-rejected words require an explanation before re-submitting.
+  const noteRequired = rejectedHit;
 
   async function handleSubmit() {
     const trimmed = word.trim().toLowerCase();
     if (!trimmed) return;
+
+    // Ensure the rejection check is current for this exact word before posting.
+    const lk = lookup && lookup.word === trimmed ? lookup : await runLookup(trimmed);
+    if (lk && lk.rejected > 0 && !note.trim()) {
+      setNoteMissing(true); // mandatory explanation for a previously-rejected word
+      return;
+    }
+    setNoteMissing(false);
+
     setStatus("submitting");
     try {
       const res = await fetch("/api/nominations", {
@@ -84,6 +142,8 @@ export function NominationModal({
     setPlayerName("");
     setNote("");
     setStatus("idle");
+    setLookup(null);
+    setNoteMissing(false);
     onClose();
   }
 
@@ -128,13 +188,45 @@ export function NominationModal({
               {c.body(word.trim() || "…")}
             </p>
 
+            {rejectedHit && (
+              <div
+                data-testid="nomination-rejected-warning"
+                className="mb-4 rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950 px-3 py-2.5"
+              >
+                <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+                  ⚠ Αυτή η λέξη έχει ξαναπροταθεί και απορρίφθηκε.
+                </p>
+                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1 leading-relaxed">
+                  Μπορείς να την ξαναστείλεις, αλλά εξήγησε καθαρά γιατί πιστεύεις ότι πρόκειται για
+                  λάθος — η εξήγηση είναι <strong>υποχρεωτική</strong>.
+                </p>
+              </div>
+            )}
+
+            {pendingHit && (
+              <div
+                data-testid="nomination-pending-info"
+                className="mb-4 rounded-xl border border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950 px-3 py-2.5"
+              >
+                <p className="text-xs text-sky-800 dark:text-sky-200 leading-relaxed">
+                  ℹ Υπάρχει ήδη ενεργή πρόταση για αυτή τη λέξη. Μπορείς να την ψηφίσεις αντί να
+                  στείλεις διπλή πρόταση.
+                </p>
+              </div>
+            )}
+
             <div className="space-y-3">
               <div>
                 <label className={labelClass}>Λέξη</label>
                 {wordEditable ? (
                   <input
                     value={editableWord}
-                    onChange={(e) => setEditableWord(e.target.value)}
+                    onChange={(e) => {
+                      setEditableWord(e.target.value);
+                      setLookup(null);      // word changed → drop any stale warning
+                      setNoteMissing(false);
+                    }}
+                    onBlur={(e) => runLookup(e.target.value.trim().toLowerCase())}
                     placeholder="π.χ. ΑΓΑΠΗ"
                     maxLength={50}
                     data-testid="nomination-modal-word-input"
@@ -166,17 +258,32 @@ export function NominationModal({
 
               <div>
                 <label className={labelClass}>
-                  Σχόλιο <span className={labelOptionalClass}>(προαιρετικό)</span>
+                  Σχόλιο{" "}
+                  {noteRequired ? (
+                    <span className="text-amber-600 dark:text-amber-400 font-semibold">(υποχρεωτικό)</span>
+                  ) : (
+                    <span className={labelOptionalClass}>(προαιρετικό)</span>
+                  )}
                 </label>
                 <textarea
                   value={note}
-                  onChange={(e) => setNote(e.target.value)}
+                  onChange={(e) => {
+                    setNote(e.target.value);
+                    if (e.target.value.trim()) setNoteMissing(false);
+                  }}
                   placeholder={c.notePlaceholder}
                   maxLength={200}
                   rows={3}
                   data-testid="nomination-modal-note"
-                  className={`${inputClass} resize-none`}
+                  className={`${inputClass} resize-none ${
+                    noteMissing ? "border-amber-500 ring-1 ring-amber-500" : ""
+                  }`}
                 />
+                {noteMissing && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1" data-testid="nomination-note-required">
+                    Πρόσθεσε μια εξήγηση για να ξαναστείλεις αυτή τη λέξη.
+                  </p>
+                )}
               </div>
             </div>
 
@@ -196,7 +303,11 @@ export function NominationModal({
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={status === "submitting" || (!wordEditable && !word.trim())}
+                disabled={
+                  status === "submitting" ||
+                  (!wordEditable && !word.trim()) ||
+                  (noteRequired && !note.trim())
+                }
                 data-testid="nomination-modal-submit"
                 className={btnModalSubmit}
               >

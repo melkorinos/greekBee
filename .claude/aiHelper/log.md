@@ -5,6 +5,26 @@
 
 ---
 
+## Session 45 — 2026-06-22: Leksikastirio admin width + re-proposal warning + skill refresh ✅
+
+### Changes
+1. **Feature — admin viewport** ([src/app/leksikastirio/page.tsx](../../src/app/leksikastirio/page.tsx)) — container is now `max-w-6xl` when `isAdmin` (desktop review), `max-w-lg` otherwise (players keep the narrow mobile column).
+2. **Feature — re-proposal warning** (Nomination dedup against rejected history):
+   - **`src/app/api/nominations/lookup/route.ts`** (new, edge) — `GET ?word=&direction=` → `{ rejected, pending }` counts (head-only). Matches POST's storage form (lowercase+trim, same direction). Anon client (RLS already permits — review route writes with it).
+   - **`src/components/shared/NominationModal.tsx`** — looks up the word (on blur for the editable Leksikastirio form; on open for a non-editable in-game flag; re-checked at submit). `rejected>0` → amber warning + **note becomes mandatory** (submit disabled until filled; inline error on the race path). `pending>0` (and not rejected) → gentle sky info banner ("vote instead"), non-blocking. Network failure → no warning, never blocks.
+   - Decisions (grill, 4Q): on-blur timing · note **required** for rejected re-proposals · **no** admin rejection-reason capture (generic warning) · also flag **pending** duplicates. Source of truth = retained rejected rows (session 44 keeps them).
+3. **Skill refresh** ([.claude/skills/apply-nominations/skill.md](../../.claude/skills/apply-nominations/skill.md)) — overlapped existing skill, updated in place: now uses `npm run apply-nominations[:dry]`, documents the puzzle re-sync (old text wrongly said puzzles aren't updated), the (direction × status) matrix, `.env`/`.env.local` loading, and the OOM-batch testing note.
+4. **Tests** — [src/test/shared/nominationModal.test.tsx](../../src/test/shared/nominationModal.test.tsx): routed mock for lookup vs POST + `postCall()` finder; 4 new tests (rejected→warn+disabled, rejected+note→posts, pending→info+non-blocking, none→clean).
+
+### Verification
+- Batch (nominationModal + leksikastirio + scripts): **56 pass**. ESLint clean. `npm run build` clean — `/api/nominations/lookup` registered as edge.
+- Full `npm run test -- --run` still OOMs in this codespace (env ceiling, see session 44) — reconfirm baseline on a roomier machine.
+
+### Follow-ups (not built)
+- Word matching is exact lowercase+trim (mirrors POST); accent variants won't dedupe. Capturing an admin rejection reason was deliberately deferred.
+
+---
+
 ## Session 44 — 2026-06-22: Nomination apply pipeline — puzzle re-sync + single command ✅
 
 ### Problem
@@ -34,30 +54,11 @@ Review ✓/✕ in `/leksikastirio?admin=<secret>` → on a machine with creds in
 
 ---
 
-## Session 43 — 2026-06-22: NYT Brand Scrub + Viewport Lock + Leksokipos Day-Change ✅
-
-### Changes
-
-1. **NYT game-name scrub (comments/docs only)** — replaced visible "Wordle" / "Connections" / "Spelling Bee" brand references with the Greek names (Leksiarxeio / Leksindeseis / Leksokipos) across code comments and docstrings: `leksiarxeio/types.ts`, `leksiarxeio/lib/scoring.ts`, `useRoundPersistence.ts`, `globals.css`, `Keyboard.tsx`, `Tile.tsx`, `LeksiarxeioBoard.tsx`, `LetterPickerModal.tsx`, `HowToPlayModal.tsx`, `FeedbackBanner.tsx`, `WordCard.tsx`, `ConnectionsLeaderboardModal.tsx`, `app/leksindeseis/ConnectionsBoard.tsx`, three test file-top comments, `scripts/generate-puzzle.ts`, `deploymentReadiness.test.ts` doc-comment, `README.md`, plus `soul.md` + `goals.md`.
-   - **Deliberately NOT changed (frozen / identifiers):** puzzle ID format `${date}-wordle-${length}` in `data/leksiarxeio/index.ts` (localStorage compat), frozen-format ID strings in tests, component/type/file names (`ConnectionsBoard`, `ConnectionsLeaderboardModal`, `puzzles-connections.json`, `CONNECTIONS_RULES`). Handoff scoped Task 1 to comments only; identifier/file renames remain tech debt.
-
-2. **Pinch-to-zoom lock (mobile)** — added `export const viewport: Viewport` to `src/app/layout.tsx` (`maximumScale: 1`, `userScalable: false`). Verified `<meta name="viewport" content="…maximum-scale=1, user-scalable=no">` in prerendered HTML.
-
-3. **Leksokipos auto-advance on day change** — new hook `src/games/leksokipos/hooks/useDayChange.ts`: on mount + `visibilitychange`, if `isDailyPuzzle(puzzle)` and `puzzle.date < today` (UTC, matching `getTodaysPuzzle()`), calls `router.replace("/leksokipos")`. Wired into `GameBoard.tsx`. Custom puzzles skipped. Handles the `revalidate=3600` stale-CDN-page case.
-
-4. **Tests** — `src/test/leksokipos/useDayChange.test.ts` (6 tests: no-redirect today, redirect on stale mount, custom skip, uses replace, visibilitychange redirect, listener cleanup). Added `next/navigation` `useRouter` mock to `GameBoard.test.tsx` (GameBoard now calls `useDayChange` → `useRouter`).
-
-### Env note
-`node_modules` had been installed on another OS (missing `@rolldown/binding-linux-x64-gnu`); ran `npm install` to restore linux native bindings so vitest/build run. Also added `Edit`/`Write` to `.claude/settings.local.json` allow-list at owner's request.
-
-**932 tests pass, 0 lint errors, build clean.**
-
----
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 43 | 2026-06-22 | NYT brand scrub (comments/docs only → Greek names; IDs/file names frozen); pinch-zoom lock (`viewport` in `layout.tsx`); Leksokipos `useDayChange` auto-advance on stale-CDN day change; tests. 932 pass. |
 | 42 | 2026-05-30 | Google OAuth augments device identity: `useAuth` hook, `/auth/callback` PKCE, `/api/auth/link` edge route (upserts `auth_user_id`, back-fills `game_scores`), `authLinked` in envelope/store, `ProfileSection` + 4 LeaderboardModals threaded, `HomeTrophyButton`, ADR 0007, CONTEXT 10-table update. DB migration SQL handed to user. |
 | 41 | 2026-05-29 | Bug fixes: dark-mode FOUC on Leksokipos client nav (`.dark` body background in globals.css); Stavrolekso server crash (self-`fetch` → direct Supabase calls); benign Turbopack edge-runtime warning documented. |
 | 40 | 2026-05-28 | Vres Tin Frasi — 4th game: pure logic (`vrestifrasi/`), data loader (community-first FIFO), components, `/vres-tin-frasi` page, platform wiring, Leksikastirio "Φράσεις" admin tab, tests. |

@@ -9,12 +9,31 @@ import userEvent from "@testing-library/user-event";
 
 // ── fetch mock ────────────────────────────────────────────────────────────────
 
-function mockFetch(ok: boolean, status = ok ? 200 : 500) {
-  return vi.spyOn(globalThis, "fetch").mockResolvedValue({
-    ok,
-    status,
-    json: async () => ({ ok }),
-  } as Response);
+// Routes the new /api/nominations/lookup call separately from the POST so a
+// single mock can drive both the re-proposal warning and the submission result.
+function mockFetch(
+  ok: boolean,
+  status = ok ? 200 : 500,
+  lookup: { rejected?: number; pending?: number } = {},
+) {
+  return vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
+    const url = typeof input === "string" ? input : input.toString();
+    if (url.includes("/api/nominations/lookup")) {
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ rejected: lookup.rejected ?? 0, pending: lookup.pending ?? 0 }),
+      } as Response;
+    }
+    return { ok, status, json: async () => ({ ok }) } as Response;
+  });
+}
+
+// Finds the POST /api/nominations call (ignores the lookup GET).
+function postCall(fetchSpy: ReturnType<typeof mockFetch>) {
+  return fetchSpy.mock.calls.find(
+    ([url, init]) => url === "/api/nominations" && (init as RequestInit | undefined)?.method === "POST",
+  );
 }
 
 afterEach(() => vi.restoreAllMocks());
@@ -75,8 +94,8 @@ describe("NominationModal — word field", () => {
     const { user } = setup({ wordEditable: true });
     await user.type(screen.getByTestId("nomination-modal-word-input"), "νεολογισμος");
     await user.click(screen.getByTestId("nomination-modal-submit"));
-    await waitFor(() => expect(fetchSpy).toHaveBeenCalledOnce());
-    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
+    await waitFor(() => expect(postCall(fetchSpy)).toBeTruthy());
+    const body = JSON.parse((postCall(fetchSpy)![1] as RequestInit).body as string);
     expect(body.word).toBe("νεολογισμος");
   });
 });
@@ -128,8 +147,8 @@ describe("NominationModal — submission", () => {
     await user.type(screen.getByTestId("nomination-modal-note"), "σημαίνει καλός");
     await user.click(screen.getByTestId("nomination-modal-submit"));
 
-    await waitFor(() => expect(fetchSpy).toHaveBeenCalledOnce());
-    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    await waitFor(() => expect(postCall(fetchSpy)).toBeTruthy());
+    const [url, init] = postCall(fetchSpy)! as [string, RequestInit];
     expect(url).toBe("/api/nominations");
     expect(init.method).toBe("POST");
     const body = JSON.parse(init.body as string);
@@ -175,5 +194,60 @@ describe("NominationModal — submission", () => {
       expect(screen.getByTestId("nomination-modal-error")).toBeInTheDocument(),
     );
     expect(onSuccess).not.toHaveBeenCalled();
+  });
+});
+
+// ── Re-proposal warning ─────────────────────────────────────────────────────
+
+describe("NominationModal — re-proposal warning", () => {
+  it("warns and disables submit when a previously-rejected word has no note", async () => {
+    mockFetch(true, 200, { rejected: 2 });
+    setup({ word: "απορ", direction: "add" });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("nomination-rejected-warning")).toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("nomination-modal-submit")).toBeDisabled();
+  });
+
+  it("allows submit once an explanation is provided for a rejected word", async () => {
+    const fetchSpy = mockFetch(true, 200, { rejected: 1 });
+    const { user } = setup({ word: "απορ", direction: "add" });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("nomination-rejected-warning")).toBeInTheDocument(),
+    );
+    await user.type(screen.getByTestId("nomination-modal-note"), "είναι υπαρκτή λέξη, δες λεξικό");
+    await user.click(screen.getByTestId("nomination-modal-submit"));
+
+    await waitFor(() => expect(postCall(fetchSpy)).toBeTruthy());
+    const body = JSON.parse((postCall(fetchSpy)![1] as RequestInit).body as string);
+    expect(body.word).toBe("απορ");
+    expect(body.note).toBe("είναι υπαρκτή λέξη, δες λεξικό");
+  });
+
+  it("shows a gentle info banner (not a block) for an already-pending word", async () => {
+    const fetchSpy = mockFetch(true, 200, { pending: 1 });
+    const { user } = setup({ word: "απορ", direction: "add" });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("nomination-pending-info")).toBeInTheDocument(),
+    );
+    expect(screen.queryByTestId("nomination-rejected-warning")).toBeNull();
+    expect(screen.getByTestId("nomination-modal-submit")).not.toBeDisabled();
+
+    await user.click(screen.getByTestId("nomination-modal-submit"));
+    await waitFor(() => expect(postCall(fetchSpy)).toBeTruthy());
+  });
+
+  it("shows no warning for a word with no prior nominations", async () => {
+    mockFetch(true, 200, { rejected: 0, pending: 0 });
+    setup({ word: "καινουργια", direction: "add" });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("nomination-modal-submit")).not.toBeDisabled(),
+    );
+    expect(screen.queryByTestId("nomination-rejected-warning")).toBeNull();
+    expect(screen.queryByTestId("nomination-pending-info")).toBeNull();
   });
 });

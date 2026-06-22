@@ -426,7 +426,8 @@ function LeksikastiríoClient() {
 
   return (
     <div className="flex-1 bg-white dark:bg-stone-950">
-    <main className="max-w-lg mx-auto px-4 py-8 space-y-6">
+    {/* Admins review from a desktop — give them the full HD width; players keep the narrow mobile column. */}
+    <main className={`${isAdmin ? "max-w-6xl" : "max-w-lg"} mx-auto px-4 py-8 space-y-6`}>
       <div>
         <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">Leksikastirio</h1>
         <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">
