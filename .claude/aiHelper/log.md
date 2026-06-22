@@ -5,6 +5,35 @@
 
 ---
 
+## Session 44 — 2026-06-22: Nomination apply pipeline — puzzle re-sync + single command ✅
+
+### Problem
+`scripts/apply-nominations.mjs` applied accepted Leksikastirio Nominations to `words-el.json` + `leksiarxeio/words-{4..8}.json` but **never re-synced the embedded `validWords` in the 1008 pre-built Leksokipos puzzles** (`puzzles-el.json`). Removed words stayed scoreable; added words never became scoreable. Correctness bug for the `remove` direction.
+
+### Decisions (via `/grill-with-docs`)
+- Triage stays **manual** in the Leksikastirio admin UI (✓/✕). No vote-threshold auto-triage.
+- Re-sync **coupled into `apply-nominations.mjs`** (one command, can't be forgotten) — not a separate script.
+- Re-sync is **surgical, not a dict rescan**: a word's validity per puzzle is self-contained (covers letters + contains centre), so we patch only affected puzzles, preserving word order → minimal diff. No 812k-word scan / center index needed.
+- "Clean rejected from backlog" = **report count only**, no deletion (rows already hidden via `status='rejected'`, retained as history).
+- Empirically verified: all 200 sampled puzzles were byte-identical to a fresh recompute → data already consistent, so only genuine deltas ever diff.
+
+### Changes
+1. **`scripts/lib/resync-puzzles.mjs`** (new, pure/dep-free) — `normalise`, `puzzleAcceptsWord`, `resyncPuzzles(puzzles, {added, removed})`. Removal wins over addition; untouched puzzles keep referential identity so the writer skips them. Predicate mirrors `computeValidWords.ts`.
+2. **`scripts/apply-nominations.mjs`** — imports `resyncPuzzles`; after word-list writes, patches `puzzles-el.json` (preview in `--dry-run`, write otherwise); reports rejected-nomination count; updated header comment documents the (direction × status) matrix + re-sync rationale.
+3. **`package.json`** — `apply-nominations` + `apply-nominations:dry` scripts using `node --env-file-if-exists=.env --env-file-if-exists=.env.local` (loads user's gitignored `.env`). Update-dataset-only — never builds/commits.
+4. **`src/test/scripts/resyncPuzzles.test.mjs`** (new) — 13 tests: predicate accept/reject, surgical add/remove, removal-wins, normalisation, order preservation, no-op identity.
+
+### Verification
+- `resyncPuzzles.test.mjs`: 13 pass. Representative batch (incl. `computeValidWords`, leksikastirio): 66 pass.
+- ESLint clean; `npm run build` clean.
+- **Full `npm run test -- --run` OOM-killed in this codespace** (RAM ~60% pre-consumed by VS Code/Claude; suite static-imports 812k-word lists). Not a regression — changes touch only `scripts/` + `package.json`, no `src/` runtime. Re-run the full suite on a roomier machine to reconfirm the session-43 baseline (932).
+- Empirical run vs real `puzzles-el.json`: remove `επαινε` → 5 puzzles touched (exact); synthetic add → correct; no-op → identity preserved; ~100–160 ms / 1008 puzzles.
+
+### Operator flow (unchanged trigger, now complete)
+Review ✓/✕ in `/leksikastirio?admin=<secret>` → on a machine with creds in `.env`, run `npm run apply-nominations:dry` (preview) then `npm run apply-nominations` → review git diff → build & deploy.
+
+---
+
 ## Session 43 — 2026-06-22: NYT Brand Scrub + Viewport Lock + Leksokipos Day-Change ✅
 
 ### Changes
@@ -25,35 +54,11 @@
 
 ---
 
-## Session 42 — 2026-05-30: Google OAuth Auth Integration ✅
-
-### Changes
-
-1. **`src/lib/supabase.ts`** — added `signInWithGoogle`, `signOut`, `getAuthUser` auth helpers.
-2. **`src/types/index.ts`** — added `authLinked?: boolean` to `PersistenceEnvelope`.
-3. **`src/hooks/useGameStore.ts`** — added `isAuthLinked()`, `setAuthLinked(value)`. `disconnectProfile()` now also clears `authLinked`.
-4. **`src/hooks/useAuth.ts`** (new) — auth state hook: reads Supabase session on mount, subscribes to `onAuthStateChange`, keeps `authLinked` in store in sync. Exposes `authLinked`, `authUserName`, `signInWithGoogle`, `signOut`, `isLoading`.
-5. **`src/app/auth/callback/page.tsx`** (new) — client component handling Google OAuth PKCE redirect: exchanges code → calls `POST /api/auth/link` → redirects back to saved referrer path.
-6. **`src/app/api/auth/link/route.ts`** (new) — edge route that upserts `auth_user_id` on `player_profiles`, pre-populates `display_name` from Google only when blank, back-fills `auth_user_id` on `game_scores`.
-7. **`src/components/shared/ProfileSection.tsx`** — added optional `authLinked`, `authUserName`, `onSignIn`, `onSignOut` props. When `authLinked`: shows "✓ [name] · Αποσύνδεση Google", hides TransferCode block. Idle mode: shows Google sign-in button above TransferCode link.
-8. **`src/hooks/useLeaderboardProfile.ts`** — added optional auth props to `LeaderboardProfileProps`.
-9. **All 4 LeaderboardModal components** — threaded auth props through to `ProfileSection`.
-10. **`src/components/shared/HomeTrophyButton.tsx`** (new) — client component rendering 🏆 per applicable game card on landing page. Manages modal open/close + wires identity/profile/auth hooks.
-11. **`src/app/page.tsx`** — added `HomeTrophyButton` to Leksokipos, Leksiarxeio, Leksindeseis, Vres Tin Frasi game cards.
-12. **CONTEXT.md** — fixed "In-game Points" (now stored), retired "Attempt Total", added "Leaderboard Score (Leksiarxeio)", added `AuthLinked` term, removed `leksiarxeio_scores`, updated table count to 10.
-13. **`docs/adr/0007-oauth-augments-device-identity.md`** (new) — documents the augment decision, merge behaviour, RLS model, TransferCode fate.
-14. **`src/test/shared/useAuth.test.ts`** (new) — 8 tests: no session, session present, store init, sign-out.
-
-**DB migration SQL** provided for user to run in Supabase dashboard (adds `auth_user_id` columns + RLS to `player_profiles` and `game_scores`).
-
-**900 tests pass, 0 lint errors, build clean.**
-
----
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 42 | 2026-05-30 | Google OAuth augments device identity: `useAuth` hook, `/auth/callback` PKCE, `/api/auth/link` edge route (upserts `auth_user_id`, back-fills `game_scores`), `authLinked` in envelope/store, `ProfileSection` + 4 LeaderboardModals threaded, `HomeTrophyButton`, ADR 0007, CONTEXT 10-table update. DB migration SQL handed to user. |
 | 41 | 2026-05-29 | Bug fixes: dark-mode FOUC on Leksokipos client nav (`.dark` body background in globals.css); Stavrolekso server crash (self-`fetch` → direct Supabase calls); benign Turbopack edge-runtime warning documented. |
 | 40 | 2026-05-28 | Vres Tin Frasi — 4th game: pure logic (`vrestifrasi/`), data loader (community-first FIFO), components, `/vres-tin-frasi` page, platform wiring, Leksikastirio "Φράσεις" admin tab, tests. |
 | 39 | 2026-05-28 | Bug fixes + Leksokipos game-state restore: community word normalisation; scoreboard labels; FOUC inline `<script>` in layout; word-click report; `useGameStateSync` slimmed to `{foundWords}`; `useGameState` server-restore gating + tests; ADR 0003. |

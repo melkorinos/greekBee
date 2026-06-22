@@ -12,6 +12,8 @@
     "parse-dict": "tsx scripts/parse-dictionary.ts",
     "generate-puzzle": "tsx scripts/generate-puzzle.ts",
     "batch-generate": "tsx scripts/batch-generate.ts",
+    "apply-nominations": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/apply-nominations.mjs",
+    "apply-nominations:dry": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/apply-nominations.mjs --dry-run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
