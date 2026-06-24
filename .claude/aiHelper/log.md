@@ -5,6 +5,11 @@
 
 ---
 
+## Session 46 — 2026-06-24: Wordlist proper-noun cleanup (list finalized, not yet applied) 🟡
+Derived **16,933 proper-noun removals** from `words-el.json` (812,168→795,235; 658 collision-words kept) using the Hunspell `el_GR` capitalisation signal; case-forms-not-prefixes; demonym/calendar rescues. Deliverable + local apply runbook in `.scratch/wordlist-cleanup/` (`decisions.json` = source of truth). **Full knowledge → [.claude/wordlist-proper-noun-cleanup-handoff.md](../wordlist-proper-noun-cleanup-handoff.md).** Not applied to data files; nothing committed by agent.
+
+---
+
 ## Session 45 — 2026-06-22: Leksikastirio admin width + re-proposal warning + skill refresh ✅
 
 ### Changes
