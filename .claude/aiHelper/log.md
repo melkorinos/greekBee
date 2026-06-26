@@ -5,8 +5,9 @@
 
 ---
 
-## Session 46 — 2026-06-24: Wordlist proper-noun cleanup (list finalized, not yet applied) 🟡
-Derived **16,933 proper-noun removals** from `words-el.json` (812,168→795,235; 658 collision-words kept) using the Hunspell `el_GR` capitalisation signal; case-forms-not-prefixes; demonym/calendar rescues. Deliverable + local apply runbook in `.scratch/wordlist-cleanup/` (`decisions.json` = source of truth). **Full knowledge → [.claude/wordlist-proper-noun-cleanup-handoff.md](../wordlist-proper-noun-cleanup-handoff.md).** Not applied to data files; nothing committed by agent.
+## Session 46 — 2026-06-24/06-26: Wordlist proper-noun cleanup — derived then APPLIED ✅
+Derived **16,933 proper-noun removals** from `words-el.json` (812,168→795,235; 658 collision-words kept) using the Hunspell `el_GR` capitalisation signal; case-forms-not-prefixes; demonym/calendar rescues. Deliverable + local apply runbook in `.scratch/wordlist-cleanup/` (`decisions.json` = source of truth). **Full knowledge → [.claude/wordlist-proper-noun-cleanup-handoff.md](../wordlist-proper-noun-cleanup-handoff.md).**
+**Applied 2026-06-26** via `apply-cleanup.mjs --in-place`: fetched 10 admin-approved additions from Supabase (8 net new), merged with the 16,933 removals in one local pass → `words-el.json` 812,168→**795,243**, `leksiarxeio/words-{4..8}.json` shrunk, `puzzles-el.json` re-synced (1006/1008 puzzles, −24,902/+47 validWords). Verified: eslint clean · build exit 0 · **949 tests pass** · puzzle scan shows **0** removed-words surviving in any `validWords` (was 24,902). Supabase step 4 done (10 addition rows `reviewed_at=now()`, queue now empty). `npm install` pulled missing `@playwright/test` devDep → `package-lock.json` touched. Data committed manually by user.
 
 ---
 
