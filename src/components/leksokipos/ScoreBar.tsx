@@ -29,7 +29,7 @@ const styles = {
 /** Three bars of increasing height — ranking ladder icon */
 function RankIcon() {
   return (
-    <svg width="16" height="14" viewBox="0 0 16 14" fill="currentColor" aria-hidden="true">
+    <svg width="17.6" height="15.4" viewBox="0 0 16 14" fill="currentColor" aria-hidden="true">
       <rect x="0" y="8" width="4" height="6" rx="1" />
       <rect x="6" y="4" width="4" height="10" rx="1" />
       <rect x="12" y="0" width="4" height="14" rx="1" />
@@ -80,7 +80,7 @@ export function ScoreBar({ score, maxScore, currentRank, onOpenLeaderboard }: Sc
               data-testid="btn-leaderboard"
               onClick={onOpenLeaderboard}
               aria-label="Πίνακας Σκορ"
-              className="text-stone-400 hover:text-amber-500 transition-colors leading-none"
+              className="text-xl text-stone-400 hover:text-amber-500 transition-colors leading-none"
             >
               🏆
             </button>

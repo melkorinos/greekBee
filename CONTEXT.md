@@ -78,7 +78,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Misplaced-Word** *(Vres Tin Frasi)* — Tile state (purple): the guessed letter appears in the answer Phrase but in a different word than the one it was guessed in. Evaluated after greens are resolved: remaining answer letters form a cross-phrase pool; a letter not in its own word's pool but present in another word's pool → misplaced-word. Keyboard priority: `correct` > `present` > `misplaced-word` > `absent`. (Not: present — that is yellow, wrong position within the same word)
 
-**Attempt Count** *(Vres Tin Frasi leaderboard)* — Number of Guesses used (1–6). Lower is better. Failed = 7 penalty. Stored in `game_scores` with `game = "vrestifrasi"`. API field named `score` for interface compatibility.
+**Attempt Count** *(Vres Tin Frasi leaderboard)* — Number of Guesses used (1–6). Lower is better. Failed = 7 penalty. Stored in `game_scores` with `game_id = "vrestifrasi"`. API field named `score` for interface compatibility.
 
 **Category** *(Leksindeseis)* — Label naming a Group of 4 words. Hidden until the Group is solved. (Not: theme, topic)
 
@@ -132,7 +132,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 |---|---|
 | `player_profiles` | `device_uuid` → `display_name`. Nullable `auth_user_id` (Supabase auth). UNIQUE on `device_uuid`. |
 | `transfer_codes` | Single-use 6-char codes, 24h TTL. |
-| `game_scores` | Leaderboard scores for all games (unified). `game` column: `"leksokipos"`, `"leksiarxeio"`, `"leksindeseis"`, `"vrestifrasi"`. Nullable `auth_user_id` for cross-device leaderboard queries. |
+| `game_scores` | Leaderboard scores for all games (unified). `game_id` column: `"leksokipos"`, `"leksiarxeio"`, `"leksindeseis"`, `"vrestifrasi"`. Per-length Leksiarxeio rows carry `word_length`. Nullable `auth_user_id` for cross-device leaderboard queries. |
 | `game_state` | Serialised Session for cross-device sync (Leksokipos daily puzzles only). Keyed on `(device_uuid, game_id, puzzle_date)`. Blob stores `{ foundWords: string[] }`. Pushed after every valid word (requires ProfileLinked). Pulled on mount when local foundWords is empty (requires ProfileLinked + daily puzzle). |
 | `nominations` | Community word proposals. |
 | `nomination_votes` | `(nomination_id, device_id)` votes. |

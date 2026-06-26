@@ -1,6 +1,6 @@
 # � Greek Word Games Platform
 
-A multi-game browser platform for Greek (and English) word games, built with **Next.js 15 · TypeScript · Tailwind CSS · Vitest**.
+A multi-game browser platform for Greek (and English) word games, built with **Next.js 16 · TypeScript · Tailwind CSS · Vitest**.
 
 ## Games
 
@@ -9,6 +9,8 @@ A multi-game browser platform for Greek (and English) word games, built with **N
 | 🌸 Leksokipos | `/leksokipos` | Live | 7-letter flower grid — find words containing the center letter |
 | 🟩 Leksiarxeio | `/leksiarxeio` | Live | Guess a hidden Greek word (4–8 letters) in 6 attempts — switch length in-game |
 | 🔗 Leksindeseis | `/leksindeseis` | Live | Group 16 curated words into 4 categories of 4 |
+| 💬 Vres Tin Frasi | `/vres-tin-frasi` | Live | Guess the daily Greek phrase (3–4 words) tile-by-tile |
+| ✏️ Stavrolekso | `/stavrolekso` | Live | Browse & solve community-submitted Greek crosswords |
 | ⚖️ Leksikastirio | `/leksikastirio` | Live | Community word court — vote on words to add or remove from the dictionary |
 
 All games share a common shell (hamburger navigation menu), a unified persistence layer, and a consistent design foundation. Each game's logic, state, and data are fully isolated.
@@ -45,7 +47,7 @@ The script reads `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from
 
 ## Project Agent
 
-This project is managed with a dedicated AI coding agent using **Claude Code**. Agent files live in `.agents/aiHelper/`:
+This project is managed with a dedicated AI coding agent using **Claude Code**. Agent files live in `.claude/aiHelper/`:
 
 | File | Purpose |
 |------|---------|
@@ -69,7 +71,7 @@ All commands live in `.claude/skills/`.
 
 | Command | Purpose |
 |---------|---------|
-| `/aihelper` | Full context reload — reads all `.agents/aiHelper/` files, then waits for your task |
+| `/aihelper` | Full context reload — reads all `.claude/aiHelper/` files, then waits for your task |
 | `/improve-codebase-architecture` | Surface architectural seams and deepening opportunities |
 | `/grill-me` | Relentless Q&A to stress-test a plan or design decision |
 | `/grill-with-docs` | Like `/grill-me` but cross-checks against domain docs (CONTEXT.md, ADRs) and updates them inline |
@@ -132,7 +134,7 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
    - The resolved `Puzzle` object is passed as a prop to `<GameBoard>`.
 
 2. **State initialisation** (`src/games/leksokipos/hooks/gameReducer.ts → buildInitialState`)
-   - A clean `GameState` is built: empty input, zero score, Beginner rank.
+   - A clean `GameState` is built: empty input, zero score, Σπόρος rank.
    - `puzzleMaxScore` is computed once here (see Scoring below) and stored in state so it never needs to be recalculated.
 
 3. **Client rehydration** (`src/games/leksokipos/hooks/useGameState.ts`)
@@ -194,12 +196,17 @@ src/
     leksokipos/     Daily puzzle + custom /[center]/[outer] dynamic route (server component delegates to LeksokiposLayout)
     leksiarxeio/    4–8 letter Greek word game (multi-length)
     leksindeseis/   Group 16 words into 4 categories
-    api/            Edge routes: game-scores, game-state, profile, suggest-word, leksiarxeio-scores
+    vres-tin-frasi/ Daily Greek phrase guessing game
+    stavrolekso/    Community crossword browser + maker (/[id], /maker)
+    leksikastirio/  Community word-court (public voting + admin review)
+    api/            Edge routes: game-scores, game-state, profile, transfer, nominations, community-puzzles, auth
   components/
     shared/         Cross-game UI primitives (Shell, FeedbackBanner, HowToPlayModal, LetterPickerModal)
     leksokipos/     Leksokipos components (LeksokiposLayout, GameBoard, FlowerGrid, FlowerGridPlayground, ScoreBar, LeaderboardModal, …)
     leksiarxeio/    Leksiarxeio components (LeksiarxeioBoard, GuessGrid, Tile, Keyboard)
     leksindeseis/   Leksindeseis components (GroupGrid, WordCard, CategoryReveal, ConnectionsBoard, ConnectionsLeaderboardModal)
+    vrestifrasi/    Vres Tin Frasi components (board, phrase tiles, leaderboard modal)
+    leksikastirio/  Community word-court admin / voting UI
   games/            Pure logic — one folder per game, zero React imports
     leksokipos/
       lib/          validation, scoring, ranking, pangram, normalize, computeValidWords, parseCustomUrl
@@ -210,8 +217,16 @@ src/
       hooks/        useLeksiarxeioState, leksiarxeioReducer
       types.ts
     leksindeseis/
+      lib/          matching
       hooks/        useLeksindeseisState, leksindeseisReducer
       types.ts
+    vrestifrasi/
+      lib/          evaluatePhraseGuess, letterState, scoring
+      hooks/        useVresTinFrasiState, vresTinFrasiReducer
+      types.ts
+    stavrolekso/
+      lib/          autoNumberSlots, getSlotLength, isConnected, normalizeAndCompare
+      types.ts   (also holds StavroleksoGrid.tsx — a React component, unlike the other games' pure-logic folders)
   hooks/
     useGameStore.ts        Unified localStorage envelope — the only code that touches localStorage
     useGameIdentity.ts     SSR-safe DeviceId + DisplayName init; used by all three game boards
@@ -220,9 +235,10 @@ src/
     useGameStateSync.ts    Cross-device sync hook — pushes Leksokipos state on valid word submit
   data/
     leksokipos/     puzzles-el.json (daily puzzles), index.ts
-    leksiarxeio/    words-4..8.json (per-length word lists from full dict), index.ts
+    leksiarxeio/    words-2..8.json (per-length word lists from full dict), index.ts
     leksindeseis/   puzzles-connections.json (hand-curated), index.ts
-    words-el.json   811k normalised Greek words (no accents, ς→σ)
+    vrestifrasi/    phrases-el.json (static phrase fallback), index.ts
+    words-el.json   ~795k normalised Greek words (no accents, ς→σ)
   lib/
     greeklish.ts    Bijective Greek↔greeklish codec for clean ASCII custom URLs
     postScore.ts    Fire-and-forget POST utility — silently swallows network errors
@@ -242,9 +258,11 @@ scripts/            Puzzle generation & curation CLIs (batch-generate, curate-an
 
 **Leksokipos** — live. Rolling 7-day leaderboard via Supabase (`game_scores` table with `game_id = "leksokipos"`). Score = Leksokipos points, higher = better.
 
-**Leksiarxeio** — live. Rolling 7-day daily leaderboard via Supabase (`leksiarxeio_scores` table). Score = sum of attempts across all 5 lengths (4–8) for a given day; lower = better. Missing lengths count as 7 (penalty). Players appear on the board as soon as they finish at least one length.
+**Leksiarxeio** — live. Rolling 7-day daily leaderboard via Supabase (`game_scores` with `game_id = "leksiarxeio"`, per-length rows via `word_length`). Score = sum of in-game points across all 5 lengths (4–8) for a given day (6 pts for a 1st-guess solve … 1 pt at the 6th); higher = better. Failed/unplayed length = 0. Players appear on the board as soon as they finish at least one length.
 
-**Leksindeseis** — live. Per-puzzle leaderboard via Supabase (`game_scores` table with `game_id = "leksindeseis"`). Score = mistakes remaining (1–4) when won; higher = better. Lost games do not appear on the board.
+**Leksindeseis** — live. Per-puzzle leaderboard via Supabase (`game_scores` with `game_id = "leksindeseis"`). Score = mistakes remaining (1–4) when won; higher = better. Lost games do not appear on the board.
+
+**Vres Tin Frasi** — live. Per-day leaderboard via Supabase (`game_scores` with `game_id = "vrestifrasi"`). Score = attempts used (1–6); lower = better; failed = 7 (penalty).
 
 ---
 
