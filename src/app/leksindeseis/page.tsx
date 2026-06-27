@@ -26,7 +26,7 @@ export default async function LeksindeseisPage() {
   return (
     <main className="flex flex-col items-center min-h-screen bg-background px-4 py-6">
       <div className="flex items-center justify-between w-full max-w-sm mb-1">
-        <h1 className="text-2xl font-bold text-foreground">🔗 Leksindeseis</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">🔗 Leksindeseis</h1>
         <HowToPlayModal
           title="Πώς να παίξεις — Leksindeseis"
           items={CONNECTIONS_RULES}

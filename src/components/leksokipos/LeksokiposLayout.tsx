@@ -81,7 +81,7 @@ export function LeksokiposLayout({
     <>
       <header className="w-full border-b border-border bg-surface px-4 py-3">
         <div className="flex items-center justify-between max-w-sm mx-auto">
-          <h1 className="text-xl font-bold tracking-tight text-foreground">🌸 Leksokipos</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">🌸 Leksokipos</h1>
           <div className="flex items-center gap-2">
             <VariantToggleButton variant={variant} onToggle={toggleVariant} />
             <ShareButton canonicalPath={canonicalPath} />

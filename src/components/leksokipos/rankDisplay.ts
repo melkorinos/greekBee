@@ -29,7 +29,11 @@ export function rankProgress(
   puzzleMaxScore: number,
   currentRank: RankName,
 ): RankProgress {
-  const currentIdx    = RANKS.findIndex((r) => r.name === currentRank);
+  // Clamp to the lowest rank if currentRank isn't on the ladder. This guards
+  // against a stale persisted rank name (e.g. an old name from localStorage saved
+  // before a rank rename) — without it, findIndex → -1 → RANKS[-1] throws.
+  const rawIdx        = RANKS.findIndex((r) => r.name === currentRank);
+  const currentIdx    = rawIdx === -1 ? 0 : rawIdx;
   const nextRankEntry = RANKS[currentIdx + 1] ?? null;
 
   let pct                   = 100;

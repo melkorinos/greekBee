@@ -38,7 +38,7 @@ export default async function StavroleksoLandingPage() {
     <main className="flex flex-col items-center min-h-screen bg-background px-4 py-6">
       <div className="w-full max-w-sm space-y-5">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">♟️ Stavrolekso</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">♟️ Stavrolekso</h1>
           <p className="text-sm text-muted mt-1">Λύσε σταυρόλεξα της κοινότητας.</p>
         </div>
 

@@ -48,7 +48,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Max Score** — Sum of all Valid Word scores, scaled to 80%, hard-capped at 500 pts. Used for Rank thresholds.
 
-**Rank** — Score milestone: Ψαράκι → Έτσι κι έτσι → Οκέι → Για πάμε → Τζάμι → Θηρίο → Γκουρού → Απολυτότητα. (Not: level, tier)
+**Rank** — Score milestone: Ψαράκι → Έτσι κιέτσι → Οκέι → Για πάμε → Τζάμι → Θηρίο → Γκουρού → Απολυτότητα. (Not: level, tier)
 
 **Found Words** — Ordered list of Valid Words submitted in the current Session.
 

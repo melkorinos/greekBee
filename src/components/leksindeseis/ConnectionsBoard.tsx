@@ -117,7 +117,7 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
             className="text-muted hover:text-foreground text-sm font-medium transition-colors"
             aria-label="Άνοιγμα κατάταξης"
           >
-            <span className="text-xl leading-none align-middle">🏆</span> Κατάταξη
+            <span className="text-trophy leading-none align-middle">🏆</span> Κατάταξη
           </button>
         </div>
       )}

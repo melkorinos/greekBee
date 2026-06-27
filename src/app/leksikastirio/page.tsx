@@ -429,7 +429,7 @@ function LeksikastiríoClient() {
     {/* Admins review from a desktop — give them the full HD width; players keep the narrow mobile column. */}
     <main className={`${isAdmin ? "max-w-6xl" : "max-w-lg"} mx-auto px-4 py-8 space-y-6`}>
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Leksikastirio</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">⚖️ Leksikastirio</h1>
         <p className="text-sm text-muted mt-1">
           Ψηφίστε λέξεις που πιστεύετε ότι πρέπει να προστεθούν ή να αφαιρεθούν.
         </p>

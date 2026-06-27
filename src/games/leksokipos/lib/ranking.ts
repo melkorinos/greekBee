@@ -11,7 +11,7 @@
  */
 export const RANKS = [
   { name: "Ψαράκι",       threshold: 0  },
-  { name: "Έτσι κι έτσι", threshold: 6  },
+  { name: "Έτσι κιέτσι",  threshold: 6  },
   { name: "Οκέι",         threshold: 12 },
   { name: "Για πάμε",     threshold: 20 },
   { name: "Τζάμι",        threshold: 30 },

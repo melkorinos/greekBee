@@ -59,18 +59,28 @@ export function ScoreBar({ score, maxScore, currentRank, onOpenLeaderboard }: Sc
     <div ref={containerRef} data-testid="score-bar" className={styles.container}>
       {/* Rank + score label */}
       <div className={styles.labelRow}>
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={() => setShowRanks((v) => !v)}
-            aria-label="Show rank thresholds"
-            className="text-muted hover:text-accent transition-colors"
-          >
+        <button
+          onClick={() => setShowRanks((v) => !v)}
+          aria-label="Εμφάνιση επιπέδων"
+          aria-expanded={showRanks}
+          className="flex items-center gap-1.5 group -ml-1 px-1 py-0.5 rounded-lg hover:bg-surface-raised transition-colors"
+        >
+          <span className="text-muted group-hover:text-accent transition-colors">
             <RankIcon />
-          </button>
-          <span data-testid="rank-label" className={styles.rankLabel}>
+          </span>
+          <span
+            data-testid="rank-label"
+            className={`${styles.rankLabel} underline decoration-1 underline-offset-4 decoration-muted/70 group-hover:decoration-accent`}
+          >
             {currentRank}
           </span>
-        </div>
+          <span
+            aria-hidden="true"
+            className={`text-muted text-[0.85rem] leading-none transition-transform ${showRanks ? "rotate-180" : ""}`}
+          >
+            ▾
+          </span>
+        </button>
         <div className="flex items-center gap-2">
           <span data-testid="score-label" className={styles.scoreLabel}>
             {score} pts
@@ -121,9 +131,11 @@ export function ScoreBar({ score, maxScore, currentRank, onOpenLeaderboard }: Sc
       {/* Next rank hint */}
       {nextRank && ptsToNext !== null && (
         <p className={styles.nextLabel}>
-          {ptsToNext > 0
-            ? `${ptsToNext} pts to ${nextRank}`
-            : `${nextRank} reached!`}
+          {ptsToNext > 0 ? (
+            <>{ptsToNext} pts για: <span className="text-foreground">{nextRank}</span></>
+          ) : (
+            <>Έφτασες: <span className="text-foreground">{nextRank}</span>! 🎉</>
+          )}
         </p>
       )}
     </div>
