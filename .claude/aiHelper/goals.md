@@ -1,7 +1,7 @@
 # Agent Goals — Greek Word Games Platform
 
 ## North Star
-Ship a polished multi-game Greek word game platform where Leksokipos, Leksiarxeio, and Leksindeseis coexist cleanly — sharing a shell, persistence layer, and design foundation — without any game's logic bleeding into another's.
+Ship a polished multi-game Greek word game platform where Leksokipos, Leksiarxeio, Leksindeseis, Vres Tin Frasi, and Stavrolekso coexist cleanly — sharing a shell, persistence layer, and design foundation — plus the Leksikastirio community word-court — without any game's logic bleeding into another's.
 
 ---
 
@@ -38,7 +38,7 @@ Ship a polished multi-game Greek word game platform where Leksokipos, Leksiarxei
 
 Priority order (work top-down):
 
-1. **Rank badge on ScoreBar** — render the current rank label (Αρχάριος → Βασίλισσα) as a styled badge inside the score bar, not just plain text.
+1. **Rank badge on ScoreBar** — render the current rank label (Σπόρος → Άνθος) as a styled badge inside the score bar, not just plain text. (A rank rename — dropping the flower metaphor for an escalating-ego ladder — is paused mid-brainstorm; see `.claude/tier-renaming-handoff.md`.)
 2. **Share score** — after completing the game, offer a shareable score card (rank + score + date) that copies to clipboard.
 3. **Home page "played today" badge** — read `useGameStore` to show ✓ on each game card if played today.
 4. **Leksokipos stats modal** — device-local all-time stats: games played, best rank, total words. Read from localStorage.
@@ -55,5 +55,4 @@ See `CLAUDE.md` standing rules — authoritative source.
 
 ## Future / Experimental Ideas
 
-### Final Build Evaluation System (action/roguelite game concept)
-At the end of a run, drop the player into an unbeatable scenario (infinite wave, unkillable boss, or fixed-time gauntlet). Score on two axes: **survival time** and **total damage dealt**. This creates a pure expression of how broken the build actually is — the better the build, the longer you last / more DPS you squeeze out before dying. Could show a post-run breakdown: peak DPS, damage by source, time alive, compared to a baseline "average build" curve. No win state — the evaluation is the ending.
+_(none currently — add platform ideas here as they surface)_

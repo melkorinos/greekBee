@@ -49,7 +49,7 @@ All commands live in `.claude/skills/`. Project-specific first, then mattpocock/
 
 ### Issue tracker
 
-Issues live as local markdown files under `.scratch/<feature>/`. See `.claude/issue-tracker/issue-tracker.md`.
+Issues live as local markdown files under `.claude/issue-tracker/issues/`. See `.claude/issue-tracker/issue-tracker.md`.
 
 ### Triage labels
 

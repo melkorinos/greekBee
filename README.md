@@ -272,16 +272,14 @@ Tracked as individual issues in [`.claude/issue-tracker/issues/`](.claude/issue-
 
 | # | Issue | Status |
 |---|-------|--------|
-| 01 | [No E2E tests](.claude/issue-tracker/issues/01-no-e2e-tests.md) | needs-triage |
-| 02 | [Mobile keyboard gap](.claude/issue-tracker/issues/02-mobile-keyboard-gap.md) | needs-triage |
-| 03 | [Style token cleanup](.claude/issue-tracker/issues/03-td001-style-tokens.md) | needs-triage |
+| 01 | [No E2E tests](.claude/issue-tracker/issues/01-no-e2e-tests.md) | ready-for-agent |
+| 03 | [Style token cleanup](.claude/issue-tracker/issues/03-td001-style-tokens.md) | ready-for-agent |
 | 04 | [Max score cap](.claude/issue-tracker/issues/04-td002-max-score-cap.md) | needs-triage |
-| 05 | [Leksiarxeio answer pool quality](.claude/issue-tracker/issues/05-td003-wordle-answer-pool.md) | needs-triage |
-| 06 | [Supabase / Vercel storage](.claude/issue-tracker/issues/06-td004-supabase-vercel-storage.md) | needs-triage |
+| 05 | [Leksiarxeio answer pool quality](.claude/issue-tracker/issues/05-td003-wordle-answer-pool.md) | ready-for-agent |
+| 06 | [Supabase / Vercel storage](.claude/issue-tracker/issues/06-td004-supabase-vercel-storage.md) | ready-for-human |
 | 07 | [Strip validWords from puzzles-el.json](.claude/issue-tracker/issues/07-puzzles-json-file-size.md) | needs-triage |
 | 08 | [Scheduled stale-row cleanup](.claude/issue-tracker/issues/08-scheduled-stale-row-cleanup.md) | ready-for-agent |
 | 09 | [API rate limiting per device](.claude/issue-tracker/issues/09-api-rate-limiting.md) | ready-for-human |
-| 10 | [Word suggestion review pipeline](.claude/issue-tracker/issues/10-word-suggestion-review-pipeline.md) | ready-for-agent |
 
 ---
 

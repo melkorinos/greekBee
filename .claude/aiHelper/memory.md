@@ -1,13 +1,16 @@
 # Agent Memory — Greek Word Games Platform
 
-## ⚡ Current State (2026-05-26)
-Three live games + custom puzzle URLs. Run `npm run test -- --run` for current count.
+## ⚡ Current State (2026-06-27)
+Five live games + custom puzzle URLs + the Leksikastirio word-court. Run `npm run test -- --run` for current count.
 
 | Game | Route | Status |
 |------|-------|--------|
 | Leksokipos | `/leksokipos` + `/leksokipos/[center]/[outer]` | Live — daily + custom URL |
 | Leksiarxeio | `/leksiarxeio` | Live — 4–8 letter Greek, multi-length |
-| Leksindeseis | `/leksindeseis` | Live — hand-curated |
+| Leksindeseis | `/leksindeseis` | Live — community-first, static fallback |
+| Vres Tin Frasi | `/vres-tin-frasi` | Live — daily Greek phrase |
+| Stavrolekso | `/stavrolekso` | Live — community crossword browser + maker |
+| Leksikastirio | `/leksikastirio` | Live — community word-court (voting + admin review) |
 
 ---
 
@@ -15,7 +18,7 @@ Three live games + custom puzzle URLs. Run `npm run test -- --run` for current c
 
 | Topic | Decision |
 |-------|----------|
-| **Routing** | `/leksokipos`, `/leksiarxeio`, `/leksindeseis`, `/` picker. Custom: `/leksokipos/[center]/[outer]` |
+| **Routing** | `/leksokipos`, `/leksiarxeio`, `/leksindeseis`, `/vres-tin-frasi`, `/stavrolekso` (+ `/[id]`, `/maker`), `/leksikastirio`, `/` picker. Custom: `/leksokipos/[center]/[outer]` |
 | **Persistence** | Single `wordgames:state` key. `useGameStore` is the ONLY localStorage writer. Exception: `leksokipos-variant` standalone key (display pref, not game state). |
 | **Types** | Root `src/types/index.ts` = `Language`, `GameId`, `PersistenceEnvelope` only. Game types in `src/games/*/types.ts`. |
 | **Theming** | All pages = white/light mode by default. Manual dark/light toggle in Shell header (☀️/🌙). `.dark` class on `<html>` drives all dark styles — `prefers-color-scheme` NOT used. `dark:` Tailwind prefix is enabled via `@custom-variant dark` in `globals.css` (see ADR 0002). Preference stored in `localStorage` key `"theme-preference"`. Style tokens in `src/components/leksokipos/styles.ts`. Feedback colours (green/yellow tile states, difficulty colours) unchanged in dark mode. |
@@ -26,7 +29,7 @@ Three live games + custom puzzle URLs. Run `npm run test -- --run` for current c
 | **No Greek accents** | Zero accents in URLs, stored state, puzzle letters, valid-word output. `normalizeLetters()` is the single normalisation point. |
 | **Custom URL** | Greeklish bijective codec (`src/lib/greeklish.ts`). Canonical 301 redirect on unnormalised params. |
 | **Supabase** | Singleton in `src/lib/supabase.ts`. `getOrCreateDeviceId()` generates stable UUID stored under `deviceId` in the envelope. See `CONTEXT.md` for current DB schema (table list grows as games are added). |
-| **Profile identity** | No PIN. Profile = device_uuid row in `player_profiles`. Cross-device: generate 6-char transfer code via `POST /api/transfer`, claim on other device via `POST /api/transfer/claim`. `useProfile` hook shared across all 3 games. `ProfileSection` component shared in `src/components/shared/`. |
+| **Profile identity** | No PIN. Profile = device_uuid row in `player_profiles`. Cross-device: generate 6-char transfer code via `POST /api/transfer`, claim on other device via `POST /api/transfer/claim`. `useProfile` hook shared across games. `ProfileSection` component shared in `src/components/shared/`. Google OAuth can augment device identity (`auth_user_id`); see ADR 0007. |
 | **Leaderboard** | Per-puzzle daily only. Silent upsert on score increase. 7-day rolling window. Custom puzzles excluded. |
 | **Leaderboard navigation** | Rolling 7-day pill strip. `getRecentPuzzleDates(7)` server-side. |
 | **Future renames** | UI strings only — never directories, types, or routes. |
@@ -38,12 +41,12 @@ Three live games + custom puzzle URLs. Run `npm run test -- --run` for current c
 
 ```
 src/
-  app/          Routes + server components (leksokipos, leksiarxeio, leksindeseis, api/)
-  components/   shared/ · leksokipos/ · leksiarxeio/ · leksindeseis/
-  games/        Pure logic: leksokipos/lib+hooks · leksiarxeio/lib+hooks · leksindeseis/hooks
-  data/         leksokipos/puzzles-el.json · leksiarxeio/words-{4..8}.json · leksindeseis/puzzles-connections.json · words-el.json
-  hooks/        useGameStore · useGameIdentity · useScoreSubmission · useRoundPersistence · useGameStateSync · useLeaderboard · useProfileVerification · useProfile · useLeaderboardProfile · useTheme
-  lib/          greeklish.ts · postScore.ts
+  app/          Routes + server components (leksokipos, leksiarxeio, leksindeseis, vres-tin-frasi, stavrolekso, leksikastirio, api/)
+  components/   shared/ · leksokipos/ · leksiarxeio/ · leksindeseis/ · vrestifrasi/ · leksikastirio/
+  games/        Pure logic: leksokipos/lib+hooks · leksiarxeio/lib+hooks · leksindeseis/hooks · vrestifrasi/lib+hooks · stavrolekso/lib (note: also holds StavroleksoGrid.tsx, a React component)
+  data/         leksokipos/puzzles-el.json · leksiarxeio/words-{2..8}.json · leksindeseis/puzzles-connections.json · vrestifrasi/phrases-el.json · words-el.json (~795k)
+  hooks/        useGameStore · useGameIdentity · useScoreSubmission · useRoundPersistence · useGameStateSync · useLeaderboard · useProfileVerification · useProfile · useLeaderboardProfile · useTheme · useAuth · useDayChange
+  lib/          greeklish.ts · postScore.ts · supabase.ts · communityPuzzleLifecycle.ts
   types/        index.ts
   test/         organised by game + shared/
 ```
