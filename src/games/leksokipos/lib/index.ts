@@ -5,7 +5,7 @@
 export { validateWord } from "./validation";
 export { scoreWord, maxScore } from "./scoring";
 export { isPangram } from "./pangram";
-export { calculateRank, RANKS } from "./ranking";
+export { calculateRank, RANKS, getRankEmoji } from "./ranking";
 export { normalizeLetters } from "./normalize";
 export { isDailyPuzzle, isISODate } from "./puzzle";
 export { pickRandom7, GREEK_VOWELS } from "./randomPuzzle";

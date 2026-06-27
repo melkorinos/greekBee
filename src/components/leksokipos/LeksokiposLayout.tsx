@@ -5,8 +5,8 @@ import { useSyncExternalStore } from "react";
 import { GameBoard } from "./GameBoard";
 import { HowToPlayModal } from "./HowToPlayModal";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
-import { NewPuzzleButton } from "./NewPuzzleButton";
 import { ShareButton } from "./ShareButton";
+import { btnHeaderIcon } from "@/styles/recipes";
 
 // ── Variant preference store ──────────────────────────────────────────────────
 // Module-level pub/sub so useSyncExternalStore can subscribe without effects.
@@ -45,7 +45,7 @@ function VariantToggleButton({
       <button
         onClick={onToggle}
         aria-label={`Εναλλαγή σε ${nextLabel}`}
-        className="w-8 h-8 flex items-center justify-center rounded-full border border-border hover:bg-surface-raised active:bg-border transition-colors text-base"
+        className={`w-7 h-7 ${btnHeaderIcon} text-base`}
       >
         {variant === "pie" ? "🌸" : "🥧"}
       </button>
@@ -85,7 +85,6 @@ export function LeksokiposLayout({
           <div className="flex items-center gap-2">
             <VariantToggleButton variant={variant} onToggle={toggleVariant} />
             <ShareButton canonicalPath={canonicalPath} />
-            <NewPuzzleButton />
             <HowToPlayModal />
           </div>
         </div>

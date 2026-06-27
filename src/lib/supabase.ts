@@ -13,24 +13,28 @@ import { createClient } from "@supabase/supabase-js";
 export interface Database {
   public: {
     Tables: {
-      scores: {
+      game_scores: {
         Row: {
-          id:           string;
-          puzzle_id:    string;
+          id:           number;
+          game_id:      string;
+          puzzle_date:  string;
           device_id:    string;
           display_name: string;
           score:        number;
-          created_at:   string;
+          data:         Record<string, unknown>;
+          auth_user_id: string | null;
         };
         Insert: {
-          id?:           string;
-          puzzle_id:     string;
+          id?:           number;
+          game_id:       string;
+          puzzle_date:   string;
           device_id:     string;
           display_name?: string;
           score:         number;
-          created_at?:   string;
+          data?:         Record<string, unknown>;
+          auth_user_id?: string | null;
         };
-        Update: Partial<Database["public"]["Tables"]["scores"]["Insert"]>;
+        Update: Partial<Database["public"]["Tables"]["game_scores"]["Insert"]>;
       };
       nominations: {
         Row: {
@@ -63,12 +67,14 @@ export interface Database {
           nomination_id: string;
           device_id:     string;
           created_at:    string;
+          vote_type:     "up" | "down";
         };
         Insert: {
           id?:            string;
           nomination_id:  string;
           device_id:      string;
           created_at?:    string;
+          vote_type?:     "up" | "down";
         };
         Update: Partial<Database["public"]["Tables"]["nomination_votes"]["Insert"]>;
       };

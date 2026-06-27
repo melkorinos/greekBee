@@ -5,7 +5,7 @@
 //   { foundWords: string[], score: number, currentInput: string }
 //
 // Uniqueness: (device_uuid, game_id, puzzle_date) — one blob per player per puzzle.
-// Retention: 7-day rolling window via puzzle_date cleanup on every upsert.
+// Retention: 7-day rolling window via the daily Vercel Cron at /api/cleanup-scores.
 // updated_at is set explicitly on every upsert (no DB trigger).
 
 import { NextRequest, NextResponse } from "next/server";
@@ -47,7 +47,6 @@ export async function POST(req: NextRequest) {
   const err = await upsertAndClean(
     "game_state",
     "device_uuid,game_id,puzzle_date",
-    "puzzle_date",
     {
       device_uuid,
       game_id,

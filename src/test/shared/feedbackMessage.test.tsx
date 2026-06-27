@@ -39,24 +39,24 @@ describe("FeedbackMessage — valid word", () => {
 describe("FeedbackMessage — error statuses", () => {
   it("shows already_found message", () => {
     renderFeedback({ word: "αλφα", status: "already_found", points: 0, isPangram: false });
-    expect(screen.getByTestId("feedback-error-already_found")).toHaveTextContent("Already found!");
+    expect(screen.getByTestId("feedback-error-already_found")).toHaveTextContent("Ήδη βρέθηκε!");
   });
 
   it("shows too_short message", () => {
     renderFeedback({ word: "αλ", status: "too_short", points: 0, isPangram: false });
-    expect(screen.getByTestId("feedback-error-too_short")).toHaveTextContent("Too short");
+    expect(screen.getByTestId("feedback-error-too_short")).toHaveTextContent("Πολύ κοντή");
   });
 
   it("shows missing_center message", () => {
     renderFeedback({ word: "πολυ", status: "missing_center", points: 0, isPangram: false });
-    expect(screen.getByTestId("feedback-error-missing_center")).toHaveTextContent("centre letter");
+    expect(screen.getByTestId("feedback-error-missing_center")).toHaveTextContent("κεντρικό γράμμα");
   });
 
   it("shows not_in_list message including the word uppercased", () => {
     renderFeedback({ word: "καλος", status: "not_in_list", points: 0, isPangram: false });
     const el = screen.getByTestId("feedback-error-not_in_list");
     expect(el).toHaveTextContent("ΚΑΛΟΣ");
-    expect(el).toHaveTextContent("not in word list");
+    expect(el).toHaveTextContent("δεν υπάρχει στη λίστα");
   });
 });
 

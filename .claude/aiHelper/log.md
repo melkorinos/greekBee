@@ -5,6 +5,31 @@
 
 ---
 
+## Session 49 — 2026-06-27: Leksokipos UI polish ✅
+Six visual/UX changes, all Leksokipos-only:
+1. **`btnHeaderIcon` recipe** added to `src/styles/recipes.ts` — formalises `border-stone-300` for circular header icon buttons (visible in dark mode; documented exception to the token rule, mirrors existing ShareButton pattern).
+2. **VariantToggleButton** (🌸/🥧): `w-8 h-8` → `w-7 h-7` (10% smaller), `border-border` → `border-stone-300` via `btnHeaderIcon` — now visually consistent with other header icons in dark mode.
+3. **NewPuzzleButton** (🎲 dice) removed from `LeksokiposLayout` header.
+4. **ShareButton idle icon** changed from box-with-arrow to copy (two overlapping pages) SVG.
+5. **5 feedback messages translated to Greek** in `FeedbackMessage.tsx`: `already_found` → "Ήδη βρέθηκε!", `too_short` → "Πολύ κοντή — τουλάχιστον 4 γράμματα", `missing_center` → "Πρέπει να περιέχει το κεντρικό γράμμα", `invalid_letter` → "Γράμμα εκτός λίστας", `not_in_list` → "… δεν υπάρχει στη λίστα".
+6. **Give-up flow redesigned**: button moved below found-words list (was in heading row); inline confirmation removed; clicking opens a two-phase `GiveUpModal` (confirm → missed words on accept). Main page still shows MissedWordsList below found words after modal closes (Option B).
+Updated tests: `feedbackMessage.test.tsx`, `LeksokiposLayout.test.tsx`, `GameBoard.test.tsx`, `recipes.test.ts`.
+Verification: **984 tests pass · eslint clean · build exit 0**.
+
+---
+
+## Session 48 — 2026-06-27: Fix broken score cleanup + add Vercel Cron ✅
+Root cause found: `upsertAndClean` in `src/lib/supabasePost.ts` built the delete query with `void` instead of `await`/`.then()` — Supabase's lazy thenable never fired. Every score ever submitted was retained. Fixed by:
+- Removed the broken cleanup from `upsertAndClean` (dropped the now-unused `dateField` param; updated both callers in `game-scores/route.ts` and `game-state/route.ts`).
+- Created `src/app/api/cleanup-scores/route.ts` — GET endpoint, CRON_SECRET auth, service role client, deletes `game_scores` **and** `game_state` rows older than 7 days in parallel.
+- Added cron entry to `vercel.json` (daily 03:00 UTC).
+- Updated `gameScoresRoute.test.ts` (removed extra enqueue for defunct cleanup call).
+- Added `cleanupScoresRoute.test.ts` (9 tests covering auth, happy path, per-table error paths).
+Verification: **979 tests pass (2 pre-existing timeouts unrelated) · eslint clean · build exit 0**.
+**Next step:** add `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET` to Vercel dashboard env vars — the cron won't work without them.
+
+---
+
 ## Session 47 — 2026-06-27: Rank rename + full design-token consolidation (ALL of #10–19 DONE) ✅
 Grilled (`/grill-with-docs`) the "consolidate shared values" idea; split it into two tracks — **content** (names live with their domain) vs **design tokens** (one platform-wide home). Wrote **ADR 0008** (CSS-variable semantic theming — revises 0002's rejection of CSS custom properties; the `.dark` toggle stays). Sliced everything into issues 13–19 via `/to-issues`.
 **Implemented + verified the content track:**

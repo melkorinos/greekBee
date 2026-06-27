@@ -111,7 +111,7 @@ describe("POST /api/game-scores — validation", () => {
 
 describe("POST /api/game-scores — locale suffix stripping", () => {
   it("accepts puzzle_date with -el suffix and strips it before validating", async () => {
-    enqueue({ error: null }, { error: null });
+    enqueue({ error: null });
     const res = await POST(makePostReq({
       game_id:      "leksokipos",
       puzzle_date:  "2026-05-22-el",
@@ -129,7 +129,7 @@ describe("POST /api/game-scores — locale suffix stripping", () => {
 
 describe("POST /api/game-scores — happy path", () => {
   it("returns { ok: true } when upsert succeeds", async () => {
-    enqueue({ error: null }, { error: null });
+    enqueue({ error: null });
     const res = await POST(makePostReq({
       game_id:      "leksokipos",
       puzzle_date:  "2026-05-22",
@@ -143,7 +143,7 @@ describe("POST /api/game-scores — happy path", () => {
   });
 
   it("succeeds with no display_name (falls back to Ανώνυμος)", async () => {
-    enqueue({ error: null }, { error: null });
+    enqueue({ error: null });
     const res = await POST(makePostReq({ game_id: "leksindeseis", puzzle_date: "2026-05-22", device_id: "d1", score: 3 }));
     expect(res.status).toBe(200);
   });
@@ -199,8 +199,8 @@ describe("POST /api/game-scores — Leksiarxeio read-modify-write", () => {
   });
 
   it("creates a new row when no prior row exists", async () => {
-    // SELECT → no existing row; upsert → ok; delete cleanup → ok
-    enqueue({ data: null, error: { message: "no rows" } }, { error: null }, { error: null });
+    // SELECT → no existing row; upsert → ok
+    enqueue({ data: null, error: { message: "no rows" } }, { error: null });
     const res = await POST(makePostReq({
       game_id: "leksiarxeio", puzzle_date: "2026-05-22",
       device_id: "d1", display_name: "Νίκος", word_length: 5, points: 4,
@@ -215,7 +215,6 @@ describe("POST /api/game-scores — Leksiarxeio read-modify-write", () => {
     enqueue(
       { data: { data: { "4": 5 } }, error: null }, // existing row
       { error: null },                               // upsert
-      { error: null },                               // cleanup
     );
     const res = await POST(makePostReq({
       game_id: "leksiarxeio", puzzle_date: "2026-05-22",
@@ -234,7 +233,7 @@ describe("POST /api/game-scores — Leksiarxeio read-modify-write", () => {
   });
 
   it("does not strip locale suffix from Leksiarxeio puzzle_date (plain YYYY-MM-DD)", async () => {
-    enqueue({ data: null, error: null }, { error: null }, { error: null });
+    enqueue({ data: null, error: null }, { error: null });
     const res = await POST(makePostReq({
       game_id: "leksiarxeio", puzzle_date: "2026-05-22",
       device_id: "d1", word_length: 4, points: 6,

@@ -13,6 +13,7 @@ import {
   // Buttons
   btnCancel,
   btnGiveUp,
+  btnHeaderIcon,
   btnModalSubmit,
   btnPrimary,
   btnPrimaryCompact,
@@ -75,6 +76,7 @@ const ALL_TOKENS: [string, string][] = [
   [btnCancel, "btnCancel"],
   [btnModalSubmit, "btnModalSubmit"],
   [btnGiveUp, "btnGiveUp"],
+  [btnHeaderIcon, "btnHeaderIcon"],
   [colorCenterLetter, "colorCenterLetter"],
   [colorOuterLetter, "colorOuterLetter"],
   [colorInputPlaceholder, "colorInputPlaceholder"],
@@ -116,6 +118,7 @@ describe("recipes.ts — visual design contracts", () => {
   describe("button shapes", () => {
     it("btnSecondary is a pill", () => expect(btnSecondary).toContain("rounded-full"));
     it("btnPrimary is a pill", () => expect(btnPrimary).toContain("rounded-full"));
+    it("btnHeaderIcon is a pill", () => expect(btnHeaderIcon).toContain("rounded-full"));
     it("btnCancel is rounded-xl", () => expect(btnCancel).toContain("rounded-xl"));
     it("btnModalSubmit is rounded-xl", () => expect(btnModalSubmit).toContain("rounded-xl"));
   });

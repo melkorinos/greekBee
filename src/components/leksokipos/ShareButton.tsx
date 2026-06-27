@@ -49,8 +49,6 @@ export function ShareButton({ canonicalPath }: ShareButtonProps) {
     error:  "border-red-400   text-red-600   bg-red-50",
   };
 
-  // Icon: share arrow (box with upward arrow) — rendered as inline SVG so it
-  // looks identical on every platform, unlike Unicode share glyphs.
   const icon =
     copyState === "copied" ? (
       <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden>
@@ -61,10 +59,10 @@ export function ShareButton({ canonicalPath }: ShareButtonProps) {
         <line x1="4" y1="4" x2="12" y2="12" /><line x1="12" y1="4" x2="4" y2="12" />
       </svg>
     ) : (
-      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden>
-        <path d="M10 3 L13 3 L13 6" />
-        <line x1="7" y1="9" x2="13" y2="3" />
-        <path d="M7 4 H3 a1 1 0 0 0 -1 1 v7 a1 1 0 0 0 1 1 h7 a1 1 0 0 0 1 -1 v-4" />
+      // Copy icon — two overlapping pages
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" aria-hidden>
+        <rect x="2" y="5" width="9" height="10" rx="1" />
+        <path d="M5 5 V3 a1 1 0 0 1 1 -1 h7 a1 1 0 0 1 1 1 v9 a1 1 0 0 1 -1 1 h-2" />
       </svg>
     );
 

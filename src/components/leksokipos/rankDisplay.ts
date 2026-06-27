@@ -8,6 +8,7 @@ import type { RankName } from "@/games/leksokipos/types";
 
 export interface RankProgressRow {
   name: RankName;
+  emoji: string;
   pts: number;
   isActive: boolean;
   achieved: boolean;
@@ -49,6 +50,7 @@ export function rankProgress(
 
   const ladder: RankProgressRow[] = [...RANKS].reverse().map((r) => ({
     name:     r.name,
+    emoji:    r.emoji,
     pts:      Math.ceil((r.threshold / 100) * puzzleMaxScore),
     isActive: r.name === currentRank,
     achieved: score >= Math.ceil((r.threshold / 100) * puzzleMaxScore),

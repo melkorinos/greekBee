@@ -10,21 +10,26 @@
  * Thresholds are a percentage (0–100) of the puzzle's max score.
  */
 export const RANKS = [
-  { name: "Ψαράκι",       threshold: 0  },
-  { name: "Έτσι κιέτσι",  threshold: 6  },
-  { name: "Οκέι",         threshold: 12 },
-  { name: "Για πάμε",     threshold: 20 },
-  { name: "Τζάμι",        threshold: 30 },
-  { name: "Θηρίο",        threshold: 42 },
-  { name: "Γκουρού",      threshold: 55 },
-  { name: "Απολυτότητα",  threshold: 80 },
+  { name: "Ψαράκι",       emoji: "🐟", threshold: 0  },
+  { name: "Έτσι κιέτσι",  emoji: "🤷", threshold: 6  },
+  { name: "Οκέι",         emoji: "👌", threshold: 12 },
+  { name: "Για πάμε",     emoji: "💪", threshold: 20 },
+  { name: "Θηρίο",        emoji: "🦁", threshold: 30 },
+  { name: "Φωτιά",        emoji: "🔥", threshold: 42 },
+  { name: "Γκουρού",      emoji: "🧘", threshold: 55 },
+  { name: "Απολυτότητα",  emoji: "💯", threshold: 80 },
 ] as const;
 
 /** Any rank name on the ladder — derived from RANKS, the single source. */
 export type RankName = (typeof RANKS)[number]["name"];
 
 /** A rank definition with its minimum score percentage threshold. */
-export type Rank = { name: RankName; threshold: number };
+export type Rank = { name: RankName; emoji: string; threshold: number };
+
+/** Returns the emoji for a given rank name, or empty string if not found. */
+export function getRankEmoji(name: RankName): string {
+  return RANKS.find((r) => r.name === name)?.emoji ?? "";
+}
 
 /** The lowest rank — used as the zero-score / empty-puzzle fallback. */
 const LOWEST_RANK: RankName = RANKS[0].name;

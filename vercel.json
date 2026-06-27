@@ -3,5 +3,11 @@
     "deploymentEnabled": {
       "workBranch": false
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cleanup-scores",
+      "schedule": "0 3 * * *"
+    }
+  ]
 }

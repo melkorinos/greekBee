@@ -16,9 +16,6 @@ vi.mock("@/components/leksokipos/GameBoard", () => ({
 vi.mock("@/components/leksokipos/ShareButton", () => ({
   ShareButton: () => <div data-testid="mock-share-btn" />,
 }));
-vi.mock("@/components/leksokipos/NewPuzzleButton", () => ({
-  NewPuzzleButton: () => <div data-testid="mock-new-puzzle-btn" />,
-}));
 vi.mock("@/components/leksokipos/HowToPlayModal", () => ({
   HowToPlayModal: () => <div data-testid="mock-how-to-play" />,
 }));
@@ -58,11 +55,10 @@ describe("LeksokiposLayout — header", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Leksokipos");
   });
 
-  it("renders the variant toggle, share, new-puzzle and how-to-play controls", () => {
+  it("renders the variant toggle, share and how-to-play controls", () => {
     setup();
     expect(screen.getByRole("button", { name: /εναλλαγή σε/i })).toBeInTheDocument();
     expect(screen.getByTestId("mock-share-btn")).toBeInTheDocument();
-    expect(screen.getByTestId("mock-new-puzzle-btn")).toBeInTheDocument();
     expect(screen.getByTestId("mock-how-to-play")).toBeInTheDocument();
   });
 });

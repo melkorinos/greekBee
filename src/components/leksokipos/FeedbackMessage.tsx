@@ -18,11 +18,11 @@ import type { ValidationStatus } from "@/games/leksokipos/types";
 /** Human-readable messages for each validation outcome */
 const MESSAGES: Record<ValidationStatus, string | ((word: string) => string)> = {
   valid:          "", // Handled separately (show the word + points)
-  already_found:  "Already found!",
-  too_short:      "Too short — 4 letters minimum",
-  missing_center: "Must contain the centre letter",
-  invalid_letter: "Not in letter list",
-  not_in_list:    (word: string) => `${word.toUpperCase()} — not in word list`,
+  already_found:  "Ήδη βρέθηκε!",
+  too_short:      "Πολύ κοντή — τουλάχιστον 4 γράμματα",
+  missing_center: "Πρέπει να περιέχει το κεντρικό γράμμα",
+  invalid_letter: "Γράμμα εκτός λίστας",
+  not_in_list:    (word: string) => `${word.toUpperCase()} — δεν υπάρχει στη λίστα`,
 };
 
 function getMessage(status: ValidationStatus, word: string): string {

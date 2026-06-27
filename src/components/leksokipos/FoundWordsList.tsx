@@ -2,41 +2,36 @@
 
 // FoundWordsList — scrollable list of all words the player has found.
 // Pangrams are highlighted in yellow since they're a special achievement.
-// Optionally shows a "Παραίτηση" give-up button right-aligned in the heading row.
+// The give-up button sits below the word list and opens the GiveUpModal
+// (confirmation + missed words) — no inline confirmation here.
 
 import { btnGiveUp, foundWordClass, foundWordPangramClass } from "@/styles/recipes";
 
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { isPangram } from "@/games/leksokipos/lib/pangram";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 interface FoundWordsListProps {
   words: string[];
   puzzle: LeksokiposPuzzle;
-  /** Called when the player confirms they want to give up. Omit to hide the button. */
+  /** Called when the player clicks give-up. Omit to hide the button. */
   onGiveUp?: () => void;
   /** When true the give-up button is hidden (game already ended). */
   givenUp?: boolean;
 }
 
-// Component-local layout + text recipes (token-based; no dark: pairs needed).
 const styles = {
-  container:   "w-full space-y-2",
-  headingRow:  "flex items-center justify-between",
-  heading:     "text-sm font-semibold text-muted tracking-wide",
-  count:       "text-foreground font-bold",
-  empty:       "text-sm text-muted italic",
-  list:        "flex flex-wrap gap-2 max-h-40 overflow-y-auto",
-  confirmRow:  "flex items-center gap-2 justify-end",
-  confirmText: "text-xs text-muted",
-  confirmYes:  "text-xs font-semibold text-danger border border-danger/40 rounded-full px-3 py-1 hover:bg-danger/10 active:bg-danger/20 transition-colors",
-  confirmNo:   "text-xs text-muted border border-border rounded-full px-3 py-1 hover:bg-surface-raised transition-colors",
+  container:  "w-full space-y-2",
+  headingRow: "flex items-center justify-between",
+  heading:    "text-sm font-semibold text-muted tracking-wide",
+  count:      "text-foreground font-bold",
+  empty:      "text-sm text-muted italic",
+  list:       "flex flex-wrap gap-2 max-h-40 overflow-y-auto",
+  giveUpRow:  "flex justify-end pt-1",
 };
 
 export function FoundWordsList({ words, puzzle, onGiveUp, givenUp }: FoundWordsListProps) {
   const sorted = useMemo(() => [...words].sort(), [words]);
-
-  const [confirming, setConfirming] = useState(false);
 
   const showGiveUpButton = !!onGiveUp && !givenUp;
 
@@ -47,37 +42,7 @@ export function FoundWordsList({ words, puzzle, onGiveUp, givenUp }: FoundWordsL
           Λέξεις που βρήκες:{" "}
           <span data-testid="found-words-count" className={styles.count}>{words.length}</span>
         </h2>
-
-        {showGiveUpButton && !confirming && (
-          <button
-            data-testid="btn-give-up"
-            onClick={() => setConfirming(true)}
-            className={btnGiveUp}
-          >
-            Παραίτηση
-          </button>
-        )}
       </div>
-
-      {showGiveUpButton && confirming && (
-        <div className={styles.confirmRow}>
-          <span className={styles.confirmText}>Είσαι σίγουρος/η;</span>
-          <button
-            data-testid="btn-give-up-confirm"
-            onClick={() => { setConfirming(false); onGiveUp?.(); }}
-            className={styles.confirmYes}
-          >
-            Ναι, παραιτούμαι
-          </button>
-          <button
-            data-testid="btn-give-up-cancel"
-            onClick={() => setConfirming(false)}
-            className={styles.confirmNo}
-          >
-            Άκυρο
-          </button>
-        </div>
-      )}
 
       {sorted.length === 0 ? (
         <p className={styles.empty}>Καμία ακόμα — αρχίσε να γράφεις!</p>
@@ -96,6 +61,17 @@ export function FoundWordsList({ words, puzzle, onGiveUp, givenUp }: FoundWordsL
         </ul>
       )}
 
+      {showGiveUpButton && (
+        <div className={styles.giveUpRow}>
+          <button
+            data-testid="btn-give-up"
+            onClick={onGiveUp}
+            className={btnGiveUp}
+          >
+            Παραίτηση
+          </button>
+        </div>
+      )}
     </div>
   );
 }

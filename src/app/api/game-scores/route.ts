@@ -95,7 +95,6 @@ export async function POST(req: NextRequest) {
     const err = await upsertAndClean(
       "game_scores",
       "game_id,device_id,puzzle_date",
-      "puzzle_date",
       { game_id, puzzle_date, device_id, display_name: name, score: newScore, data: newData },
     );
     if (err) return NextResponse.json({ error: err }, { status: 500 });
@@ -111,7 +110,6 @@ export async function POST(req: NextRequest) {
   const err = await upsertAndClean(
     "game_scores",
     "game_id,device_id,puzzle_date",
-    "puzzle_date",
     { game_id, puzzle_date, device_id, display_name: name, score },
   );
   if (err) return NextResponse.json({ error: err }, { status: 500 });

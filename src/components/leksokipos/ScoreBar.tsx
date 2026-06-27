@@ -8,6 +8,7 @@ import { scoreBarFill, scoreBarTrack } from "@/styles/recipes";
 import { useEffect, useRef, useState } from "react";
 
 import type { RankName } from "@/games/leksokipos/types";
+import { getRankEmoji } from "@/games/leksokipos/lib";
 import { rankProgress } from "./rankDisplay";
 
 interface ScoreBarProps {
@@ -72,7 +73,7 @@ export function ScoreBar({ score, maxScore, currentRank, onOpenLeaderboard }: Sc
             data-testid="rank-label"
             className={`${styles.rankLabel} underline decoration-1 underline-offset-4 decoration-muted/70 group-hover:decoration-accent`}
           >
-            {currentRank}
+            {getRankEmoji(currentRank)} {currentRank}
           </span>
           <span
             aria-hidden="true"
@@ -112,7 +113,7 @@ export function ScoreBar({ score, maxScore, currentRank, onOpenLeaderboard }: Sc
                   : "text-muted/60"
               }`}
             >
-              <span>{row.name}</span>
+              <span>{row.emoji} {row.name}</span>
               <span>{row.pts} pts</span>
             </div>
           ))}
@@ -132,9 +133,9 @@ export function ScoreBar({ score, maxScore, currentRank, onOpenLeaderboard }: Sc
       {nextRank && ptsToNext !== null && (
         <p className={styles.nextLabel}>
           {ptsToNext > 0 ? (
-            <>{ptsToNext} pts για: <span className="text-foreground">{nextRank}</span></>
+            <>{ptsToNext} pts για: <span className="text-foreground">{getRankEmoji(nextRank)} {nextRank}</span></>
           ) : (
-            <>Έφτασες: <span className="text-foreground">{nextRank}</span>! 🎉</>
+            <>Έφτασες: <span className="text-foreground">{getRankEmoji(nextRank)} {nextRank}</span>! 🎉</>
           )}
         </p>
       )}

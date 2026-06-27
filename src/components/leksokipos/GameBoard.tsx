@@ -13,6 +13,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { FeedbackMessage } from "./FeedbackMessage";
 import { FoundWordsList } from "./FoundWordsList";
 import { FlowerGridPlayground as FlowerGrid } from "./FlowerGridPlayground";
+import { GiveUpModal } from "./GiveUpModal";
 import { LeaderboardModal } from "./LeaderboardModal";
 import { MissedWordsList } from "./MissedWordsList";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
@@ -65,6 +66,7 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
 
   // Leaderboard + profile
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
+  const [giveUpModalOpen, setGiveUpModalOpen] = useState(false);
   const { deviceId, displayName, setDeviceId: setDeviceIdState, setDisplayName: setDisplayNameState } = useGameIdentity();
 
   // Only daily puzzles participate in the leaderboard.
@@ -254,7 +256,7 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
       <FoundWordsList
         words={foundWords}
         puzzle={activePuzzle}
-        onGiveUp={isDaily && !givenUp ? giveUp : undefined}
+        onGiveUp={isDaily && !givenUp ? () => setGiveUpModalOpen(true) : undefined}
         givenUp={givenUp}
       />
 
@@ -262,6 +264,16 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
       {givenUp && (
         <MissedWordsList puzzle={activePuzzle} foundWords={foundWords} />
       )}
+
+      {/* Give-up modal -- confirmation phase, then missed words on accept */}
+      <GiveUpModal
+        isOpen={giveUpModalOpen}
+        onClose={() => setGiveUpModalOpen(false)}
+        onConfirm={() => { giveUp(); }}
+        givenUp={givenUp}
+        puzzle={activePuzzle}
+        foundWords={foundWords}
+      />
 
       {/* Leaderboard modal -- only for daily puzzles */}
       {isDaily && (

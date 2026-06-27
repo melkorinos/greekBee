@@ -214,7 +214,7 @@ describe("Word suggestion flow", () => {
 // ── Give-up ───────────────────────────────────────────────────────────────────
 
 describe("Give-up flow", () => {
-  it("shows give-up button in found-words heading for daily puzzle", () => {
+  it("shows give-up button below the found-words list for daily puzzles", () => {
     render(<GameBoard puzzle={{ ...puzzle, id: "2026-05-20-el", date: "2026-05-20" }} />);
     expect(screen.getByTestId("btn-give-up")).toBeInTheDocument();
   });
@@ -224,7 +224,7 @@ describe("Give-up flow", () => {
     expect(screen.queryByTestId("btn-give-up")).toBeNull();
   });
 
-  it("clicking give-up shows confirmation row", async () => {
+  it("clicking give-up opens the confirmation modal", async () => {
     const user = userEvent.setup();
     render(<GameBoard puzzle={{ ...puzzle, id: "2026-05-20-el", date: "2026-05-20" }} />);
     await user.click(screen.getByTestId("btn-give-up"));
@@ -232,7 +232,7 @@ describe("Give-up flow", () => {
     expect(screen.getByTestId("btn-give-up-cancel")).toBeInTheDocument();
   });
 
-  it("cancelling give-up hides confirmation and restores give-up button", async () => {
+  it("cancelling give-up closes the modal and restores the give-up button", async () => {
     const user = userEvent.setup();
     render(<GameBoard puzzle={{ ...puzzle, id: "2026-05-20-el", date: "2026-05-20" }} />);
     await user.click(screen.getByTestId("btn-give-up"));
@@ -241,13 +241,14 @@ describe("Give-up flow", () => {
     expect(screen.queryByTestId("btn-give-up-confirm")).toBeNull();
   });
 
-  it("confirming give-up shows the game-over banner and missed-words list", async () => {
+  it("confirming give-up shows the game-over banner and missed-words list in modal", async () => {
     const user = userEvent.setup();
     render(<GameBoard puzzle={{ ...puzzle, id: "2026-05-20-el", date: "2026-05-20" }} />);
     await user.click(screen.getByTestId("btn-give-up"));
     await user.click(screen.getByTestId("btn-give-up-confirm"));
     await waitFor(() => expect(screen.getByTestId("give-up-banner")).toBeInTheDocument());
-    expect(screen.getByTestId("missed-words-list")).toBeInTheDocument();
+    // missed-words-list appears both in the open modal and on the main page
+    expect(screen.getAllByTestId("missed-words-list").length).toBeGreaterThan(0);
   });
 
   it("hides the honeycomb and action buttons after confirming give-up", async () => {
@@ -267,10 +268,12 @@ describe("Give-up flow", () => {
     await user.keyboard("anti{Enter}");
     await user.click(screen.getByTestId("btn-give-up"));
     await user.click(screen.getByTestId("btn-give-up-confirm"));
-    await waitFor(() => expect(screen.getByTestId("missed-words-list")).toBeInTheDocument());
-    // "anti" should not appear in missed list
-    const missedList = screen.getByTestId("missed-words-list");
-    expect(missedList).not.toHaveTextContent("anti");
+    // missed-words-list appears in both the open modal and on the main page
+    await waitFor(() => expect(screen.getAllByTestId("missed-words-list").length).toBeGreaterThan(0));
+    // "anti" should not appear in any missed list
+    screen.getAllByTestId("missed-words-list").forEach((list) => {
+      expect(list).not.toHaveTextContent("anti");
+    });
   });
 });
 
