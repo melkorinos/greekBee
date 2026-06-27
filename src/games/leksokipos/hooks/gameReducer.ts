@@ -125,7 +125,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "RESTORE_STATE": {
       // Merge saved localStorage fields into current state.
       // Only called once after first client render to avoid hydration mismatch.
-      return { ...state, ...action.saved };
+      // Recalculate currentRank from score — never trust the persisted name,
+      // which may be stale after a rank rename.
+      const restoredScore = action.saved.score ?? state.score;
+      return {
+        ...state,
+        ...action.saved,
+        currentRank: calculateRank(restoredScore, state.puzzleMaxScore),
+      };
     }
 
     default:
