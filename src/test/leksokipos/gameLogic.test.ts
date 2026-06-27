@@ -5,7 +5,7 @@ import { MAX_SCORE_CAP, maxScore, scoreWord } from "@/games/leksokipos/lib/scori
 import { describe, expect, it } from "vitest";
 
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
-import { calculateRank } from "@/games/leksokipos/lib/ranking";
+import { RANKS, calculateRank } from "@/games/leksokipos/lib/ranking";
 import { isPangram } from "@/games/leksokipos/lib/pangram";
 import { validateWord } from "@/games/leksokipos/lib/validation";
 
@@ -82,20 +82,20 @@ describe("maxScore", () => {
 // ── calculateRank ──────────────────────────────────────────────────────────────
 
 describe("calculateRank", () => {
-  it("returns Σπόρος at 0 score", () => {
-    expect(calculateRank(0, 100)).toBe("Σπόρος");
+  it("returns the lowest rank at 0 score", () => {
+    expect(calculateRank(0, 100)).toBe(RANKS[0].name);
   });
 
-  it("returns Ευφυΐα at 70% of max score", () => {
-    expect(calculateRank(70, 100)).toBe("Ευφυΐα");
+  it("returns the 55%-tier rank at 70% of max score", () => {
+    expect(calculateRank(70, 100)).toBe(RANKS[6].name);
   });
 
-  it("returns Άνθος at 100% of max score", () => {
-    expect(calculateRank(100, 100)).toBe("Άνθος");
+  it("returns the top rank at 100% of max score", () => {
+    expect(calculateRank(100, 100)).toBe(RANKS[RANKS.length - 1].name);
   });
 
-  it("returns Σπόρος when maxScore is 0 (edge case)", () => {
-    expect(calculateRank(0, 0)).toBe("Σπόρος");
+  it("returns the lowest rank when maxScore is 0 (edge case)", () => {
+    expect(calculateRank(0, 0)).toBe(RANKS[0].name);
   });
 });
 

@@ -6,7 +6,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 ## Glossary
 
-**Platform** — The entire application: shell, navigation, persistence, and all games. (Not: app, site)
+**Platform** — The entire application: shell, navigation, persistence, and all games. Named **Leksarxeia** (the brand shown in the Shell header and picker). (Not: app, site)
 
 **Game** — A distinct word-game mode. Currently: Leksokipos, Leksiarxeio, Leksindeseis, Vres Tin Frasi, Stavrolekso.
 
@@ -48,7 +48,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Max Score** — Sum of all Valid Word scores, scaled to 80%, hard-capped at 500 pts. Used for Rank thresholds.
 
-**Rank** — Score milestone: Σπόρος → Βλαστός → Μπουμπούκι → Άνοιγμα → Ανθισμένο → Θαυμαστό → Ευφυΐα → Άνθος. (Not: level, tier)
+**Rank** — Score milestone: Ψαράκι → Έτσι κι έτσι → Οκέι → Για πάμε → Τζάμι → Θηρίο → Γκουρού → Απολυτότητα. (Not: level, tier)
 
 **Found Words** — Ordered list of Valid Words submitted in the current Session.
 

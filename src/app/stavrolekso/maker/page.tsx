@@ -55,29 +55,29 @@ function ResumeForm({ onLoaded }: {
   }
 
   return (
-    <div className="border border-stone-200 dark:border-stone-700 rounded-xl p-4 space-y-3">
-      <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Συνέχισε παζλ</p>
+    <div className="border border-border rounded-xl p-4 space-y-3">
+      <p className="text-sm font-semibold text-foreground">Συνέχισε παζλ</p>
       <div className="flex gap-2">
         <input
           type="text"
           placeholder="ID παζλ"
           value={puzzleId}
           onChange={(e) => setPuzzleId(e.target.value)}
-          className="flex-1 border border-stone-300 dark:border-stone-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+          className="flex-1 border border-border rounded-lg px-3 py-2 text-sm bg-surface-raised text-foreground"
         />
         <input
           type="text"
           placeholder="PIN"
           value={pin}
           onChange={(e) => setPin(e.target.value)}
-          className="w-28 border border-stone-300 dark:border-stone-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+          className="w-28 border border-border rounded-lg px-3 py-2 text-sm bg-surface-raised text-foreground"
         />
       </div>
-      {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
       <button
         disabled={!puzzleId.trim() || !pin || loading}
         onClick={handleResume}
-        className="w-full py-2 rounded-lg bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 text-sm font-semibold disabled:opacity-40 hover:bg-stone-700 dark:hover:bg-stone-100 transition-colors"
+        className="w-full py-2 rounded-lg bg-inverted text-inverted-foreground text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition-colors"
       >
         {loading ? "Φόρτωση…" : "Φόρτωσε"}
       </button>
@@ -99,44 +99,44 @@ function ConfirmationScreen({ info, onNew }: { info: Confirmation; onNew: () => 
   }
 
   return (
-    <main className="flex flex-col items-center min-h-screen bg-zinc-50 dark:bg-stone-950 px-4 py-8">
+    <main className="flex flex-col items-center min-h-screen bg-background px-4 py-8">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center space-y-1">
           <p className="text-3xl">✅</p>
-          <h1 className="text-xl font-bold text-stone-800 dark:text-stone-100">Το παζλ στάλθηκε!</h1>
-          <p className="text-sm text-stone-500 dark:text-stone-400">Βρίσκεται σε αναμονή έγκρισης από admin.</p>
+          <h1 className="text-xl font-bold text-foreground">Το παζλ στάλθηκε!</h1>
+          <p className="text-sm text-muted">Βρίσκεται σε αναμονή έγκρισης από admin.</p>
         </div>
 
-        <div className="border border-stone-200 dark:border-stone-700 rounded-xl p-5 space-y-4">
+        <div className="border border-border rounded-xl p-5 space-y-4">
           <div>
-            <p className="text-xs text-stone-400 dark:text-stone-500 mb-1">ID Παζλ — κράτα το!</p>
+            <p className="text-xs text-muted mb-1">ID Παζλ — κράτα το!</p>
             <div className="flex items-center gap-2">
-              <span className="text-3xl font-mono font-bold text-stone-800 dark:text-stone-100">{info.id}</span>
+              <span className="text-3xl font-mono font-bold text-foreground">{info.id}</span>
               <button onClick={() => copy(String(info.id), setCopiedId)}
-                className="text-xs px-2 py-1 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors">
+                className="text-xs px-2 py-1 rounded-lg bg-surface-raised text-muted hover:bg-border transition-colors">
                 {copiedId ? "Αντιγράφηκε!" : "Αντιγραφή"}
               </button>
             </div>
           </div>
 
           <div>
-            <p className="text-xs text-stone-400 dark:text-stone-500 mb-1">Edit PIN — κράτα το!</p>
+            <p className="text-xs text-muted mb-1">Edit PIN — κράτα το!</p>
             <div className="flex items-center gap-2">
-              <span className="text-2xl font-mono font-bold text-stone-800 dark:text-stone-100">{info.pin}</span>
+              <span className="text-2xl font-mono font-bold text-foreground">{info.pin}</span>
               <button onClick={() => copy(info.pin, setCopiedPin)}
-                className="text-xs px-2 py-1 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors">
+                className="text-xs px-2 py-1 rounded-lg bg-surface-raised text-muted hover:bg-border transition-colors">
                 {copiedPin ? "Αντιγράφηκε!" : "Αντιγραφή"}
               </button>
             </div>
           </div>
 
           {info.submitterName && (
-            <p className="text-sm text-stone-500 dark:text-stone-400">Από: {info.submitterName}</p>
+            <p className="text-sm text-muted">Από: {info.submitterName}</p>
           )}
         </div>
 
         <button onClick={onNew}
-          className="w-full py-2.5 rounded-xl border border-stone-300 dark:border-stone-600 text-sm font-semibold text-stone-700 dark:text-stone-200 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors">
+          className="w-full py-2.5 rounded-xl border border-border text-sm font-semibold text-foreground hover:bg-surface-raised transition-colors">
           Δημιούργησε νέο παζλ
         </button>
       </div>
@@ -425,23 +425,23 @@ export default function StavroleksoMakerPage() {
 
   if (phase === 1) {
     return (
-      <main className="flex flex-col items-center min-h-screen bg-zinc-50 dark:bg-stone-950 px-4 py-8">
+      <main className="flex flex-col items-center min-h-screen bg-background px-4 py-8">
         <div className="w-full max-w-sm space-y-6">
           <div>
-            <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">✏️ Maker Stavrolekso</h1>
-            <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">Δημιούργησε το δικό σου σταυρόλεξο.</p>
+            <h1 className="text-2xl font-bold text-foreground">✏️ Maker Stavrolekso</h1>
+            <p className="text-sm text-muted mt-1">Δημιούργησε το δικό σου σταυρόλεξο.</p>
           </div>
 
           {/* Size picker */}
           <div className="space-y-2">
-            <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Μέγεθος πλέγματος</p>
+            <p className="text-sm font-semibold text-foreground">Μέγεθος πλέγματος</p>
             <div className="flex gap-2">
               {([9, 13, 15] as const).map((s) => (
                 <button key={s} onClick={() => setSize(s)}
                   className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors ${
                     size === s
-                      ? "bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 border-stone-800 dark:border-stone-200"
-                      : "border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800"
+                      ? "bg-inverted text-inverted-foreground border-inverted"
+                      : "border-border text-muted hover:bg-surface-raised"
                   }`}
                 >
                   {s}×{s}
@@ -454,17 +454,17 @@ export default function StavroleksoMakerPage() {
           <div className="space-y-3">
             <input type="text" placeholder="Τίτλος (προαιρετικό)" value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full border border-stone-300 dark:border-stone-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-surface-raised text-foreground"
             />
             <input type="text" placeholder="Όνομα δημιουργού (προαιρετικό)" value={submitterName}
               onChange={(e) => setSubmitterName(e.target.value)}
-              className="w-full border border-stone-300 dark:border-stone-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100"
+              className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-surface-raised text-foreground"
             />
           </div>
 
           <button
             onClick={() => setPhase(2)}
-            className="w-full py-3 rounded-xl bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 font-semibold disabled:opacity-40 hover:bg-stone-700 dark:hover:bg-stone-100 transition-colors"
+            className="w-full py-3 rounded-xl bg-inverted text-inverted-foreground font-semibold disabled:opacity-40 hover:opacity-90 transition-colors"
           >
             Δημιούργησε πλέγμα →
           </button>
@@ -478,16 +478,16 @@ export default function StavroleksoMakerPage() {
   // ── Phase 2 + 3 layout ────────────────────────────────────────────────────
 
   return (
-    <main className="flex flex-col items-center min-h-screen bg-zinc-50 dark:bg-stone-950 px-4 py-6">
+    <main className="flex flex-col items-center min-h-screen bg-background px-4 py-6">
       <div className="w-full max-w-sm space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold text-stone-800 dark:text-stone-100">
+          <h1 className="text-lg font-bold text-foreground">
             {phase === 2 ? "Σχεδίασε πλέγμα" : "Συμπλήρωσε λέξεις"}
           </h1>
           <div className="flex gap-2">
             <button onClick={() => { setPhase(1); setBlackSquares([]); setCells({}); setClues({}); setSelectedSlot(null); setActiveCellKey(null); }}
-              className="text-xs px-3 py-1.5 rounded-lg border border-stone-300 dark:border-stone-600 text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors">
+              className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted hover:bg-surface-raised transition-colors">
               ← Αρχή
             </button>
             {phase === 2 && (
@@ -496,13 +496,13 @@ export default function StavroleksoMakerPage() {
                 const first = slots[0];
                 if (first) setSelectedSlot({ number: first.number, direction: first.direction });
               }}
-                className="text-xs px-3 py-1.5 rounded-lg bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 font-semibold hover:bg-stone-700 dark:hover:bg-stone-100 transition-colors">
+                className="text-xs px-3 py-1.5 rounded-lg bg-inverted text-inverted-foreground font-semibold hover:opacity-90 transition-colors">
                 Λέξεις →
               </button>
             )}
             {phase === 3 && (
               <button onClick={() => setPhase(2)}
-                className="text-xs px-3 py-1.5 rounded-lg border border-stone-300 dark:border-stone-600 text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors">
+                className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted hover:bg-surface-raised transition-colors">
                 ← Πλέγμα
               </button>
             )}
@@ -511,11 +511,11 @@ export default function StavroleksoMakerPage() {
 
         {/* PIN display */}
         <div className="flex items-center gap-2 text-xs">
-          <span className="text-stone-400 dark:text-stone-500">Edit PIN:</span>
-          <code className="font-mono font-semibold text-stone-700 dark:text-stone-200 bg-stone-100 dark:bg-stone-800 px-1.5 py-0.5 rounded">{editPin}</code>
+          <span className="text-muted">Edit PIN:</span>
+          <code className="font-mono font-semibold text-foreground bg-surface-raised px-1.5 py-0.5 rounded">{editPin}</code>
           <button
             onClick={handleCopyPin}
-            className="px-2 py-0.5 rounded border border-stone-300 dark:border-stone-600 text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
+            className="px-2 py-0.5 rounded border border-border text-muted hover:bg-surface-raised transition-colors"
           >
             {copiedPin ? "✓ Αντιγράφηκε" : "Αντιγραφή"}
           </button>
@@ -523,7 +523,7 @@ export default function StavroleksoMakerPage() {
 
         {/* Connectivity warning */}
         {!connected && (
-          <p className="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+          <p className="text-xs font-semibold text-danger bg-danger/10 border border-danger/40 rounded-lg px-3 py-2">
             ⚠️ Τα λευκά κελιά δεν είναι συνεκτικά.
           </p>
         )}
@@ -545,8 +545,8 @@ export default function StavroleksoMakerPage() {
 
         {/* Phase 3: clue bar — below the grid */}
         {phase === 3 && (
-          <div className="border border-stone-200 dark:border-stone-700 rounded-xl px-3 py-2.5 flex items-center gap-3">
-            <p className="text-xs font-semibold text-stone-500 dark:text-stone-400 shrink-0 min-w-[90px]">
+          <div className="border border-border rounded-xl px-3 py-2.5 flex items-center gap-3">
+            <p className="text-xs font-semibold text-muted shrink-0 min-w-[90px]">
               {selectedSlotDef
                 ? `${selectedSlotDef.number} ${selectedSlotDef.direction === "across" ? "Οριζόντια" : "Κάθετα"} (${getSlotLength(selectedSlotDef.direction, selectedSlotDef.startRow, selectedSlotDef.startCol, size, size, blackSet)}γρ.)`
                 : "Επίλεξε slot"}
@@ -560,7 +560,7 @@ export default function StavroleksoMakerPage() {
               onChange={(e) => {
                 if (selectedClueKey) setClues((prev) => ({ ...prev, [selectedClueKey]: e.target.value }));
               }}
-              className="flex-1 min-w-0 border border-stone-300 dark:border-stone-600 rounded-lg px-2 py-1.5 text-sm bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100 disabled:opacity-40"
+              className="flex-1 min-w-0 border border-border rounded-lg px-2 py-1.5 text-sm bg-surface-raised text-foreground disabled:opacity-40"
             />
           </div>
         )}
@@ -573,7 +573,7 @@ export default function StavroleksoMakerPage() {
               if (dirSlots.length === 0) return null;
               return (
                 <div key={dir}>
-                  <p className="text-xs font-semibold text-stone-400 dark:text-stone-500 uppercase tracking-wide mb-1.5">
+                  <p className="text-xs font-semibold text-muted uppercase tracking-wide mb-1.5">
                     {dir === "across" ? "Οριζόντια" : "Κάθετα"}
                   </p>
                   <ul className="space-y-0.5">
@@ -591,12 +591,12 @@ export default function StavroleksoMakerPage() {
                             }}
                             className={`w-full text-left px-2 py-1.5 rounded-lg text-sm flex items-baseline gap-2 transition-colors ${
                               isSelected
-                                ? "bg-blue-100 dark:bg-blue-900 text-stone-900 dark:text-stone-100"
-                                : "hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300"
+                                ? "bg-blue-100 dark:bg-blue-900 text-foreground"
+                                : "hover:bg-surface-raised text-muted"
                             }`}
                           >
                             <span className="font-semibold text-xs shrink-0 w-5 text-right">{s.number}.</span>
-                            <span className={`truncate text-xs ${clueText ? "" : "italic text-stone-400 dark:text-stone-500"}`}>
+                            <span className={`truncate text-xs ${clueText ? "" : "italic text-muted"}`}>
                               {clueText || "—"}
                             </span>
                           </button>
@@ -610,14 +610,14 @@ export default function StavroleksoMakerPage() {
 
             {/* Submit */}
             {submitError && (
-              <p className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2">
+              <p className="text-xs text-danger bg-danger/10 border border-danger/40 rounded-lg px-3 py-2">
                 {submitError}
               </p>
             )}
             <button
               disabled={submitting}
               onClick={handleSubmit}
-              className="w-full py-3 rounded-xl bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 font-semibold disabled:opacity-40 hover:bg-stone-700 dark:hover:bg-stone-100 transition-colors"
+              className="w-full py-3 rounded-xl bg-inverted text-inverted-foreground font-semibold disabled:opacity-40 hover:opacity-90 transition-colors"
             >
               {submitting ? "Αποστολή…" : resumeId !== null ? "Ενημέρωσε παζλ" : "Υποβολή παζλ"}
             </button>
@@ -626,7 +626,7 @@ export default function StavroleksoMakerPage() {
 
         {/* Phase 2: slot count indicator */}
         {phase === 2 && slots.length > 0 && (
-          <p className="text-xs text-stone-400 dark:text-stone-500 text-center">
+          <p className="text-xs text-muted text-center">
             {slots.filter((s) => s.direction === "across").length} Οριζόντια ·{" "}
             {slots.filter((s) => s.direction === "down").length} Κάθετα
           </p>

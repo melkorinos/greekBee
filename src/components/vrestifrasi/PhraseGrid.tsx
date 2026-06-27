@@ -131,7 +131,7 @@ export function PhraseGrid({
 
   return (
     <div
-      className="flex flex-col divide-y divide-stone-200 dark:divide-stone-700 w-full max-w-sm mx-auto"
+      className="flex flex-col divide-y divide-border w-full max-w-sm mx-auto"
       role="grid"
       aria-label="Phrase guess grid"
     >

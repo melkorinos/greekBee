@@ -38,7 +38,7 @@ Ship a polished multi-game Greek word game platform where Leksokipos, Leksiarxei
 
 Priority order (work top-down):
 
-1. **Rank badge on ScoreBar** — render the current rank label (Σπόρος → Άνθος) as a styled badge inside the score bar, not just plain text. (A rank rename — dropping the flower metaphor for an escalating-ego ladder — is paused mid-brainstorm; see `.claude/tier-renaming-handoff.md`.)
+1. **Rank badge on ScoreBar** — render the current rank label (ψαράκι → Απολυτότητα) as a styled badge inside the score bar, not just plain text. (The rank rename — dropping the flower metaphor for the rising-ranks ladder — is DONE; names now derive from the single-source `RANKS` array. A design-token / font consolidation follows; see ADR 0008 and issues 13–19.)
 2. **Share score** — after completing the game, offer a shareable score card (rank + score + date) that copies to clipboard.
 3. **Home page "played today" badge** — read `useGameStore` to show ✓ on each game card if played today.
 4. **Leksokipos stats modal** — device-local all-time stats: games played, best rank, total words. Read from localStorage.

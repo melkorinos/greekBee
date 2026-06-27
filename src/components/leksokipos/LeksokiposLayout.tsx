@@ -45,11 +45,11 @@ function VariantToggleButton({
       <button
         onClick={onToggle}
         aria-label={`Εναλλαγή σε ${nextLabel}`}
-        className="w-8 h-8 flex items-center justify-center rounded-full border border-stone-300 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-800 active:bg-stone-200 dark:active:bg-stone-700 transition-colors text-base"
+        className="w-8 h-8 flex items-center justify-center rounded-full border border-border hover:bg-surface-raised active:bg-border transition-colors text-base"
       >
         {variant === "pie" ? "🌸" : "🥧"}
       </button>
-      <div className="pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-stone-800 px-2.5 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      <div className="pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-inverted px-2.5 py-1 text-xs text-inverted-foreground opacity-0 group-hover:opacity-100 transition-opacity z-10">
         {nextLabel}
       </div>
     </div>
@@ -79,9 +79,9 @@ export function LeksokiposLayout({
 
   return (
     <>
-      <header className="w-full border-b border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 px-4 py-3">
+      <header className="w-full border-b border-border bg-surface px-4 py-3">
         <div className="flex items-center justify-between max-w-sm mx-auto">
-          <h1 className="text-xl font-bold tracking-tight text-stone-800 dark:text-stone-100">🌸 Leksokipos</h1>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">🌸 Leksokipos</h1>
           <div className="flex items-center gap-2">
             <VariantToggleButton variant={variant} onToggle={toggleVariant} />
             <ShareButton canonicalPath={canonicalPath} />
@@ -97,7 +97,7 @@ export function LeksokiposLayout({
           </p>
         </div>
       )}
-      <div className="flex flex-1 w-full flex-col items-center bg-white dark:bg-stone-950">
+      <div className="flex flex-1 w-full flex-col items-center bg-background">
         <GameBoard puzzle={puzzle} recentPuzzleDates={recentPuzzleDates} variant={variant} />
       </div>
     </>

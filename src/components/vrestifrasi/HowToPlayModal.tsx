@@ -13,11 +13,11 @@ type ExColor = "correct" | "present" | "misplaced-word" | "absent" | "empty";
 // A mini tile for the worked examples in the modal
 function ExTile({ letter, color }: { letter: string; color: ExColor }) {
   const cls: Record<ExColor, string> = {
-    correct:        "bg-green-600  border-green-600  text-white",
-    present:        "bg-yellow-500 border-yellow-500 text-white",
-    "misplaced-word": "bg-purple-600 border-purple-600 text-white",
-    absent:         "bg-stone-500  border-stone-500  text-white",
-    empty:          "bg-transparent border-stone-300 text-stone-700 dark:border-stone-600 dark:text-stone-200",
+    correct:        "bg-correct  border-correct  text-white",
+    present:        "bg-present  border-present  text-white",
+    "misplaced-word": "bg-misplaced border-misplaced text-white",
+    absent:         "bg-absent   border-absent   text-white",
+    empty:          "bg-transparent border-border text-foreground",
   };
   return (
     <div
@@ -48,21 +48,21 @@ export function HowToPlayModal({ isOpen, onClose }: Props) {
       onClick={onClose}
     >
       <div
-        className="bg-white dark:bg-stone-900 rounded-2xl shadow-xl w-full max-w-sm p-6 relative max-h-[90vh] overflow-y-auto"
+        className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6 relative max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onClose}
           aria-label="Close"
-          className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300 text-xl leading-none"
+          className="absolute top-4 right-4 text-muted hover:text-foreground text-xl leading-none"
         >
           ✕
         </button>
 
-        <h2 className="text-lg font-bold text-stone-800 dark:text-stone-100 mb-1">
+        <h2 className="text-lg font-bold text-foreground mb-1">
           Πώς να παίξεις
         </h2>
-        <p className="text-xs text-stone-500 dark:text-stone-400 mb-4 leading-relaxed">
+        <p className="text-xs text-muted mb-4 leading-relaxed">
           Βρες τη φράση σε 6 προσπάθειες. Κάθε προσπάθεια πρέπει να έχει τον ίδιο αριθμό λέξεων
           και τα ίδια μήκη λέξεων με τη σωστή φράση.
         </p>
@@ -71,8 +71,8 @@ export function HowToPlayModal({ isOpen, onClose }: Props) {
           {/* Green */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-green-600 flex-none" />
-              <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Πράσινο — σωστό γράμμα, σωστή θέση</p>
+              <div className="w-3 h-3 rounded-full bg-correct flex-none" />
+              <p className="text-sm font-semibold text-foreground">Πράσινο — σωστό γράμμα, σωστή θέση</p>
             </div>
             <div className="flex gap-2 items-center pl-5">
               <ExWord tiles={[
@@ -88,16 +88,16 @@ export function HowToPlayModal({ isOpen, onClose }: Props) {
                 { l: "η", c: "empty" },
               ]} />
             </div>
-            <p className="text-xs text-stone-500 dark:text-stone-400 pl-5">
-              Τα γράμματα <strong className="text-stone-700 dark:text-stone-200">Κ</strong>, <strong className="text-stone-700 dark:text-stone-200">Α</strong> και <strong className="text-stone-700 dark:text-stone-200">Υ</strong> είναι στη σωστή θέση μέσα στη λέξη τους.
+            <p className="text-xs text-muted pl-5">
+              Τα γράμματα <strong className="text-foreground">Κ</strong>, <strong className="text-foreground">Α</strong> και <strong className="text-foreground">Υ</strong> είναι στη σωστή θέση μέσα στη λέξη τους.
             </p>
           </div>
 
           {/* Yellow */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-yellow-500 flex-none" />
-              <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Κίτρινο — σωστό γράμμα, λάθος θέση (ίδια λέξη)</p>
+              <div className="w-3 h-3 rounded-full bg-present flex-none" />
+              <p className="text-sm font-semibold text-foreground">Κίτρινο — σωστό γράμμα, λάθος θέση (ίδια λέξη)</p>
             </div>
             <div className="flex gap-2 items-center pl-5">
               <ExWord tiles={[
@@ -107,16 +107,16 @@ export function HowToPlayModal({ isOpen, onClose }: Props) {
                 { l: "ε", c: "empty" },
               ]} />
             </div>
-            <p className="text-xs text-stone-500 dark:text-stone-400 pl-5">
-              Το <strong className="text-stone-700 dark:text-stone-200">Α</strong> υπάρχει σε αυτή τη λέξη αλλά σε διαφορετική θέση.
+            <p className="text-xs text-muted pl-5">
+              Το <strong className="text-foreground">Α</strong> υπάρχει σε αυτή τη λέξη αλλά σε διαφορετική θέση.
             </p>
           </div>
 
           {/* Purple */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-purple-600 flex-none" />
-              <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Μοβ — σωστό γράμμα, ανήκει σε άλλη λέξη της φράσης</p>
+              <div className="w-3 h-3 rounded-full bg-misplaced flex-none" />
+              <p className="text-sm font-semibold text-foreground">Μοβ — σωστό γράμμα, ανήκει σε άλλη λέξη της φράσης</p>
             </div>
             <div className="flex gap-2 items-center pl-5">
               <ExWord tiles={[
@@ -132,16 +132,16 @@ export function HowToPlayModal({ isOpen, onClose }: Props) {
                 { l: "η", c: "empty" },
               ]} />
             </div>
-            <p className="text-xs text-stone-500 dark:text-stone-400 pl-5">
-              Το <strong className="text-stone-700 dark:text-stone-200">Λ</strong> υπάρχει στη φράση αλλά σε <em>διαφορετική λέξη</em> — όχι σε αυτή που το έγραψες.
+            <p className="text-xs text-muted pl-5">
+              Το <strong className="text-foreground">Λ</strong> υπάρχει στη φράση αλλά σε <em>διαφορετική λέξη</em> — όχι σε αυτή που το έγραψες.
             </p>
           </div>
 
           {/* Grey */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-stone-500 flex-none" />
-              <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Γκρι — το γράμμα δεν υπάρχει στη φράση</p>
+              <div className="w-3 h-3 rounded-full bg-absent flex-none" />
+              <p className="text-sm font-semibold text-foreground">Γκρι — το γράμμα δεν υπάρχει στη φράση</p>
             </div>
             <div className="flex gap-2 items-center pl-5">
               <ExWord tiles={[
@@ -151,14 +151,14 @@ export function HowToPlayModal({ isOpen, onClose }: Props) {
                 { l: "ι", c: "empty" },
               ]} />
             </div>
-            <p className="text-xs text-stone-500 dark:text-stone-400 pl-5">
-              Το <strong className="text-stone-700 dark:text-stone-200">Σ</strong> δεν εμφανίζεται πουθενά στη φράση.
+            <p className="text-xs text-muted pl-5">
+              Το <strong className="text-foreground">Σ</strong> δεν εμφανίζεται πουθενά στη φράση.
             </p>
           </div>
         </div>
 
-        <div className="mt-5 pt-4 border-t border-stone-200 dark:border-stone-700">
-          <p className="text-xs text-stone-500 dark:text-stone-400">
+        <div className="mt-5 pt-4 border-t border-border">
+          <p className="text-xs text-muted">
             💡 Μοβ ≠ κίτρινο: κίτρινο σημαίνει &quot;λάθος θέση στην ίδια λέξη&quot;,
             μοβ σημαίνει &quot;ανήκει σε άλλη λέξη της φράσης&quot;.
           </p>
@@ -166,7 +166,7 @@ export function HowToPlayModal({ isOpen, onClose }: Props) {
 
         <button
           onClick={onClose}
-          className="mt-5 w-full py-2.5 rounded-xl bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 text-sm font-semibold hover:bg-stone-700 dark:hover:bg-stone-100 transition-colors"
+          className="mt-5 w-full py-2.5 rounded-xl bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
         >
           Κατάλαβα!
         </button>

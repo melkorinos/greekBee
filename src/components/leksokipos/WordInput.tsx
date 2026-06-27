@@ -5,7 +5,7 @@
 // When canSubmit is true (word >=4 letters), a green submit button appears
 // inline so players can submit without needing a separate button row.
 
-import { colorCenterLetter, colorInputPlaceholder, colorOuterLetter } from "./styles";
+import { colorCenterLetter, colorInputPlaceholder, colorOuterLetter } from "@/styles/recipes";
 
 interface WordInputProps {
   value:        string;
@@ -43,7 +43,7 @@ export function WordInput({ value, centerLetter, onSubmit, canSubmit = false }: 
           onClick={onSubmit}
           data-testid="btn-enter"
           aria-label="Submission"
-          className="ml-3 flex items-center justify-center w-9 h-9 rounded-full bg-green-500 hover:bg-green-600 active:bg-green-700 text-white text-lg font-bold shadow-sm transition-colors"
+          className="ml-3 flex items-center justify-center w-9 h-9 rounded-full bg-correct text-white text-lg font-bold shadow-sm hover:opacity-90 transition-opacity"
         >
           &#9166;
         </button>

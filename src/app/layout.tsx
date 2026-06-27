@@ -1,23 +1,26 @@
 import "./globals.css";
 
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 
 import type { Metadata, Viewport } from "next";
 import { Shell } from "@/components/shared/Shell";
+import { PLATFORM_NAME, PLATFORM_DESCRIPTION } from "@/config/platform";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// Greek subset is mandatory — this is a Greek word-game platform. Without it,
+// every Greek glyph falls back to a system font.
+const sans = Inter({
+  variable: "--font-inter",
+  subsets: ["latin", "greek"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const mono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
+  subsets: ["latin", "greek"],
 });
 
 export const metadata: Metadata = {
-  title: "Leksarxeia",
-  description: "Ελληνικά παιχνίδια λέξεων: Leksokipos, Leksiarxeio, Leksindeseis",
+  title: PLATFORM_NAME,
+  description: PLATFORM_DESCRIPTION,
 };
 
 // Lock the viewport so pinch-to-zoom can't push the game UI out of the layout on mobile.
@@ -36,7 +39,7 @@ export default function RootLayout({
   return (
     <html
       lang="el"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${sans.variable} ${mono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

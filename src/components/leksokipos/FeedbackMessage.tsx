@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 // FeedbackMessage — brief toast-style message shown after each word submission.
 // Auto-hides when the player types a new letter (lastSubmission resets via input change).
@@ -11,7 +11,7 @@ import {
   feedbackSuggestLinkClass,
   feedbackValidClass,
   feedbackValidContainer,
-} from "./styles";
+} from "@/styles/recipes";
 
 import type { ValidationStatus } from "@/games/leksokipos/types";
 

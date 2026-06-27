@@ -24,8 +24,8 @@ export function WordCard({ word, selected, disabled = false, onSelect }: WordCar
           ? "opacity-50 cursor-not-allowed"
           : "cursor-pointer active:opacity-80",
         selected
-          ? "bg-stone-700 border-stone-700 text-white dark:bg-stone-300 dark:border-stone-300 dark:text-stone-900"
-          : "bg-white dark:bg-stone-800 border-stone-300 dark:border-stone-700 text-stone-800 dark:text-stone-100 hover:border-stone-500 dark:hover:border-stone-500",
+          ? "bg-inverted border-inverted text-inverted-foreground"
+          : "bg-surface-raised border-border text-foreground hover:border-muted",
       ].join(" ")}
     >
       {word}

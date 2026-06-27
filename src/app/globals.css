@@ -6,23 +6,74 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Semantic design tokens (ADR 0008) — the single source for the platform's
+     palette. Mapped to the existing stone/yellow scale so adopting them is a
+     no-visual-change refactor; overridden under .dark below. */
+  --surface:        #ffffff;
+  --surface-raised: var(--color-stone-50);
+  --muted:          var(--color-stone-500);
+  --border:         var(--color-stone-200);
+  --brand:          var(--color-yellow-400);
+  --accent:         var(--color-yellow-500);
+  --danger:         var(--color-red-500);
+  /* Emphasis / primary-action fill — inverts vs the page (dark fill on light). */
+  --inverted:            var(--color-stone-800);
+  --inverted-foreground: #ffffff;
+
+  /* Feedback (tile / word states) — solid fills, identical in light & dark
+     (classic Wordle behaviour). Values match the guess tiles. */
+  --correct:   var(--color-green-600);
+  --present:   var(--color-yellow-500);
+  --absent:    var(--color-stone-500);
+  --misplaced: var(--color-purple-600);
 }
 
 .dark {
   --background: var(--color-stone-950);
+  --foreground: var(--color-stone-100);
+
+  --surface:        var(--color-stone-900);
+  --surface-raised: var(--color-stone-800);
+  --muted:          var(--color-stone-400);
+  --border:         var(--color-stone-700);
+  --accent:         var(--color-yellow-400);
+  --danger:         var(--color-red-400);
+  --inverted:            var(--color-stone-200);
+  --inverted-foreground: var(--color-stone-900);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+
+  /* Semantic tokens → utilities: bg-surface, text-foreground, text-muted,
+     border-border, bg-brand, text-accent, bg-correct, … */
+  --color-surface:        var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-muted:          var(--muted);
+  --color-border:         var(--border);
+  --color-brand:          var(--brand);
+  --color-accent:         var(--accent);
+  --color-danger:         var(--danger);
+  --color-inverted:            var(--inverted);
+  --color-inverted-foreground: var(--inverted-foreground);
+  --color-correct:        var(--correct);
+  --color-present:        var(--present);
+  --color-absent:         var(--absent);
+  --color-misplaced:      var(--misplaced);
+
+  /* Shared icon size for the leaderboard 🏆 — one place to resize it everywhere. */
+  --text-trophy: 1.25rem;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  /* Inter (Latin + Greek), loaded via next/font and exposed as --font-sans. */
+  font-family: var(--font-sans), system-ui, sans-serif;
 }
 
 /* Remove Android Chrome's tap-highlight rectangle (dark square on touch). */

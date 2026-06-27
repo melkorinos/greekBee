@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 // GameBoard -- the top-level client component that composes all game UI pieces.
 // Receives the initial puzzle as a prop (loaded server-side in page.tsx).
@@ -19,7 +19,7 @@ import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { ScoreBar } from "./ScoreBar";
 import { NominationModal } from "@/components/shared/NominationModal";
 import { WordInput } from "./WordInput";
-import { btnSecondary } from "./styles";
+import { btnSecondary } from "@/styles/recipes";
 import { useDayChange } from "@/games/leksokipos/hooks/useDayChange";
 import { useGameState } from "@/games/leksokipos/hooks/useGameState";
 import { useGameStateSync } from "@/hooks/useGameStateSync";

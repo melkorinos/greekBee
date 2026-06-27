@@ -95,15 +95,15 @@ function LeksiarxeioQueueCard({
   }
 
   return (
-    <div className="border border-stone-200 dark:border-stone-700 rounded-xl p-4 space-y-2">
+    <div className="border border-border rounded-xl p-4 space-y-2">
       {puzzle.submitter_name && (
-        <p className="text-xs text-stone-400 dark:text-stone-500">από {puzzle.submitter_name}</p>
+        <p className="text-xs text-muted">από {puzzle.submitter_name}</p>
       )}
       <div className="grid grid-cols-5 gap-1">
         {[4, 5, 6, 7, 8].map((len) => (
           <div key={len} className="text-center">
             <p className="text-xs text-stone-400">{len}γρ</p>
-            <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">{puzzle.data[String(len)]}</p>
+            <p className="text-sm font-semibold text-foreground">{puzzle.data[String(len)]}</p>
           </div>
         ))}
       </div>
@@ -149,11 +149,11 @@ function VresTinFrasiQueueCard({
   }
 
   return (
-    <div className="border border-stone-200 dark:border-stone-700 rounded-xl p-4 space-y-2">
+    <div className="border border-border rounded-xl p-4 space-y-2">
       {puzzle.submitter_name && (
-        <p className="text-xs text-stone-400 dark:text-stone-500">από {puzzle.submitter_name}</p>
+        <p className="text-xs text-muted">από {puzzle.submitter_name}</p>
       )}
-      <p className="text-base font-semibold text-stone-700 dark:text-stone-200">{puzzle.data.phrase}</p>
+      <p className="text-base font-semibold text-foreground">{puzzle.data.phrase}</p>
       <div className="flex gap-2 pt-1">
         <button
           disabled={busy}
@@ -196,15 +196,15 @@ function LeksindeseisQueueCard({
   }
 
   return (
-    <div className="border border-stone-200 dark:border-stone-700 rounded-xl p-4 space-y-2">
+    <div className="border border-border rounded-xl p-4 space-y-2">
       {puzzle.submitter_name && (
-        <p className="text-xs text-stone-400 dark:text-stone-500">από {puzzle.submitter_name}</p>
+        <p className="text-xs text-muted">από {puzzle.submitter_name}</p>
       )}
       <div className="space-y-2">
         {puzzle.data.map((group, i) => (
-          <div key={i} className="bg-stone-50 dark:bg-stone-800 rounded-lg px-3 py-2">
-            <p className="text-xs font-semibold text-stone-600 dark:text-stone-300 mb-1">{group.category}</p>
-            <p className="text-xs text-stone-500 dark:text-stone-400">{group.words.join(", ")}</p>
+          <div key={i} className="bg-surface-raised rounded-lg px-3 py-2">
+            <p className="text-xs font-semibold text-muted mb-1">{group.category}</p>
+            <p className="text-xs text-muted">{group.words.join(", ")}</p>
           </div>
         ))}
       </div>
@@ -253,21 +253,21 @@ function StavroleksoQueueCard({
   const created    = new Date(puzzle.created_at).toLocaleDateString("el-GR");
 
   return (
-    <div className="border border-stone-200 dark:border-stone-700 rounded-xl p-4 space-y-2">
+    <div className="border border-border rounded-xl p-4 space-y-2">
       <div className="flex items-start justify-between gap-2">
         <div>
           {puzzle.title && (
-            <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">{puzzle.title}</p>
+            <p className="text-sm font-semibold text-foreground">{puzzle.title}</p>
           )}
-          <p className="text-xs text-stone-400 dark:text-stone-500">
+          <p className="text-xs text-muted">
             {puzzle.data.width}×{puzzle.data.height} · {slotCount} slots · {created}
           </p>
           {puzzle.submitter_name && (
-            <p className="text-xs text-stone-400 dark:text-stone-500">από {puzzle.submitter_name}</p>
+            <p className="text-xs text-muted">από {puzzle.submitter_name}</p>
           )}
         </div>
       </div>
-      <pre className="text-[10px] text-stone-500 dark:text-stone-400 bg-stone-50 dark:bg-stone-900 rounded-lg p-2 overflow-x-auto max-h-40">
+      <pre className="text-[10px] text-muted bg-surface rounded-lg p-2 overflow-x-auto max-h-40">
         {JSON.stringify(puzzle.data, null, 2)}
       </pre>
       <div className="flex gap-2 pt-1">
@@ -407,7 +407,7 @@ function LeksikastiríoClient() {
     const copy  = communityTabCopy[activeTab as CommunityTab];
     if (queue.length === 0) {
       return (
-        <p className="text-sm text-stone-400 dark:text-stone-500 text-center py-8">{copy.emptyState}</p>
+        <p className="text-sm text-muted text-center py-8">{copy.emptyState}</p>
       );
     }
     return (
@@ -425,18 +425,18 @@ function LeksikastiríoClient() {
   const communityTabs: CommunityTab[]   = ["leksiarxeio", "leksindeseis", "vrestifrasi", "stavrolekso"];
 
   return (
-    <div className="flex-1 bg-white dark:bg-stone-950">
+    <div className="flex-1 bg-background">
     {/* Admins review from a desktop — give them the full HD width; players keep the narrow mobile column. */}
     <main className={`${isAdmin ? "max-w-6xl" : "max-w-lg"} mx-auto px-4 py-8 space-y-6`}>
       <div>
-        <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">Leksikastirio</h1>
-        <p className="text-sm text-stone-500 dark:text-stone-400 mt-1">
+        <h1 className="text-2xl font-bold text-foreground">Leksikastirio</h1>
+        <p className="text-sm text-muted mt-1">
           Ψηφίστε λέξεις που πιστεύετε ότι πρέπει να προστεθούν ή να αφαιρεθούν.
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-stone-200 dark:border-stone-800 flex-wrap">
+      <div className="flex border-b border-border flex-wrap">
         {nominationTabs.map((tab) => (
           <button
             key={tab}
@@ -445,8 +445,8 @@ function LeksikastiríoClient() {
             className={[
               "px-5 py-2.5 text-sm font-semibold transition-colors",
               activeTab === tab
-                ? "border-b-2 border-stone-800 dark:border-stone-300 text-stone-800 dark:text-stone-100"
-                : "text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300",
+                ? "border-b-2 border-inverted text-foreground"
+                : "text-muted hover:text-foreground",
             ].join(" ")}
           >
             {nominationTabCopy[tab].label}
@@ -460,8 +460,8 @@ function LeksikastiríoClient() {
             className={[
               "px-5 py-2.5 text-sm font-semibold transition-colors",
               activeTab === tab
-                ? "border-b-2 border-stone-800 dark:border-stone-300 text-stone-800 dark:text-stone-100"
-                : "text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300",
+                ? "border-b-2 border-inverted text-foreground"
+                : "text-muted hover:text-foreground",
             ].join(" ")}
           >
             {communityTabCopy[tab].label}
@@ -475,7 +475,7 @@ function LeksikastiríoClient() {
           <button
             onClick={() => setModalOpen(true)}
             data-testid="open-nomination-modal"
-            className="px-4 py-2 rounded-full bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 text-sm font-semibold hover:bg-stone-700 dark:hover:bg-stone-100 transition-colors"
+            className="px-4 py-2 rounded-full bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 transition-colors"
           >
             {nominationTabCopy[activeTab].buttonLabel}
           </button>
@@ -484,15 +484,15 @@ function LeksikastiríoClient() {
 
       {/* Content */}
       {loading ? (
-        <p className="text-sm text-stone-400 dark:text-stone-500 text-center py-8">Φόρτωση…</p>
+        <p className="text-sm text-muted text-center py-8">Φόρτωση…</p>
       ) : isNominationTab(activeTab) ? (
         nominations.length === 0 ? (
-          <p className="text-sm text-stone-400 dark:text-stone-500 text-center py-8">{nominationTabCopy[activeTab].emptyState}</p>
+          <p className="text-sm text-muted text-center py-8">{nominationTabCopy[activeTab].emptyState}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-stone-200 dark:border-stone-800 text-left text-xs text-stone-400 dark:text-stone-500 font-semibold uppercase tracking-wide">
+                <tr className="border-b border-border text-left text-xs text-muted font-semibold uppercase tracking-wide">
                   <th className="pb-2 pr-4 font-semibold">Λέξη</th>
                   <th className="pb-2 pr-4 font-semibold">Από</th>
                   <th className="pb-2 pr-4 font-semibold">Σχόλιο</th>

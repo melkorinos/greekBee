@@ -21,10 +21,10 @@ const ROWS = [
 ];
 
 const STATE_CLASSES: Record<string, string> = {
-  correct: "bg-green-600  text-white border-green-600",
-  present: "bg-yellow-500 text-white border-yellow-500",
-  absent:  "bg-stone-500  text-white border-stone-500",
-  unknown: "bg-stone-200  text-stone-800 border-stone-200 dark:bg-stone-700 dark:text-stone-100 dark:border-stone-700",
+  correct: "bg-correct text-white border-correct",
+  present: "bg-present text-white border-present",
+  absent:  "bg-absent  text-white border-absent",
+  unknown: "bg-border  text-foreground border-border",
 };
 
 export function Keyboard({
@@ -56,8 +56,8 @@ export function Keyboard({
     disabled ? "opacity-50 pointer-events-none" : "",
   ].join(" ");
 
-  const enterClass  = `${actionBase} px-1 text-base bg-emerald-600 border-emerald-500 text-white`;
-  const deleteClass = `${actionBase} px-1 text-sm  bg-stone-300  border-stone-200   text-stone-700 dark:bg-stone-700 dark:border-stone-700 dark:text-stone-300`;
+  const enterClass  = `${actionBase} px-1 text-base bg-correct border-correct text-white`;
+  const deleteClass = `${actionBase} px-1 text-sm  bg-border  border-border  text-muted`;
 
   return (
     <div className="flex flex-col items-center gap-1.5 w-full" aria-label="Keyboard">

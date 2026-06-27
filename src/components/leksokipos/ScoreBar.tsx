@@ -1,10 +1,10 @@
-﻿"use client";
+"use client";
 
 // ScoreBar — displays the player's score, current rank and a visual progress bar.
 // The bar shows progress from the current rank threshold to the next rank threshold
 // so it always feels achievable and resets on each level-up.
 
-import { scoreBarFill, scoreBarTrack } from "./styles";
+import { scoreBarFill, scoreBarTrack } from "@/styles/recipes";
 import { useEffect, useRef, useState } from "react";
 
 import type { RankName } from "@/games/leksokipos/types";
@@ -21,9 +21,9 @@ interface ScoreBarProps {
 const styles = {
   container:   "w-full space-y-2",
   labelRow:    "flex items-center justify-between text-sm",
-  rankLabel:   "font-semibold text-stone-800",
-  scoreLabel:  "text-stone-500",
-  nextLabel:   "text-xs text-stone-400 text-right",
+  rankLabel:   "font-semibold text-foreground",
+  scoreLabel:  "text-muted",
+  nextLabel:   "text-xs text-muted text-right",
 };
 
 /** Three bars of increasing height — ranking ladder icon */
@@ -63,7 +63,7 @@ export function ScoreBar({ score, maxScore, currentRank, onOpenLeaderboard }: Sc
           <button
             onClick={() => setShowRanks((v) => !v)}
             aria-label="Show rank thresholds"
-            className="text-stone-400 hover:text-yellow-500 transition-colors"
+            className="text-muted hover:text-accent transition-colors"
           >
             <RankIcon />
           </button>
@@ -80,7 +80,7 @@ export function ScoreBar({ score, maxScore, currentRank, onOpenLeaderboard }: Sc
               data-testid="btn-leaderboard"
               onClick={onOpenLeaderboard}
               aria-label="Πίνακας Σκορ"
-              className="text-xl text-stone-400 hover:text-amber-500 transition-colors leading-none"
+              className="text-trophy text-muted hover:text-accent transition-colors leading-none"
             >
               🏆
             </button>
@@ -90,16 +90,16 @@ export function ScoreBar({ score, maxScore, currentRank, onOpenLeaderboard }: Sc
 
       {/* Rank ladder popover */}
       {showRanks && (
-        <div className="rounded-xl border border-stone-200 bg-white shadow-md p-3 space-y-1">
+        <div className="rounded-xl border border-border bg-surface shadow-md p-3 space-y-1">
           {ladder.map((row) => (
             <div
               key={row.name}
               className={`flex justify-between text-sm px-2 py-0.5 rounded-lg ${
                 row.isActive
-                  ? "bg-yellow-100 font-semibold text-yellow-800"
+                  ? "bg-brand/20 font-semibold text-foreground"
                   : row.achieved
-                  ? "text-stone-500"
-                  : "text-stone-400"
+                  ? "text-muted"
+                  : "text-muted/60"
               }`}
             >
               <span>{row.name}</span>

@@ -3,7 +3,7 @@
 
 import type { GameState, LeksokiposPuzzle } from "../types";
 
-import { calculateRank } from "../lib/ranking";
+import { RANKS, calculateRank } from "../lib/ranking";
 import { maxScore } from "../lib/scoring";
 import { normalizeLetters } from "../lib/normalize";
 import { validateWord } from "../lib/validation";
@@ -32,7 +32,7 @@ export function buildInitialState(puzzle: LeksokiposPuzzle): GameState {
     currentInput: "",
     foundWords: [],
     score: 0,
-    currentRank: "Σπόρος",
+    currentRank: RANKS[0].name,
     puzzleMaxScore: maxScore(puzzle),
     startedAt: Date.now(),
     lastSubmission: null,

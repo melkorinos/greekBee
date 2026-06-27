@@ -5,7 +5,7 @@
 // Pangrams are highlighted in gold, consistent with FoundWordsList.
 // Each word is clickable to nominate it for removal.
 
-import { foundWordClass, foundWordPangramClass } from "./styles";
+import { foundWordClass, foundWordPangramClass } from "@/styles/recipes";
 
 import { NominationModal } from "@/components/shared/NominationModal";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
@@ -18,11 +18,12 @@ interface MissedWordsListProps {
   foundWords: string[];
 }
 
+// Component-local layout + text recipes (token-based; no dark: pairs needed).
 const styles = {
   container:    "w-full space-y-2",
-  heading:      "text-sm font-semibold text-stone-500 tracking-wide",
-  count:        "text-stone-800 font-bold",
-  empty:        "text-sm text-stone-400 italic",
+  heading:      "text-sm font-semibold text-muted tracking-wide",
+  count:        "text-foreground font-bold",
+  empty:        "text-sm text-muted italic",
   list:         "flex flex-wrap gap-2 max-h-48 overflow-y-auto",
   wordReported: "opacity-50 cursor-default",
   wordReport:   "cursor-pointer hover:opacity-75 transition-opacity",

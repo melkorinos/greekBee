@@ -9,6 +9,7 @@
 
 import React from "react";
 import { GAME_REGISTRY } from "@/config/games";
+import { PLATFORM_NAME } from "@/config/platform";
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
 import { HomeTrophyButton } from "@/components/shared/HomeTrophyButton";
 import { SubmitPuzzleButton } from "@/components/shared/SubmitPuzzleButton";
@@ -20,7 +21,7 @@ function StavroleksoMakerButton() {
       href="/stavrolekso/maker"
       aria-label="Δημιούργησε σταυρόλεξο"
       title="Δημιούργησε σταυρόλεξο"
-      className="p-1.5 rounded-lg text-stone-400 hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-base leading-none"
+      className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-raised transition-colors text-base leading-none"
     >
       ✏️
     </Link>
@@ -39,7 +40,7 @@ const GAME_RULES = {
       "Οι λέξεις πρέπει να έχουν τουλάχιστον **4 γράμματα**.",
       "Τα γράμματα μπορούν να χρησιμοποιηθούν **περισσότερες από μία φορά**.",
       "Μια λέξη που χρησιμοποιεί **και τα 7 γράμματα** κερδίζει επιπλέον bonus πόντους!",
-      "Ανέβα στην κατάταξη από Σπόρο μέχρι Άνθος! 🌸",
+      "Ανέβα στην κατάταξη από Ψαράκι μέχρι Απολυτότητα! 🌸",
     ],
   },
   leksiarxeio: {
@@ -108,11 +109,11 @@ const communityList = GAMES.filter((g) => g.id === "leksikastirio");
 
 function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submitButton?: React.ReactNode }) {
   return (
-    <li className="flex items-stretch rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-sm hover:shadow-md hover:border-stone-300 dark:hover:border-stone-700 transition-all overflow-hidden">
+    <li className="flex items-stretch rounded-2xl bg-surface border border-border shadow-sm hover:shadow-md hover:border-border transition-all overflow-hidden">
       <Link href={game.href} className="flex-1 flex items-start gap-4 p-5">
         <span className="text-3xl mt-0.5">{game.emoji}</span>
         <div>
-          <p className="font-semibold text-stone-800 dark:text-stone-100 flex items-center gap-2 flex-wrap">
+          <p className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
             {game.title}
             {game.wip && (
               <span className="text-xs font-normal text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
@@ -120,10 +121,10 @@ function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submit
               </span>
             )}
           </p>
-          <p className="text-sm text-stone-500 dark:text-stone-400 mt-0.5">{game.description}</p>
+          <p className="text-sm text-muted mt-0.5">{game.description}</p>
         </div>
       </Link>
-      <div className="flex flex-col items-center justify-center gap-1 px-3 border-l border-stone-100 dark:border-stone-800 shrink-0">
+      <div className="flex flex-col items-center justify-center gap-1 px-3 border-l border-border shrink-0">
         <HowToPlayModal
           title={game.rulesTitle}
           items={game.rules}
@@ -137,9 +138,9 @@ function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submit
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen bg-zinc-50 dark:bg-stone-950 px-4 py-12">
-      <h1 className="text-3xl font-bold text-stone-800 dark:text-stone-100 mb-2">Leksarxeia</h1>
-      <p className="text-stone-500 dark:text-stone-400 text-sm mb-10">Επίλεξε παιχνίδι για να ξεκινήσεις</p>
+    <div className="flex flex-col items-center justify-start min-h-screen bg-background px-4 py-12">
+      <h1 className="text-3xl font-bold text-foreground mb-2">{PLATFORM_NAME}</h1>
+      <p className="text-muted text-sm mb-10">Επίλεξε παιχνίδι για να ξεκινήσεις</p>
 
       <ul className="w-full max-w-sm space-y-4">
         {gameList.map((game) => (
@@ -160,9 +161,9 @@ export default function HomePage() {
       </ul>
 
       <div className="w-full max-w-sm mt-8 mb-4 flex items-center gap-3">
-        <hr className="flex-1 border-stone-200 dark:border-stone-800" />
-        <span className="text-xs font-semibold text-stone-400 dark:text-stone-500 uppercase tracking-widest">Κοινότητα</span>
-        <hr className="flex-1 border-stone-200 dark:border-stone-800" />
+        <hr className="flex-1 border-border" />
+        <span className="text-xs font-semibold text-muted uppercase tracking-widest">Κοινότητα</span>
+        <hr className="flex-1 border-border" />
       </div>
 
       <ul className="w-full max-w-sm space-y-4">

@@ -24,24 +24,11 @@ export interface LeksokiposPuzzle {
 
 // ─── Scoring & Ranks ─────────────────────────────────────────────────────────
 
-/** Player rank thresholds, ordered from lowest to highest.
- *  Ranks are calculated as a percentage of the maximum possible score. */
-export type RankName =
-  | "Σπόρος"
-  | "Βλαστός"
-  | "Μπουμπούκι"
-  | "Άνοιγμα"
-  | "Ανθισμένο"
-  | "Θαυμαστό"
-  | "Ευφυΐα"
-  | "Άνθος";
-
-/** A rank definition with its minimum score percentage threshold */
-export interface Rank {
-  name: RankName;
-  /** Minimum percentage of total possible score required to reach this rank (0–100) */
-  threshold: number;
-}
+// Rank names live in lib/ranking.ts (the RANKS ladder — the single source of
+// truth). RankName and Rank are derived there; imported here for local use
+// below and re-exported so existing import sites keep working.
+import type { RankName, Rank } from "./lib/ranking";
+export type { RankName, Rank };
 
 // ─── Word Validation ─────────────────────────────────────────────────────────
 

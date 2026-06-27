@@ -6,7 +6,10 @@ interface CategoryRevealProps {
   group: LeksindeseisGroup;
 }
 
-// Difficulty colours (1=amber, 2=green, 3=blue, 4=purple)
+// Difficulty colours (1=amber, 2=green, 3=blue, 4=purple).
+// INTENTIONAL fixed palette (ADR 0008 exception): these encode the four
+// difficulty tiers as a meaningful colour scale, not theme surfaces — they are
+// the same in light and dark by design, so they are not semantic tokens.
 const DIFFICULTY_CLASSES: Record<number, string> = {
   1: "bg-amber-300  text-amber-900",
   2: "bg-green-400  text-green-900",
@@ -15,7 +18,7 @@ const DIFFICULTY_CLASSES: Record<number, string> = {
 };
 
 export function CategoryReveal({ group }: CategoryRevealProps) {
-  const colours = DIFFICULTY_CLASSES[group.difficulty] ?? "bg-stone-300 text-stone-800";
+  const colours = DIFFICULTY_CLASSES[group.difficulty] ?? "bg-border text-foreground";
 
   return (
     <div

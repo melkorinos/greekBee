@@ -23,13 +23,13 @@ export function VresTinFrasiPageClient({
     <>
       {/* Header row */}
       <div className="flex items-center justify-between w-full max-w-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-stone-800 dark:text-stone-100">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
           💬 Vres Tin Frasi
         </h1>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setLbOpen(true)}
-            className="text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100 transition-colors text-xl"
+            className="text-muted hover:text-foreground transition-colors text-trophy"
             aria-label="Πίνακας σκορ"
             title="Πίνακας σκορ"
           >
@@ -39,11 +39,11 @@ export function VresTinFrasiPageClient({
             <button
               onClick={() => setHtpOpen(true)}
               aria-label="Πώς να παίξεις"
-              className="w-8 h-8 flex items-center justify-center rounded-full border border-stone-300 dark:border-stone-700 text-stone-600 dark:text-stone-400 text-sm font-bold hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-full border border-border text-muted text-sm font-bold hover:bg-surface-raised transition-colors"
             >
               ?
             </button>
-            <div className="pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-stone-800 px-2.5 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-10">
+            <div className="pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-inverted px-2.5 py-1 text-xs text-inverted-foreground opacity-0 group-hover:opacity-100 transition-opacity z-10">
               Κανόνες
             </div>
           </div>

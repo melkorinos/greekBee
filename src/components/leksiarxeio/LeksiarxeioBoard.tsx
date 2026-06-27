@@ -136,17 +136,17 @@ function LengthPanel({
         <div className="flex items-center gap-4">
           <button
             onClick={onPrev}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-stone-200 hover:bg-stone-300 text-stone-800 dark:bg-stone-700 dark:hover:bg-stone-600 dark:text-stone-100 text-lg font-bold transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-border hover:opacity-80 text-foreground text-lg font-bold transition-opacity"
             aria-label="Μικρότερο μήκος"
           >
             −
           </button>
-          <span className="text-stone-800 dark:text-stone-100 font-bold text-lg w-6 text-center tabular-nums">
+          <span className="text-foreground font-bold text-lg w-6 text-center tabular-nums">
             {activeLength}
           </span>
           <button
             onClick={onNext}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-stone-200 hover:bg-stone-300 text-stone-800 dark:bg-stone-700 dark:hover:bg-stone-600 dark:text-stone-100 text-lg font-bold transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-border hover:opacity-80 text-foreground text-lg font-bold transition-opacity"
             aria-label="Μεγαλύτερο μήκος"
           >
             +

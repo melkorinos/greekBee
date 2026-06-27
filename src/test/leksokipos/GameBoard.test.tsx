@@ -6,6 +6,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 
 import { GameBoard } from "@/components/leksokipos/GameBoard";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
+import { RANKS } from "@/games/leksokipos/lib/ranking";
 import userEvent from "@testing-library/user-event";
 
 // GameBoard calls useDayChange → useRouter; provide a stub so it doesn't throw.
@@ -58,9 +59,9 @@ describe("GameBoard rendering", () => {
     expect(screen.getByTestId("btn-enter")).toBeInTheDocument();
   });
 
-  it("renders the score bar with Σπόρος rank at start", () => {
+  it("renders the score bar with the starting rank", () => {
     setup();
-    expect(screen.getByTestId("rank-label")).toHaveTextContent("Σπόρος");
+    expect(screen.getByTestId("rank-label")).toHaveTextContent(RANKS[0].name);
     expect(screen.getByTestId("score-label")).toHaveTextContent("0 pts");
   });
 

@@ -37,13 +37,13 @@ export default async function StavroleksoPuzzlePage({
   if (!puzzle || puzzle.status !== "approved") notFound();
 
   return (
-    <main className="flex flex-col items-center min-h-screen bg-zinc-50 dark:bg-stone-950 px-4 py-6">
+    <main className="flex flex-col items-center min-h-screen bg-background px-4 py-6">
       <div className="w-full max-w-sm space-y-3 mb-4">
-        <h1 className="text-xl font-bold text-stone-800 dark:text-stone-100">
+        <h1 className="text-xl font-bold text-foreground">
           {puzzle.title ?? `Stavrolekso #${puzzle.id}`}
         </h1>
         {puzzle.submitter_name && (
-          <p className="text-xs text-stone-400 dark:text-stone-500">από {puzzle.submitter_name}</p>
+          <p className="text-xs text-muted">από {puzzle.submitter_name}</p>
         )}
       </div>
 

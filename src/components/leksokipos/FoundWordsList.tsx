@@ -4,7 +4,7 @@
 // Pangrams are highlighted in yellow since they're a special achievement.
 // Optionally shows a "Παραίτηση" give-up button right-aligned in the heading row.
 
-import { btnGiveUp, foundWordClass, foundWordPangramClass } from "./styles";
+import { btnGiveUp, foundWordClass, foundWordPangramClass } from "@/styles/recipes";
 
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { isPangram } from "@/games/leksokipos/lib/pangram";
@@ -19,17 +19,18 @@ interface FoundWordsListProps {
   givenUp?: boolean;
 }
 
+// Component-local layout + text recipes (token-based; no dark: pairs needed).
 const styles = {
   container:   "w-full space-y-2",
   headingRow:  "flex items-center justify-between",
-  heading:     "text-sm font-semibold text-stone-500 tracking-wide",
-  count:       "text-stone-800 font-bold",
-  empty:       "text-sm text-stone-400 italic",
+  heading:     "text-sm font-semibold text-muted tracking-wide",
+  count:       "text-foreground font-bold",
+  empty:       "text-sm text-muted italic",
   list:        "flex flex-wrap gap-2 max-h-40 overflow-y-auto",
   confirmRow:  "flex items-center gap-2 justify-end",
-  confirmText: "text-xs text-stone-500",
-  confirmYes:  "text-xs font-semibold text-red-600 border border-red-300 rounded-full px-3 py-1 hover:bg-red-50 active:bg-red-100 transition-colors",
-  confirmNo:   "text-xs text-stone-500 border border-stone-200 rounded-full px-3 py-1 hover:bg-stone-100 transition-colors",
+  confirmText: "text-xs text-muted",
+  confirmYes:  "text-xs font-semibold text-danger border border-danger/40 rounded-full px-3 py-1 hover:bg-danger/10 active:bg-danger/20 transition-colors",
+  confirmNo:   "text-xs text-muted border border-border rounded-full px-3 py-1 hover:bg-surface-raised transition-colors",
 };
 
 export function FoundWordsList({ words, puzzle, onGiveUp, givenUp }: FoundWordsListProps) {

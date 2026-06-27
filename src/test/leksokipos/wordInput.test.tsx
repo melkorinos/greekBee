@@ -32,10 +32,10 @@ describe("WordInput — letter display", () => {
   it("applies centre-letter style to tiles matching the centre", () => {
     render(<WordInput value="παιντ" centerLetter="α" />);
     const tiles = screen.getAllByTestId("word-input-letter");
-    // 'α' is index 1 — should have yellow class
-    expect(tiles[1].className).toContain("yellow");
+    // 'α' is index 1 — should have the centre-letter accent token
+    expect(tiles[1].className).toContain("text-accent");
     // others should not
-    expect(tiles[0].className).not.toContain("yellow");
+    expect(tiles[0].className).not.toContain("text-accent");
   });
 });
 

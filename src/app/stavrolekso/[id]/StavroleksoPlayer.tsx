@@ -156,9 +156,9 @@ export function StavroleksoPlayer({ id, puzzle }: Props) {
   return (
     <div className="w-full max-w-sm space-y-4">
       {/* Progress */}
-      <div className="flex items-center justify-between text-xs text-stone-400 dark:text-stone-500">
+      <div className="flex items-center justify-between text-xs text-muted">
         <span>{solvedCount}/{totalSlots} slots λυμένα</span>
-        {isComplete && <span className="text-green-600 dark:text-green-400 font-semibold">✓ Ολοκληρώθηκε!</span>}
+        {isComplete && <span className="text-correct font-semibold">✓ Ολοκληρώθηκε!</span>}
       </div>
 
       {/* Grid */}
@@ -178,19 +178,19 @@ export function StavroleksoPlayer({ id, puzzle }: Props) {
 
       {/* Clue panel */}
       {selectedSlotDef ? (
-        <div className="border border-stone-200 dark:border-stone-700 rounded-xl p-4 space-y-1">
-          <p className="text-xs font-semibold text-stone-400 dark:text-stone-500">
+        <div className="border border-border rounded-xl p-4 space-y-1">
+          <p className="text-xs font-semibold text-muted">
             {selectedSlotDef.number} {selectedSlotDef.direction === "across" ? "Οριζόντια" : "Κάθετα"} ({slotLen} γράμμ.)
           </p>
-          <p className="text-sm text-stone-800 dark:text-stone-100">
+          <p className="text-sm text-foreground">
             {selectedSlotDef.clue || <span className="italic text-stone-400">Χωρίς υπόδειξη</span>}
           </p>
           {solvedSlots.includes(selectedSlotDef.number) && (
-            <p className="text-xs text-green-600 dark:text-green-400 font-semibold">✓ Σωστό!</p>
+            <p className="text-xs text-correct font-semibold">✓ Σωστό!</p>
           )}
         </div>
       ) : (
-        <p className="text-sm text-stone-400 dark:text-stone-500 text-center">
+        <p className="text-sm text-muted text-center">
           Πάτησε ένα κελί για να επιλέξεις slot.
         </p>
       )}
@@ -199,7 +199,7 @@ export function StavroleksoPlayer({ id, puzzle }: Props) {
       <div className="grid grid-cols-2 gap-3">
         {(["across", "down"] as const).map((dir) => (
           <div key={dir}>
-            <p className="text-xs font-semibold text-stone-500 dark:text-stone-400 mb-1">
+            <p className="text-xs font-semibold text-muted mb-1">
               {dir === "across" ? "Οριζόντια" : "Κάθετα"}
             </p>
             <ul className="space-y-1">
@@ -213,10 +213,10 @@ export function StavroleksoPlayer({ id, puzzle }: Props) {
                     }}
                     className={`text-left text-xs w-full px-1 py-0.5 rounded transition-colors ${
                       selectedSlot?.number === s.number && selectedSlot?.direction === s.direction
-                        ? "bg-blue-100 dark:bg-blue-900 text-stone-900 dark:text-stone-100"
+                        ? "bg-blue-100 dark:bg-blue-900 text-foreground"
                         : solvedSlots.includes(s.number)
-                          ? "text-green-600 dark:text-green-400 line-through"
-                          : "text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800"
+                          ? "text-correct line-through"
+                          : "text-muted hover:bg-surface-raised"
                     }`}
                   >
                     <span className="font-semibold">{s.number}.</span> {s.clue || "—"}

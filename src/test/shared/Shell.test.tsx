@@ -35,11 +35,11 @@ describe("Shell rendering", () => {
     expect(screen.getByRole("link", { name: /leksarxeia/i })).toBeInTheDocument();
   });
 
-  it("header has light bg-white background", () => {
+  it("header has the surface background token", () => {
     setup();
     const header = document.querySelector("header");
     expect(header).not.toBeNull();
-    expect(header!.className).toContain("bg-white");
+    expect(header!.className).toContain("bg-surface");
   });
 
   it("renders the hamburger button", () => {

@@ -29,13 +29,13 @@ export function LeksiarxeioPageClient({ puzzles, wordLists, today }: Leksiarxeio
   return (
     <>
       <div className="flex items-center justify-between w-full max-w-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-stone-800 dark:text-stone-100">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
           ✏️ Leksiarxeio
         </h1>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setLbOpen(true)}
-            className="text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100 transition-colors text-xl"
+            className="text-muted hover:text-foreground transition-colors text-trophy"
             aria-label="Πίνακας σκορ"
             title="Πίνακας σκορ"
           >

@@ -1,7 +1,7 @@
-﻿// theme.test.tsx — light-theme class assertions for Leksiarxeio Tile and Keyboard.
+﻿// theme.test.tsx — semantic-token class assertions for Leksiarxeio Tile and Keyboard.
 // Renders each component in isolation (no game state needed) and confirms the
-// unconditional light-mode classes are present. Dark variants (dark:*) are not
-// asserted here — they activate only when .dark is on <html> (see ADR 0002).
+// expected design tokens are applied (ADR 0008). Light/dark flips come from the
+// tokens in globals.css, so components carry no dark:* variants.
 
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -12,28 +12,28 @@ import { Tile } from "@/components/leksiarxeio/Tile";
 // ── Tile ──────────────────────────────────────────────────────────────────────
 
 describe("Tile light theme classes", () => {
-  it('empty tile has border-stone-300 (light border)', () => {
+  it('empty tile has border-border token', () => {
     const { container } = render(<Tile state="empty" />);
     const div = container.firstElementChild as HTMLElement;
-    expect(div.className).toContain("border-stone-300");
+    expect(div.className).toContain("border-border");
   });
 
-  it('empty tile has text-stone-800 (dark foreground on white bg)', () => {
+  it('empty tile has text-foreground token', () => {
     const { container } = render(<Tile state="empty" />);
     const div = container.firstElementChild as HTMLElement;
-    expect(div.className).toContain("text-stone-800");
+    expect(div.className).toContain("text-foreground");
   });
 
-  it('pending tile has border-stone-500', () => {
+  it('pending tile has border-muted token', () => {
     const { container } = render(<Tile state="pending" letter="α" />);
     const div = container.firstElementChild as HTMLElement;
-    expect(div.className).toContain("border-stone-500");
+    expect(div.className).toContain("border-muted");
   });
 
-  it('correct tile has bg-green-600', () => {
+  it('correct tile has bg-correct token', () => {
     const { container } = render(<Tile state="correct" letter="α" />);
     const div = container.firstElementChild as HTMLElement;
-    expect(div.className).toContain("bg-green-600");
+    expect(div.className).toContain("bg-correct");
   });
 });
 
@@ -43,7 +43,7 @@ describe("Keyboard light theme classes", () => {
   const noop = () => {};
   const emptyStates = {};
 
-  it("unknown key has bg-stone-200 (light key background)", () => {
+  it("unknown key has bg-border token", () => {
     render(
       <Keyboard
         letterStates={emptyStates}
@@ -56,10 +56,10 @@ describe("Keyboard light theme classes", () => {
     const buttons = screen.getAllByRole("button");
     const letterButton = buttons.find((b) => b.textContent && b.textContent.trim().length === 1);
     expect(letterButton).toBeDefined();
-    expect(letterButton!.className).toContain("bg-stone-200");
+    expect(letterButton!.className).toContain("bg-border");
   });
 
-  it("unknown key has text-stone-800", () => {
+  it("unknown key has text-foreground token", () => {
     render(
       <Keyboard
         letterStates={emptyStates}
@@ -70,10 +70,10 @@ describe("Keyboard light theme classes", () => {
     );
     const buttons = screen.getAllByRole("button");
     const letterButton = buttons.find((b) => b.textContent && b.textContent.trim().length === 1);
-    expect(letterButton!.className).toContain("text-stone-800");
+    expect(letterButton!.className).toContain("text-foreground");
   });
 
-  it("correct key has bg-green-600", () => {
+  it("correct key has bg-correct token", () => {
     const { container } = render(
       <Keyboard
         letterStates={{ α: "correct" }}
@@ -84,7 +84,7 @@ describe("Keyboard light theme classes", () => {
     );
     const alphaButton = container.querySelector('[data-testid="key-α"]') as HTMLElement;
     expect(alphaButton).not.toBeNull();
-    expect(alphaButton.className).toContain("bg-green-600");
+    expect(alphaButton.className).toContain("bg-correct");
   });
 });
 // ── Keyboard responsive layout ───────────────────────────────────────────────

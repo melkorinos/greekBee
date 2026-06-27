@@ -68,17 +68,17 @@ export function NominationCard({
   return (
     <tr
       data-testid="nomination-card"
-      className="border-b border-stone-100 dark:border-stone-800 last:border-0 align-top"
+      className="border-b border-border last:border-0 align-top"
     >
-      <td className="py-3 pr-4 font-bold text-stone-800 dark:text-stone-100 uppercase tracking-wide whitespace-nowrap">
+      <td className="py-3 pr-4 font-bold text-foreground uppercase tracking-wide whitespace-nowrap">
         {nomination.word}
       </td>
 
-      <td className="py-3 pr-4 text-xs text-stone-400 dark:text-stone-500 whitespace-nowrap">
+      <td className="py-3 pr-4 text-xs text-muted whitespace-nowrap">
         {nomination.player_name ?? "—"}
       </td>
 
-      <td className="py-3 pr-4 text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
+      <td className="py-3 pr-4 text-sm text-muted leading-relaxed">
         {nomination.note ?? ""}
       </td>
 
@@ -92,8 +92,8 @@ export function NominationCard({
             className={[
               "flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full transition-colors",
               currentVote === "up"
-                ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300"
-                : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-green-100 dark:hover:bg-green-900 hover:text-green-700 dark:hover:text-green-300",
+                ? "bg-correct/15 text-correct"
+                : "bg-surface-raised text-muted hover:bg-correct/15 hover:text-correct",
             ].join(" ")}
           >
             ▲ {nomination.upvote_count}
@@ -106,8 +106,8 @@ export function NominationCard({
             className={[
               "flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-full transition-colors",
               currentVote === "down"
-                ? "bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300"
-                : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-red-100 dark:hover:bg-red-900 hover:text-red-600 dark:hover:text-red-300",
+                ? "bg-danger/15 text-danger"
+                : "bg-surface-raised text-muted hover:bg-danger/15 hover:text-danger",
             ].join(" ")}
           >
             ▼ {nomination.downvote_count}

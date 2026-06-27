@@ -59,7 +59,7 @@ export default function AuthCallbackPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4 text-stone-700 dark:text-stone-300">
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 text-foreground">
         <p className="text-sm">{error}</p>
         <Link href="/" className="text-xs underline text-stone-500">Επιστροφή στην αρχική</Link>
       </div>

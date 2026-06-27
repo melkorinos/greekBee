@@ -35,7 +35,7 @@ export function HowToPlayModal({
 
   const triggerClass = lightTrigger
     ? "w-8 h-8 flex items-center justify-center rounded-full border border-stone-600 text-stone-300 text-sm font-bold hover:bg-stone-700 transition-colors"
-    : "w-8 h-8 flex items-center justify-center rounded-full border border-stone-300 dark:border-stone-700 text-stone-600 dark:text-stone-400 text-sm font-bold hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors";
+    : "w-8 h-8 flex items-center justify-center rounded-full border border-border text-muted text-sm font-bold hover:bg-surface-raised transition-colors";
 
   return (
     <>
@@ -60,20 +60,20 @@ export function HowToPlayModal({
           onClick={() => setOpen(false)}
         >
           <div
-            className="bg-white dark:bg-stone-900 rounded-2xl shadow-xl w-full max-w-sm p-6 relative overflow-hidden"
+            className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6 relative overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={() => setOpen(false)}
               aria-label="Close"
-              className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300 text-xl leading-none"
+              className="absolute top-4 right-4 text-muted hover:text-foreground text-xl leading-none"
             >
               ✕
             </button>
 
-            <h2 className="text-lg font-bold text-stone-800 dark:text-stone-100 mb-3">{title}</h2>
+            <h2 className="text-lg font-bold text-foreground mb-3">{title}</h2>
 
-            <ul className="space-y-2 text-sm text-stone-700 dark:text-stone-300 overflow-y-auto max-h-[70dvh]">
+            <ul className="space-y-2 text-sm text-foreground overflow-y-auto max-h-[70dvh]">
               {items.map((item, i) => (
                 <li key={i} className="flex gap-2">
                   <span className="mt-0.5 shrink-0">{bulletIcon}</span>

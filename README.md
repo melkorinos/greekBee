@@ -134,7 +134,7 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
    - The resolved `Puzzle` object is passed as a prop to `<GameBoard>`.
 
 2. **State initialisation** (`src/games/leksokipos/hooks/gameReducer.ts → buildInitialState`)
-   - A clean `GameState` is built: empty input, zero score, Σπόρος rank.
+   - A clean `GameState` is built: empty input, zero score, lowest rank (`RANKS[0]`).
    - `puzzleMaxScore` is computed once here (see Scoring below) and stored in state so it never needs to be recalculated.
 
 3. **Client rehydration** (`src/games/leksokipos/hooks/useGameState.ts`)
@@ -160,16 +160,16 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
 7. **Rank calculation** (`src/games/leksokipos/lib/ranking.ts`)
    - Score is compared against thresholds as a % of `maxScore`:
 
-   | Rank        | Threshold |
-   |-------------|-----------|
-   | Σπόρος      | 0%        |
-   | Βλαστός     | 6%        |
-   | Μπουμπούκι  | 12%       |
-   | Άνοιγμα     | 20%       |
-   | Ανθισμένο   | 30%       |
-   | Θαυμαστό    | 42%       |
-   | Ευφυΐα      | 55%       |
-   | Άνθος       | 80%       |
+   | Rank         | Threshold |
+   |--------------|-----------|
+   | Ψαράκι       | 0%        |
+   | Έτσι κι έτσι | 6%        |
+   | Οκέι         | 12%       |
+   | Για πάμε     | 20%       |
+   | Τζάμι        | 30%       |
+   | Θηρίο        | 42%       |
+   | Γκουρού      | 55%       |
+   | Απολυτότητα  | 80%       |
 
    `rankProgress()` (pure function) derives the progress-bar fill, points-to-next and the full ladder for the UI — keeping all rank display logic out of React components.
 

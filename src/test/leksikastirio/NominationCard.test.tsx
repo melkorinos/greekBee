@@ -75,26 +75,27 @@ describe("NominationCard — rendering", () => {
 
 // ── Vote highlight state ──────────────────────────────────────────────────────
 // Active state uses bg-green-100 / bg-red-100 (no hover: prefix).
-// Inactive state uses bg-stone-100 with hover:bg-green-100 / hover:bg-red-100.
-// We check bg-stone-100 (inactive) vs its absence (active) to avoid matching hover classes.
+// Inactive state uses the bg-surface-raised token; active uses bg-correct/15 (up)
+// or bg-danger/15 (down). We check bg-surface-raised (inactive) vs its absence
+// (active) to avoid matching hover classes.
 
 describe("NominationCard — vote highlight", () => {
   it("neither button is highlighted when currentVote is null", () => {
     setup({ currentVote: null });
-    expect(screen.getByTestId("vote-up-button").className).toContain("bg-stone-100");
-    expect(screen.getByTestId("vote-down-button").className).toContain("bg-stone-100");
+    expect(screen.getByTestId("vote-up-button").className).toContain("bg-surface-raised");
+    expect(screen.getByTestId("vote-down-button").className).toContain("bg-surface-raised");
   });
 
   it("upvote button is highlighted when currentVote is 'up'", () => {
     setup({ currentVote: "up" });
-    expect(screen.getByTestId("vote-up-button").className).not.toContain("bg-stone-100");
-    expect(screen.getByTestId("vote-down-button").className).toContain("bg-stone-100");
+    expect(screen.getByTestId("vote-up-button").className).not.toContain("bg-surface-raised");
+    expect(screen.getByTestId("vote-down-button").className).toContain("bg-surface-raised");
   });
 
   it("downvote button is highlighted when currentVote is 'down'", () => {
     setup({ currentVote: "down" });
-    expect(screen.getByTestId("vote-down-button").className).not.toContain("bg-stone-100");
-    expect(screen.getByTestId("vote-up-button").className).toContain("bg-stone-100");
+    expect(screen.getByTestId("vote-down-button").className).not.toContain("bg-surface-raised");
+    expect(screen.getByTestId("vote-up-button").className).toContain("bg-surface-raised");
   });
 });
 

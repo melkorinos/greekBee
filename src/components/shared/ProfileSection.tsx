@@ -11,7 +11,7 @@
 //
 // When authLinked=true: TransferCode block is replaced with Google account indicator + sign-out.
 
-import { btnPrimaryCompact, inputCompactClass, labelClass } from "@/components/leksokipos/styles";
+import { btnPrimaryCompact, inputCompactClass, labelClass } from "@/styles/recipes";
 import { useEffect, useState } from "react";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -141,7 +141,7 @@ export function ProfileSection({
       {/* ── AuthLinked — Google account connected ────────────────────────────── */}
       {authLinked && (
         <div className="flex items-center justify-between">
-          <span className="text-xs text-green-600 dark:text-green-400 font-semibold">
+          <span className="text-xs text-correct font-semibold">
             ✓ {authUserName ?? displayName ?? "Συνδεδεμένος"}
           </span>
           {onSignOut && (
@@ -161,7 +161,7 @@ export function ProfileSection({
           {onSignIn && (
             <button
               onClick={() => void onSignIn()}
-              className="w-full flex items-center justify-center gap-2 text-xs font-medium border border-stone-200 dark:border-stone-700 rounded-lg px-3 py-2 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors text-stone-700 dark:text-stone-300"
+              className="w-full flex items-center justify-center gap-2 text-xs font-medium border border-border rounded-lg px-3 py-2 hover:bg-surface-raised transition-colors text-foreground"
             >
               <GoogleIcon />
               Σύνδεση με Google
@@ -169,9 +169,9 @@ export function ProfileSection({
           )}
           {onSignIn && onSaveName && (
             <div className="flex items-center gap-2">
-              <hr className="flex-1 border-stone-200 dark:border-stone-700" />
-              <span className="text-xs text-stone-400 dark:text-stone-500 whitespace-nowrap">ή χρησιμοποίησε ψευδώνυμο</span>
-              <hr className="flex-1 border-stone-200 dark:border-stone-700" />
+              <hr className="flex-1 border-border" />
+              <span className="text-xs text-muted whitespace-nowrap">ή χρησιμοποίησε ψευδώνυμο</span>
+              <hr className="flex-1 border-border" />
             </div>
           )}
           {onSaveName && (
@@ -193,11 +193,11 @@ export function ProfileSection({
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMode("claiming")}
-              className="text-xs text-stone-500 underline underline-offset-2 hover:text-stone-800 dark:hover:text-stone-200 transition-colors"
+              className="text-xs text-stone-500 underline underline-offset-2 hover:text-foreground transition-colors"
             >
               Σύνδεση με κωδικό
             </button>
-            <span className="text-stone-300 dark:text-stone-600 select-none">|</span>
+            <span className="text-muted select-none">|</span>
             <button
               onClick={() => setMode("confirming")}
               className="text-xs text-stone-400 hover:text-red-500 transition-colors"
@@ -212,7 +212,7 @@ export function ProfileSection({
       {/* ── Claiming (enter transfer code) ───────────────────────────────────── */}
       {!authLinked && mode === "claiming" && (
         <div className="space-y-2">
-          <p className="text-xs text-stone-500 dark:text-stone-400">
+          <p className="text-xs text-muted">
             Άνοιξε τον πίνακα σκορ στην <strong>άλλη συσκευή</strong>, πάτα «Μεταφορά» και εισάγε τον κωδικό εδώ:
           </p>
           <input
@@ -247,7 +247,7 @@ export function ProfileSection({
       {/* ── Linked (ProfileLinked, no Google) ────────────────────────────────── */}
       {!authLinked && mode === "linked" && (
         <div className="flex items-center justify-between">
-          <span className="text-xs text-green-600 dark:text-green-400 font-semibold">
+          <span className="text-xs text-correct font-semibold">
             ✓ {displayName || "Ανώνυμος"}
           </span>
           <div className="flex items-center gap-3">
@@ -255,11 +255,11 @@ export function ProfileSection({
               onClick={() => void handleGenerate()}
               disabled={loading}
               title="Δημιούργησε κωδικό για να συνδεθείς από άλλη συσκευή"
-              className="text-xs text-stone-500 underline underline-offset-2 hover:text-stone-800 dark:hover:text-stone-200 transition-colors"
+              className="text-xs text-stone-500 underline underline-offset-2 hover:text-foreground transition-colors"
             >
               {loading ? "…" : "Μεταφορά σε άλλη συσκευή"}
             </button>
-            <span className="text-stone-300 dark:text-stone-600 select-none">|</span>
+            <span className="text-muted select-none">|</span>
             <button
               onClick={() => setMode("confirming")}
               className="text-xs text-stone-400 hover:text-red-500 transition-colors"
@@ -273,24 +273,24 @@ export function ProfileSection({
       {/* ── Transferring (show generated code) ───────────────────────────────── */}
       {!authLinked && mode === "transferring" && (
         <div className="space-y-2">
-          <p className="text-xs text-stone-500 dark:text-stone-400">
+          <p className="text-xs text-muted">
             Ο κωδικός μεταφοράς σου:
           </p>
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-mono font-bold tracking-[0.25em] text-stone-900 dark:text-stone-100 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg px-3 py-1.5">
+            <span className="text-2xl font-mono font-bold tracking-[0.25em] text-foreground bg-surface-raised border border-border rounded-lg px-3 py-1.5">
               {transferCode}
             </span>
             <button
               onClick={() => void handleCopy()}
-              className="text-xs text-stone-500 border border-stone-200 dark:border-stone-700 rounded px-2 py-1 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+              className="text-xs text-stone-500 border border-border rounded px-2 py-1 hover:bg-surface-raised transition-colors"
             >
               {copied ? "✓ Αντιγράφηκε" : "Αντιγραφή"}
             </button>
           </div>
-          <p className="text-xs text-stone-500 dark:text-stone-400">
+          <p className="text-xs text-muted">
             Στη <strong>νέα συσκευή</strong>: άνοιξε τον πίνακα σκορ → «Σύνδεση με κωδικό» → εισάγε τον κωδικό.
           </p>
-          <p className="text-xs text-stone-400 dark:text-stone-500">Ισχύει για 24 ώρες · μία χρήση.</p>
+          <p className="text-xs text-muted">Ισχύει για 24 ώρες · μία χρήση.</p>
           <button
             onClick={() => setMode("linked")}
             className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
@@ -314,7 +314,7 @@ export function ProfileSection({
           <button
             data-testid="btn-disconnect-cancel"
             onClick={() => setMode(profileLinked ? "linked" : "idle")}
-            className="text-xs text-stone-500 border border-stone-200 dark:border-stone-700 rounded-full px-3 py-1 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+            className="text-xs text-stone-500 border border-border rounded-full px-3 py-1 hover:bg-surface-raised transition-colors"
           >
             Άκυρο
           </button>

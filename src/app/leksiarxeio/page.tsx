@@ -17,9 +17,9 @@ export default async function LeksiarxeioPage() {
   ) as Record<LeksiarxeioLength, string[]>;
 
   return (
-    <main className="flex flex-1 flex-col items-center gap-2 px-4 pt-4 bg-white dark:bg-stone-950 text-stone-900 dark:text-stone-100">
+    <main className="flex flex-1 flex-col items-center gap-2 px-4 pt-4 bg-background text-foreground">
       {submitter_name && (
-        <p className="text-xs text-stone-400 dark:text-stone-500 self-center">
+        <p className="text-xs text-muted self-center">
           Παζλ από {submitter_name}
         </p>
       )}

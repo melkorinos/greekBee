@@ -73,8 +73,8 @@ export function ConnectionsLeaderboardModal({
       buildUrl={buildUrl}
       scoreLabel="Σκορ"
       formatScore={(n) => `${n}/4`}
-      pillActive="bg-purple-500 text-white"
-      playerMark="text-purple-600 dark:text-purple-400"
+      pillActive="bg-misplaced text-white"
+      playerMark="text-misplaced"
       showNameEditor={true}
       saveButtonAlwaysActive={!profileLinked}
       topSlot={

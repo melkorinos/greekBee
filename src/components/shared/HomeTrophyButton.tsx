@@ -78,7 +78,7 @@ export function HomeTrophyButton({ gameId }: HomeTrophyButtonProps) {
         onClick={() => setIsOpen(true)}
         aria-label="Πίνακας Σκορ"
         title="Πίνακας Σκορ"
-        className="p-1.5 rounded-lg text-stone-400 hover:text-amber-500 dark:text-stone-500 dark:hover:text-amber-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors text-base leading-none"
+        className="p-1.5 rounded-lg text-muted hover:text-accent hover:bg-surface-raised transition-colors text-base leading-none"
       >
         🏆
       </button>

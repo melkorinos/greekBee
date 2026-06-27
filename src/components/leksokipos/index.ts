@@ -7,4 +7,4 @@ export { GameBoard } from "./GameBoard";
 export { HowToPlayModal } from "./HowToPlayModal";
 export { NewPuzzleButton } from "./NewPuzzleButton";
 export { LeaderboardModal } from "./LeaderboardModal";
-export * from "./styles";
+export * from "@/styles/recipes";

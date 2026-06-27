@@ -16,11 +16,11 @@ interface TileProps {
 }
 
 const STATE_CLASSES: Record<TileState, string> = {
-  correct: "bg-green-600  border-green-600  text-white",
-  present: "bg-yellow-500 border-yellow-500 text-white",
-  absent:  "bg-stone-500  border-stone-500  text-white",
-  empty:   "bg-transparent border-stone-300 text-stone-800 dark:border-stone-600 dark:text-stone-100",
-  pending: "bg-transparent border-stone-500 text-stone-800 dark:border-stone-400 dark:text-stone-100",
+  correct: "bg-correct  border-correct  text-white",
+  present: "bg-present  border-present  text-white",
+  absent:  "bg-absent   border-absent   text-white",
+  empty:   "bg-transparent border-border text-foreground",
+  pending: "bg-transparent border-muted  text-foreground",
 };
 
 export function Tile({

@@ -5,6 +5,7 @@
 // hamburger button that opens a slide-out drawer listing all available games.
 
 import { GAME_REGISTRY } from "@/config/games";
+import { PLATFORM_NAME } from "@/config/platform";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
@@ -66,13 +67,13 @@ export function Shell({ children }: ShellProps) {
   return (
     <div className="min-h-screen flex flex-col">
       {/* ── Sticky header ─────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 w-full border-b border-stone-200 bg-white dark:bg-stone-900 dark:border-stone-800 px-4 py-3">
+      <header className="sticky top-0 z-30 w-full border-b border-border bg-surface px-4 py-3">
         <div className="flex items-center justify-between max-w-sm mx-auto">
           <Link
             href="/"
-            className="text-sm font-semibold text-stone-700 hover:text-stone-900 dark:text-stone-300 dark:hover:text-stone-100 transition-colors"
+            className="text-sm font-semibold text-foreground hover:opacity-80 transition-colors"
           >
-            🎮 Leksarxeia
+            🎮 {PLATFORM_NAME}
           </Link>
 
           <div className="flex items-center gap-1">
@@ -80,7 +81,7 @@ export function Shell({ children }: ShellProps) {
             <button
               onClick={toggle}
               aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              className="flex items-center justify-center w-9 h-9 rounded-full text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800 active:bg-stone-200 dark:active:bg-stone-700 transition-colors"
+              className="flex items-center justify-center w-9 h-9 rounded-full text-muted hover:bg-surface-raised active:bg-border transition-colors"
             >
               {theme === "dark" ? "☀️" : "🌙"}
             </button>
@@ -90,7 +91,7 @@ export function Shell({ children }: ShellProps) {
               onClick={() => setDrawerOpen((v) => !v)}
               aria-label={drawerOpen ? "Close menu" : "Open menu"}
               aria-expanded={drawerOpen}
-              className="flex items-center justify-center w-9 h-9 rounded-full text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800 active:bg-stone-200 dark:active:bg-stone-700 transition-colors"
+              className="flex items-center justify-center w-9 h-9 rounded-full text-muted hover:bg-surface-raised active:bg-border transition-colors"
             >
               <HamburgerIcon open={drawerOpen} />
             </button>

@@ -24,27 +24,27 @@ export default async function LeksindeseisPage() {
   const { puzzle, submitter_name } = await getTodaysLeksindeseisPuzzle(today);
 
   return (
-    <main className="flex flex-col items-center min-h-screen bg-zinc-50 dark:bg-stone-950 px-4 py-6">
+    <main className="flex flex-col items-center min-h-screen bg-background px-4 py-6">
       <div className="flex items-center justify-between w-full max-w-sm mb-1">
-        <h1 className="text-2xl font-bold text-stone-800 dark:text-stone-100">🔗 Leksindeseis</h1>
+        <h1 className="text-2xl font-bold text-foreground">🔗 Leksindeseis</h1>
         <HowToPlayModal
           title="Πώς να παίξεις — Leksindeseis"
           items={CONNECTIONS_RULES}
           bulletIcon="🔗"
         />
       </div>
-      <p className="text-stone-500 dark:text-stone-400 text-xs mb-1 self-start max-w-sm">
+      <p className="text-muted text-xs mb-1 self-start max-w-sm">
         Ομαδοποίησε 16 λέξεις σε 4 κατηγορίες των 4
       </p>
       {submitter_name && (
-        <p className="text-xs text-stone-400 dark:text-stone-500 self-start max-w-sm mb-5">
+        <p className="text-xs text-muted self-start max-w-sm mb-5">
           Παζλ από {submitter_name}
         </p>
       )}
       {puzzle ? (
         <ConnectionsBoard puzzle={puzzle} />
       ) : (
-        <p className="text-stone-500 dark:text-stone-400 text-sm mt-12">
+        <p className="text-muted text-sm mt-12">
           Δεν υπάρχει παζλ σήμερα.
         </p>
       )}

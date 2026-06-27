@@ -83,6 +83,11 @@ export function StavroleksoGrid({
         const isActive      = activeCellKey === key;
         const isWarned      = warnedCells?.has(key);
 
+        // INTENTIONAL fixed "paper" palette (ADR 0008 exception): the crossword
+        // grid stays a light paper sheet in BOTH themes (cells go white→stone-100,
+        // not white→dark-surface), so these are NOT semantic surface tokens. The
+        // solved/active/warn highlights are pale paper tints, deliberately distinct
+        // from the solid feedback tokens used by the Wordle-style games.
         let bg = "bg-white dark:bg-stone-100";
         if (isWarned)      bg = "bg-yellow-100 dark:bg-yellow-200";
         if (isSolved)      bg = "bg-green-200 dark:bg-green-300";
@@ -101,7 +106,7 @@ export function StavroleksoGrid({
                 {number}
               </span>
             )}
-            <span className="text-stone-900 dark:text-stone-900 font-bold leading-none"
+            <span className="text-stone-900 font-bold leading-none"
               style={{ fontSize: `clamp(8px, ${90 / width}cqw, 18px)` }}
             >
               {letter}

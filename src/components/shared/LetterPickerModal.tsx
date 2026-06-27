@@ -101,7 +101,7 @@ export function LetterPickerModal({
       data-testid="letter-picker-backdrop"
     >
       <div
-        className="bg-white dark:bg-stone-900 rounded-2xl shadow-xl w-full max-w-sm p-6 relative"
+        className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6 relative"
         onClick={(e) => e.stopPropagation()}
         data-testid="letter-picker-modal"
       >
@@ -109,23 +109,23 @@ export function LetterPickerModal({
         <button
           onClick={handleClose}
           aria-label="Close"
-          className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300 text-xl leading-none"
+          className="absolute top-4 right-4 text-muted hover:text-foreground text-xl leading-none"
           data-testid="letter-picker-close"
         >
           ✕
         </button>
 
-        <h2 className="text-lg font-bold text-stone-800 dark:text-stone-100 mb-1">Επιλογή Γραμμάτων</h2>
+        <h2 className="text-lg font-bold text-foreground mb-1">Επιλογή Γραμμάτων</h2>
 
         {/* Instructions */}
-        <p className="text-xs text-stone-500 dark:text-stone-400 mb-1 leading-relaxed">
+        <p className="text-xs text-muted mb-1 leading-relaxed">
           Επίλεξε <strong>7 γράμματα</strong>. Το πρώτο που θα πατήσεις γίνεται το{" "}
           <span className="text-yellow-600 font-semibold">κεντρικό (υποχρεωτικό)</span> γράμμα.
           Για να το αλλάξεις χρησιμοποίησε <strong>Επαναφορά</strong>.
         </p>
 
         {/* Progress */}
-        <p className="text-xs text-stone-400 dark:text-stone-500 mb-4 text-center" data-testid="letter-picker-count">
+        <p className="text-xs text-muted mb-4 text-center" data-testid="letter-picker-count">
           {selectedCount} / 7 γράμματα επιλεγμένα
         </p>
 
@@ -151,10 +151,10 @@ export function LetterPickerModal({
                       isCenter
                         ? "bg-yellow-400 border-yellow-400 text-white cursor-default"
                         : isOuter
-                        ? "bg-stone-700 border-stone-700 text-white hover:bg-stone-600 active:bg-stone-500 dark:bg-stone-500 dark:border-stone-500 dark:hover:bg-stone-400"
+                        ? "bg-inverted border-inverted text-inverted-foreground hover:opacity-90"
                         : isFull
-                        ? "bg-stone-100 border-stone-200 text-stone-300 cursor-not-allowed dark:bg-stone-800 dark:border-stone-700 dark:text-stone-600"
-                        : "bg-stone-200 border-stone-300 text-stone-700 hover:bg-stone-300 active:bg-stone-400 dark:bg-stone-700 dark:border-stone-700 dark:text-stone-100 dark:hover:bg-stone-600",
+                        ? "bg-surface-raised border-border text-muted cursor-not-allowed"
+                        : "bg-border border-border text-foreground hover:opacity-80",
                     ].join(" ")}
                   >
                     {letter.toUpperCase()}
@@ -170,14 +170,14 @@ export function LetterPickerModal({
           <button
             onClick={reset}
             data-testid="letter-picker-reset"
-            className="flex-1 py-2 rounded-xl border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-300 text-sm font-medium hover:bg-stone-50 dark:hover:bg-stone-800 active:bg-stone-100 transition-colors"
+            className="flex-1 py-2 rounded-xl border border-border text-muted text-sm font-medium hover:bg-surface-raised active:bg-stone-100 transition-colors"
           >
             Επαναφορά
           </button>
           <button
             onClick={handleRandom}
             data-testid="letter-picker-random"
-            className="flex-1 py-2 rounded-xl border border-stone-300 dark:border-stone-600 text-stone-600 dark:text-stone-300 text-sm font-medium hover:bg-stone-50 dark:hover:bg-stone-800 active:bg-stone-100 transition-colors"
+            className="flex-1 py-2 rounded-xl border border-border text-muted text-sm font-medium hover:bg-surface-raised active:bg-stone-100 transition-colors"
           >
             🎲 Τυχαίο
           </button>
@@ -196,7 +196,7 @@ export function LetterPickerModal({
               "flex-1 py-2 rounded-xl text-sm font-bold border transition-colors",
               canGenerate
                 ? "bg-yellow-400 border-yellow-400 text-white hover:bg-yellow-500 active:bg-yellow-600"
-                : "bg-stone-100 border-stone-200 text-stone-300 cursor-not-allowed dark:bg-stone-800 dark:border-stone-700 dark:text-stone-600",
+                : "bg-surface-raised border-border text-muted cursor-not-allowed",
             ].join(" ")}
           >
             Δημιουργία

@@ -2,7 +2,7 @@
 
 Status: needs-triage
 
-`maxScore()` in `src/games/leksokipos/lib/scoring.ts` hard-caps the ceiling at 500 pts (`MAX_SCORE_CAP`). This means puzzles with very large valid-word sets feel much easier than intended — a player can hit Άνθος with far fewer words found proportionally.
+`maxScore()` in `src/games/leksokipos/lib/scoring.ts` hard-caps the ceiling at 500 pts (`MAX_SCORE_CAP`). This means puzzles with very large valid-word sets feel much easier than intended — a player can hit the top rank with far fewer words found proportionally.
 
 ## Current behaviour
 

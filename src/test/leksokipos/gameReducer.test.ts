@@ -6,6 +6,7 @@ import { buildInitialState, gameReducer } from "@/games/leksokipos/hooks/gameRed
 import { describe, expect, it } from "vitest";
 
 import { maxScore } from "@/games/leksokipos/lib/scoring";
+import { RANKS } from "@/games/leksokipos/lib/ranking";
 
 // ── Shared test fixture ────────────────────────────────────────────────────────
 
@@ -38,9 +39,9 @@ describe("buildInitialState", () => {
     expect(s.puzzleMaxScore).toBeGreaterThan(0);
   });
 
-  it("starts at Σπόρος rank", () => {
+  it("starts at the lowest rank", () => {
     const s = freshState();
-    expect(s.currentRank).toBe("Σπόρος");
+    expect(s.currentRank).toBe(RANKS[0].name);
   });
 
   it("stores the puzzle on state", () => {
@@ -141,7 +142,7 @@ describe("SUBMIT_WORD — valid word", () => {
     for (const word of puzzle.validWords) {
       s = submitWord(word, s);
     }
-    expect(s.currentRank).not.toBe("Σπόρος");
+    expect(s.currentRank).not.toBe(RANKS[0].name);
   });
 
   it("records lastSubmission with status valid", () => {
@@ -220,7 +221,7 @@ describe("NEW_GAME", () => {
     expect(s.score).toBe(0);
     expect(s.foundWords).toHaveLength(0);
     expect(s.currentInput).toBe("");
-    expect(s.currentRank).toBe("Σπόρος");
+    expect(s.currentRank).toBe(RANKS[0].name);
     expect(s.puzzle.id).toBe("new-puzzle");
   });
 
@@ -240,12 +241,12 @@ describe("RESTORE_STATE", () => {
       saved: {
         foundWords: ["anti", "paid"],
         score: 2,
-        currentRank: "Βλαστός",
+        currentRank: RANKS[1].name,
       },
     });
     expect(s.foundWords).toEqual(["anti", "paid"]);
     expect(s.score).toBe(2);
-    expect(s.currentRank).toBe("Βλαστός");
+    expect(s.currentRank).toBe(RANKS[1].name);
   });
 
   it("preserves puzzleMaxScore from the initial state", () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { btnCancel, btnModalSubmit, inputClass, labelClass, labelOptionalClass } from "@/components/leksokipos/styles";
+import { btnCancel, btnModalSubmit, inputClass, labelClass, labelOptionalClass } from "@/styles/recipes";
 
 interface Props {
   isOpen:  boolean;
@@ -56,12 +56,12 @@ export function CommunityVresTinFrasiSubmitModal({ isOpen, onClose }: Props) {
   if (status === "success") {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={handleClose}>
-        <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
           <div className="text-center py-4">
             <p className="text-3xl mb-3">🙏</p>
-            <p className="font-semibold text-stone-800 dark:text-stone-100 mb-1">Ευχαριστούμε!</p>
-            <p className="text-sm text-stone-500 dark:text-stone-400">Η φράση σου στάλθηκε για έλεγχο.</p>
-            <button onClick={handleClose} className="mt-5 px-6 py-2 rounded-xl bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 text-sm font-semibold hover:bg-stone-700 dark:hover:bg-stone-100 transition-colors">
+            <p className="font-semibold text-foreground mb-1">Ευχαριστούμε!</p>
+            <p className="text-sm text-muted">Η φράση σου στάλθηκε για έλεγχο.</p>
+            <button onClick={handleClose} className="mt-5 px-6 py-2 rounded-xl bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 transition-opacity">
               Κλείσιμο
             </button>
           </div>
@@ -72,11 +72,11 @@ export function CommunityVresTinFrasiSubmitModal({ isOpen, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={handleClose}>
-      <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-xl w-full max-w-sm p-6 relative max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <button onClick={handleClose} aria-label="Close" className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300 text-xl leading-none">✕</button>
+      <div className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6 relative max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <button onClick={handleClose} aria-label="Close" className="absolute top-4 right-4 text-muted hover:text-foreground text-xl leading-none">✕</button>
 
-        <h2 className="text-lg font-bold text-stone-800 dark:text-stone-100 mb-1">Υποβολή Φράσης</h2>
-        <p className="text-xs text-stone-500 dark:text-stone-400 mb-5 leading-relaxed">
+        <h2 className="text-lg font-bold text-foreground mb-1">Υποβολή Φράσης</h2>
+        <p className="text-xs text-muted mb-5 leading-relaxed">
           Πρότεινε μια ελληνική φράση (3–4 λέξεις, κάθε λέξη 2–8 γράμματα).
           Θα γίνει το παζλ Vres Tin Frasi για μία ολόκληρη μέρα αν εγκριθεί.
         </p>
@@ -91,11 +91,11 @@ export function CommunityVresTinFrasiSubmitModal({ isOpen, onClose }: Props) {
               maxLength={60}
               className={inputClass}
             />
-            {errors.general && <p className="text-xs text-red-500 mt-1">{errors.general}</p>}
+            {errors.general && <p className="text-xs text-danger mt-1">{errors.general}</p>}
             {Object.entries(errors)
               .filter(([k]) => k !== "general")
               .map(([k, v]) => (
-                <p key={k} className="text-xs text-red-500 mt-1">{v}</p>
+                <p key={k} className="text-xs text-danger mt-1">{v}</p>
               ))}
           </div>
 
@@ -114,7 +114,7 @@ export function CommunityVresTinFrasiSubmitModal({ isOpen, onClose }: Props) {
         </div>
 
         {status === "error" && (
-          <p className="text-xs text-red-500 mt-2">Κάτι πήγε στραβά. Δοκίμασε ξανά.</p>
+          <p className="text-xs text-danger mt-2">Κάτι πήγε στραβά. Δοκίμασε ξανά.</p>
         )}
 
         <div className="flex gap-2 mt-5">
