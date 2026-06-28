@@ -1,4 +1,4 @@
-// GET /api/cleanup-scores — deletes game_scores and game_state rows older than SCORE_RETENTION_DAYS days.
+// GET /api/cleanup-scores — deletes game_scores, game_state, and transfer_codes rows older than SCORE_RETENTION_DAYS days.
 // Invoked daily by Vercel Cron (see vercel.json). Auth via CRON_SECRET env var,
 // which Vercel injects automatically in production.
 // Uses the Supabase service role key to bypass RLS on DELETE.
@@ -32,23 +32,26 @@ export async function GET(req: NextRequest) {
 
   const supabase = getServiceRoleClient();
 
-  const [scoresResult, stateResult] = await Promise.all([
+  const [scoresResult, stateResult, transferCodesResult] = await Promise.all([
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase.from("game_scores") as any).delete({ count: "exact" }).lt("puzzle_date", cutoffStr),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase.from("game_state") as any).delete({ count: "exact" }).lt("puzzle_date", cutoffStr),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase.from("transfer_codes") as any).delete({ count: "exact" }).lt("created_at", cutoffStr),
   ]);
 
-  if (scoresResult.error || stateResult.error) {
-    const msg = scoresResult.error?.message ?? stateResult.error?.message;
+  if (scoresResult.error || stateResult.error || transferCodesResult.error) {
+    const msg = scoresResult.error?.message ?? stateResult.error?.message ?? transferCodesResult.error?.message;
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 
   return NextResponse.json({
     cutoff,
     deleted: {
-      scores:    scoresResult.count ?? 0,
-      gameState: stateResult.count  ?? 0,
+      scores:         scoresResult.count       ?? 0,
+      gameState:      stateResult.count        ?? 0,
+      transferCodes:  transferCodesResult.count ?? 0,
     },
   });
 }

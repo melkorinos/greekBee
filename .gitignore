@@ -42,6 +42,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# local DB backups — never commit
+db-backups/
+
+# Supabase CLI temp files — never commit
+supabase/.temp/
+
 # word list source files — do NOT bundle with the app
 # words-el.json is committed (pre-normalised canonical list)
 # words-el.raw.json is committed (canonical accented source — 22 MB, not imported by the app)

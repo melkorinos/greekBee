@@ -1,8 +1,9 @@
 // rankDisplay.test.ts — rankProgress(): progress maths + stale-rank safety.
+//                       getRankEmoji(): emoji lookup + unknown-name guard.
 
 import { describe, expect, it } from "vitest";
 
-import { RANKS } from "@/games/leksokipos/lib/ranking";
+import { RANKS, getRankEmoji } from "@/games/leksokipos/lib/ranking";
 import { rankProgress } from "@/components/leksokipos/rankDisplay";
 
 describe("rankProgress", () => {
@@ -27,5 +28,23 @@ describe("rankProgress", () => {
     // Falls back to the lowest rank's progression; no row is marked active.
     expect(nextRank).toBe(RANKS[1].name);
     expect(ladder.some((r) => r.isActive)).toBe(false);
+  });
+});
+
+describe("getRankEmoji", () => {
+  it("returns the correct emoji for a known rank", () => {
+    expect(getRankEmoji("Ψαράκι")).toBe("🐟");
+    expect(getRankEmoji("Απολυτότητα")).toBe("💯");
+  });
+
+  it("returns empty string for an unknown/stale rank name", () => {
+    const stale = "Τζάμι" as unknown as (typeof RANKS)[number]["name"];
+    expect(getRankEmoji(stale)).toBe("");
+  });
+
+  it("every rank on the ladder has a non-empty emoji", () => {
+    for (const rank of RANKS) {
+      expect(getRankEmoji(rank.name)).not.toBe("");
+    }
   });
 });

@@ -24,9 +24,38 @@ import {
   lbTdScore,
 } from "@/styles/recipes";
 
+// ── URL builder factory ───────────────────────────────────────────────────────
+
+/**
+ * Creates a standard /api/game-scores URL builder for a given game.
+ * Pass { sort: "asc" } for games where lower score is better (e.g. VresTinFrasi).
+ */
+export function buildLeaderboardUrl(
+  gameId: string,
+  options?: { sort?: "asc" },
+): LeaderboardUrlBuilder {
+  return (date, deviceId) => {
+    const params = new URLSearchParams({ game_id: gameId, puzzle_date: date });
+    if (options?.sort) params.set("sort", options.sort);
+    if (deviceId) params.set("deviceId", deviceId);
+    return `/api/game-scores?${params.toString()}`;
+  };
+}
+
 // ── Day-label helpers ─────────────────────────────────────────────────────────
 
 const GREEK_DAYS = ["Κυρ", "Δευ", "Τρι", "Τετ", "Πεμ", "Παρ", "Σαβ"] as const;
+
+/** Returns the last `n` dates (newest-first) starting from `today` (YYYY-MM-DD). */
+export function getLast7Dates(today: string, n = 7): string[] {
+  const dates: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const d = new Date(today + "T00:00:00");
+    d.setDate(d.getDate() - i);
+    dates.push(d.toISOString().slice(0, 10));
+  }
+  return dates;
+}
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 

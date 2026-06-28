@@ -28,7 +28,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Community Puzzle** — A Puzzle submitted by a player, admin-approved, and queued as the Daily Puzzle for Leksiarxeio or Leksindeseis. Primary source for both games; static pools are fallback only. Carries optional `submitter_name` shown during play. Row is deleted immediately on consumption. (Not: curated puzzle — retired)
 
-**Community Puzzle Lifecycle** — The shared state machine behind every `/api/community-puzzles/*` route: submit → `pending` → approve (UPDATE status) or reject (DELETE row). One module (`src/lib/communityPuzzleLifecycle.ts`) owns auth, parsing, insert, list, and review; per-game variation (table, validation adapter, list shape, public approved list) enters as config declared in each game's route file. (Not: submission flow, community puzzle API)
+**Community Puzzle Lifecycle** — The shared state machine for every Community Puzzle: submit → `pending` → approve (UPDATE status) or reject (DELETE row) → **consume** (claim the oldest approved row when a game serves its Daily Puzzle, then DELETE it). One module (`src/lib/communityPuzzleLifecycle.ts`) owns all four transitions: auth, parsing, insert, list, and review back the `/api/community-puzzles/*` routes; `consumeApprovedPuzzle(table)` backs the three game data loaders (Leksiarxeio, Vres Tin Frasi, Leksindeseis), which are thin mappers from the claimed row to their own Puzzle shape plus a static fallback. Per-game variation (table, validation adapter, list shape, public approved list) enters as config declared in each game's route file. Stavrolekso never consumes — its rows persist after approval. (Not: submission flow, community puzzle API)
 
 **Custom Puzzle** *(Leksokipos only)* — Player-constructed from a 7-letter combination. ID: `custom-{center}-{sortedOuter}`. Never on the Leaderboard.
 
@@ -128,18 +128,20 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 ## Database tables (10)
 
+> **Authoritative schema** — columns, types, constraints, RLS policies and indexes live in `supabase/migrations/` (the `*_baseline_remote_schema.sql` baseline plus any later migrations), **not here**. Change the schema only via a new migration file applied with `npx supabase db push`; never edit the live DB without one, or the repo drifts. This table documents each table's **purpose** and the shape of its `jsonb` blobs (which the DDL can't express).
+
 | Table | Purpose |
 |---|---|
-| `player_profiles` | `device_uuid` → `display_name`. Nullable `auth_user_id` (Supabase auth). UNIQUE on `device_uuid`. |
-| `transfer_codes` | Single-use 6-char codes, 24h TTL. |
-| `game_scores` | Leaderboard scores for all games (unified). `game_id` column: `"leksokipos"`, `"leksiarxeio"`, `"leksindeseis"`, `"vrestifrasi"`. Per-length Leksiarxeio rows carry `word_length`. Nullable `auth_user_id` for cross-device leaderboard queries. |
-| `game_state` | Serialised Session for cross-device sync (Leksokipos daily puzzles only). Keyed on `(device_uuid, game_id, puzzle_date)`. Blob stores `{ foundWords: string[] }`. Pushed after every valid word (requires ProfileLinked). Pulled on mount when local foundWords is empty (requires ProfileLinked + daily puzzle). |
-| `nominations` | Community word proposals. |
-| `nomination_votes` | `(nomination_id, device_id)` votes. |
-| `community_leksiarxeio_puzzles` | Player-submitted Leksiarxeio puzzles. One row = all 5 lengths. Deleted on consumption. Cols: `id`, `submitter_name`, `data` (jsonb `{"4":…,"8":…}`), `status`, `created_at`. |
-| `community_leksindeseis_puzzles` | Player-submitted Leksindeseis puzzles. Deleted on consumption. Cols: `id`, `submitter_name`, `data` (jsonb 4-group array), `status`, `created_at`. |
-| `community_vrestifrasi_puzzles` | Player-submitted Vres Tin Frasi phrases. Deleted on consumption. Cols: `id`, `submitter_name`, `data` (jsonb `{ "phrase": "Κάνε υπομονή" }`), `status`, `created_at`. |
-| `community_stavrolekso_puzzles` | Community-submitted crosswords. **Never deleted after approval.** Cols: `id` (serial), `title` (text, nullable), `submitter_name` (text), `edit_pin` (text), `data` (jsonb slot-based schema), `status` (`pending`\|`approved`), `created_at`. |
+| `player_profiles` | Device identity: `device_uuid` → `display_name`. Optional `auth_user_id` links a Google account (ADR 0007). |
+| `transfer_codes` | Single-use 6-char codes for cross-device identity transfer, 24h TTL. |
+| `game_scores` | Unified leaderboard for all games, keyed by `game_id` (`leksokipos`/`leksiarxeio`/`leksindeseis`/`vrestifrasi`). Leksiarxeio writes one row per `word_length`. `auth_user_id` enables cross-device leaderboard queries. |
+| `game_state` | Serialised Session for cross-device sync (Leksokipos daily puzzles only). Blob: `{ foundWords: string[] }`. Pushed after every valid word; pulled on mount when local progress is empty. Both require ProfileLinked. |
+| `nominations` | Community word proposals (add / remove a word). |
+| `nomination_votes` | Up/down votes on nominations, one per device. |
+| `community_leksiarxeio_puzzles` | Player-submitted Leksiarxeio puzzles. One row = all 5 lengths (`data` jsonb `{"4":…,"8":…}`). Deleted on consumption. |
+| `community_leksindeseis_puzzles` | Player-submitted Leksindeseis puzzles (`data` jsonb 4-group array). Deleted on consumption. |
+| `community_vrestifrasi_puzzles` | Player-submitted Vres Tin Frasi phrases (`data` jsonb `{ "phrase": "…" }`). Deleted on consumption. |
+| `community_stavrolekso_puzzles` | Community-submitted crosswords (`data` jsonb slot-based; PIN-gated creator edits). **Never deleted after approval.** |
 
 ---
 

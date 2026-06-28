@@ -16,10 +16,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseClient } from "@/lib/supabase";
 import { isISODate } from "@/games/leksokipos/lib";
 import { upsertAndClean } from "@/lib/supabasePost";
+import { LEKSIARXEIO } from "@/config/gameRules";
+import { normalizePuzzleDate } from "@/lib/puzzleDate";
+import { sanitizeDisplayName } from "@/lib/postScore";
 
 export const runtime = "edge";
 
-const LEKSIARXEIO_LENGTHS = new Set([4, 5, 6, 7, 8]);
+const VALID_WORD_LENGTHS = new Set<number>(LEKSIARXEIO.LENGTHS);
 
 // ── POST ──────────────────────────────────────────────────────────────────────
 
@@ -56,8 +59,7 @@ export async function POST(req: NextRequest) {
 
   const { game_id, puzzle_date: rawDate, device_id, display_name } = body;
 
-  // Strip a trailing locale suffix (e.g. "2026-05-22-el" → "2026-05-22")
-  const puzzle_date = rawDate?.replace(/-[a-z]{2}$/i, "") ?? "";
+  const puzzle_date = normalizePuzzleDate(rawDate);
 
   if (!game_id || !puzzle_date || !device_id) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -66,12 +68,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid puzzle_date format" }, { status: 400 });
   }
 
-  const name = (display_name ?? "").trim() || "Ανώνυμος";
+  const name = sanitizeDisplayName(display_name);
 
   // ── Leksiarxeio: read-modify-write one length at a time ────────────────────
   if (game_id === "leksiarxeio") {
     const { word_length, points } = body as LeksiarxeioScorePayload;
-    if (!LEKSIARXEIO_LENGTHS.has(word_length)) {
+    if (!VALID_WORD_LENGTHS.has(word_length)) {
       return NextResponse.json({ error: "Invalid word_length" }, { status: 400 });
     }
     if (typeof points !== "number" || points < 0 || points > 6) {

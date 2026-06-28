@@ -4,7 +4,7 @@
 // The bar shows progress from the current rank threshold to the next rank threshold
 // so it always feels achievable and resets on each level-up.
 
-import { scoreBarFill, scoreBarTrack } from "@/styles/recipes";
+import { btnHeaderIcon, btnHeaderIconSize, scoreBarFill, scoreBarTrack } from "@/styles/recipes";
 import { useEffect, useRef, useState } from "react";
 
 import type { RankName } from "@/games/leksokipos/types";
@@ -64,22 +64,16 @@ export function ScoreBar({ score, maxScore, currentRank, onOpenLeaderboard }: Sc
           onClick={() => setShowRanks((v) => !v)}
           aria-label="Εμφάνιση επιπέδων"
           aria-expanded={showRanks}
-          className="flex items-center gap-1.5 group -ml-1 px-1 py-0.5 rounded-lg hover:bg-surface-raised transition-colors"
+          className="flex items-center gap-1.5 group"
         >
-          <span className="text-muted group-hover:text-accent transition-colors">
+          <span className={`${btnHeaderIconSize} ${btnHeaderIcon} group-hover:bg-surface-raised group-hover:text-accent`}>
             <RankIcon />
           </span>
           <span
             data-testid="rank-label"
-            className={`${styles.rankLabel} underline decoration-1 underline-offset-4 decoration-muted/70 group-hover:decoration-accent`}
+            className={styles.rankLabel}
           >
-            {getRankEmoji(currentRank)} {currentRank}
-          </span>
-          <span
-            aria-hidden="true"
-            className={`text-muted text-[0.85rem] leading-none transition-transform ${showRanks ? "rotate-180" : ""}`}
-          >
-            ▾
+            {currentRank} {getRankEmoji(currentRank)}
           </span>
         </button>
         <div className="flex items-center gap-2">
@@ -91,7 +85,7 @@ export function ScoreBar({ score, maxScore, currentRank, onOpenLeaderboard }: Sc
               data-testid="btn-leaderboard"
               onClick={onOpenLeaderboard}
               aria-label="Πίνακας Σκορ"
-              className="text-trophy text-muted hover:text-accent transition-colors leading-none"
+              className={`${btnHeaderIconSize} ${btnHeaderIcon} text-trophy leading-none`}
             >
               🏆
             </button>
@@ -113,7 +107,7 @@ export function ScoreBar({ score, maxScore, currentRank, onOpenLeaderboard }: Sc
                   : "text-muted/60"
               }`}
             >
-              <span>{row.emoji} {row.name}</span>
+              <span>{row.name} {row.emoji}</span>
               <span>{row.pts} pts</span>
             </div>
           ))}
@@ -133,9 +127,9 @@ export function ScoreBar({ score, maxScore, currentRank, onOpenLeaderboard }: Sc
       {nextRank && ptsToNext !== null && (
         <p className={styles.nextLabel}>
           {ptsToNext > 0 ? (
-            <>{ptsToNext} pts για: <span className="text-foreground">{getRankEmoji(nextRank)} {nextRank}</span></>
+            <>{ptsToNext} pts για: <span className="text-foreground">{nextRank} {getRankEmoji(nextRank)}</span></>
           ) : (
-            <>Έφτασες: <span className="text-foreground">{getRankEmoji(nextRank)} {nextRank}</span>! 🎉</>
+            <>Έφτασες: <span className="text-foreground">{nextRank} {getRankEmoji(nextRank)}</span>! 🎉</>
           )}
         </p>
       )}

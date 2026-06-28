@@ -9,8 +9,8 @@ import userEvent from "@testing-library/user-event";
 // Mock all child components to focus on layout-level behaviour.
 // Vitest hoists vi.mock() calls before imports are executed.
 vi.mock("@/components/leksokipos/GameBoard", () => ({
-  GameBoard: ({ variant }: { variant?: "pie" | "flower" }) => (
-    <div data-testid="mock-game-board" data-variant={variant ?? "pie"} />
+  GameBoard: ({ variant, puzzle }: { variant?: "pie" | "flower"; puzzle: { id: string } }) => (
+    <div data-testid="mock-game-board" data-variant={variant ?? "pie"} data-puzzle-id={puzzle.id} />
   ),
 }));
 vi.mock("@/components/leksokipos/ShareButton", () => ({
@@ -110,6 +110,32 @@ describe("LeksokiposLayout — variant toggle", () => {
     expect(screen.getByTestId("mock-game-board")).toHaveAttribute("data-variant", "pie");
     await user.click(screen.getByRole("button", { name: "Εναλλαγή σε Λουλούδι" }));
     expect(screen.getByTestId("mock-game-board")).toHaveAttribute("data-variant", "flower");
+  });
+});
+
+// ── Puzzle key (remount guard) ────────────────────────────────────────────────
+// key={puzzle.id} on GameBoard ensures React remounts the component — and resets
+// all hook state — whenever the active puzzle changes. Without this, navigating
+// between daily puzzles in the same route leaves givenUp/foundWords stale.
+
+describe("LeksokiposLayout — puzzle key", () => {
+  it("passes puzzle.id as a data attribute to GameBoard", () => {
+    setup();
+    expect(screen.getByTestId("mock-game-board")).toHaveAttribute("data-puzzle-id", puzzle.id);
+  });
+
+  it("mounts a fresh GameBoard (different DOM node) when puzzle.id changes", () => {
+    const puzzle2 = { ...puzzle, id: "different-puzzle-id", date: "2026-01-02" };
+    const { rerender } = render(<LeksokiposLayout {...defaultProps} />);
+    const board1 = screen.getByTestId("mock-game-board");
+
+    rerender(<LeksokiposLayout {...defaultProps} puzzle={puzzle2} canonicalPath="/leksokipos/a/pinted2" />);
+    const board2 = screen.getByTestId("mock-game-board");
+
+    // key={puzzle.id} forces a remount — the DOM element is a different object.
+    // Without the key prop React would reuse the same element (board1 === board2).
+    expect(board1).not.toBe(board2);
+    expect(board2).toHaveAttribute("data-puzzle-id", puzzle2.id);
   });
 });
 

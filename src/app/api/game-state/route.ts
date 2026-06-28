@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseClient } from "@/lib/supabase";
 import { isISODate } from "@/games/leksokipos/lib";
 import { upsertAndClean } from "@/lib/supabasePost";
+import { normalizePuzzleDate } from "@/lib/puzzleDate";
 
 export const runtime = "edge";
 
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
 
   const { device_uuid, game_id, puzzle_date: rawDate, state } = body;
 
-  const puzzle_date = rawDate?.replace(/-[a-z]{2}$/i, "") ?? "";
+  const puzzle_date = normalizePuzzleDate(rawDate);
 
   if (!device_uuid || !game_id || !puzzle_date || !state || typeof state !== "object") {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });

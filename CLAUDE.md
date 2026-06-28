@@ -21,6 +21,7 @@ At the start of every session, read these files in order:
 - Do not install new dependencies without explicit approval.
 - Keep `.claude/aiHelper/log.md` under 250 lines — condense older entries before adding new.
 - Do not touch `words-el.json` or any `puzzles-*.json` unless the task explicitly requires it.
+- **DB schema is version-controlled** in `supabase/migrations/` (authoritative DDL + RLS; `CONTEXT.md` documents purpose only). Change it via a new migration applied with `npx supabase db push` — never via the Supabase dashboard or MCP `apply_migration` without committing a matching migration file, or the repo drifts. The `supabase` CLI is an approved devDependency. (`db pull`/`db reset`/local stack need Docker, which is not installed and not required for `db push`.)
 - When an issue is resolved, **delete its file** from `.claude/issue-tracker/issues/` — do not leave it with a "done" status.
 
 ## Available slash commands

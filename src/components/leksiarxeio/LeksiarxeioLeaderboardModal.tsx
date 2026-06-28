@@ -10,28 +10,11 @@
 //   - Shared ProfileSection (topSlot)
 
 import type { LeaderboardProfileProps } from "@/hooks/useLeaderboardProfile";
-import type { LeaderboardUrlBuilder } from "@/hooks/useLeaderboard";
-import { LeaderboardModalBase } from "@/components/shared/LeaderboardModal";
+import { LeaderboardModalBase, getLast7Dates, buildLeaderboardUrl } from "@/components/shared/LeaderboardModal";
 import { ProfileSection } from "@/components/shared/ProfileSection";
 import { useLeaderboardProfile } from "@/hooks/useLeaderboardProfile";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function getLast7Dates(today: string): string[] {
-  const dates: string[] = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(today + "T00:00:00");
-    d.setDate(d.getDate() - i);
-    dates.push(d.toISOString().slice(0, 10));
-  }
-  return dates;
-}
-
-const buildUrl: LeaderboardUrlBuilder = (date, deviceId) => {
-  const params = new URLSearchParams({ game_id: "leksiarxeio", puzzle_date: date });
-  if (deviceId) params.set("deviceId", deviceId);
-  return `/api/game-scores?${params.toString()}`;
-};
+const buildUrl = buildLeaderboardUrl("leksiarxeio");
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 

@@ -12,13 +12,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 
-function postScore(url: string, body: unknown): void {
-  fetch(url, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(body),
-  }).catch(() => {});
-}
+import { postScore, sanitizeDisplayName } from "@/lib/postScore";
 
 interface UseScoreSubmissionOptions {
   /** Which game's leaderboard to post to. */
@@ -57,7 +51,7 @@ export function useScoreSubmission({
         puzzle_date:  puzzleDate,
         device_id:    deviceId,
         score,
-        display_name: displayNameRef.current || "Ανώνυμος",
+        display_name: sanitizeDisplayName(displayNameRef.current),
       });
     },
     [enabled, gameId, puzzleDate, deviceId],
@@ -72,7 +66,7 @@ export function useScoreSubmission({
         puzzle_date:  puzzleDate,
         device_id:    deviceId,
         score,
-        display_name: name || "Ανώνυμος",
+        display_name: sanitizeDisplayName(name),
       });
     },
     [enabled, gameId, puzzleDate, deviceId],

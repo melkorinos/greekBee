@@ -4,9 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StavroleksoGrid, computeHighlightedCells } from "@/games/stavrolekso/StavroleksoGrid";
 import { autoNumberSlots, isConnected, makeBlackSet, getSlotCells, getSlotLength } from "@/games/stavrolekso/lib";
 import type { Direction, SlotDef } from "@/games/stavrolekso/types";
-import wordsEl from "@/data/words-el.json";
-
-const WORD_SET = new Set((wordsEl as string[]).map((w) => w.toLowerCase()));
 
 type Phase = 1 | 2 | 3;
 type GridSize = 9 | 13 | 15;
@@ -190,19 +187,57 @@ export default function StavroleksoMakerPage() {
     [selectedSlot, slots, size, blackSet],
   );
 
-  // Warned cells: slots whose assembled answer is not in the word list
-  const warnedCells = useMemo<Set<string>>(() => {
-    if (phase !== 3) return new Set();
-    const warned = new Set<string>();
+  // Fully-filled slot answers (lowercased) paired with their cells. Only complete
+  // words are candidates for the "not a real word" warning.
+  const filledWords = useMemo(() => {
+    if (phase !== 3) return [] as { word: string; cells: string[] }[];
+    const result: { word: string; cells: string[] }[] = [];
     for (const slot of slots) {
       const slotCells = getSlotCells(slot.direction, slot.startRow, slot.startCol, size, size, blackSet);
       const word = slotCells.map((k) => cells[k] ?? "").join("").toLowerCase();
-      if (word.length === slotCells.length && word.length > 0 && !WORD_SET.has(word)) {
-        slotCells.forEach((k) => warned.add(k));
+      if (word.length === slotCells.length && word.length > 0) {
+        result.push({ word, cells: slotCells });
       }
     }
-    return warned;
+    return result;
   }, [phase, slots, cells, size, blackSet]);
+
+  // Words confirmed (by the server dictionary) NOT to be real words. The check
+  // runs server-side so the 811k-word dictionary never ships to the browser.
+  const [invalidWords, setInvalidWords] = useState<Set<string>>(new Set());
+
+  // Debounced dictionary check: re-validate the filled words shortly after the
+  // grid stops changing. Soft warning only — failures are silently ignored.
+  useEffect(() => {
+    if (filledWords.length === 0) {
+      setInvalidWords(new Set());
+      return;
+    }
+    let ignore = false;
+    const unique = [...new Set(filledWords.map((f) => f.word))];
+    const handle = setTimeout(() => {
+      fetch("/api/validate-words", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ words: unique }),
+      })
+        .then((res) => (res.ok ? res.json() : { invalid: [] }))
+        .then((json: { invalid?: string[] }) => {
+          if (!ignore) setInvalidWords(new Set((json.invalid ?? []).map((w) => w.toLowerCase())));
+        })
+        .catch(() => {});
+    }, 350);
+    return () => { ignore = true; clearTimeout(handle); };
+  }, [filledWords]);
+
+  // Warned cells: cells belonging to a filled word the server flagged as unknown.
+  const warnedCells = useMemo<Set<string>>(() => {
+    const warned = new Set<string>();
+    for (const { word, cells: slotCells } of filledWords) {
+      if (invalidWords.has(word)) slotCells.forEach((k) => warned.add(k));
+    }
+    return warned;
+  }, [filledWords, invalidWords]);
 
   // ── Phase 2: toggle black squares ─────────────────────────────────────────
 

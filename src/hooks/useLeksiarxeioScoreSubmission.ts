@@ -12,14 +12,7 @@
 import { useCallback, useEffect, useRef } from "react";
 
 import { scoreLeksiarxeio } from "@/games/leksiarxeio/lib";
-
-function postScore(url: string, body: unknown): void {
-  fetch(url, {
-    method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(body),
-  }).catch(() => {});
-}
+import { postScore, sanitizeDisplayName } from "@/lib/postScore";
 
 interface UseLeksiarxeioScoreSubmissionOptions {
   /** The puzzle date (YYYY-MM-DD) — used as the leaderboard partition key. */
@@ -49,7 +42,7 @@ export function useLeksiarxeioScoreSubmission({
         word_length:  length,
         device_id:    deviceId,
         points,
-        display_name: displayNameRef.current || "Ανώνυμος",
+        display_name: sanitizeDisplayName(displayNameRef.current),
       });
     },
     [puzzleDate, deviceId],

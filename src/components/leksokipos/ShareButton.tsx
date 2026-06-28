@@ -5,6 +5,7 @@
 // Used only in the /leksokipos/[center]/[outer] route for now.
 
 import { useCallback, useState } from "react";
+import { btnHeaderIconSize } from "@/styles/recipes";
 
 type CopyState = "idle" | "copied" | "error";
 
@@ -44,7 +45,7 @@ export function ShareButton({ canonicalPath }: ShareButtonProps) {
   };
 
   const style: Record<CopyState, string> = {
-    idle:   "border-stone-300 text-stone-600 hover:bg-stone-100 active:bg-stone-200",
+    idle:   "border-border text-muted hover:bg-surface-raised active:bg-border",
     copied: "border-green-400 text-green-600 bg-green-50",
     error:  "border-red-400   text-red-600   bg-red-50",
   };
@@ -71,7 +72,7 @@ export function ShareButton({ canonicalPath }: ShareButtonProps) {
       <button
         data-testid="btn-share"
         onClick={handleClick}
-        className={`w-8 h-8 flex items-center justify-center rounded-full border transition-colors ${style[copyState]}`}
+        className={`${btnHeaderIconSize} flex items-center justify-center rounded-full border transition-colors ${style[copyState]}`}
         aria-label={tooltip[copyState]}
       >
         {icon}

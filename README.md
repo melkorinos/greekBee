@@ -43,6 +43,19 @@ node scripts/apply-nominations.mjs
 
 The script reads `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from `.env.local`.
 
+### Database schema & migrations
+
+The Postgres schema (tables, RLS policies, indexes) is version-controlled under `supabase/migrations/`, with the `supabase` CLI as a devDependency. Add a change as a new `supabase/migrations/<timestamp>_<name>.sql` file, then apply it:
+
+```bash
+# Apply pending migrations to the remote DB (no Docker required)
+npx supabase db push --db-url <SUPABASE_DB_URL from .env.local>
+```
+
+Don't alter the live schema via the Supabase dashboard or MCP without committing a matching migration file, or the repo drifts. (`db pull` / `db reset` / the local stack need Docker, which isn't required for the push workflow.)
+
+Migrations capture **structure only**. For a full backup including row **data**, use `npm run db:backup` (schema + roles + data → `db-backups/`).
+
 ---
 
 ## Project Agent

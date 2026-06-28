@@ -28,7 +28,7 @@ Five live games + custom puzzle URLs + the Leksikastirio word-court. Run `npm ru
 | **Custom puzzle ID** | `custom-{center}-{sortedOuter}` — not date-scoped. |
 | **No Greek accents** | Zero accents in URLs, stored state, puzzle letters, valid-word output. `normalizeLetters()` is the single normalisation point. |
 | **Custom URL** | Greeklish bijective codec (`src/lib/greeklish.ts`). Canonical 301 redirect on unnormalised params. |
-| **Supabase** | Singleton in `src/lib/supabase.ts`. `getOrCreateDeviceId()` generates stable UUID stored under `deviceId` in the envelope. See `CONTEXT.md` for current DB schema (table list grows as games are added). |
+| **Supabase** | Singleton in `src/lib/supabase.ts`. `getOrCreateDeviceId()` generates stable UUID stored under `deviceId` in the envelope. **Schema is version-controlled** in `supabase/migrations/` (authoritative DDL + RLS); change it via a new migration + `npx supabase db push` (no Docker), never via dashboard/MCP alone or it drifts. `CONTEXT.md` documents table *purpose* only. |
 | **Profile identity** | No PIN. Profile = device_uuid row in `player_profiles`. Cross-device: generate 6-char transfer code via `POST /api/transfer`, claim on other device via `POST /api/transfer/claim`. `useProfile` hook shared across games. `ProfileSection` component shared in `src/components/shared/`. Google OAuth can augment device identity (`auth_user_id`); see ADR 0007. |
 | **Leaderboard** | Per-puzzle daily only. Silent upsert on score increase. 7-day rolling window. Custom puzzles excluded. |
 | **Leaderboard navigation** | Rolling 7-day pill strip. `getRecentPuzzleDates(7)` server-side. |
@@ -49,6 +49,7 @@ src/
   lib/          greeklish.ts · postScore.ts · supabase.ts · communityPuzzleLifecycle.ts
   types/        index.ts
   test/         organised by game + shared/
+supabase/       config.toml + migrations/ — version-controlled DB schema (authoritative)
 ```
 
 ---
@@ -89,6 +90,9 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `dataLoader.test.ts` (leksindeseis) | `getTodaysLeksindeseisPuzzle` — date match, fallback, shape |
 | `persistence.test.ts` | `useRoundPersistence` — hydration, saving, clear(), shouldSave |
 | `useScoreSubmission.test.ts` | Unified hook — submit/submitWithName (Leksokipos+Leksindeseis) + submitLength with penalty (Leksiarxeio) |
+| `useGuessRound.test.ts` | Shared guess-game spine — score-only-on-end, onGameEnd once, persist `{guesses,status}` + restore, save guard, per-puzzle sessions |
+| `communityPuzzleLifecycle.test.ts` | submit/list/review handlers **+ `consumeApprovedPuzzle`** (claim oldest approved, delete by id, null on empty/error) |
+| `leksokiposSync.test.ts` | `pushFoundWords` (wire shape, never throws) + `pullSnapshot` (rebuild snapshot+score, params, null on empty/null/error) — the cross-device sync wire |
 | `useGameIdentity.test.ts` | SSR-safe DeviceId + DisplayName init, setter state updates |
 | `useGameStore.test.ts` | readSlice, writeSlice, clearSlice, deviceId, displayName, profileLinked, migration |
 | `Shell.test.tsx` | Hamburger open/close/Escape, nav links, theme toggle (aria-label, `.dark` class on `documentElement`) |

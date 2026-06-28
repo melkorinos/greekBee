@@ -5,6 +5,27 @@
 
 ---
 
+## Session 51 — 2026-06-28: Bug fix — givenUp state bleeding across Leksokipos daily puzzles ✅
+Production bug: giving up on today's puzzle then navigating to a past daily via the leaderboard day strip showed the past puzzle as permanently locked (give-up banner, no game board).
+**Root cause:** Next.js App Router reuses client component instances when navigating between `/leksokipos/[center]/[outer]` URLs (same route pattern). `GameBoard`'s `useReducer` state — including `givenUp:true` — persisted to the new puzzle. `useRoundPersistence` hydration found no saved state for the new puzzle and left the stale state untouched.
+**Fix 1 (primary):** `key={puzzle.id}` on `<GameBoard>` in `LeksokiposLayout.tsx` — forces React to remount the component whenever the puzzle ID changes, resetting all hook state.
+**Fix 2 (secondary):** Added `shouldSave: snap => snap.foundWords.length > 0 || snap.givenUp` to `useRoundPersistence` in `useGameState.ts` — mirrors the pattern already in `useGuessRound`. Prevents the initial empty state from being written to localStorage on mount, which was silently blocking the cross-device server restore for puzzles not yet played locally.
+**Tests added:** `LeksokiposLayout.test.tsx` — mock updated to expose `data-puzzle-id`; new "puzzle key" describe: passes puzzle id through, different DOM node on puzzle change. `GameBoard.test.tsx` — new "Puzzle navigation" describe: givenUp doesn't carry to a different puzzle; foundWords/score reset on puzzle change.
+Verification: **1113 tests pass · eslint clean · build exit 0**.
+
+---
+
+## Session 50 — 2026-06-28: Architecture deepening — lifecycle consume + guess-game spine + sync seam ✅
+Ran `/improve-codebase-architecture`; implemented all 4 candidates.
+1. **Completed the Community Puzzle Lifecycle (consume transition).** Added `consumeApprovedPuzzle<TData>(table)` to `src/lib/communityPuzzleLifecycle.ts` — claims oldest approved row (FIFO), deletes it, returns `{ data, submitter_name }` or null on empty/error. The "query approved → delete → fallback" block was triplicated in the three data loaders; they're now thin row→Puzzle mappers (`data/leksiarxeio`, `data/vrestifrasi`, `data/leksindeseis`). The module now owns all four transitions (submit/list/review/consume). CONTEXT.md lifecycle entry updated.
+2. **Shared guess-game spine.** New `src/hooks/useGuessRound.ts` — owns the identical reducer→`useRoundPersistence`→`useGameEndCallback`→score wiring that `useLeksiarxeioState` + `useVresTinFrasiState` had copied. Persists the shared `{guesses,status}` snapshot; games keep only their action wrappers, letter-state map, exposed fields. Both hooks refactored onto it (behaviour identical).
+3. **Folded orphaned `dateToIndex`.** `data/leksindeseis` had a byte-identical private copy of `lib/puzzleRotation.dateToIndex` → now imports the shared one.
+4. **One seam for Leksokipos cross-device sync (candidate #3).** New `src/games/leksokipos/sync.ts` owns BOTH directions of the `game_state` wire: `pushFoundWords` (was inlined in `useGameStateSync`) + `pullSnapshot` (the fetch→reconstruct-score→snapshot block that was copy-pasted twice in `useGameState`: mount-time + `restoreFromServer`). Hooks now own only effects/gates/dispatch; the URL, JSON shape, and snapshot reconstruction live in one place. No behaviour change — the pre-existing hook tests (`useGameState.test.ts`, `useGameStateSync.test.ts`) passed unchanged as the guard. Motivated by a historical bug where, after a transfer-code sync, the player name restored but found words didn't — exactly the drift one-pull prevents.
+Tests: new `useGuessRound.test.ts` (12); new `leksokiposSync.test.ts` (7 — push wire shape + pull rebuild/score/null paths, the found-words regression guard); +2 push-dedup/empty-backfill tests in `useGameStateSync.test.ts`; extended `communityPuzzleLifecycle.test.ts` with `consumeApprovedPuzzle` (4).
+Verification: **1109 tests pass · eslint clean · build exit 0**.
+
+---
+
 ## Session 49 — 2026-06-27: Leksokipos UI polish ✅
 Six visual/UX changes, all Leksokipos-only:
 1. **`btnHeaderIcon` recipe** added to `src/styles/recipes.ts` — formalises `border-stone-300` for circular header icon buttons (visible in dark mode; documented exception to the token rule, mirrors existing ShareButton pattern).
@@ -15,18 +36,6 @@ Six visual/UX changes, all Leksokipos-only:
 6. **Give-up flow redesigned**: button moved below found-words list (was in heading row); inline confirmation removed; clicking opens a two-phase `GiveUpModal` (confirm → missed words on accept). Main page still shows MissedWordsList below found words after modal closes (Option B).
 Updated tests: `feedbackMessage.test.tsx`, `LeksokiposLayout.test.tsx`, `GameBoard.test.tsx`, `recipes.test.ts`.
 Verification: **984 tests pass · eslint clean · build exit 0**.
-
----
-
-## Session 48 — 2026-06-27: Fix broken score cleanup + add Vercel Cron ✅
-Root cause found: `upsertAndClean` in `src/lib/supabasePost.ts` built the delete query with `void` instead of `await`/`.then()` — Supabase's lazy thenable never fired. Every score ever submitted was retained. Fixed by:
-- Removed the broken cleanup from `upsertAndClean` (dropped the now-unused `dateField` param; updated both callers in `game-scores/route.ts` and `game-state/route.ts`).
-- Created `src/app/api/cleanup-scores/route.ts` — GET endpoint, CRON_SECRET auth, service role client, deletes `game_scores` **and** `game_state` rows older than 7 days in parallel.
-- Added cron entry to `vercel.json` (daily 03:00 UTC).
-- Updated `gameScoresRoute.test.ts` (removed extra enqueue for defunct cleanup call).
-- Added `cleanupScoresRoute.test.ts` (9 tests covering auth, happy path, per-table error paths).
-Verification: **979 tests pass (2 pre-existing timeouts unrelated) · eslint clean · build exit 0**.
-**Next step:** add `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET` to Vercel dashboard env vars — the cron won't work without them.
 
 ---
 
@@ -104,6 +113,7 @@ Review ✓/✕ in `/leksikastirio?admin=<secret>` → on a machine with creds in
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 48 | 2026-06-27 | Fixed broken score cleanup (`upsertAndClean` used `void` not `await` → Supabase thenable never fired; all scores retained). Removed cleanup from `upsertAndClean`; new `cleanup-scores` GET route (CRON_SECRET, service role, deletes `game_scores`+`game_state` >7d); `vercel.json` daily cron. Tests. **Needs `SUPABASE_SERVICE_ROLE_KEY`+`CRON_SECRET` in Vercel env.** |
 | 43 | 2026-06-22 | NYT brand scrub (comments/docs only → Greek names; IDs/file names frozen); pinch-zoom lock (`viewport` in `layout.tsx`); Leksokipos `useDayChange` auto-advance on stale-CDN day change; tests. 932 pass. |
 | 42 | 2026-05-30 | Google OAuth augments device identity: `useAuth` hook, `/auth/callback` PKCE, `/api/auth/link` edge route (upserts `auth_user_id`, back-fills `game_scores`), `authLinked` in envelope/store, `ProfileSection` + 4 LeaderboardModals threaded, `HomeTrophyButton`, ADR 0007, CONTEXT 10-table update. DB migration SQL handed to user. |
 | 41 | 2026-05-29 | Bug fixes: dark-mode FOUC on Leksokipos client nav (`.dark` body background in globals.css); Stavrolekso server crash (self-`fetch` → direct Supabase calls); benign Turbopack edge-runtime warning documented. |

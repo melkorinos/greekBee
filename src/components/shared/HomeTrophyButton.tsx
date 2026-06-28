@@ -9,6 +9,7 @@ import { useGameIdentity } from "@/hooks/useGameIdentity";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { setDisplayName as storeSetDisplayName } from "@/hooks/useGameStore";
+import { getLast7Dates }                from "@/components/shared/LeaderboardModal";
 import { LeaderboardModal }             from "@/components/leksokipos/LeaderboardModal";
 import { LeksiarxeioLeaderboardModal }  from "@/components/leksiarxeio/LeksiarxeioLeaderboardModal";
 import { ConnectionsLeaderboardModal }  from "@/components/leksindeseis/ConnectionsLeaderboardModal";
@@ -18,15 +19,6 @@ type LeaderboardGameId = "leksokipos" | "leksiarxeio" | "leksindeseis" | "vresti
 
 interface HomeTrophyButtonProps {
   gameId: LeaderboardGameId;
-}
-
-function getLast7Dates(): string[] {
-  const today = new Date();
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    return d.toISOString().slice(0, 10);
-  });
 }
 
 export function HomeTrophyButton({ gameId }: HomeTrophyButtonProps) {
@@ -53,7 +45,7 @@ export function HomeTrophyButton({ gameId }: HomeTrophyButtonProps) {
   }
 
   const today       = new Date().toISOString().slice(0, 10);
-  const recentDates = getLast7Dates();
+  const recentDates = getLast7Dates(today);
 
   const sharedProps = {
     isOpen,

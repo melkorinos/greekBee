@@ -12,15 +12,14 @@ import { useCallback, useMemo, useReducer, useState } from "react";
 
 import { leksindeseisReducer } from "./leksindeseisReducer";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
-
-const MAX_MISTAKES = 4;
+import { LEKSINDESEIS } from "@/config/gameRules";
 
 function buildInitialState(puzzle: LeksindeseisPuzzle): LeksindeseisState {
   return {
     puzzle,
     solvedGroups:      [],
     currentSelection:  [],
-    mistakesRemaining: MAX_MISTAKES,
+    mistakesRemaining: LEKSINDESEIS.MAX_MISTAKES,
     status:            "playing",
     lastFeedback:      null,
     guessHistory:      [],

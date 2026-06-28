@@ -4,27 +4,12 @@
 // Uses ascending score sort (sort=asc param on the API).
 
 import type { LeaderboardProfileProps } from "@/hooks/useLeaderboardProfile";
-import type { LeaderboardUrlBuilder } from "@/hooks/useLeaderboard";
-import { LeaderboardModalBase } from "@/components/shared/LeaderboardModal";
+import { LeaderboardModalBase, getLast7Dates, buildLeaderboardUrl } from "@/components/shared/LeaderboardModal";
 import { ProfileSection } from "@/components/shared/ProfileSection";
 import { useLeaderboardProfile } from "@/hooks/useLeaderboardProfile";
 
-function getLast7Dates(today: string): string[] {
-  const dates: string[] = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(today + "T00:00:00");
-    d.setDate(d.getDate() - i);
-    dates.push(d.toISOString().slice(0, 10));
-  }
-  return dates;
-}
-
 // sort=asc so the leaderboard endpoint orders by ascending score (fewer guesses = better rank)
-const buildUrl: LeaderboardUrlBuilder = (date, deviceId) => {
-  const params = new URLSearchParams({ game_id: "vrestifrasi", puzzle_date: date, sort: "asc" });
-  if (deviceId) params.set("deviceId", deviceId);
-  return `/api/game-scores?${params.toString()}`;
-};
+const buildUrl = buildLeaderboardUrl("vrestifrasi", { sort: "asc" });
 
 interface VresTinFrasiLeaderboardModalProps extends LeaderboardProfileProps {
   isOpen:      boolean;

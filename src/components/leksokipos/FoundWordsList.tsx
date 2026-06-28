@@ -27,7 +27,7 @@ const styles = {
   count:      "text-foreground font-bold",
   empty:      "text-sm text-muted italic",
   list:       "flex flex-wrap gap-2 max-h-40 overflow-y-auto",
-  giveUpRow:  "flex justify-end pt-1",
+  giveUpRow:  "flex justify-start pt-1",
 };
 
 export function FoundWordsList({ words, puzzle, onGiveUp, givenUp }: FoundWordsListProps) {

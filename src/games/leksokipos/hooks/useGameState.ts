@@ -16,12 +16,12 @@ import { buildInitialState, gameReducer } from "./gameReducer";
 import { useCallback, useEffect, useMemo, useReducer } from "react";
 
 import type { LeksokiposPuzzle, LeksokiposRoundSnapshot } from "../types";
-import { calculateRank } from "../lib/ranking";
 import { isDailyPuzzle } from "../lib/puzzle";
-import { maxScore, scoreWord } from "../lib/scoring";
 import { normalizeLetters } from "../lib/normalize";
+import { pullSnapshot } from "../sync";
 import { getOrCreateDeviceId, isProfileLinked, readSlice } from "@/hooks/useGameStore";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
+import { normalizePuzzleDate } from "@/lib/puzzleDate";
 
 /**
  * Central game hook — all components talk to this, never to the reducer directly.
@@ -52,6 +52,10 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     initialPuzzle.id,
     snapshot,
     useCallback((saved) => dispatch({ type: "RESTORE_STATE", saved }), []),
+    // Only persist once there is meaningful progress — prevents the initial empty
+    // state from being written to localStorage on mount, which would otherwise
+    // block the cross-device server restore for puzzles not yet played locally.
+    useCallback((snap: LeksokiposRoundSnapshot) => snap.foundWords.length > 0 || snap.givenUp, []),
   );
 
   // Mount-time restore. Skipped when local session already exists, unless
@@ -71,29 +75,13 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     const deviceId = getOrCreateDeviceId();
     if (!deviceId) return;
 
-    // Puzzle IDs are "YYYY-MM-DD-el"; the API expects plain "YYYY-MM-DD".
-    const puzzleDate = initialPuzzle.id.replace(/-[a-z]{2}$/i, "");
-
-    fetch(
-      `/api/game-state?device_uuid=${encodeURIComponent(deviceId)}&game_id=leksokipos&puzzle_date=${encodeURIComponent(puzzleDate)}`
-    )
-      .then((r) => r.json())
-      .then((data: { state?: { foundWords?: string[] } | null }) => {
-        const foundWords = data.state?.foundWords;
-        if (!Array.isArray(foundWords) || foundWords.length === 0) return;
-        const score = foundWords.reduce((sum, w) => sum + scoreWord(w, initialPuzzle), 0);
-        dispatch({
-          type: "RESTORE_STATE",
-          saved: {
-            foundWords,
-            score,
-            currentRank: calculateRank(score, maxScore(initialPuzzle)),
-            startedAt:   Date.now(),
-            givenUp:     false,
-          },
-        });
-      })
-      .catch(() => {});
+    void pullSnapshot({
+      deviceUuid: deviceId,
+      puzzleDate: normalizePuzzleDate(initialPuzzle.id),
+      puzzle:     initialPuzzle,
+    }).then((saved) => {
+      if (saved) dispatch({ type: "RESTORE_STATE", saved });
+    });
   // initialPuzzle is stable for the lifetime of this hook instance.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -105,27 +93,13 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     localStorage.removeItem(NEEDS_RESTORE_KEY);
     const deviceId = getOrCreateDeviceId();
     if (!deviceId) return Promise.resolve();
-    const puzzleDate = initialPuzzle.id.replace(/-[a-z]{2}$/i, "");
-    return fetch(
-      `/api/game-state?device_uuid=${encodeURIComponent(deviceId)}&game_id=leksokipos&puzzle_date=${encodeURIComponent(puzzleDate)}`
-    )
-      .then((r) => r.json())
-      .then((data: { state?: { foundWords?: string[] } | null }) => {
-        const foundWords = data.state?.foundWords;
-        if (!Array.isArray(foundWords) || foundWords.length === 0) return;
-        const score = foundWords.reduce((sum, w) => sum + scoreWord(w, initialPuzzle), 0);
-        dispatch({
-          type: "RESTORE_STATE",
-          saved: {
-            foundWords,
-            score,
-            currentRank: calculateRank(score, maxScore(initialPuzzle)),
-            startedAt:   Date.now(),
-            givenUp:     false,
-          },
-        });
-      })
-      .catch(() => {});
+    return pullSnapshot({
+      deviceUuid: deviceId,
+      puzzleDate: normalizePuzzleDate(initialPuzzle.id),
+      puzzle:     initialPuzzle,
+    }).then((saved) => {
+      if (saved) dispatch({ type: "RESTORE_STATE", saved });
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

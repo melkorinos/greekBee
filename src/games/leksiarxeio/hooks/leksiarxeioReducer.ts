@@ -4,8 +4,7 @@
 import type { GuessResult, TileState, LeksiarxeioState } from "../types";
 
 import { evaluateGuess } from "../lib/evaluateGuess";
-
-const MAX_GUESSES = 6;
+import { LEKSIARXEIO } from "@/config/gameRules";
 
 // ─── Action types ─────────────────────────────────────────────────────────────
 
@@ -65,7 +64,7 @@ export function leksiarxeioReducer(state: LeksiarxeioState, action: LeksiarxeioA
       const newGuesses = [...state.guesses, result];
 
       const won  = guess === answer;
-      const lost = !won && newGuesses.length >= MAX_GUESSES;
+      const lost = !won && newGuesses.length >= LEKSIARXEIO.MAX_GUESSES;
 
       return {
         ...state,
