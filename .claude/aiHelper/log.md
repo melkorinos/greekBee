@@ -5,7 +5,17 @@
 
 ---
 
-## Session 51 — 2026-06-28: Bug fix — givenUp state bleeding across Leksokipos daily puzzles ✅
+## Session 51 — 2026-06-28: Bug fix — past-puzzle navigation locked by useDayChange + givenUp bleed ✅
+Two bugs fixed. Root cause of the reported production issue: `useDayChange` called `check()` on mount and redirected any puzzle with `date < today` — including puzzles the player deliberately navigated to via the leaderboard day strip — back to today's (given-up) game. Secondary pre-existing bug: `GameBoard` shared `useReducer` state (including `givenUp:true`) between puzzles when navigating without a remount.
+**Fix 1 (primary — useDayChange):** Added early return in `useDayChange` if `puzzle.date < mountDate` at mount time. Past puzzles are deliberately visited; they should never be auto-redirected. The stale-tab day-rollover case is preserved via the `visibilitychange` listener, which still fires when a player reopens a tab where TODAY's puzzle has become stale overnight.
+**Fix 2 (secondary — GameBoard):** `key={puzzle.id}` on `<GameBoard>` in `LeksokiposLayout.tsx` — forces React to remount when puzzle changes, preventing `givenUp`/`foundWords` state from leaking between puzzles (Next.js App Router reuses client components on same-route navigations).
+**Fix 3 (secondary — shouldSave):** Added `shouldSave: snap => snap.foundWords.length > 0 || snap.givenUp` guard to `useRoundPersistence` in `useGameState.ts` — prevents the initial empty state from being written to localStorage on mount, which was blocking cross-device server restore for unplayed puzzles.
+**Tests:** `useDayChange.test.ts` — rewrote suite: no redirect on mount for past puzzle, no redirect on visibilitychange for past puzzle, day-rollover redirect via visibilitychange for today's puzzle (with `vi.setSystemTime`). `LeksokiposLayout.test.tsx` — mock updated + remount assertion. `GameBoard.test.tsx` — givenUp/foundWords don't carry to a new puzzle.
+Verification: **1113 tests pass · eslint clean · build exit 0**.
+
+---
+
+## Session 50 — 2026-06-28: Architecture deepening — lifecycle consume + guess-game spine + sync seam ✅
 Production bug: giving up on today's puzzle then navigating to a past daily via the leaderboard day strip showed the past puzzle as permanently locked (give-up banner, no game board).
 **Root cause:** Next.js App Router reuses client component instances when navigating between `/leksokipos/[center]/[outer]` URLs (same route pattern). `GameBoard`'s `useReducer` state — including `givenUp:true` — persisted to the new puzzle. `useRoundPersistence` hydration found no saved state for the new puzzle and left the stale state untouched.
 **Fix 1 (primary):** `key={puzzle.id}` on `<GameBoard>` in `LeksokiposLayout.tsx` — forces React to remount the component whenever the puzzle ID changes, resetting all hook state.

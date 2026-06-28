@@ -23,6 +23,14 @@ export function useDayChange(puzzle: LeksokiposPuzzle) {
   useEffect(() => {
     if (!isDailyPuzzle(puzzle)) return;
 
+    // If the puzzle is already from the past when the page mounts, the player
+    // deliberately navigated here (e.g. via the leaderboard day strip).
+    // Skip the redirect entirely — they should be able to play past puzzles.
+    // The stale-tab case is covered below: a puzzle that was current at mount
+    // will still be redirected via visibilitychange once the day rolls over.
+    const mountDate = new Date().toISOString().split("T")[0];
+    if (puzzle.date < mountDate) return;
+
     function check() {
       // Matches getTodaysPuzzle() server-side (UTC date), so client and server agree.
       const today = new Date().toISOString().split("T")[0];
@@ -31,10 +39,7 @@ export function useDayChange(puzzle: LeksokiposPuzzle) {
       }
     }
 
-    // Check on mount (covers a cached page served the next day).
-    check();
-
-    // Check whenever the user returns to the tab.
+    // Check whenever the user returns to the tab after a day has rolled over.
     document.addEventListener("visibilitychange", check);
     return () => document.removeEventListener("visibilitychange", check);
   }, [puzzle, router]);
