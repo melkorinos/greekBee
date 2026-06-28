@@ -5,13 +5,13 @@
 
 import type { LeksiarxeioPuzzle, LeksiarxeioRoundSnapshot } from "../types";
 import { leksiarxeioReducer, makeInitialLeksiarxeioState } from "./leksiarxeioReducer";
-import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
+import { useCallback, useMemo, useReducer } from "react";
 
 import { buildLetterStateMap } from "../lib/letterState";
 import { scoreLeksiarxeio } from "../lib/scoring";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
-
-const MAX_GUESSES = 6;
+import { useGameEndCallback } from "@/hooks/useGameEndCallback";
+import { LEKSIARXEIO } from "@/config/gameRules";
 
 /**
  * All state and actions the Leksiarxeio UI needs.
@@ -66,14 +66,7 @@ export function useLeksiarxeioState(
     useCallback((snap: LeksiarxeioRoundSnapshot) => snap.guesses.length > 0, []),
   );
 
-  // ── Fire onGameEnd once when status transitions away from "playing" ──────────
-  const prevStatusRef = useRef(state.status);
-  useEffect(() => {
-    if (prevStatusRef.current === "playing" && state.status !== "playing") {
-      onGameEnd?.(state.guesses.length, state.status === "won");
-    }
-    prevStatusRef.current = state.status;
-  }, [state.status, state.guesses.length, onGameEnd]);
+  useGameEndCallback(state.status, state.guesses.length, onGameEnd);
 
   // ── Derived values ────────────────────────────────────────────────────────────
   const letterStates = useMemo(
@@ -113,7 +106,7 @@ export function useLeksiarxeioState(
     status:       state.status,
     lastMessage:  state.lastMessage,
     letterStates,
-    maxGuesses:   MAX_GUESSES,
+    maxGuesses:   LEKSIARXEIO.MAX_GUESSES,
     score,
     addLetter,
     deleteLetter,

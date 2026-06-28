@@ -3,8 +3,7 @@
 
 import type { PhraseGuessResult, VresTinFrasiState } from "../types";
 import { evaluatePhraseGuess } from "../lib/evaluatePhraseGuess";
-
-const MAX_GUESSES = 6;
+import { VRESTIFRASI } from "@/config/gameRules";
 
 // ─── Action types ─────────────────────────────────────────────────────────────
 
@@ -129,7 +128,7 @@ export function vresTinFrasiReducer(
       const newGuesses = [...state.guesses, result];
 
       const won  = currentWords.every((w, i) => w === puzzle.normalizedWords[i]);
-      const lost = !won && newGuesses.length >= MAX_GUESSES;
+      const lost = !won && newGuesses.length >= VRESTIFRASI.MAX_GUESSES;
 
       return {
         ...state,

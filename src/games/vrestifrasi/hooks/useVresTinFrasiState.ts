@@ -5,13 +5,13 @@
 
 import type { VresTinFrasiPuzzle, VresTinFrasiRoundSnapshot } from "../types";
 import { vresTinFrasiReducer, makeInitialVresTinFrasiState } from "./vresTinFrasiReducer";
-import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
+import { useCallback, useMemo, useReducer } from "react";
 
 import { buildPhraseLetterStateMap } from "../lib/letterState";
 import { scoreVresTinFrasi } from "../lib/scoring";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
-
-const MAX_GUESSES = 6;
+import { useGameEndCallback } from "@/hooks/useGameEndCallback";
+import { VRESTIFRASI } from "@/config/gameRules";
 
 export interface UseVresTinFrasiStateReturn {
   guesses:          ReturnType<typeof makeInitialVresTinFrasiState>["guesses"];
@@ -60,14 +60,7 @@ export function useVresTinFrasiState(
     useCallback((snap: VresTinFrasiRoundSnapshot) => snap.guesses.length > 0, []),
   );
 
-  // Fire onGameEnd once when status transitions away from "playing"
-  const prevStatusRef = useRef(state.status);
-  useEffect(() => {
-    if (prevStatusRef.current === "playing" && state.status !== "playing") {
-      onGameEnd?.(state.guesses.length, state.status === "won");
-    }
-    prevStatusRef.current = state.status;
-  }, [state.status, state.guesses.length, onGameEnd]);
+  useGameEndCallback(state.status, state.guesses.length, onGameEnd);
 
   const letterStates = useMemo(
     () => buildPhraseLetterStateMap(state.guesses),
@@ -95,7 +88,7 @@ export function useVresTinFrasiState(
     status:           state.status,
     lastMessage:      state.lastMessage,
     letterStates,
-    maxGuesses:       MAX_GUESSES,
+    maxGuesses:       VRESTIFRASI.MAX_GUESSES,
     score,
     addLetter,
     deleteLetter,

@@ -9,18 +9,12 @@
 //   - "Παίξε αυτό το παζλ" footer link for past dates
 
 import type { LeaderboardProfileProps } from "@/hooks/useLeaderboardProfile";
-import { LeaderboardModalBase } from "@/components/shared/LeaderboardModal";
+import { LeaderboardModalBase, buildLeaderboardUrl } from "@/components/shared/LeaderboardModal";
 import { ProfileSection } from "@/components/shared/ProfileSection";
-import type { LeaderboardUrlBuilder } from "@/hooks/useLeaderboard";
 import Link from "next/link";
 import { useLeaderboardProfile } from "@/hooks/useLeaderboardProfile";
 
-// Module-level constant — no closure deps, prevents a re-fetch on every keystroke.
-const buildUrl: LeaderboardUrlBuilder = (puzzleId, dId) => {
-  const params = new URLSearchParams({ game_id: "leksokipos", puzzle_date: puzzleId });
-  if (dId) params.set("deviceId", dId);
-  return `/api/game-scores?${params.toString()}`;
-};
+const buildUrl = buildLeaderboardUrl("leksokipos");
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 

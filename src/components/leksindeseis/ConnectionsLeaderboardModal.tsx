@@ -9,18 +9,13 @@
 //   - Shared ProfileSection (topSlot)
 
 import type { LeaderboardProfileProps } from "@/hooks/useLeaderboardProfile";
-import type { LeaderboardUrlBuilder } from "@/hooks/useLeaderboard";
-import { LeaderboardModalBase } from "@/components/shared/LeaderboardModal";
+import { LeaderboardModalBase, buildLeaderboardUrl } from "@/components/shared/LeaderboardModal";
 import { ProfileSection } from "@/components/shared/ProfileSection";
 import { useLeaderboardProfile } from "@/hooks/useLeaderboardProfile";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const buildUrl: LeaderboardUrlBuilder = (date, deviceId) => {
-  const params = new URLSearchParams({ game_id: "leksindeseis", puzzle_date: date });
-  if (deviceId) params.set("deviceId", deviceId);
-  return `/api/game-scores?${params.toString()}`;
-};
+const buildUrl = buildLeaderboardUrl("leksindeseis");
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 

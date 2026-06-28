@@ -5,6 +5,7 @@
 import { getSupabaseClient } from "@/lib/supabase";
 import type { VresTinFrasiPuzzle } from "@/games/vrestifrasi/types";
 import { normalizeLetters } from "@/lib/normalize";
+import { dateToIndex } from "@/lib/puzzleRotation";
 
 import phrasesData from "./phrases-el.json";
 
@@ -13,12 +14,6 @@ const PHRASES: PhraseEntry[] = phrasesData as PhraseEntry[];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function dateToIndex(dateStr: string, listLength: number): number {
-  const epoch  = new Date("2025-01-01").getTime();
-  const target = new Date(dateStr).getTime();
-  const day    = Math.floor((target - epoch) / 86_400_000);
-  return ((day % listLength) + listLength) % listLength;
-}
 
 function buildPuzzle(date: string, phraseDisplay: string): VresTinFrasiPuzzle {
   const normalizedWords = phraseDisplay

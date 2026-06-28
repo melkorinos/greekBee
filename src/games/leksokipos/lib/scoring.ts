@@ -3,9 +3,7 @@
 
 import type { LeksokiposPuzzle } from "../types";
 import { isPangram } from "./pangram";
-
-/** Bonus points awarded on top of regular score for a pangram */
-const PANGRAM_BONUS = 7;
+import { LEKSOKIPOS } from "@/config/gameRules";
 
 /**
  * Calculates the points for a single valid word.
@@ -17,7 +15,7 @@ const PANGRAM_BONUS = 7;
  */
 export function scoreWord(word: string, puzzle: LeksokiposPuzzle): number {
   const base = word.length === 4 ? 1 : word.length;
-  const bonus = isPangram(word, puzzle) ? PANGRAM_BONUS : 0;
+  const bonus = isPangram(word, puzzle) ? LEKSOKIPOS.PANGRAM_BONUS : 0;
   return base + bonus;
 }
 
@@ -33,12 +31,12 @@ export function scoreWord(word: string, puzzle: LeksokiposPuzzle): number {
  *
  * Tech debt: see .claude/issue-tracker/issues/04-td002-max-score-cap.md
  */
-export const MAX_SCORE_CAP = 500;
+export const MAX_SCORE_CAP = LEKSOKIPOS.MAX_SCORE_CAP;
 
 export function maxScore(puzzle: LeksokiposPuzzle): number {
   const raw = puzzle.validWords.reduce(
     (total, word) => total + scoreWord(word, puzzle),
     0
   );
-  return Math.min(Math.ceil(raw * 0.8), MAX_SCORE_CAP);
+  return Math.min(Math.ceil(raw * LEKSOKIPOS.SCORE_SCALE), MAX_SCORE_CAP);
 }

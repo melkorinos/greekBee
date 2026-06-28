@@ -22,6 +22,7 @@ import { maxScore, scoreWord } from "../lib/scoring";
 import { normalizeLetters } from "../lib/normalize";
 import { getOrCreateDeviceId, isProfileLinked, readSlice } from "@/hooks/useGameStore";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
+import { normalizePuzzleDate } from "@/lib/puzzleDate";
 
 /**
  * Central game hook — all components talk to this, never to the reducer directly.
@@ -71,8 +72,7 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     const deviceId = getOrCreateDeviceId();
     if (!deviceId) return;
 
-    // Puzzle IDs are "YYYY-MM-DD-el"; the API expects plain "YYYY-MM-DD".
-    const puzzleDate = initialPuzzle.id.replace(/-[a-z]{2}$/i, "");
+    const puzzleDate = normalizePuzzleDate(initialPuzzle.id);
 
     fetch(
       `/api/game-state?device_uuid=${encodeURIComponent(deviceId)}&game_id=leksokipos&puzzle_date=${encodeURIComponent(puzzleDate)}`
@@ -105,7 +105,7 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     localStorage.removeItem(NEEDS_RESTORE_KEY);
     const deviceId = getOrCreateDeviceId();
     if (!deviceId) return Promise.resolve();
-    const puzzleDate = initialPuzzle.id.replace(/-[a-z]{2}$/i, "");
+    const puzzleDate = normalizePuzzleDate(initialPuzzle.id);
     return fetch(
       `/api/game-state?device_uuid=${encodeURIComponent(deviceId)}&game_id=leksokipos&puzzle_date=${encodeURIComponent(puzzleDate)}`
     )

@@ -11,6 +11,7 @@
 import { createListHandler, createSubmitHandler } from "@/lib/communityPuzzleLifecycle";
 import type { CommunityPuzzleGameConfig, SubmissionValidation } from "@/lib/communityPuzzleLifecycle";
 import type { StavroleksoPuzzleData } from "@/games/stavrolekso/types";
+import { STAVROLEKSO } from "@/config/gameRules";
 
 export const runtime = "edge";
 
@@ -32,7 +33,7 @@ function validate(body: unknown): SubmissionValidation {
     return { ok: false, status: 400, body: { error: "data is required" } };
   }
 
-  if (![9, 13, 15].includes(data.width) || data.width !== data.height) {
+  if (!(STAVROLEKSO.VALID_GRID_SIZES as readonly number[]).includes(data.width) || data.width !== data.height) {
     return { ok: false, status: 400, body: { error: "Grid must be square: 9×9, 13×13, or 15×15" } };
   }
 

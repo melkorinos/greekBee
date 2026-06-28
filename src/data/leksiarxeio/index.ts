@@ -7,6 +7,8 @@
 
 import { getSupabaseClient } from "@/lib/supabase";
 import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
+import { LEKSIARXEIO } from "@/config/gameRules";
+import { dateToIndex } from "@/lib/puzzleRotation";
 
 import words4 from "./words-4.json";
 import words5 from "./words-5.json";
@@ -14,7 +16,7 @@ import words6 from "./words-6.json";
 import words7 from "./words-7.json";
 import words8 from "./words-8.json";
 
-export const LEKSIARXEIO_LENGTHS: LeksiarxeioLength[] = [4, 5, 6, 7, 8];
+export const LEKSIARXEIO_LENGTHS: LeksiarxeioLength[] = [...LEKSIARXEIO.LENGTHS];
 
 const WORD_LISTS: Record<LeksiarxeioLength, string[]> = {
   3: [],
@@ -25,12 +27,6 @@ const WORD_LISTS: Record<LeksiarxeioLength, string[]> = {
   8: words8 as string[],
 };
 
-function dateToIndex(dateStr: string, listLength: number): number {
-  const epoch = new Date("2025-01-01").getTime();
-  const target = new Date(dateStr).getTime();
-  const dayOffset = Math.floor((target - epoch) / 86_400_000);
-  return ((dayOffset % listLength) + listLength) % listLength;
-}
 
 function buildFallbackPuzzle(date: string, length: LeksiarxeioLength): LeksiarxeioPuzzle {
   const pool = WORD_LISTS[length];

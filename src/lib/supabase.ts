@@ -78,6 +78,133 @@ export interface Database {
         };
         Update: Partial<Database["public"]["Tables"]["nomination_votes"]["Insert"]>;
       };
+      player_profiles: {
+        Row: {
+          id:           number;
+          display_name: string;
+          device_uuid:  string;
+          created_at:   string;
+          last_active:  string;
+          auth_user_id: string | null;
+        };
+        Insert: {
+          id?:           number;
+          display_name:  string;
+          device_uuid:   string;
+          created_at?:   string;
+          last_active?:  string;
+          auth_user_id?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["player_profiles"]["Insert"]>;
+      };
+      game_state: {
+        Row: {
+          id:          number;
+          device_uuid: string;
+          game_id:     string;
+          puzzle_date: string;
+          state:       Record<string, unknown>;
+          updated_at:  string;
+        };
+        Insert: {
+          id?:          number;
+          device_uuid:  string;
+          game_id:      string;
+          puzzle_date:  string;
+          state?:       Record<string, unknown>;
+          updated_at?:  string;
+        };
+        Update: Partial<Database["public"]["Tables"]["game_state"]["Insert"]>;
+      };
+      transfer_codes: {
+        Row: {
+          code:        string;
+          device_uuid: string;
+          created_at:  string;
+          expires_at:  string;
+          used:        boolean;
+        };
+        Insert: {
+          code:         string;
+          device_uuid:  string;
+          created_at?:  string;
+          expires_at?:  string;
+          used?:        boolean;
+        };
+        Update: Partial<Database["public"]["Tables"]["transfer_codes"]["Insert"]>;
+      };
+      community_leksiarxeio_puzzles: {
+        Row: {
+          id:             number;
+          submitter_name: string;
+          data:           Record<string, unknown>;
+          status:         "pending" | "accepted" | "rejected";
+          created_at:     string;
+        };
+        Insert: {
+          id?:             number;
+          submitter_name?: string;
+          data:            Record<string, unknown>;
+          status?:         "pending" | "accepted" | "rejected";
+          created_at?:     string;
+        };
+        Update: Partial<Database["public"]["Tables"]["community_leksiarxeio_puzzles"]["Insert"]>;
+      };
+      community_leksindeseis_puzzles: {
+        Row: {
+          id:             number;
+          submitter_name: string;
+          data:           Record<string, unknown>;
+          status:         "pending" | "accepted" | "rejected";
+          created_at:     string;
+        };
+        Insert: {
+          id?:             number;
+          submitter_name?: string;
+          data:            Record<string, unknown>;
+          status?:         "pending" | "accepted" | "rejected";
+          created_at?:     string;
+        };
+        Update: Partial<Database["public"]["Tables"]["community_leksindeseis_puzzles"]["Insert"]>;
+      };
+      community_vrestifrasi_puzzles: {
+        Row: {
+          id:             number;
+          submitter_name: string;
+          data:           Record<string, unknown>;
+          status:         "pending" | "accepted" | "rejected";
+          created_at:     string;
+        };
+        Insert: {
+          id?:             number;
+          submitter_name?: string;
+          data:            Record<string, unknown>;
+          status?:         "pending" | "accepted" | "rejected";
+          created_at?:     string;
+        };
+        Update: Partial<Database["public"]["Tables"]["community_vrestifrasi_puzzles"]["Insert"]>;
+      };
+      community_stavrolekso_puzzles: {
+        Row: {
+          id:             number;
+          title:          string | null;
+          submitter_name: string;
+          edit_pin:       string;
+          data:           Record<string, unknown>;
+          status:         "pending" | "accepted" | "rejected";
+          created_at:     string;
+        };
+        Insert: {
+          id?:             number;
+          title?:          string | null;
+          submitter_name?: string;
+          edit_pin:        string;
+          data:            Record<string, unknown>;
+          status?:         "pending" | "accepted" | "rejected";
+          created_at?:     string;
+        };
+        Update: Partial<Database["public"]["Tables"]["community_stavrolekso_puzzles"]["Insert"]>;
+      };
     };
   };
 }
