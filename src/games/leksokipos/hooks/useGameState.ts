@@ -52,6 +52,10 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     initialPuzzle.id,
     snapshot,
     useCallback((saved) => dispatch({ type: "RESTORE_STATE", saved }), []),
+    // Only persist once there is meaningful progress — prevents the initial empty
+    // state from being written to localStorage on mount, which would otherwise
+    // block the cross-device server restore for puzzles not yet played locally.
+    useCallback((snap: LeksokiposRoundSnapshot) => snap.foundWords.length > 0 || snap.givenUp, []),
   );
 
   // Mount-time restore. Skipped when local session already exists, unless

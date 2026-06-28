@@ -277,6 +277,52 @@ describe("Give-up flow", () => {
   });
 });
 
+// ── Puzzle navigation (givenUp bleed regression) ──────────────────────────────
+// Regression: Next.js App Router reuses the GameBoard instance when navigating
+// between /leksokipos/[center]/[outer] URLs. Without key={puzzle.id} the
+// useReducer state (including givenUp:true) would persist to the next puzzle.
+
+describe("Puzzle navigation", () => {
+  // Wrap GameBoard with key={activePuzzle.id} — mirrors what LeksokiposLayout does.
+  function KeyedWrapper({ activePuzzle }: { activePuzzle: LeksokiposPuzzle }) {
+    return <GameBoard key={activePuzzle.id} puzzle={activePuzzle} />;
+  }
+
+  const dailyA: LeksokiposPuzzle = { ...puzzle, id: "2026-05-20-el", date: "2026-05-20" };
+  const dailyB: LeksokiposPuzzle = { ...puzzle, id: "2026-05-21-el", date: "2026-05-21" };
+
+  it("does not carry givenUp state to a different puzzle", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<KeyedWrapper activePuzzle={dailyA} />);
+
+    // Give up on puzzle A
+    await user.click(screen.getByTestId("btn-give-up"));
+    await user.click(screen.getByTestId("btn-give-up-confirm"));
+    await waitFor(() => expect(screen.getByTestId("give-up-banner")).toBeInTheDocument());
+
+    // Navigate to puzzle B (key change → remount)
+    rerender(<KeyedWrapper activePuzzle={dailyB} />);
+
+    // Puzzle B must start fresh — no give-up banner, action buttons visible
+    expect(screen.queryByTestId("give-up-banner")).toBeNull();
+    expect(screen.getByTestId("btn-delete")).toBeInTheDocument();
+    expect(screen.getByTestId("btn-shuffle")).toBeInTheDocument();
+  });
+
+  it("does not carry foundWords to a different puzzle", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<KeyedWrapper activePuzzle={dailyA} />);
+
+    await user.keyboard("paint{Enter}");
+    expect(screen.getByTestId("found-words-count")).toHaveTextContent("1");
+
+    rerender(<KeyedWrapper activePuzzle={dailyB} />);
+
+    expect(screen.getByTestId("found-words-count")).toHaveTextContent("0");
+    expect(screen.getByTestId("score-label")).toHaveTextContent("0 pts");
+  });
+});
+
 // ── Leaderboard button location ────────────────────────────────────────────────
 
 describe("Leaderboard button", () => {

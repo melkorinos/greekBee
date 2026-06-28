@@ -4,6 +4,7 @@
 // Each game passes its own title, rules list, and optional bullet icon.
 
 import { useState } from "react";
+import { btnHeaderIcon, btnHeaderIconSize } from "@/styles/recipes";
 
 interface HowToPlayModalProps {
   title:        string;
@@ -35,7 +36,7 @@ export function HowToPlayModal({
 
   const triggerClass = lightTrigger
     ? "w-8 h-8 flex items-center justify-center rounded-full border border-stone-600 text-stone-300 text-sm font-bold hover:bg-stone-700 transition-colors"
-    : "w-8 h-8 flex items-center justify-center rounded-full border border-border text-muted text-sm font-bold hover:bg-surface-raised transition-colors";
+    : `${btnHeaderIconSize} ${btnHeaderIcon} text-sm font-bold`;
 
   return (
     <>

@@ -5,6 +5,16 @@
 
 ---
 
+## Session 51 — 2026-06-28: Bug fix — givenUp state bleeding across Leksokipos daily puzzles ✅
+Production bug: giving up on today's puzzle then navigating to a past daily via the leaderboard day strip showed the past puzzle as permanently locked (give-up banner, no game board).
+**Root cause:** Next.js App Router reuses client component instances when navigating between `/leksokipos/[center]/[outer]` URLs (same route pattern). `GameBoard`'s `useReducer` state — including `givenUp:true` — persisted to the new puzzle. `useRoundPersistence` hydration found no saved state for the new puzzle and left the stale state untouched.
+**Fix 1 (primary):** `key={puzzle.id}` on `<GameBoard>` in `LeksokiposLayout.tsx` — forces React to remount the component whenever the puzzle ID changes, resetting all hook state.
+**Fix 2 (secondary):** Added `shouldSave: snap => snap.foundWords.length > 0 || snap.givenUp` to `useRoundPersistence` in `useGameState.ts` — mirrors the pattern already in `useGuessRound`. Prevents the initial empty state from being written to localStorage on mount, which was silently blocking the cross-device server restore for puzzles not yet played locally.
+**Tests added:** `LeksokiposLayout.test.tsx` — mock updated to expose `data-puzzle-id`; new "puzzle key" describe: passes puzzle id through, different DOM node on puzzle change. `GameBoard.test.tsx` — new "Puzzle navigation" describe: givenUp doesn't carry to a different puzzle; foundWords/score reset on puzzle change.
+Verification: **1113 tests pass · eslint clean · build exit 0**.
+
+---
+
 ## Session 50 — 2026-06-28: Architecture deepening — lifecycle consume + guess-game spine + sync seam ✅
 Ran `/improve-codebase-architecture`; implemented all 4 candidates.
 1. **Completed the Community Puzzle Lifecycle (consume transition).** Added `consumeApprovedPuzzle<TData>(table)` to `src/lib/communityPuzzleLifecycle.ts` — claims oldest approved row (FIFO), deletes it, returns `{ data, submitter_name }` or null on empty/error. The "query approved → delete → fallback" block was triplicated in the three data loaders; they're now thin row→Puzzle mappers (`data/leksiarxeio`, `data/vrestifrasi`, `data/leksindeseis`). The module now owns all four transitions (submit/list/review/consume). CONTEXT.md lifecycle entry updated.

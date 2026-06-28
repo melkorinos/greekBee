@@ -43,13 +43,15 @@ export const inputCompactClass =
 // Base fill/text/border are tokenised; hover/active polish uses opacity/token
 // tints so no `dark:` pair is needed.
 
-/** Small circular icon button for game headers (variant toggle, share, etc.).
- * Documented exception: border-stone-300 is intentionally hardcoded (not a token).
- * stone-300 reads clearly against both the light page background AND the dark
- * stone-950 surface — the same pattern used by ShareButton. border-border
- * (stone-200 light / stone-700 dark) is too faint on the dark surface. */
+/** Diameter of every circular icon button in game headers. One place to change all three. */
+export const btnHeaderIconSize = "w-8 h-8";
+
+/** Small circular icon button for game headers (variant toggle, share, help).
+ * Pair with btnHeaderIconSize for the full circle.
+ * Border uses border-border (stone-200 light / stone-700 dark) — same token as
+ * the horizontal page separator, so the circles feel visually quiet in dark mode. */
 export const btnHeaderIcon =
-  "flex items-center justify-center rounded-full border border-stone-300 text-muted hover:bg-surface-raised active:bg-border transition-colors";
+  "flex items-center justify-center rounded-full border border-border text-muted hover:bg-surface-raised active:bg-border transition-colors";
 
 /** Secondary action button — border only, neutral fill (Delete / Shuffle / 🏆) */
 export const btnSecondary =
