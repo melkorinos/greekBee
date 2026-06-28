@@ -14,6 +14,7 @@
 import { useEffect, useRef } from "react";
 
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
+import { pushFoundWords } from "@/games/leksokipos/sync";
 
 interface UseGameStateSyncOptions {
   puzzleDate:    string;
@@ -61,16 +62,7 @@ export function useGameStateSync({
     const deviceUuid = getOrCreateDeviceId();
     if (!deviceUuid) return;
 
-    fetch("/api/game-state", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({
-        device_uuid:  deviceUuid,
-        game_id:      "leksokipos",
-        puzzle_date:  puzzleDate,
-        state: { foundWords },
-      }),
-    }).catch(() => {});
+    pushFoundWords({ deviceUuid, puzzleDate, foundWords });
   // foundWords (array ref) changes on every valid submit — that's our per-word
   // trigger. profileLinked flipping true is the backfill trigger for words found
   // before the profile existed.

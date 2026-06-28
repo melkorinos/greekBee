@@ -1,7 +1,8 @@
 // communityPuzzleLifecycle.ts — the Community Puzzle Lifecycle module.
 //
 // One implementation of the lifecycle shared by every /api/community-puzzles/*
-// route: submit → pending → approve (UPDATE status) | reject (DELETE row).
+// route: submit → pending → approve (UPDATE status) | reject (DELETE row) →
+// consume (claim the oldest approved row when a game serves its Daily Puzzle).
 // Per-game variation enters through CommunityPuzzleGameConfig:
 //   - table:    which community_*_puzzles table backs the game
 //   - validate: submission validation adapter — defined in the game's own
@@ -41,6 +42,51 @@ export interface CommunityPuzzleGameConfig {
 }
 
 const DEFAULT_SELECT = "id, submitter_name, data, status, created_at";
+
+// ── Consume (claim the next approved Community Puzzle) ──────────────────────────
+// The fourth lifecycle transition. A game's data loader claims the oldest approved
+// row (FIFO), deletes it so it is never served again, and receives the row's jsonb
+// `data` blob plus submitter_name. Each loader maps the blob to its own Puzzle
+// shape and owns its own static fallback when the queue is empty. Returns null on
+// an empty queue or any error so the caller falls through to its fallback.
+//
+// Stavrolekso is excluded by design: its rows are never consumed (CONTEXT.md).
+
+/** What a loader receives when it claims an approved Community Puzzle. */
+export interface ConsumedPuzzle<TData> {
+  /** The row's jsonb payload, shaped per game. */
+  data:           TData;
+  /** Submitter's display name, or null when blank. */
+  submitter_name: string | null;
+}
+
+export async function consumeApprovedPuzzle<TData>(
+  table: string,
+): Promise<ConsumedPuzzle<TData> | null> {
+  try {
+    const supabase = getSupabaseClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase.from(table) as any)
+      .select("id, submitter_name, data")
+      .eq("status", "approved")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .single();
+
+    if (error || !data) return null;
+
+    const row = data as { id: number; submitter_name: string | null; data: TData };
+
+    // Delete immediately — consumed puzzles are never reused.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase.from(table) as any).delete().eq("id", row.id);
+
+    return { data: row.data, submitter_name: row.submitter_name || null };
+  } catch {
+    // Any error → caller falls through to its static fallback.
+    return null;
+  }
+}
 
 function isAdmin(req: NextRequest): boolean {
   const secret = req.headers.get("x-admin-secret") ?? "";

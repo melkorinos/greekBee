@@ -5,7 +5,7 @@
 // One community puzzle row covers all 5 lengths. The row is deleted immediately
 // on consumption so it is never served again.
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { consumeApprovedPuzzle } from "@/lib/communityPuzzleLifecycle";
 import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
 import { LEKSIARXEIO } from "@/config/gameRules";
 import { dateToIndex } from "@/lib/puzzleRotation";
@@ -45,34 +45,15 @@ interface LeksiarxeioDaily {
  * Checks the community queue first; falls back to static word pools.
  */
 export async function getAllTodaysLeksiarxeioPuzzles(date: string): Promise<LeksiarxeioDaily> {
-  try {
-    const supabase = getSupabaseClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from("community_leksiarxeio_puzzles") as any)
-      .select("id, submitter_name, data")
-      .eq("status", "approved")
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .single();
-
-    if (!error && data) {
-      const row = data as { id: number; submitter_name: string; data: Record<string, string> };
-
-      // Delete immediately — consumed puzzles are never reused
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from("community_leksiarxeio_puzzles") as any).delete().eq("id", row.id);
-
-      const puzzles = LEKSIARXEIO_LENGTHS.map((len): LeksiarxeioPuzzle => ({
-        id:     `${date}-wordle-${len}`,
-        date,
-        answer: (row.data[String(len)] ?? "").toLowerCase(),
-        length: len,
-      }));
-
-      return { puzzles, submitter_name: row.submitter_name || null };
-    }
-  } catch {
-    // Fall through to static fallback on any error
+  const consumed = await consumeApprovedPuzzle<Record<string, string>>("community_leksiarxeio_puzzles");
+  if (consumed) {
+    const puzzles = LEKSIARXEIO_LENGTHS.map((len): LeksiarxeioPuzzle => ({
+      id:     `${date}-wordle-${len}`,
+      date,
+      answer: (consumed.data[String(len)] ?? "").toLowerCase(),
+      length: len,
+    }));
+    return { puzzles, submitter_name: consumed.submitter_name };
   }
 
   return {

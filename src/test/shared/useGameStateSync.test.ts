@@ -119,4 +119,34 @@ describe("useGameStateSync — incremental push when already linked", () => {
 
     expect(spy).not.toHaveBeenCalled();
   });
+
+  it("does not push when the profile links before any word is found (empty backfill)", async () => {
+    const spy = mockFetch();
+
+    const { rerender } = renderHook(
+      ({ profileLinked }) =>
+        useGameStateSync({ puzzleDate: "2026-01-01", isDaily: true, profileLinked, foundWords: [] }),
+      { initialProps: { profileLinked: false } },
+    );
+
+    // Link with nothing found yet — there is nothing to back-fill.
+    await act(async () => { rerender({ profileLinked: true }); });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("does not re-push on a re-render that adds no new word (per-word dedup)", async () => {
+    const spy = mockFetch();
+
+    const { rerender } = renderHook(
+      ({ foundWords }) =>
+        useGameStateSync({ puzzleDate: "2026-01-01", isDaily: true, profileLinked: true, foundWords }),
+      { initialProps: { foundWords: [] as string[] } },
+    );
+
+    await act(async () => { rerender({ foundWords: ["αντι"] }); });      // grows → push
+    await act(async () => { rerender({ foundWords: ["αντι"] }); });      // same length → no push
+
+    expect(spy).toHaveBeenCalledOnce();
+  });
 });

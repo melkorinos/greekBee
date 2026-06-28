@@ -2,7 +2,7 @@
 // Primary source: community_vrestifrasi_puzzles (approved FIFO).
 // Fallback: deterministic rotation through phrases-el.json by date.
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { consumeApprovedPuzzle } from "@/lib/communityPuzzleLifecycle";
 import type { VresTinFrasiPuzzle } from "@/games/vrestifrasi/types";
 import { normalizeLetters } from "@/lib/normalize";
 import { dateToIndex } from "@/lib/puzzleRotation";
@@ -40,30 +40,12 @@ interface VresTinFrasiDaily {
  * Community queue is checked first; static phrase pool is the fallback.
  */
 export async function getTodaysVresTinFrasiPuzzle(date: string): Promise<VresTinFrasiDaily> {
-  try {
-    const supabase = getSupabaseClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from("community_vrestifrasi_puzzles") as any)
-      .select("id, submitter_name, data")
-      .eq("status", "approved")
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .single();
-
-    if (!error && data) {
-      const row = data as { id: number; submitter_name: string; data: { phrase: string } };
-
-      // Consume immediately — never reused
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from("community_vrestifrasi_puzzles") as any).delete().eq("id", row.id);
-
-      return {
-        puzzle:         buildPuzzle(date, row.data.phrase),
-        submitter_name: row.submitter_name || null,
-      };
-    }
-  } catch {
-    // Fall through to static fallback
+  const consumed = await consumeApprovedPuzzle<{ phrase: string }>("community_vrestifrasi_puzzles");
+  if (consumed) {
+    return {
+      puzzle:         buildPuzzle(date, consumed.data.phrase),
+      submitter_name: consumed.submitter_name,
+    };
   }
 
   const entry = PHRASES[dateToIndex(date, PHRASES.length)];

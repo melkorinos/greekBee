@@ -16,10 +16,9 @@ import { buildInitialState, gameReducer } from "./gameReducer";
 import { useCallback, useEffect, useMemo, useReducer } from "react";
 
 import type { LeksokiposPuzzle, LeksokiposRoundSnapshot } from "../types";
-import { calculateRank } from "../lib/ranking";
 import { isDailyPuzzle } from "../lib/puzzle";
-import { maxScore, scoreWord } from "../lib/scoring";
 import { normalizeLetters } from "../lib/normalize";
+import { pullSnapshot } from "../sync";
 import { getOrCreateDeviceId, isProfileLinked, readSlice } from "@/hooks/useGameStore";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 import { normalizePuzzleDate } from "@/lib/puzzleDate";
@@ -72,28 +71,13 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     const deviceId = getOrCreateDeviceId();
     if (!deviceId) return;
 
-    const puzzleDate = normalizePuzzleDate(initialPuzzle.id);
-
-    fetch(
-      `/api/game-state?device_uuid=${encodeURIComponent(deviceId)}&game_id=leksokipos&puzzle_date=${encodeURIComponent(puzzleDate)}`
-    )
-      .then((r) => r.json())
-      .then((data: { state?: { foundWords?: string[] } | null }) => {
-        const foundWords = data.state?.foundWords;
-        if (!Array.isArray(foundWords) || foundWords.length === 0) return;
-        const score = foundWords.reduce((sum, w) => sum + scoreWord(w, initialPuzzle), 0);
-        dispatch({
-          type: "RESTORE_STATE",
-          saved: {
-            foundWords,
-            score,
-            currentRank: calculateRank(score, maxScore(initialPuzzle)),
-            startedAt:   Date.now(),
-            givenUp:     false,
-          },
-        });
-      })
-      .catch(() => {});
+    void pullSnapshot({
+      deviceUuid: deviceId,
+      puzzleDate: normalizePuzzleDate(initialPuzzle.id),
+      puzzle:     initialPuzzle,
+    }).then((saved) => {
+      if (saved) dispatch({ type: "RESTORE_STATE", saved });
+    });
   // initialPuzzle is stable for the lifetime of this hook instance.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -105,27 +89,13 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     localStorage.removeItem(NEEDS_RESTORE_KEY);
     const deviceId = getOrCreateDeviceId();
     if (!deviceId) return Promise.resolve();
-    const puzzleDate = normalizePuzzleDate(initialPuzzle.id);
-    return fetch(
-      `/api/game-state?device_uuid=${encodeURIComponent(deviceId)}&game_id=leksokipos&puzzle_date=${encodeURIComponent(puzzleDate)}`
-    )
-      .then((r) => r.json())
-      .then((data: { state?: { foundWords?: string[] } | null }) => {
-        const foundWords = data.state?.foundWords;
-        if (!Array.isArray(foundWords) || foundWords.length === 0) return;
-        const score = foundWords.reduce((sum, w) => sum + scoreWord(w, initialPuzzle), 0);
-        dispatch({
-          type: "RESTORE_STATE",
-          saved: {
-            foundWords,
-            score,
-            currentRank: calculateRank(score, maxScore(initialPuzzle)),
-            startedAt:   Date.now(),
-            givenUp:     false,
-          },
-        });
-      })
-      .catch(() => {});
+    return pullSnapshot({
+      deviceUuid: deviceId,
+      puzzleDate: normalizePuzzleDate(initialPuzzle.id),
+      puzzle:     initialPuzzle,
+    }).then((saved) => {
+      if (saved) dispatch({ type: "RESTORE_STATE", saved });
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

@@ -90,6 +90,9 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `dataLoader.test.ts` (leksindeseis) | `getTodaysLeksindeseisPuzzle` — date match, fallback, shape |
 | `persistence.test.ts` | `useRoundPersistence` — hydration, saving, clear(), shouldSave |
 | `useScoreSubmission.test.ts` | Unified hook — submit/submitWithName (Leksokipos+Leksindeseis) + submitLength with penalty (Leksiarxeio) |
+| `useGuessRound.test.ts` | Shared guess-game spine — score-only-on-end, onGameEnd once, persist `{guesses,status}` + restore, save guard, per-puzzle sessions |
+| `communityPuzzleLifecycle.test.ts` | submit/list/review handlers **+ `consumeApprovedPuzzle`** (claim oldest approved, delete by id, null on empty/error) |
+| `leksokiposSync.test.ts` | `pushFoundWords` (wire shape, never throws) + `pullSnapshot` (rebuild snapshot+score, params, null on empty/null/error) — the cross-device sync wire |
 | `useGameIdentity.test.ts` | SSR-safe DeviceId + DisplayName init, setter state updates |
 | `useGameStore.test.ts` | readSlice, writeSlice, clearSlice, deviceId, displayName, profileLinked, migration |
 | `Shell.test.tsx` | Hamburger open/close/Escape, nav links, theme toggle (aria-label, `.dark` class on `documentElement`) |

@@ -3,15 +3,27 @@
 // Leksiarxeio — React hook.
 // Wires the reducer to persistence and exposes a clean API to the UI.
 
-import type { LeksiarxeioPuzzle, LeksiarxeioRoundSnapshot } from "../types";
-import { leksiarxeioReducer, makeInitialLeksiarxeioState } from "./leksiarxeioReducer";
-import { useCallback, useMemo, useReducer } from "react";
+import type { GuessResult, LeksiarxeioPuzzle, LeksiarxeioState } from "../types";
+import {
+  leksiarxeioReducer,
+  makeInitialLeksiarxeioState,
+  type LeksiarxeioAction,
+} from "./leksiarxeioReducer";
+import { useCallback, useMemo } from "react";
 
 import { buildLetterStateMap } from "../lib/letterState";
 import { scoreLeksiarxeio } from "../lib/scoring";
-import { useRoundPersistence } from "@/hooks/useRoundPersistence";
-import { useGameEndCallback } from "@/hooks/useGameEndCallback";
+import { useGuessRound, type GuessRoundSnapshot } from "@/hooks/useGuessRound";
 import { LEKSIARXEIO } from "@/config/gameRules";
+
+/** Build the reducer's RESTORE_STATE action from a persisted snapshot. */
+const restoreLeksiarxeio = (
+  snap: GuessRoundSnapshot<GuessResult>,
+): LeksiarxeioAction => ({
+  type:    "RESTORE_STATE",
+  guesses: snap.guesses,
+  status:  snap.status,
+});
 
 /**
  * All state and actions the Leksiarxeio UI needs.
@@ -40,33 +52,21 @@ export function useLeksiarxeioState(
 ): UseLeksiarxeioStateReturn {
   const validSet = useMemo(() => new Set(validWords), [validWords]);
 
-  const [state, dispatch] = useReducer(
-    leksiarxeioReducer,
+  const { state, dispatch, score } = useGuessRound<
+    LeksiarxeioState,
+    LeksiarxeioAction,
+    GuessResult,
+    LeksiarxeioPuzzle
+  >({
+    gameId:            "leksiarxeio",
     puzzle,
-    makeInitialLeksiarxeioState
-  );
-
-  // Memoize only the fields that need to be persisted.
-  // puzzle.id is not included — it's the session key, not part of the snapshot.
-  const snapshot = useMemo<LeksiarxeioRoundSnapshot>(() => ({
-    guesses: state.guesses,
-    status:  state.status,
-  }), [state.guesses, state.status]);
-
-  useRoundPersistence<LeksiarxeioRoundSnapshot>(
-    "leksiarxeio",
-    puzzle.id,
-    snapshot,
-    useCallback((saved) => dispatch({
-      type:    "RESTORE_STATE",
-      guesses: saved.guesses,
-      status:  saved.status,
-    }), []),
-    // Only persist once the player has made at least one guess
-    useCallback((snap: LeksiarxeioRoundSnapshot) => snap.guesses.length > 0, []),
-  );
-
-  useGameEndCallback(state.status, state.guesses.length, onGameEnd);
+    puzzleId:          puzzle.id,
+    reducer:           leksiarxeioReducer,
+    makeInitialState:  makeInitialLeksiarxeioState,
+    makeRestoreAction: restoreLeksiarxeio,
+    scoreFn:           scoreLeksiarxeio,
+    onGameEnd,
+  });
 
   // ── Derived values ────────────────────────────────────────────────────────────
   const letterStates = useMemo(
@@ -74,30 +74,22 @@ export function useLeksiarxeioState(
     [state.guesses]
   );
 
-  const score = useMemo(
-    () =>
-      state.status !== "playing"
-        ? scoreLeksiarxeio(state.guesses.length, state.status === "won")
-        : 0,
-    [state.guesses.length, state.status]
-  );
-
   // ── Actions ───────────────────────────────────────────────────────────────────
   const addLetter = useCallback(
     (letter: string) => dispatch({ type: "ADD_LETTER", letter }),
-    []
+    [dispatch]
   );
   const deleteLetter = useCallback(
     () => dispatch({ type: "DELETE_LETTER" }),
-    []
+    [dispatch]
   );
   const submitGuess = useCallback(
     () => dispatch({ type: "SUBMIT_GUESS", validWords: validSet }),
-    [validSet]
+    [dispatch, validSet]
   );
   const clearMessage = useCallback(
     () => dispatch({ type: "CLEAR_MESSAGE" }),
-    []
+    [dispatch]
   );
 
   return {

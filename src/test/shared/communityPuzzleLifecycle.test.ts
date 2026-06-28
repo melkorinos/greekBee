@@ -21,7 +21,7 @@ function makeChain(table: string, result: ChainResult) {
     _calls.push({ table, op, args });
     return chain;
   };
-  for (const op of ["insert", "select", "update", "delete", "eq", "order"]) {
+  for (const op of ["insert", "select", "update", "delete", "eq", "order", "limit"]) {
     chain[op] = record(op);
   }
   chain.single = () => {
@@ -41,9 +41,8 @@ vi.mock("@/lib/supabase", () => ({
   }),
 }));
 
-const { createListHandler, createReviewHandler, createSubmitHandler } = await import(
-  "@/lib/communityPuzzleLifecycle"
-);
+const { consumeApprovedPuzzle, createListHandler, createReviewHandler, createSubmitHandler } =
+  await import("@/lib/communityPuzzleLifecycle");
 type SubmissionValidation = import("@/lib/communityPuzzleLifecycle").SubmissionValidation;
 
 // ── Synthetic game config ─────────────────────────────────────────────────────
@@ -211,6 +210,49 @@ describe("createListHandler — publicApprovedList (Stavrolekso shape)", () => {
     const res = await GET(makeReq("GET", undefined, { query: "?status=pending", secret: CORRECT_SECRET }));
     expect(res.status).toBe(200);
     expect(_calls.find((c) => c.op === "eq")?.args).toEqual(["status", "pending"]);
+  });
+});
+
+// ── Consume ─────────────────────────────────────────────────────────────────────
+// The fourth lifecycle transition: a game's data loader claims the oldest approved
+// row, the module deletes it, and the loader receives data + submitter_name. The
+// three game data loaders (Leksiarxeio, Vres Tin Frasi, Leksindeseis) are thin
+// mappers over this, so this is their consume test surface.
+
+describe("consumeApprovedPuzzle", () => {
+  it("claims the oldest approved row (limit 1), deletes it by id, returns data + submitter_name", async () => {
+    _queue.push({ data: { id: 3, submitter_name: "Νίκος", data: { phrase: "γεια σου" } }, error: null });
+
+    const result = await consumeApprovedPuzzle<{ phrase: string }>(TABLE);
+    expect(result).toEqual({ data: { phrase: "γεια σου" }, submitter_name: "Νίκος" });
+
+    expect(_calls.find((c) => c.op === "eq")?.args).toEqual(["status", "approved"]);
+    expect(_calls.find((c) => c.op === "order")?.args).toEqual(["created_at", { ascending: true }]);
+    expect(_calls.find((c) => c.op === "limit")?.args).toEqual([1]);
+
+    const del = _calls.find((c) => c.op === "delete");
+    expect(del?.table).toBe(TABLE);
+    expect(_calls.filter((c) => c.op === "eq").pop()?.args).toEqual(["id", 3]);
+  });
+
+  it("returns null and attempts no delete when the queue is empty", async () => {
+    _queue.push({ data: null, error: null });
+    const result = await consumeApprovedPuzzle(TABLE);
+    expect(result).toBeNull();
+    expect(_calls.find((c) => c.op === "delete")).toBeUndefined();
+  });
+
+  it("returns null on DB error so the loader falls through to its static fallback", async () => {
+    _queue.push({ data: null, error: { message: "db fail" } });
+    const result = await consumeApprovedPuzzle(TABLE);
+    expect(result).toBeNull();
+    expect(_calls.find((c) => c.op === "delete")).toBeUndefined();
+  });
+
+  it("normalises a blank submitter_name to null", async () => {
+    _queue.push({ data: { id: 4, submitter_name: "", data: { phrase: "x" } }, error: null });
+    const result = await consumeApprovedPuzzle<{ phrase: string }>(TABLE);
+    expect(result?.submitter_name).toBeNull();
   });
 });
 

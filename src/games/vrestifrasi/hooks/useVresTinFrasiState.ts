@@ -3,15 +3,27 @@
 // Vres Tin Frasi — React hook.
 // Wires the reducer to persistence and exposes a clean API to the UI.
 
-import type { VresTinFrasiPuzzle, VresTinFrasiRoundSnapshot } from "../types";
-import { vresTinFrasiReducer, makeInitialVresTinFrasiState } from "./vresTinFrasiReducer";
-import { useCallback, useMemo, useReducer } from "react";
+import type { PhraseGuessResult, VresTinFrasiPuzzle, VresTinFrasiState } from "../types";
+import {
+  vresTinFrasiReducer,
+  makeInitialVresTinFrasiState,
+  type VresTinFrasiAction,
+} from "./vresTinFrasiReducer";
+import { useCallback, useMemo } from "react";
 
 import { buildPhraseLetterStateMap } from "../lib/letterState";
 import { scoreVresTinFrasi } from "../lib/scoring";
-import { useRoundPersistence } from "@/hooks/useRoundPersistence";
-import { useGameEndCallback } from "@/hooks/useGameEndCallback";
+import { useGuessRound, type GuessRoundSnapshot } from "@/hooks/useGuessRound";
 import { VRESTIFRASI } from "@/config/gameRules";
+
+/** Build the reducer's RESTORE_STATE action from a persisted snapshot. */
+const restoreVresTinFrasi = (
+  snap: GuessRoundSnapshot<PhraseGuessResult>,
+): VresTinFrasiAction => ({
+  type:    "RESTORE_STATE",
+  guesses: snap.guesses,
+  status:  snap.status,
+});
 
 export interface UseVresTinFrasiStateReturn {
   guesses:          ReturnType<typeof makeInitialVresTinFrasiState>["guesses"];
@@ -37,49 +49,32 @@ export function useVresTinFrasiState(
 ): UseVresTinFrasiStateReturn {
   const validSet = useMemo(() => new Set(validWords), [validWords]);
 
-  const [state, dispatch] = useReducer(
-    vresTinFrasiReducer,
+  const { state, dispatch, score } = useGuessRound<
+    VresTinFrasiState,
+    VresTinFrasiAction,
+    PhraseGuessResult,
+    VresTinFrasiPuzzle
+  >({
+    gameId:            "vrestifrasi",
     puzzle,
-    makeInitialVresTinFrasiState,
-  );
-
-  const snapshot = useMemo<VresTinFrasiRoundSnapshot>(() => ({
-    guesses: state.guesses,
-    status:  state.status,
-  }), [state.guesses, state.status]);
-
-  useRoundPersistence<VresTinFrasiRoundSnapshot>(
-    "vrestifrasi",
-    puzzle.id,
-    snapshot,
-    useCallback((saved) => dispatch({
-      type:    "RESTORE_STATE",
-      guesses: saved.guesses,
-      status:  saved.status,
-    }), []),
-    useCallback((snap: VresTinFrasiRoundSnapshot) => snap.guesses.length > 0, []),
-  );
-
-  useGameEndCallback(state.status, state.guesses.length, onGameEnd);
+    puzzleId:          puzzle.id,
+    reducer:           vresTinFrasiReducer,
+    makeInitialState:  makeInitialVresTinFrasiState,
+    makeRestoreAction: restoreVresTinFrasi,
+    scoreFn:           scoreVresTinFrasi,
+    onGameEnd,
+  });
 
   const letterStates = useMemo(
     () => buildPhraseLetterStateMap(state.guesses),
     [state.guesses],
   );
 
-  const score = useMemo(
-    () =>
-      state.status !== "playing"
-        ? scoreVresTinFrasi(state.guesses.length, state.status === "won")
-        : 0,
-    [state.guesses.length, state.status],
-  );
-
-  const addLetter    = useCallback((letter: string) => dispatch({ type: "ADD_LETTER", letter }), []);
-  const deleteLetter = useCallback(() => dispatch({ type: "DELETE_LETTER" }), []);
-  const clearWord    = useCallback(() => dispatch({ type: "CLEAR_WORD" }), []);
-  const submitGuess  = useCallback(() => dispatch({ type: "SUBMIT_GUESS", validWords: validSet }), [validSet]);
-  const clearMessage = useCallback(() => dispatch({ type: "CLEAR_MESSAGE" }), []);
+  const addLetter    = useCallback((letter: string) => dispatch({ type: "ADD_LETTER", letter }), [dispatch]);
+  const deleteLetter = useCallback(() => dispatch({ type: "DELETE_LETTER" }), [dispatch]);
+  const clearWord    = useCallback(() => dispatch({ type: "CLEAR_WORD" }), [dispatch]);
+  const submitGuess  = useCallback(() => dispatch({ type: "SUBMIT_GUESS", validWords: validSet }), [dispatch, validSet]);
+  const clearMessage = useCallback(() => dispatch({ type: "CLEAR_MESSAGE" }), [dispatch]);
 
   return {
     guesses:          state.guesses,
