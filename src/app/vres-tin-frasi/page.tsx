@@ -27,7 +27,7 @@ export default async function VresTinFrasiPage() {
   ];
 
   return (
-    <main className="flex flex-1 flex-col items-center gap-2 px-4 pt-4 bg-background text-foreground">
+    <main data-game="vrestifrasi" className="flex flex-1 flex-col items-center gap-2 px-4 pt-4 bg-background text-foreground">
       {submitter_name && (
         <p className="text-xs text-muted self-center">
           Παζλ από {submitter_name}

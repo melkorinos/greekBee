@@ -5,6 +5,7 @@
 // Phase 2  (givenUp): shows missed words; player closes when done.
 // The main page still renders MissedWordsList below the found words after close.
 
+import { Modal } from "@/components/shared/Modal";
 import { btnCancel } from "@/styles/recipes";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { MissedWordsList } from "./MissedWordsList";
@@ -29,25 +30,8 @@ export function GiveUpModal({
   puzzle,
   foundWords,
 }: GiveUpModalProps) {
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6 relative"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          onClick={onClose}
-          aria-label="Κλείσιμο"
-          className="absolute top-4 right-4 text-muted hover:text-foreground text-xl leading-none"
-        >
-          ✕
-        </button>
-
+    <Modal isOpen={isOpen} onClose={onClose} closeLabel="Κλείσιμο">
         {!givenUp ? (
           <>
             <h2 className="text-lg font-bold text-foreground mb-2">Παραίτηση;</h2>
@@ -83,7 +67,6 @@ export function GiveUpModal({
             </button>
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }

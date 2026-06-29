@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Modal } from "@/components/shared/Modal";
 import { btnCancel, btnModalSubmit, inputClass, labelClass, labelOptionalClass } from "@/styles/recipes";
 
 interface Props {
@@ -55,26 +56,21 @@ export function CommunityVresTinFrasiSubmitModal({ isOpen, onClose }: Props) {
 
   if (status === "success") {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={handleClose}>
-        <div className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
-          <div className="text-center py-4">
-            <p className="text-3xl mb-3">🙏</p>
-            <p className="font-semibold text-foreground mb-1">Ευχαριστούμε!</p>
-            <p className="text-sm text-muted">Η φράση σου στάλθηκε για έλεγχο.</p>
-            <button onClick={handleClose} className="mt-5 px-6 py-2 rounded-xl bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 transition-opacity">
-              Κλείσιμο
-            </button>
-          </div>
+      <Modal isOpen={isOpen} onClose={handleClose} showClose={false}>
+        <div className="text-center py-4">
+          <p className="text-3xl mb-3">🙏</p>
+          <p className="font-semibold text-foreground mb-1">Ευχαριστούμε!</p>
+          <p className="text-sm text-muted">Η φράση σου στάλθηκε για έλεγχο.</p>
+          <button onClick={handleClose} className="mt-5 px-6 py-2 rounded-xl bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 transition-opacity">
+            Κλείσιμο
+          </button>
         </div>
-      </div>
+      </Modal>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={handleClose}>
-      <div className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6 relative max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-        <button onClick={handleClose} aria-label="Close" className="absolute top-4 right-4 text-muted hover:text-foreground text-xl leading-none">✕</button>
-
+    <Modal isOpen={isOpen} onClose={handleClose} closeLabel="Close" cardClassName="max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-bold text-foreground mb-1">Υποβολή Φράσης</h2>
         <p className="text-xs text-muted mb-5 leading-relaxed">
           Πρότεινε μια ελληνική φράση (3–4 λέξεις, κάθε λέξη 2–8 γράμματα).
@@ -123,7 +119,6 @@ export function CommunityVresTinFrasiSubmitModal({ isOpen, onClose }: Props) {
             {status === "submitting" ? "…" : "Αποστολή"}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

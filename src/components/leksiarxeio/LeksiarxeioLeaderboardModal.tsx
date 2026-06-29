@@ -63,8 +63,6 @@ export function LeksiarxeioLeaderboardModal({
       buildUrl={buildUrl}
       subtitle="Άθροισμα σκορ (4–8 γράμματα) · υψηλότερο = καλύτερο"
       scoreLabel="Σκορ"
-      pillActive="bg-correct text-white"
-      playerMark="text-correct"
       showNameEditor={true}
       saveButtonAlwaysActive={!profileLinked}
       topSlot={

@@ -64,8 +64,6 @@ export function LeaderboardModal({
       dates={recentDates}
       defaultDate={defaultPuzzleId}
       buildUrl={buildUrl}
-      pillActive="bg-amber-400 text-amber-900"
-      playerMark="text-amber-500"
       showNameEditor={true}
       saveButtonAlwaysActive={!profileLinked}
       topSlot={
@@ -84,23 +82,23 @@ export function LeaderboardModal({
         />
       }
       emptySlot={(date) =>
-        date < today ? (
+        date !== defaultPuzzleId ? (
           <Link
             href={`/leksokipos?puzzle=${date}`}
             className="text-stone-600 text-sm underline hover:text-stone-800"
           >
-            Παίξε αυτό το παζλ →
+            {date === today ? "Παίξε το σημερινό παζλ →" : "Παίξε αυτό το παζλ →"}
           </Link>
         ) : null
       }
       footerSlot={(date) =>
-        date < today ? (
+        date !== defaultPuzzleId ? (
           <Link
             href={`/leksokipos?puzzle=${date}`}
             onClick={onClose}
             className="text-sm text-stone-600 underline hover:text-stone-800 transition-colors"
           >
-            Παίξε αυτό το παζλ →
+            {date === today ? "Παίξε το σημερινό παζλ →" : "Παίξε αυτό το παζλ →"}
           </Link>
         ) : null
       }

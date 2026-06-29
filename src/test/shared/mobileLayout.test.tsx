@@ -14,13 +14,12 @@ import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
 
 const ITEMS = ["Rule one", "Rule **two** bold", "Rule three"];
 
-function renderOpenModal(lightTrigger = false) {
+function renderOpenModal() {
   render(
     <HowToPlayModal
       title="Test modal"
       items={ITEMS}
       bulletIcon="▸"
-      lightTrigger={lightTrigger}
     />,
   );
   // Open the modal

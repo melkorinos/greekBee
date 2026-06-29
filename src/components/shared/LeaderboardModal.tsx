@@ -5,12 +5,15 @@
 // Manages: selectedDate state, nameInput state, useLeaderboard call,
 // day strip rendering, leaderboard table, name editor.
 //
-// Callers customise the look via pillActive / playerMark Tailwind class strings
-// and plug in game-specific slots (profile section, footer link, empty CTA).
+// The accent (selected-day pill, "(εσύ)" mark, player-row tint) comes from the
+// game's --game-accent token (ADR 0009), set on the game's [data-game] wrapper —
+// callers no longer pass colour strings. They still plug in game-specific slots
+// (profile section, footer link, empty CTA).
 
 import { useEffect, useMemo, useState } from "react";
 
 import Link from "next/link";
+import { Modal } from "./Modal";
 import type { LeaderboardUrlBuilder } from "@/hooks/useLeaderboard";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import {
@@ -78,10 +81,6 @@ export interface LeaderboardModalBaseProps {
   scoreLabel?:     string;
   /** Score cell formatter. Defaults to String(n). */
   formatScore?:    (n: number) => string;
-  /** Tailwind classes applied to the selected day pill. */
-  pillActive:      string;
-  /** Tailwind class applied to the "(εσύ)" label. */
-  playerMark:      string;
   /** Rendered between the header and the name editor (e.g. profile section). */
   topSlot?:        React.ReactNode;
   /** When false, the name editor is hidden. Defaults to true. */
@@ -110,8 +109,6 @@ export function LeaderboardModalBase({
   buildUrl,
   scoreLabel     = "Σκορ",
   formatScore    = String,
-  pillActive,
-  playerMark,
   topSlot,
   showNameEditor          = true,
   saveButtonAlwaysActive  = false,
@@ -145,30 +142,20 @@ export function LeaderboardModalBase({
     onSaveName(trimmed);
   }
 
-  function handleOverlayClick(e: React.MouseEvent<HTMLDivElement>) {
-    if (e.target === e.currentTarget) onClose();
-  }
-
   const { top20, playerRow } = data;
   const nameDirty            = nameInput.trim() !== displayName && nameInput.trim() !== "";
   const saveDisabled         = saveButtonAlwaysActive ? false : !nameDirty;
   const saveLabel            = saveButtonAlwaysActive ? "Αποθήκευση" : (!nameDirty && displayName ? "✓" : "Αποθήκευση");
   const footer               = footerSlot?.(selectedDate);
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center"
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      onClick={handleOverlayClick}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      variant="sheet"
+      ariaLabel={title}
+      cardClassName="max-h-[82vh] flex flex-col"
     >
-      <div className="absolute inset-0 bg-black/40" />
-
-      <div className="relative bg-surface rounded-t-2xl w-full max-w-sm max-h-[82vh] flex flex-col shadow-2xl">
-
         {/* ── Header ─────────────────────────────────────────────────────────── */}
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-border">
           <div>
@@ -233,7 +220,7 @@ export function LeaderboardModalBase({
                     aria-label={date}
                     className={`shrink-0 flex flex-col items-center px-2.5 py-1.5 rounded-lg transition-colors ${
                       isSelected
-                        ? pillActive
+                        ? "bg-game-accent text-game-accent-foreground"
                         : "bg-surface-raised text-muted hover:bg-border"
                     }`}
                   >
@@ -296,7 +283,7 @@ export function LeaderboardModalBase({
                     <td className={lbTdName}>
                       {row.display_name}
                       {row.isPlayer && (
-                        <span className={`${playerMark} ml-1 text-xs`}>(εσύ)</span>
+                        <span className="text-game-accent ml-1 text-xs">(εσύ)</span>
                       )}
                     </td>
                     <td className={lbTdScore}>{formatScore(row.score)}</td>
@@ -315,7 +302,7 @@ export function LeaderboardModalBase({
                     <td className={lbTdRank}>{playerRow.rank}</td>
                     <td className={lbTdName}>
                       {playerRow.display_name}
-                      <span className={`${playerMark} ml-1 text-xs`}>(εσύ)</span>
+                      <span className="text-game-accent ml-1 text-xs">(εσύ)</span>
                     </td>
                     <td className={lbTdScore}>{formatScore(playerRow.score)}</td>
                   </tr>
@@ -331,9 +318,7 @@ export function LeaderboardModalBase({
             {footer}
           </div>
         )}
-
-      </div>
-    </div>
+    </Modal>
   );
 }
 

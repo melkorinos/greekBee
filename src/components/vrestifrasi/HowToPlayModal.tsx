@@ -3,6 +3,8 @@
 // How-to-play modal for Vres Tin Frasi.
 // Explains all four tile states with worked examples — emphasises purple vs yellow.
 
+import { Modal } from "@/components/shared/Modal";
+
 interface Props {
   isOpen:  boolean;
   onClose: () => void;
@@ -40,25 +42,13 @@ function ExWord({ tiles }: { tiles: Array<{ l: string; c: ExColor }> }) {
 }
 
 export function HowToPlayModal({ isOpen, onClose }: Props) {
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-      onClick={onClose}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      closeLabel="Close"
+      cardClassName="max-h-[90vh] overflow-y-auto"
     >
-      <div
-        className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6 relative max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          onClick={onClose}
-          aria-label="Close"
-          className="absolute top-4 right-4 text-muted hover:text-foreground text-xl leading-none"
-        >
-          ✕
-        </button>
-
         <h2 className="text-lg font-bold text-foreground mb-1">
           Πώς να παίξεις
         </h2>
@@ -170,7 +160,6 @@ export function HowToPlayModal({ isOpen, onClose }: Props) {
         >
           Κατάλαβα!
         </button>
-      </div>
-    </div>
+    </Modal>
   );
 }

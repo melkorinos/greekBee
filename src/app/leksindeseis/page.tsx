@@ -24,7 +24,7 @@ export default async function LeksindeseisPage() {
   const { puzzle, submitter_name } = await getTodaysLeksindeseisPuzzle(today);
 
   return (
-    <main className="flex flex-col items-center min-h-screen bg-background px-4 py-6">
+    <main data-game="leksindeseis" className="flex flex-col items-center min-h-screen bg-background px-4 py-6">
       <div className="flex items-center justify-between w-full max-w-sm mb-1">
         <h1 className="text-2xl font-bold tracking-tight text-foreground">🔗 Leksindeseis</h1>
         <HowToPlayModal

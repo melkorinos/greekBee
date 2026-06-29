@@ -2,6 +2,7 @@
 
 import { btnCancel, btnModalSubmit, inputClass, inputReadonlyClass, labelClass, labelOptionalClass } from "@/styles/recipes";
 
+import { Modal } from "./Modal";
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
 import { useCallback, useEffect, useState } from "react";
 
@@ -150,25 +151,14 @@ export function NominationModal({
   const displayWord = word.toUpperCase();
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-      onClick={handleClose}
-      data-testid="nomination-modal-backdrop"
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      closeLabel="Close"
+      backdropTestId="nomination-modal-backdrop"
+      cardTestId="nomination-modal"
+      closeTestId="nomination-modal-close"
     >
-      <div
-        className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6 relative"
-        onClick={(e) => e.stopPropagation()}
-        data-testid="nomination-modal"
-      >
-        <button
-          onClick={handleClose}
-          aria-label="Close"
-          data-testid="nomination-modal-close"
-          className="absolute top-4 right-4 text-muted hover:text-foreground text-xl leading-none"
-        >
-          ✕
-        </button>
-
         {status === "success" ? (
           <div className="text-center py-4" data-testid="nomination-modal-success">
             <p className="text-3xl mb-3">🙏</p>
@@ -316,7 +306,6 @@ export function NominationModal({
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }

@@ -54,8 +54,6 @@ export function VresTinFrasiLeaderboardModal({
       buildUrl={buildUrl}
       subtitle="Αριθμός προσπαθειών · χαμηλότερο = καλύτερο"
       scoreLabel="Προσπάθειες"
-      pillActive="bg-misplaced text-white"
-      playerMark="text-purple-600"
       showNameEditor={true}
       saveButtonAlwaysActive={!profileLinked}
       topSlot={

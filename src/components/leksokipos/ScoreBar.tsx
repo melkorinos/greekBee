@@ -4,7 +4,8 @@
 // The bar shows progress from the current rank threshold to the next rank threshold
 // so it always feels achievable and resets on each level-up.
 
-import { btnHeaderIcon, btnHeaderIconSize, scoreBarFill, scoreBarTrack } from "@/styles/recipes";
+import { btnHeaderIcon, btnHeaderIconSize } from "@/styles/recipes";
+import { scoreBarFill, scoreBarTrack } from "./styles";
 import { useEffect, useRef, useState } from "react";
 
 import type { RankName } from "@/games/leksokipos/types";

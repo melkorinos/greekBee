@@ -5,22 +5,27 @@
 
 ---
 
+## Session 53 — 2026-06-29: UI consolidation — per-game accent, Modal primitive, recipes split (ADR 0009) ✅
+Grilled (`/grill-with-docs`) the recipes.ts/chrome consolidation; wrote **ADR 0009**. Goal: shared chrome (common feel) + a per-game signature colour, all one-line-changeable. Four parts, each test/eslint/build-green:
+1. **Per-game accent token** — `--game-accent`/`--game-accent-foreground` in `globals.css`, set via `[data-game="…"]` selectors; the 4 games' root wrappers (`page.tsx`/`[outer]/page.tsx`) carry `data-game`. `LeaderboardModalBase` consumes the token directly — `pillActive`/`playerMark` props **deleted**, removing the per-game literal palette strings (amber/green/purple). Player-row tint `bg-brand/10`→`bg-game-accent/10`. Brand accents decoupled from feedback tokens (Leksiarxeio was reusing `correct`, Leksindeseis/Vres `misplaced`).
+2. **Modal primitive** — new `src/components/shared/Modal.tsx` (`center`|`sheet`) owns backdrop/z-index/overlay-click/close-button. 9 modals migrated (5 center, 3 community-submit incl. success states, 1 leaderboard sheet); copy-pasted shells deleted. New `modal.test.tsx` (12).
+3. **Recipes split** — Leksokipos-only recipes → new `src/components/leksokipos/styles.ts`; `src/styles/recipes.ts` now genuinely platform-shared (CLAUDE.md "no speculative shared/"). 9 single-token `color*` aliases inlined (the token is the single source). Tests split: `recipes.test.ts` (platform) + new leksokipos `styles.test.ts`.
+4. **`lightTrigger` deleted** — dead prop (no production caller; Leksiarxeio never set it); its `border-stone-600 text-stone-300 hover:bg-stone-700` literals gone; HowToPlay tooltip tokenised `bg-stone-800`→`bg-inverted`.
+Docs: ADR 0008 cross-referenced (recipes-split refinement); memory.md Theming row + test-coverage map updated; investigation handoff marked RESOLVED. Verification: **1104 tests pass · eslint clean · build exit 0**.
+
+---
+
+## Session 52 — 2026-06-29: Bug fix — leaderboard modal missing "back to today" link ✅
+`footerSlot` and `emptySlot` in `src/components/leksokipos/LeaderboardModal.tsx` used `date < today` as the condition for showing a navigation link, so no link appeared when the player was on a past puzzle and selected the "Σήμερα" pill. Changed condition to `date !== defaultPuzzleId` so a link shows whenever the selected date differs from the currently-played puzzle. Added distinct label "Παίξε το σημερινό παζλ →" when the selected date is today. Added 2 new tests (back-to-today link, no link when current puzzle pill selected); updated 1 existing test label. 1115 tests pass · eslint clean · build exit 0.
+
+---
+
 ## Session 51 — 2026-06-28: Bug fix — past-puzzle navigation locked by useDayChange + givenUp bleed ✅
 Two bugs fixed. Root cause of the reported production issue: `useDayChange` called `check()` on mount and redirected any puzzle with `date < today` — including puzzles the player deliberately navigated to via the leaderboard day strip — back to today's (given-up) game. Secondary pre-existing bug: `GameBoard` shared `useReducer` state (including `givenUp:true`) between puzzles when navigating without a remount.
 **Fix 1 (primary — useDayChange):** Added early return in `useDayChange` if `puzzle.date < mountDate` at mount time. Past puzzles are deliberately visited; they should never be auto-redirected. The stale-tab day-rollover case is preserved via the `visibilitychange` listener, which still fires when a player reopens a tab where TODAY's puzzle has become stale overnight.
 **Fix 2 (secondary — GameBoard):** `key={puzzle.id}` on `<GameBoard>` in `LeksokiposLayout.tsx` — forces React to remount when puzzle changes, preventing `givenUp`/`foundWords` state from leaking between puzzles (Next.js App Router reuses client components on same-route navigations).
 **Fix 3 (secondary — shouldSave):** Added `shouldSave: snap => snap.foundWords.length > 0 || snap.givenUp` guard to `useRoundPersistence` in `useGameState.ts` — prevents the initial empty state from being written to localStorage on mount, which was blocking cross-device server restore for unplayed puzzles.
 **Tests:** `useDayChange.test.ts` — rewrote suite: no redirect on mount for past puzzle, no redirect on visibilitychange for past puzzle, day-rollover redirect via visibilitychange for today's puzzle (with `vi.setSystemTime`). `LeksokiposLayout.test.tsx` — mock updated + remount assertion. `GameBoard.test.tsx` — givenUp/foundWords don't carry to a new puzzle.
-Verification: **1113 tests pass · eslint clean · build exit 0**.
-
----
-
-## Session 50 — 2026-06-28: Architecture deepening — lifecycle consume + guess-game spine + sync seam ✅
-Production bug: giving up on today's puzzle then navigating to a past daily via the leaderboard day strip showed the past puzzle as permanently locked (give-up banner, no game board).
-**Root cause:** Next.js App Router reuses client component instances when navigating between `/leksokipos/[center]/[outer]` URLs (same route pattern). `GameBoard`'s `useReducer` state — including `givenUp:true` — persisted to the new puzzle. `useRoundPersistence` hydration found no saved state for the new puzzle and left the stale state untouched.
-**Fix 1 (primary):** `key={puzzle.id}` on `<GameBoard>` in `LeksokiposLayout.tsx` — forces React to remount the component whenever the puzzle ID changes, resetting all hook state.
-**Fix 2 (secondary):** Added `shouldSave: snap => snap.foundWords.length > 0 || snap.givenUp` to `useRoundPersistence` in `useGameState.ts` — mirrors the pattern already in `useGuessRound`. Prevents the initial empty state from being written to localStorage on mount, which was silently blocking the cross-device server restore for puzzles not yet played locally.
-**Tests added:** `LeksokiposLayout.test.tsx` — mock updated to expose `data-puzzle-id`; new "puzzle key" describe: passes puzzle id through, different DOM node on puzzle change. `GameBoard.test.tsx` — new "Puzzle navigation" describe: givenUp doesn't carry to a different puzzle; foundWords/score reset on puzzle change.
 Verification: **1113 tests pass · eslint clean · build exit 0**.
 
 ---

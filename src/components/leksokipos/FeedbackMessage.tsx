@@ -11,7 +11,7 @@ import {
   feedbackSuggestLinkClass,
   feedbackValidClass,
   feedbackValidContainer,
-} from "@/styles/recipes";
+} from "./styles";
 
 import type { ValidationStatus } from "@/games/leksokipos/types";
 
