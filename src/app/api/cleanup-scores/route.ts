@@ -6,7 +6,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
-import { SCORE_RETENTION_DAYS } from "@/config/retention";
+import { LEADERBOARD_WINDOW_DAYS, SCORE_RETENTION_DAYS } from "@/config/retention";
 
 export const runtime = "edge";
 
@@ -24,6 +24,13 @@ export async function GET(req: NextRequest) {
   const auth   = req.headers.get("Authorization") ?? "";
   if (!secret || auth !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (SCORE_RETENTION_DAYS <= LEADERBOARD_WINDOW_DAYS) {
+    return NextResponse.json(
+      { error: `SCORE_RETENTION_DAYS (${SCORE_RETENTION_DAYS}) must exceed LEADERBOARD_WINDOW_DAYS (${LEADERBOARD_WINDOW_DAYS})` },
+      { status: 500 },
+    );
   }
 
   const cutoff = new Date();

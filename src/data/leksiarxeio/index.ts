@@ -15,6 +15,11 @@ import words5 from "./words-5.json";
 import words6 from "./words-6.json";
 import words7 from "./words-7.json";
 import words8 from "./words-8.json";
+import answers4 from "./answers-4.json";
+import answers5 from "./answers-5.json";
+import answers6 from "./answers-6.json";
+import answers7 from "./answers-7.json";
+import answers8 from "./answers-8.json";
 
 export const LEKSIARXEIO_LENGTHS: LeksiarxeioLength[] = [...LEKSIARXEIO.LENGTHS];
 
@@ -27,10 +32,19 @@ const WORD_LISTS: Record<LeksiarxeioLength, string[]> = {
   8: words8 as string[],
 };
 
+const ANSWER_POOLS: Record<LeksiarxeioLength, string[]> = {
+  3: [],
+  4: answers4 as string[],
+  5: answers5 as string[],
+  6: answers6 as string[],
+  7: answers7 as string[],
+  8: answers8 as string[],
+};
+
 
 function buildFallbackPuzzle(date: string, length: LeksiarxeioLength): LeksiarxeioPuzzle {
-  const pool = WORD_LISTS[length];
-  if (!pool || pool.length === 0) throw new Error(`No word list for length ${length}`);
+  const pool = getAnswerPool(length);
+  if (pool.length === 0) throw new Error(`No answer pool for length ${length}`);
   const answer = pool[dateToIndex(date, pool.length)];
   return { id: `${date}-wordle-${length}`, date, answer, length };
 }
@@ -67,6 +81,15 @@ export async function getAllTodaysLeksiarxeioPuzzles(date: string): Promise<Leks
  */
 export function getValidWords(length: LeksiarxeioLength = 4): string[] {
   return WORD_LISTS[length] ?? [];
+}
+
+/**
+ * Returns the curated answer pool for a given length — used for daily puzzle rotation.
+ * Falls back to the full word list if no curated pool exists.
+ */
+export function getAnswerPool(length: LeksiarxeioLength = 4): string[] {
+  const pool = ANSWER_POOLS[length];
+  return pool && pool.length > 0 ? pool : WORD_LISTS[length] ?? [];
 }
 
 /** Returns today's ISO date string (YYYY-MM-DD) using the server clock */
