@@ -55,15 +55,15 @@ describe("scoreWord", () => {
 });
 
 describe("maxScore", () => {
-  it("returns 80% of the raw word-score total for small puzzles", () => {
+  it("returns 85% of the raw word-score total for small puzzles", () => {
     // raw: anti(1) + paid(1) + paint(5) + painted(14) + panted(6) + patina(6) = 33
-    // capped at 80%: ceil(33 * 0.8) = 27 — well below the 500-pt hard cap
-    expect(maxScore(puzzle)).toBe(27);
+    // capped at 85%: ceil(33 * 0.85) = 29 — well below the 600-pt hard cap
+    expect(maxScore(puzzle)).toBe(29);
   });
 
-  it("never exceeds MAX_SCORE_CAP (500) regardless of word count", () => {
-    // Build a puzzle whose 80%-of-raw would be > 500
-    // 100 × 10-letter words each score 10 pts → raw = 1000, 80% = 800 > 500
+  it("never exceeds MAX_SCORE_CAP (600) regardless of word count", () => {
+    // Build a puzzle whose 85%-of-raw would be > 600
+    // 100 × 10-letter words each score 10 pts → raw = 1000, 85% = 850 > 600
     const bigWords = Array.from({ length: 100 }, (_, i) =>
       "abcdefghi" + String.fromCharCode(97 + (i % 26))
     );
@@ -74,8 +74,8 @@ describe("maxScore", () => {
     expect(maxScore(bigPuzzle)).toBe(MAX_SCORE_CAP);
   });
 
-  it("MAX_SCORE_CAP is 500", () => {
-    expect(MAX_SCORE_CAP).toBe(500);
+  it("MAX_SCORE_CAP is 600", () => {
+    expect(MAX_SCORE_CAP).toBe(600);
   });
 });
 
@@ -86,7 +86,7 @@ describe("calculateRank", () => {
     expect(calculateRank(0, 100)).toBe(RANKS[0].name);
   });
 
-  it("returns the 55%-tier rank at 70% of max score", () => {
+  it("returns the 60%-tier rank at 70% of max score", () => {
     expect(calculateRank(70, 100)).toBe(RANKS[6].name);
   });
 

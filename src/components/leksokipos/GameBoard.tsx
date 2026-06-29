@@ -8,7 +8,7 @@ import { useGameIdentity } from "@/hooks/useGameIdentity";
 import { useProfile } from "@/hooks/useProfile";
 import { useProfileVerification } from "@/hooks/useProfileVerification";
 import { getSuggestedWords, markSuggested } from "@/hooks/suggestions";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { FeedbackMessage } from "./FeedbackMessage";
 import { FoundWordsList } from "./FoundWordsList";
@@ -18,6 +18,7 @@ import { LeaderboardModal } from "./LeaderboardModal";
 import { MissedWordsList } from "./MissedWordsList";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { ScoreBar } from "./ScoreBar";
+import type { EndgameInfo } from "./ScoreBar";
 import { NominationModal } from "@/components/shared/NominationModal";
 import { WordInput } from "./WordInput";
 import { btnSecondary } from "@/styles/recipes";
@@ -25,7 +26,7 @@ import { useDayChange } from "@/games/leksokipos/hooks/useDayChange";
 import { useGameState } from "@/games/leksokipos/hooks/useGameState";
 import { useGameStateSync } from "@/hooks/useGameStateSync";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
-import { isDailyPuzzle } from "@/games/leksokipos/lib";
+import { isDailyPuzzle, isPangram } from "@/games/leksokipos/lib";
 
 interface GameBoardProps {
   puzzle: LeksokiposPuzzle;
@@ -57,6 +58,35 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   // Redirect to today's puzzle if this page is a stale daily puzzle (day rolled over).
   useDayChange(puzzle);
 
+  // ── Endgame / Τζιμάνι ────────────────────────────────────────────────────
+  const isDaily   = isDailyPuzzle(activePuzzle);
+  const isEndgame = isDaily && score >= puzzleMaxScore;
+
+  const foundWordsSet = useMemo(
+    () => new Set(foundWords.map((w) => w.toLowerCase())),
+    [foundWords],
+  );
+
+  const remainingWords = useMemo(
+    () => activePuzzle.validWords.filter((w) => !foundWordsSet.has(w.toLowerCase())),
+    [activePuzzle.validWords, foundWordsSet],
+  );
+
+  const isPerfect = remainingWords.length === 0;
+
+  const endgameInfo = useMemo((): EndgameInfo | undefined => {
+    if (!isEndgame) return undefined;
+    const remainingPangrams = remainingWords.filter((w) => isPangram(w, activePuzzle)).length;
+    const lengthMap = new Map<number, number>();
+    for (const w of remainingWords) {
+      lengthMap.set(w.length, (lengthMap.get(w.length) ?? 0) + 1);
+    }
+    const byLength = Array.from(lengthMap.entries())
+      .sort(([a], [b]) => b - a)
+      .map(([length, count]) => ({ length, count }));
+    return { remainingTotal: remainingWords.length, remainingPangrams, byLength };
+  }, [isEndgame, remainingWords, activePuzzle]);
+
   // Word suggestion
   const [suggestWord,    setSuggestWord]    = useState<string | null>(null);
   const [suggestedWords, setSuggestedWords] = useState<Set<string>>(
@@ -69,8 +99,6 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   const [giveUpModalOpen, setGiveUpModalOpen] = useState(false);
   const { deviceId, displayName, setDeviceId: setDeviceIdState, setDisplayName: setDisplayNameState } = useGameIdentity();
 
-  // Only daily puzzles participate in the leaderboard.
-  const isDaily          = isDailyPuzzle(activePuzzle);
   const leaderboardPuzzleId = activePuzzle.date;
 
   // Score submission -- all posting logic lives in the hook.
@@ -80,6 +108,7 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
     deviceId,
     displayName,
     enabled:     isDaily,
+    isPerfect,
   });
 
   // Auto-post whenever the score increases.
@@ -92,18 +121,13 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   });
 
   // Cross-device sync — pushes state on every valid word, daily puzzles only.
-  // Also backfills already-found words when profileLinked flips true (the
-  // pre-transfer flow: play first, then link to generate a transfer code).
   useGameStateSync({ puzzleDate: leaderboardPuzzleId, isDaily, foundWords, profileLinked });
 
-  // Wraps claim so that found words restore immediately if the modal is opened
-  // while the game is already mounted (the common case on the leksokipos page).
   const handleTransferClaim = useCallback(async (code: string): Promise<void> => {
     await claimTransferCode(code);
     await restoreFromServer();
   }, [claimTransferCode, restoreFromServer]);
 
-  // Auto-heal stale linked profile — silently disconnects if the DB row is gone.
   useProfileVerification({
     profileLinked,
     deviceId,
@@ -128,11 +152,11 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
     setSuggestWord(null);
   }
 
-  // Stable ref keyboard pattern -- listener registered once, handler updated via layoutEffect.
+  // Stable ref keyboard pattern — listener registered once, handler updated via layoutEffect.
   const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
   useLayoutEffect(() => {
     keyHandlerRef.current = (e: KeyboardEvent) => {
-      if (givenUp) return; // board is locked after give-up
+      if (givenUp || isPerfect) return; // board locked after give-up or full completion
       if (e.key === "Enter") {
         submitWord();
       } else if (e.key === "Backspace") {
@@ -159,29 +183,42 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
         score={score}
         maxScore={puzzleMaxScore}
         currentRank={currentRank}
+        endgameInfo={endgameInfo}
         onOpenLeaderboard={isDaily ? () => setLeaderboardOpen(true) : undefined}
       />
 
       {/* Active game UI -- hidden once the player gives up */}
       {!givenUp && (
         <>
-          <WordInput
-            value={currentInput}
-            centerLetter={activePuzzle.centerLetter}
-            onSubmit={submitWord}
-            canSubmit={currentInput.length >= 4}
-          />
+          {isPerfect ? (
+            /* Τζιμάνι — all words found */
+            <div
+              data-testid="perfect-message"
+              className="text-center font-bold text-2xl text-foreground py-2"
+            >
+              ΤΟ ΠΕΘΑΝΕΣ 🏛️
+            </div>
+          ) : (
+            <>
+              <WordInput
+                value={currentInput}
+                centerLetter={activePuzzle.centerLetter}
+                onSubmit={submitWord}
+                canSubmit={currentInput.length >= 4}
+              />
 
-          {lastSubmission && (
-            <FeedbackMessage
-              word={lastSubmission.word}
-              status={lastSubmission.result.status}
-              points={lastSubmission.result.points}
-              isPangram={lastSubmission.result.isPangram}
-              onSuggest={() => handleSuggest(lastSubmission.word)}
-              alreadySuggested={suggestedWords.has(lastSubmission.word.toLowerCase())}
-              justSuggested={justSuggested === lastSubmission.word.toLowerCase()}
-            />
+              {lastSubmission && (
+                <FeedbackMessage
+                  word={lastSubmission.word}
+                  status={lastSubmission.result.status}
+                  points={lastSubmission.result.points}
+                  isPangram={lastSubmission.result.isPangram}
+                  onSuggest={() => handleSuggest(lastSubmission.word)}
+                  alreadySuggested={suggestedWords.has(lastSubmission.word.toLowerCase())}
+                  justSuggested={justSuggested === lastSubmission.word.toLowerCase()}
+                />
+              )}
+            </>
           )}
 
           <NominationModal
@@ -192,37 +229,40 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
             onSuccess={handleSuggestSuccess}
           />
 
+          {/* Flower grid — always visible; non-interactive once Τζιμάνι achieved */}
           <FlowerGrid
             centerLetter={activePuzzle.centerLetter}
             outerLetters={activePuzzle.outerLetters}
-            onLetterClick={(l) => { setJustSuggested(null); addLetter(l); }}
+            onLetterClick={isPerfect ? () => {} : (l) => { setJustSuggested(null); addLetter(l); }}
             variant={variant}
           />
 
-          <div className={buttonRowClass}>
-            <button
-              data-testid="btn-delete"
-              onClick={deleteLetter}
-              className={btnSecondary}
-            >
-              Διαγραφή
-            </button>
-            <button
-              data-testid="btn-clear"
-              onClick={clearInput}
-              className={btnSecondary}
-              aria-label="Clear input"
-            >
-              Καθαρισμός
-            </button>
-            <button
-              data-testid="btn-shuffle"
-              onClick={shuffleLetters}
-              className={btnSecondary}
-            >
-              Ανακάτεμα
-            </button>
-          </div>
+          {!isPerfect && (
+            <div className={buttonRowClass}>
+              <button
+                data-testid="btn-delete"
+                onClick={deleteLetter}
+                className={btnSecondary}
+              >
+                Διαγραφή
+              </button>
+              <button
+                data-testid="btn-clear"
+                onClick={clearInput}
+                className={btnSecondary}
+                aria-label="Clear input"
+              >
+                Καθαρισμός
+              </button>
+              <button
+                data-testid="btn-shuffle"
+                onClick={shuffleLetters}
+                className={btnSecondary}
+              >
+                Ανακάτεμα
+              </button>
+            </div>
+          )}
         </>
       )}
 
@@ -256,7 +296,7 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
       <FoundWordsList
         words={foundWords}
         puzzle={activePuzzle}
-        onGiveUp={isDaily && !givenUp ? () => setGiveUpModalOpen(true) : undefined}
+        onGiveUp={isDaily && !givenUp && !isPerfect ? () => setGiveUpModalOpen(true) : undefined}
         givenUp={givenUp}
       />
 

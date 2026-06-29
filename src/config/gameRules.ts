@@ -7,8 +7,8 @@
 export const LEKSOKIPOS = {
   MIN_WORD_LENGTH: 4,
   PANGRAM_BONUS:   7,
-  MAX_SCORE_CAP:   500,
-  SCORE_SCALE:     0.8,
+  MAX_SCORE_CAP:   600,
+  SCORE_SCALE:     0.85,
 } as const;
 
 export const LEKSIARXEIO = {

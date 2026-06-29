@@ -282,6 +282,7 @@ export function LeaderboardModalBase({
                     <td className={lbTdRank}>{row.rank}</td>
                     <td className={lbTdName}>
                       {row.display_name}
+                      {row.is_perfect && <span className="ml-1">🏛️</span>}
                       {row.isPlayer && (
                         <span className="text-game-accent ml-1 text-xs">(εσύ)</span>
                       )}
@@ -302,6 +303,7 @@ export function LeaderboardModalBase({
                     <td className={lbTdRank}>{playerRow.rank}</td>
                     <td className={lbTdName}>
                       {playerRow.display_name}
+                      {playerRow.is_perfect && <span className="ml-1">🏛️</span>}
                       <span className="text-game-accent ml-1 text-xs">(εσύ)</span>
                     </td>
                     <td className={lbTdScore}>{formatScore(playerRow.score)}</td>

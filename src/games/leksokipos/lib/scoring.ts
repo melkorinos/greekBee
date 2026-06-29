@@ -26,10 +26,8 @@ export function scoreWord(word: string, puzzle: LeksokiposPuzzle): number {
  *
  * Two adjustments keep the ceiling player-friendly:
  *  1. Only 80% of the raw total counts — reaching every obscure word is not required.
- *  2. Hard cap of 500 pts — prevents puzzles with very large word lists from
+ *  2. Hard cap of 600 pts — prevents puzzles with very large word lists from
  *     producing leaderboard scores in the thousands.
- *
- * Tech debt: see .claude/issue-tracker/issues/04-td002-max-score-cap.md
  */
 export const MAX_SCORE_CAP = LEKSOKIPOS.MAX_SCORE_CAP;
 

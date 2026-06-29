@@ -11,12 +11,12 @@
  */
 export const RANKS = [
   { name: "Ψαράκι",       emoji: "🐟", threshold: 0  },
-  { name: "Έτσι κιέτσι",  emoji: "🤷", threshold: 6  },
-  { name: "Οκέι",         emoji: "👌", threshold: 12 },
-  { name: "Για πάμε",     emoji: "💪", threshold: 20 },
-  { name: "Θηρίο",        emoji: "🦁", threshold: 30 },
-  { name: "Φωτιά",        emoji: "🔥", threshold: 42 },
-  { name: "Γκουρού",      emoji: "🧘", threshold: 55 },
+  { name: "Έτσι κιέτσι",  emoji: "🤷", threshold: 8  },
+  { name: "Οκέι",         emoji: "👌", threshold: 16 },
+  { name: "Για πάμε",     emoji: "💪", threshold: 24 },
+  { name: "Θηρίο",        emoji: "🦁", threshold: 35 },
+  { name: "Φωτιά",        emoji: "🔥", threshold: 45 },
+  { name: "Γκουρού",      emoji: "🧘", threshold: 60 },
   { name: "Απολυτότητα",  emoji: "💯", threshold: 80 },
 ] as const;
 
