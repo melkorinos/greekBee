@@ -46,9 +46,13 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Score** *(Leksokipos)* — Accumulated points: 4-letter words = 1 pt; 5+ = 1 pt/letter; Pangram +7 pt bonus.
 
-**Max Score** — Sum of all Valid Word scores, scaled to 80%, hard-capped at 500 pts. Used for Rank thresholds.
+**Max Score** *(Leksokipos)* — Sum of all Valid Word scores, scaled to 85%, hard-capped at 600 pts. Used for Rank thresholds and as the Endgame Zone trigger.
 
-**Rank** — Score milestone: Ψαράκι → Έτσι κιέτσι → Οκέι → Για πάμε → Τζάμι → Θηρίο → Γκουρού → Απολυτότητα. (Not: level, tier)
+**Endgame Zone** *(Leksokipos)* — Scoring range entered when `score ≥ maxScore` (daily puzzles only). The rank-ladder popup is replaced by an endgame panel showing: total Valid Words remaining, pangrams remaining, and a count per word length (longest first). No hints are given.
+
+**Τζιμάνι** *(Leksokipos)* — Secret rank achieved when 0 Valid Words remain (player has found every word). Not shown in the rank ladder. "ΤΟ ΠΕΘΑΝΕΣ" is displayed in the word-feedback area; the letter input is disabled. Marked with 🏛️ on the Leaderboard. Extremely rare in practice.
+
+**Rank** — Score milestone: Ψαράκι → Έτσι κιέτσι → Οκέι → Για πάμε → Θηρίο → Φωτιά → Γκουρού → Απολυτότητα. (Not: level, tier)
 
 **Found Words** — Ordered list of Valid Words submitted in the current Session.
 
@@ -123,6 +127,10 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 **Οριζόντια** — Across direction in a Stavrolekso Puzzle. (Not: horizontal, across)
 
 **Κάθετα** — Down direction in a Stavrolekso Puzzle. (Not: vertical, down)
+
+**Offline Lock** — A deliberate client-side state on a Leksokipos Daily Puzzle that blocks browser refresh and in-app navigation, and routes score submissions through the Offline Score Outbox instead of posting directly. Activated via a toggle inside the Leksokipos UI; released manually. Only available on Daily Puzzles. (Not: offline mode, airplane mode, offline play)
+
+**Offline Score Outbox** — A single-entry localStorage record holding the latest pending Leksokipos Score from a locked Session: `{ gameId, puzzleDate, deviceId, score, displayName }`. Written on every word found while Offline Lock is active; overwritten (not appended) on each subsequent word. Flushed to `game_scores` on lock release, or automatically on the next page mount if an entry exists. Kept on flush failure and retried on the next release. (Not: queue, cache, retry buffer)
 
 ---
 

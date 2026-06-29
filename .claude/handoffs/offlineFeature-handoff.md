@@ -1,68 +1,102 @@
-# Handoff — Offline Play Feature (SHELVED mid-design)
+# Handoff — Offline Lock Feature (READY FOR IMPLEMENTATION)
 
-**Status:** Shelved during a `/grill-with-docs` session, before any code or ADR was written. No files changed. Picking this back up means resuming the grill (5 unanswered questions below) → ADR → implementation.
-
-**Date shelved:** 2026-06-22
+**Status:** Design complete. Grill session finished 2026-06-29. No code written yet. Pick up at implementation.
 
 ---
 
 ## Goal
 
-The platform lives online but is accidentally playable offline (a friend played a full game on a flight; the score reached the leaderboard after landing). The user wants to (a) understand the current offline behaviour, (b) make it a *deliberate, reliable* feature, and (c) define the offline happy-flow. Acknowledged constraint from the user: players will still need to go online eventually to fetch the next day's puzzle.
+Give Leksokipos players a deliberate way to play offline without losing their score. A toggle activates Offline Lock: navigation and refresh are blocked, scores queue locally, and on unlock the score syncs to the leaderboard.
 
 ---
 
-## Investigation findings (current state — verified in code)
+## Settled design (all decisions final)
 
-**There is NO deliberate offline support.** No service worker, no PWA manifest, no offline outbox/retry queue. The flight success was accidental + fragile.
+### What it is
 
-What works offline today:
-- **Gameplay is fully client-side.** Game pages are async server components that load puzzle data from statically-imported JSON ([src/data/leksokipos/index.ts](../../src/data/leksokipos/index.ts)). The client receives a puzzle object that already embeds its `validWords` / word-pool, so validation + scoring + rank run with zero network. Logic in `src/games/*/lib/` is pure.
-- **Progress persists locally** via [src/hooks/useRoundPersistence.ts](../../src/hooks/useRoundPersistence.ts) → `localStorage` key `wordgames:state`. No network.
+An **Offline Lock** toggle inside the Leksokipos game UI (exact placement deferred — don't cramp the UI; decide during implementation). Available on Daily Puzzles only — hidden on Custom Puzzles.
 
-What does NOT work offline:
-- **Cold start fails.** Pages are server-rendered (e.g. [src/app/leksokipos/page.tsx:19](../../src/app/leksokipos/page.tsx#L19) is `async`). Opening a URL fresh while offline → browser "no internet" page. The tab must already be loaded before signal is lost.
-- **Scores are silently dropped offline.** [src/hooks/useScoreSubmission.ts:15-21](../../src/hooks/useScoreSubmission.ts#L15-L21) is fire-and-forget `fetch(...).catch(()=>{})`. Same for game-state sync [src/hooks/useGameStateSync.ts](../../src/hooks/useGameStateSync.ts). No retry, no queue.
-- **No `online` event listener** anywhere (grep-confirmed).
+### While locked
 
-Why the flight score reached the server (the subtle bit): in [useScoreSubmission.ts:53-54](../../src/hooks/useScoreSubmission.ts#L53-L54) the in-memory `lastPostedRef` advances *before* the fetch, so it advances even when the offline POST fails. The score only got through because of **continued interaction after reconnect** — finding ≥1 more word (re-fires `submit` with a higher score) or saving a name (`submitWithName` bypasses the guard). A puzzle finished entirely offline with no post-landing interaction would have lost its score.
+- `beforeunload` blocks browser refresh and tab close
+- Shell nav links (game picker, header logo) show a confirmation dialog before routing away
+- `useDayChange` redirect is suppressed — replaced by an in-game banner: "Today's puzzle has changed — finish and unlock to sync, then refresh for the new puzzle"
+- Every score submission writes to the **Offline Score Outbox** (see below) instead of POSTing directly
+- `game_state` pushes (found-words cross-device sync) fail silently as before — self-heal on next word found post-reconnect. Not queued.
+- Name saves while locked overwrite `displayName` in the outbox entry
 
-Current realistic offline happy-flow (no code changes): load page online before flight → keep tab open → play (works) → **don't refresh/navigate** (would white-screen) → on landing, *interact* (find a word or open leaderboard) to push the final score.
+### Offline Score Outbox
 
----
+Single overwriting localStorage entry — not an append queue. Shape:
 
-## Relevant existing artifacts (do not re-derive)
+```ts
+{ gameId: "leksokipos", puzzleDate: string, deviceId: string, score: number, displayName: string }
+```
 
-- **ADR 0003** `docs/adr/0003-game-state-cross-device-sync.md` — `game_state` table sync (Leksokipos found-words; push-after-word, pull-on-mount; requires ProfileLinked). Any outbox must coexist with this, not duplicate it.
-- **CONTEXT.md** — full glossary; `game_state` table documented at line ~136. No offline/outbox/installable vocabulary yet — those terms need minting.
-- **Session 43** (`.claude/aiHelper/log.md`) — added `src/games/leksokipos/hooks/useDayChange.ts`: online-only redirect on day change / stale CDN page. Offline mode interacts with this at the midnight boundary.
-- **CLAUDE.md standing rule** — no new dependencies without explicit approval (gates the SW-tooling choice).
+Each new word overwrites the previous entry. `game_scores` upserts by `(device_id, game_id, puzzle_date)` so only the latest score matters.
 
----
+Flush calls `postScore` directly — **bypasses `useScoreSubmission` hooks entirely** (avoids `lastPostedRef` dedup guard, which is in-memory only and resets on refresh).
 
-## Open design questions (grill round 1 — ASKED, NOT YET ANSWERED)
+### On toggle-off (unlock)
 
-Each had a recommended answer; the user shelved before responding. Resume here.
+1. Flush outbox via `postScore`
+2. If flush fails: keep entry, retry on next toggle-off
+3. Clear `beforeunload` handler and Shell nav interception
 
-1. **Installable PWA vs SW-only?** — Rec: **full installable PWA** (only thing surviving "closed tab / rebooted phone on the plane").
-2. **SW tooling: Serwist vs next-pwa vs hand-rolled?** — Rec: **Serwist** (App Router + Vercel/ISR; next-pwa unmaintained; hand-rolled cache-versioning is a footgun). **Needs explicit dependency approval per CLAUDE.md.**
-3. **Offline cold-start scope?** — Rec: the four daily games (Leksokipos, Leksiarxeio, Leksindeseis, Vres Tin Frasi), today's puzzle only. **Exclude Stavrolekso + Custom/Community** (DB-fetched at request time, inherently online).
-4. **Score outbox — what to queue + flush trigger?** — Rec: queue **leaderboard `game_scores` only** (game_state restore is already idempotent via pull-on-mount); flush via **`online` event + flush-on-app-load**, NOT Background Sync API (iOS/Safari unsupported, and iOS is the flight audience).
-5. **Day-boundary staleness (offline across midnight)?** — Rec: serve last-cached puzzle stamped with its real `puzzle_date`; reconcile via existing `useDayChange` on reconnect; late outbox flush lands on the correct day because `game_scores` is keyed by `puzzle_date`.
+### On page mount (safety net)
 
-Deeper branches not yet reached: cache-update/refresh UX, exact "you're offline" indicator behaviour (global shell badge vs per-game; `navigator.onLine` vs reachability), manifest/icon assets, precaching *future* days' puzzles.
+If an outbox entry exists in localStorage on mount, flush it immediately — even if not currently locked. Catches the "forgot to unlock" case.
 
----
+### No online notification
 
-## Two ADRs anticipated (when un-shelved)
-
-- Installable PWA + offline scope decision (Q1+Q3).
-- Score outbox + flush-on-reconnect semantics (Q4).
+No passive "you're back online" banner. Flush is manual (toggle-off) only.
 
 ---
 
-## Suggested skills for the next session
+## Key files to touch
 
-- **`/grill-with-docs`** — resume the grill from the 5 questions above; mint CONTEXT.md offline terms inline as they resolve.
-- **`/to-prd`** then **`/to-issues`** — once the design settles, turn it into a spec + vertical-slice issues.
-- **`/run`** / **`/verify`** — to confirm offline behaviour empirically (DevTools "Offline" throttling) before and after implementation.
+| File | Why |
+|------|-----|
+| `src/hooks/useScoreSubmission.ts` | Must be bypassed during lock; outbox flush calls `postScore` directly |
+| `src/hooks/useGameStateSync.ts` | No changes needed — silent failure while offline is acceptable |
+| `src/games/leksokipos/hooks/useDayChange.ts` | Must read `isLocked` and skip `router.replace` while locked; show banner instead |
+| `src/lib/postScore.ts` | Flush calls this directly |
+| Shell layout / nav links | Must read lock state and show confirmation before routing |
+
+New files expected:
+- `src/hooks/useOfflineLock.ts` — lock state, `beforeunload` registration, outbox read/write/flush
+- `src/games/leksokipos/hooks/useOfflineScoreOutbox.ts` — or merged into above
+
+---
+
+## Architecture note: lock state sharing
+
+The toggle lives in Leksokipos, but the Shell needs to read it to block its nav links. Options at implementation time:
+
+- **React context** at Shell layout level — Leksokipos writes `setLocked`; Shell reads `isLocked`
+- **localStorage flag** + `storage` event — Shell subscribes to `offlineLock` key changes
+
+Both are valid. The context approach is more idiomatic React; the localStorage approach avoids adding a provider to the global layout.
+
+---
+
+## Constraints
+
+- No new npm dependencies (CLAUDE.md standing rule)
+- Cold start (closed tab, rebooted phone) is not supported — acknowledged by design (ADR 0010)
+- Puzzle rotates at **03:00** (not midnight) — relevant to the day-boundary banner
+
+---
+
+## Docs already written
+
+- `CONTEXT.md` — `Offline Lock` and `Offline Score Outbox` terms minted
+- `docs/adr/0010-offline-lock-client-side-no-service-worker.md` — records no-SW decision
+
+---
+
+## Suggested next steps
+
+- `/to-issues` — break into vertical-slice implementation tickets
+- `/tdd` — implement with red-green-refactor starting from the outbox flush logic
+- `/verify` — confirm offline behaviour with DevTools "Offline" throttling before and after
