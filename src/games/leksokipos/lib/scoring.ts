@@ -31,6 +31,11 @@ export function scoreWord(word: string, puzzle: LeksokiposPuzzle): number {
  */
 export const MAX_SCORE_CAP = LEKSOKIPOS.MAX_SCORE_CAP;
 
+/** Sums scores for a given word list against the same puzzle. Used by god-mode injection. */
+export function computeScoreFromWords(words: string[], puzzle: LeksokiposPuzzle): number {
+  return words.reduce((total, word) => total + scoreWord(word, puzzle), 0);
+}
+
 export function maxScore(puzzle: LeksokiposPuzzle): number {
   const raw = puzzle.validWords.reduce(
     (total, word) => total + scoreWord(word, puzzle),

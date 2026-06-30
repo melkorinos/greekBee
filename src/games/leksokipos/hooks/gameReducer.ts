@@ -1,7 +1,7 @@
 // Pure reducer for the Leksokipos game.
 // No React imports — this file can be tested with plain Vitest unit tests.
 
-import type { GameState, LeksokiposPuzzle } from "../types";
+import type { GameState, LeksokiposPuzzle, RankName } from "../types";
 
 import { RANKS, calculateRank } from "../lib/ranking";
 import { maxScore } from "../lib/scoring";
@@ -18,7 +18,8 @@ export type GameAction =
   | { type: "SHUFFLE_LETTERS" }              // Randomise the outer ring display order
   | { type: "GIVE_UP" }                      // Player gives up — locks the game permanently
   | { type: "NEW_GAME"; puzzle: LeksokiposPuzzle }     // Load a fresh puzzle
-  | { type: "RESTORE_STATE"; saved: Partial<GameState> }; // Rehydrate from localStorage (client-only)
+  | { type: "RESTORE_STATE"; saved: Partial<GameState> }  // Rehydrate from localStorage (client-only)
+  | { type: "GOD_MODE_INJECT"; foundWords: string[]; score: number; currentRank: RankName }; // Dev testing only
 
 // ─── Initial State Factory ────────────────────────────────────────────────────
 
@@ -126,6 +127,17 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       // Merge saved localStorage fields into current state.
       // Only called once after first client render to avoid hydration mismatch.
       return { ...state, ...action.saved };
+    }
+
+    case "GOD_MODE_INJECT": {
+      return {
+        ...state,
+        foundWords:   action.foundWords,
+        score:        action.score,
+        currentRank:  action.currentRank,
+        currentInput: "",
+        lastSubmission: null,
+      };
     }
 
     default:

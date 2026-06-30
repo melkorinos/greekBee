@@ -433,6 +433,14 @@ function LeksikastiríoClient() {
         <p className="text-sm text-muted mt-1">
           Ψηφίστε λέξεις που πιστεύετε ότι πρέπει να προστεθούν ή να αφαιρεθούν.
         </p>
+        {isAdmin && (
+          <a
+            href="/leksokipos?godmode=zzkdgr3"
+            className="inline-block mt-2 text-xs text-muted hover:text-foreground underline underline-offset-2"
+          >
+            🧪 Leksokipos God Mode
+          </a>
+        )}
       </div>
 
       {/* Tabs */}

@@ -3,7 +3,7 @@
 // Import from "@/games/leksokipos/lib" to get everything in one shot.
 
 export { validateWord } from "./validation";
-export { scoreWord, maxScore } from "./scoring";
+export { scoreWord, maxScore, computeScoreFromWords } from "./scoring";
 export { isPangram } from "./pangram";
 export { calculateRank, RANKS, getRankEmoji } from "./ranking";
 export { normalizeLetters } from "./normalize";

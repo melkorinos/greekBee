@@ -425,6 +425,85 @@ describe("Τζιμάνι — all words found", () => {
   });
 });
 
+// ── God Mode ──────────────────────────────────────────────────────────────────
+
+describe("God Mode", () => {
+  describe("without ?godmode param", () => {
+    it("🧪 button is absent", () => {
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      expect(screen.queryByTestId("btn-god-mode")).toBeNull();
+    });
+
+    it("god mode panel is absent", () => {
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      expect(screen.queryByTestId("god-mode-panel")).toBeNull();
+    });
+  });
+
+  describe("with ?godmode=zzkdgr3", () => {
+    beforeEach(() => {
+      window.history.pushState({}, "", "?godmode=zzkdgr3");
+    });
+
+    afterEach(() => {
+      window.history.pushState({}, "", "/");
+    });
+
+    it("🧪 button is present", () => {
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      expect(screen.getByTestId("btn-god-mode")).toBeInTheDocument();
+    });
+
+    it("god mode panel is in the DOM (off-screen until opened)", () => {
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      expect(screen.getByTestId("god-mode-panel")).toBeInTheDocument();
+    });
+
+    it("clicking 🧪 opens the panel (backdrop appears)", async () => {
+      const user = userEvent.setup();
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      await user.click(screen.getByTestId("btn-god-mode"));
+      // Backdrop only renders when isOpen=true
+      expect(document.querySelector(".fixed.inset-0.bg-black\\/20")).toBeInTheDocument();
+    });
+
+    it("'Βρες Όλες' injects all words and triggers Τζιμάνι", async () => {
+      const user = userEvent.setup();
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      await user.click(screen.getByTestId("btn-god-mode"));
+      await user.click(screen.getByText(/βρες Όλες \(Τζιμάνι\)/i));
+      expect(screen.getByTestId("perfect-message")).toBeInTheDocument();
+    });
+
+    it("'Βρες Όλες-1' injects all-but-last words and does not trigger Τζιμάνι", async () => {
+      const user = userEvent.setup();
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      await user.click(screen.getByTestId("btn-god-mode"));
+      await user.click(screen.getByText(/βρες Όλες-1/i));
+      expect(screen.queryByTestId("perfect-message")).toBeNull();
+      expect(screen.getByTestId("found-words-count")).toHaveTextContent(
+        String(dailyPuzzle.validWords.length - 1),
+      );
+    });
+
+    it("Reset restores blank state after injection", async () => {
+      const user = userEvent.setup();
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      await user.click(screen.getByTestId("btn-god-mode"));
+      await user.click(screen.getByText(/βρες Όλες-1/i));
+      await user.click(screen.getByText(/reset/i));
+      expect(screen.getByTestId("found-words-count")).toHaveTextContent("0");
+      expect(screen.getByTestId("score-label")).toHaveTextContent("0 pts");
+    });
+
+    it("wrong param value does NOT activate god mode", () => {
+      window.history.pushState({}, "", "?godmode=wrong");
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      expect(screen.queryByTestId("btn-god-mode")).toBeNull();
+    });
+  });
+});
+
 // ── Leaderboard button location ────────────────────────────────────────────────
 
 describe("Leaderboard button", () => {

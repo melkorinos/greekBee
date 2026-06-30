@@ -14,6 +14,7 @@ import { FeedbackMessage } from "./FeedbackMessage";
 import { FoundWordsList } from "./FoundWordsList";
 import { FlowerGridPlayground as FlowerGrid } from "./FlowerGridPlayground";
 import { GiveUpModal } from "./GiveUpModal";
+import { GodModePanel } from "./GodModePanel";
 import { LeaderboardModal } from "./LeaderboardModal";
 import { MissedWordsList } from "./MissedWordsList";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
@@ -53,7 +54,16 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
     handleKeyboardLetter,
     giveUp,
     restoreFromServer,
+    godModeInject,
+    resetGame,
   } = useGameState(puzzle);
+
+  // God mode — activated by ?godmode=zzkdgr3 in the URL. Never posts to DB.
+  const [isGodMode] = useState(() =>
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("godmode") === "zzkdgr3"
+  );
+  const [godModeOpen, setGodModeOpen] = useState(false);
 
   // Redirect to today's puzzle if this page is a stale daily puzzle (day rolled over).
   useDayChange(puzzle);
@@ -102,12 +112,13 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   const leaderboardPuzzleId = activePuzzle.date;
 
   // Score submission -- all posting logic lives in the hook.
+  // Disabled in god mode to prevent test data polluting the leaderboard.
   const { submit: postScore, submitWithName: postScoreWithName } = useScoreSubmission({
     gameId:      "leksokipos",
     puzzleDate:  leaderboardPuzzleId,
     deviceId,
     displayName,
-    enabled:     isDaily,
+    enabled:     isDaily && !isGodMode,
     isPerfect,
   });
 
@@ -331,6 +342,28 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
           onDisconnect={disconnect}
           onClose={() => setLeaderboardOpen(false)}
         />
+      )}
+
+      {/* God mode — only when ?godmode=zzkdgr3 is in the URL */}
+      {isGodMode && (
+        <>
+          <button
+            data-testid="btn-god-mode"
+            onClick={() => setGodModeOpen((v) => !v)}
+            aria-label="God Mode"
+            className="fixed bottom-4 right-4 z-40 w-10 h-10 rounded-full bg-surface border border-border shadow-lg flex items-center justify-center text-lg hover:bg-surface-raised transition-colors"
+          >
+            🧪
+          </button>
+          <GodModePanel
+            isOpen={godModeOpen}
+            onClose={() => setGodModeOpen(false)}
+            puzzle={activePuzzle}
+            foundWords={foundWords}
+            onInject={godModeInject}
+            onReset={resetGame}
+          />
+        </>
       )}
     </div>
   );
