@@ -5,8 +5,7 @@
 
 import type { LeaderboardProfileProps } from "@/hooks/useLeaderboardProfile";
 import { LeaderboardModalBase, getLast7Dates, buildLeaderboardUrl } from "@/components/shared/LeaderboardModal";
-import { ProfileSection } from "@/components/shared/ProfileSection";
-import { useLeaderboardProfile } from "@/hooks/useLeaderboardProfile";
+import { useLeaderboardProfileSlot } from "@/components/shared/LeaderboardProfileSlot";
 
 // sort=asc so the leaderboard endpoint orders by ascending score (fewer guesses = better rank)
 const buildUrl = buildLeaderboardUrl("vrestifrasi", { sort: "asc" });
@@ -25,23 +24,10 @@ export function VresTinFrasiLeaderboardModal({
   today,
   deviceId,
   displayName,
-  profileLinked,
-  onSaveName,
-  onProfileCreate,
-  onTransferGenerate,
-  onTransferClaim,
-  onDisconnect,
-  authLinked,
-  authUserName,
-  onSignIn,
-  onSignOut,
   onClose,
+  ...profile
 }: VresTinFrasiLeaderboardModalProps) {
-  const { createError, handleSave } = useLeaderboardProfile({
-    profileLinked,
-    onProfileCreate,
-    onSaveName,
-  });
+  const profileSlot = useLeaderboardProfileSlot({ displayName, ...profile });
 
   return (
     <LeaderboardModalBase
@@ -54,25 +40,8 @@ export function VresTinFrasiLeaderboardModal({
       buildUrl={buildUrl}
       subtitle="Αριθμός προσπαθειών · χαμηλότερο = καλύτερο"
       scoreLabel="Προσπάθειες"
-      showNameEditor={true}
-      saveButtonAlwaysActive={!profileLinked}
-      topSlot={
-        <ProfileSection
-          profileLinked={profileLinked}
-          displayName={displayName}
-          createError={createError ?? undefined}
-          onTransferGenerate={onTransferGenerate}
-          onTransferClaim={onTransferClaim}
-          onDisconnect={onDisconnect}
-          authLinked={authLinked}
-          authUserName={authUserName}
-          onSignIn={onSignIn}
-          onSignOut={onSignOut}
-          onSaveName={(name) => void handleSave(name)}
-        />
-      }
-      onSaveName={(name) => void handleSave(name)}
       onClose={onClose}
+      {...profileSlot}
     />
   );
 }

@@ -9,10 +9,8 @@ Known mitigations applied (Session 25):
 - `export const revalidate = 3600` on `[center]/[outer]` — CDN caches full page HTML.
 - All API routes moved to Edge runtime (`export const runtime = "edge"`).
 
-Next potential optimisation (not yet needed):
-- Remove `validWords` from `puzzles-el.json` (tech debt #1 in README). Curated puzzle pages currently
-  load the ~5 MB JSON at build time. Stripping `validWords` reduces it to ~50 KB, cutting bundle
-  parse time per cold start significantly.
+Stripping `validWords` from `puzzles-el.json` was evaluated and rejected: saving ~4–10 ms of JSON
+parse time is outweighed by adding ~50–200 ms of dictionary computation on first request per puzzle.
 
 ### Leksindeseis puzzle supply (`puzzles-connections.json`)
 Community-submitted Leksindeseis puzzles are the primary source, with `puzzles-connections.json` as the static fallback. The fallback pool is thin — operator must manually add new dated entries. No reminder system exists. Add a cron check or at minimum document the procedure clearly before going to production.
@@ -26,8 +24,8 @@ The `/leksokipos/[center]/[outer]` route shows a banner if `validWords.length < 
 ### Greek letters in URLs
 Modern messaging apps (WhatsApp, Telegram, iMessage) and all mainstream browsers handle Greek path segments correctly via IRI/percent-encoding. Edge risk: some old email clients or corporate proxies may mangle `%CE%B1`-style sequences. Acceptable for the current use case; document if a user reports it.
 
-### `puzzles-el.json` file size (Leksokipos)
-At several MB the file is large because each of the ~1000 pre-built puzzles stores its full `validWords` array. Now that `buildCustomPuzzle` computes words dynamically from `words-el.json`, the same approach could be applied to pre-built puzzles — storing only `centerLetter + outerLetters + date` and computing `validWords` at request time. This would shrink the file dramatically. Tracked as issue 07 (Strip validWords from puzzles-el.json). Do this as an explicit tech debt task, not opportunistically.
+### 🟡 API rate limiting (accepted risk)
+All INSERT-capable API routes write to Supabase with no per-device throttle. RLS policies allow unlimited anon inserts. At current scale this is acceptable — the most likely abuse vector is an accidental client bug, not coordinated attack. Decision: **accept risk and monitor** (Option C). Set a Supabase row-count alert on `game_scores` at 50 000 rows and `nominations` at 5 000 rows; revisit with Redis sliding-window rate limiting when DAU exceeds ~500. Alert must be configured in the Supabase dashboard by the operator.
 
 ### Mobile input path for Leksiarxeio
 `window.keydown` works on desktop. The on-screen Keyboard component handles mobile. There is no test verifying the on-screen keyboard dispatches correctly end-to-end.

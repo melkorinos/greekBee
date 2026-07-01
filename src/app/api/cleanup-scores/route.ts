@@ -6,7 +6,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
-import { LEADERBOARD_WINDOW_DAYS, SCORE_RETENTION_DAYS } from "@/config/retention";
+import { LEADERBOARD_WINDOW_DAYS, NOMINATION_APPLIED_RETENTION_DAYS, SCORE_RETENTION_DAYS } from "@/config/retention";
 
 export const runtime = "edge";
 
@@ -33,32 +33,44 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - SCORE_RETENTION_DAYS);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  const scoreCutoff = new Date();
+  scoreCutoff.setDate(scoreCutoff.getDate() - SCORE_RETENTION_DAYS);
+  const cutoffStr = scoreCutoff.toISOString().split("T")[0];
+
+  const nominationCutoff = new Date();
+  nominationCutoff.setDate(nominationCutoff.getDate() - NOMINATION_APPLIED_RETENTION_DAYS);
+  const nominationCutoffStr = nominationCutoff.toISOString();
 
   const supabase = getServiceRoleClient();
 
-  const [scoresResult, stateResult, transferCodesResult] = await Promise.all([
+  const [scoresResult, stateResult, transferCodesResult, nominationsResult] = await Promise.all([
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase.from("game_scores") as any).delete({ count: "exact" }).lt("puzzle_date", cutoffStr),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase.from("game_state") as any).delete({ count: "exact" }).lt("puzzle_date", cutoffStr),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase.from("transfer_codes") as any).delete({ count: "exact" }).lt("created_at", cutoffStr),
+    // Delete accepted nominations that have been applied (reviewed_at set) and are older than 30 days.
+    // Rejected and pending nominations are never deleted.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase.from("nominations") as any).delete({ count: "exact" })
+      .eq("status", "accepted")
+      .not("reviewed_at", "is", null)
+      .lt("reviewed_at", nominationCutoffStr),
   ]);
 
-  if (scoresResult.error || stateResult.error || transferCodesResult.error) {
-    const msg = scoresResult.error?.message ?? stateResult.error?.message ?? transferCodesResult.error?.message;
+  if (scoresResult.error || stateResult.error || transferCodesResult.error || nominationsResult.error) {
+    const msg = scoresResult.error?.message ?? stateResult.error?.message ?? transferCodesResult.error?.message ?? nominationsResult.error?.message;
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 
   return NextResponse.json({
-    cutoff,
+    cutoff: scoreCutoff,
     deleted: {
-      scores:         scoresResult.count       ?? 0,
-      gameState:      stateResult.count        ?? 0,
-      transferCodes:  transferCodesResult.count ?? 0,
+      scores:         scoresResult.count        ?? 0,
+      gameState:      stateResult.count         ?? 0,
+      transferCodes:  transferCodesResult.count  ?? 0,
+      nominations:    nominationsResult.count    ?? 0,
     },
   });
 }

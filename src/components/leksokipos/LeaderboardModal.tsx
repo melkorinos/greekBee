@@ -3,16 +3,14 @@
 // LeaderboardModal — Leksokipos leaderboard wrapper.
 //
 // Wires the shared LeaderboardModalBase with:
-//   - Amber colour scheme
 //   - Server-provided recentDates for the day strip
-//   - Shared ProfileSection (topSlot)
+//   - Shared profile slot (useLeaderboardProfileSlot)
 //   - "Παίξε αυτό το παζλ" footer link for past dates
 
 import type { LeaderboardProfileProps } from "@/hooks/useLeaderboardProfile";
 import { LeaderboardModalBase, buildLeaderboardUrl } from "@/components/shared/LeaderboardModal";
-import { ProfileSection } from "@/components/shared/ProfileSection";
+import { useLeaderboardProfileSlot } from "@/components/shared/LeaderboardProfileSlot";
 import Link from "next/link";
-import { useLeaderboardProfile } from "@/hooks/useLeaderboardProfile";
 
 const buildUrl = buildLeaderboardUrl("leksokipos");
 
@@ -36,24 +34,11 @@ export function LeaderboardModal({
   recentDates,
   deviceId,
   displayName,
-  profileLinked,
-  onSaveName,
-  onProfileCreate,
-  onTransferGenerate,
-  onTransferClaim,
-  onDisconnect,
-  authLinked,
-  authUserName,
-  onSignIn,
-  onSignOut,
   onClose,
+  ...profile
 }: LeaderboardModalProps) {
   const today = new Date().toISOString().split("T")[0];
-  const { createError, handleSave } = useLeaderboardProfile({
-    profileLinked,
-    onProfileCreate,
-    onSaveName,
-  });
+  const profileSlot = useLeaderboardProfileSlot({ displayName, ...profile });
 
   return (
     <LeaderboardModalBase
@@ -64,23 +49,6 @@ export function LeaderboardModal({
       dates={recentDates}
       defaultDate={defaultPuzzleId}
       buildUrl={buildUrl}
-      showNameEditor={true}
-      saveButtonAlwaysActive={!profileLinked}
-      topSlot={
-        <ProfileSection
-          profileLinked={profileLinked}
-          displayName={displayName}
-          createError={createError ?? undefined}
-          onTransferGenerate={onTransferGenerate}
-          onTransferClaim={onTransferClaim}
-          onDisconnect={onDisconnect}
-          authLinked={authLinked}
-          authUserName={authUserName}
-          onSignIn={onSignIn}
-          onSignOut={onSignOut}
-          onSaveName={(name) => void handleSave(name)}
-        />
-      }
       emptySlot={(date) =>
         date !== defaultPuzzleId ? (
           <Link
@@ -102,8 +70,8 @@ export function LeaderboardModal({
           </Link>
         ) : null
       }
-      onSaveName={(name) => void handleSave(name)}
       onClose={onClose}
+      {...profileSlot}
     />
   );
 }

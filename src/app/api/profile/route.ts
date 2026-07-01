@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase.from("player_profiles") as any).upsert(
-    { display_name, device_uuid },
+    { display_name, device_uuid, last_active: new Date().toISOString() },
     { onConflict: "device_uuid" }
   );
 

@@ -6,6 +6,7 @@ import { NominationCard, type Nomination } from "@/components/leksikastirio/Nomi
 import { NominationModal } from "@/components/shared/NominationModal";
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
 import { markSuggested } from "@/hooks/suggestions";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 // ── Tab types ─────────────────────────────────────────────────────────────────
@@ -434,12 +435,12 @@ function LeksikastiríoClient() {
           Ψηφίστε λέξεις που πιστεύετε ότι πρέπει να προστεθούν ή να αφαιρεθούν.
         </p>
         {isAdmin && (
-          <a
+          <Link
             href="/leksokipos?godmode=zzkdgr3"
             className="inline-block mt-2 text-xs text-muted hover:text-foreground underline underline-offset-2"
           >
             🧪 Leksokipos God Mode
-          </a>
+          </Link>
         )}
       </div>
 

@@ -13,6 +13,7 @@ import { NextRequest } from "next/server";
 type ChainResult = { data?: unknown; error?: { message: string } | null };
 
 let _callQueue: ChainResult[] = [];
+let _lastUpsertPayload: unknown = null;
 
 function makeChain(result: ChainResult) {
   const chain: Record<string, unknown> = {};
@@ -21,7 +22,7 @@ function makeChain(result: ChainResult) {
   chain.eq     = ret;
   chain.order  = ret;
   chain.insert = () => Promise.resolve(result);
-  chain.upsert = () => Promise.resolve(result);
+  chain.upsert = (data: unknown) => { _lastUpsertPayload = data; return Promise.resolve(result); };
   chain.single = () => Promise.resolve(result);
   chain.then   = (resolve: (v: ChainResult) => void) => resolve(result);
   return chain;
@@ -56,8 +57,8 @@ function makePostReq(body: unknown): NextRequest {
   });
 }
 
-beforeEach(() => { _callQueue = []; });
-afterEach(()  => { _callQueue = []; });
+beforeEach(() => { _callQueue = []; _lastUpsertPayload = null; });
+afterEach(()  => { _callQueue = []; _lastUpsertPayload = null; });
 
 // ── GET ?device_uuid= — startup existence check ───────────────────────────────
 
@@ -125,5 +126,13 @@ describe("POST /api/profile — idempotent upsert", () => {
     enqueue({ data: null, error: null });
     const res = await POST(makePostReq({ device_uuid: "uuid-anon" }));
     expect(res.status).toBe(200);
+  });
+
+  it("includes last_active as a valid ISO timestamp in the upsert payload", async () => {
+    enqueue({ data: null, error: null });
+    await POST(makePostReq({ display_name: "Νίκος", device_uuid: "uuid-abc" }));
+    const payload = _lastUpsertPayload as Record<string, unknown>;
+    expect(typeof payload.last_active).toBe("string");
+    expect(new Date(payload.last_active as string).getTime()).not.toBeNaN();
   });
 });

@@ -17,17 +17,23 @@ vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY",  "test-service-role-key");
 type DeleteResult = { error: { message: string } | null; count: number | null };
 
 const _results: Record<string, DeleteResult> = {
-  game_scores: { error: null, count: 0 },
-  game_state:  { error: null, count: 0 },
+  game_scores:  { error: null, count: 0 },
+  game_state:   { error: null, count: 0 },
+  nominations:  { error: null, count: 0 },
 };
 
+// Fluent chain: .delete().eq().not().lt() all resolve to the table's result.
 vi.mock("@supabase/supabase-js", () => ({
   createClient: () => ({
-    from: (table: string) => ({
-      delete: () => ({
-        lt: () => Promise.resolve(_results[table] ?? { error: null, count: 0 }),
-      }),
-    }),
+    from: (table: string) => {
+      const resolve = () => Promise.resolve(_results[table] ?? { error: null, count: 0 });
+      const c: Record<string, unknown> = {};
+      c["delete"] = () => c;
+      c["eq"]     = () => c;
+      c["not"]    = () => c;
+      c["lt"]     = resolve;
+      return c;
+    },
   }),
 }));
 
@@ -42,8 +48,9 @@ function makeReq(authHeader?: string): NextRequest {
 }
 
 beforeEach(() => {
-  _results.game_scores = { error: null, count: 0 };
-  _results.game_state  = { error: null, count: 0 };
+  _results.game_scores  = { error: null, count: 0 };
+  _results.game_state   = { error: null, count: 0 };
+  _results.nominations  = { error: null, count: 0 };
 });
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -72,19 +79,30 @@ describe("GET /api/cleanup-scores — happy path", () => {
 
     const json = await res.json() as {
       cutoff:  string;
-      deleted: { scores: number; gameState: number };
+      deleted: { scores: number; gameState: number; nominations: number };
     };
     expect(json.deleted.scores).toBe(12);
     expect(json.deleted.gameState).toBe(4);
+    expect(json.deleted.nominations).toBe(0);
     expect(json.cutoff).toMatch(/^\d{4}-\d{2}-\d{2}/);
   });
 
-  it("returns deleted: 0 for both tables when nothing is older than 10 days", async () => {
+  it("returns deleted: 0 for all tables when nothing is stale", async () => {
     const res = await GET(makeReq(`Bearer ${TEST_SECRET}`));
     expect(res.status).toBe(200);
-    const json = await res.json() as { deleted: { scores: number; gameState: number } };
+    const json = await res.json() as { deleted: { scores: number; gameState: number; nominations: number } };
     expect(json.deleted.scores).toBe(0);
     expect(json.deleted.gameState).toBe(0);
+    expect(json.deleted.nominations).toBe(0);
+  });
+
+  it("returns nominations deleted count when accepted+applied nominations are stale", async () => {
+    _results.nominations = { error: null, count: 7 };
+
+    const res = await GET(makeReq(`Bearer ${TEST_SECRET}`));
+    expect(res.status).toBe(200);
+    const json = await res.json() as { deleted: { nominations: number } };
+    expect(json.deleted.nominations).toBe(7);
   });
 });
 
@@ -107,5 +125,14 @@ describe("GET /api/cleanup-scores — error handling", () => {
     expect(res.status).toBe(500);
     const json = await res.json() as { error: string };
     expect(json.error).toBe("state delete failed");
+  });
+
+  it("returns 500 when nominations delete fails", async () => {
+    _results.nominations = { error: { message: "nominations delete failed" }, count: null };
+
+    const res = await GET(makeReq(`Bearer ${TEST_SECRET}`));
+    expect(res.status).toBe(500);
+    const json = await res.json() as { error: string };
+    expect(json.error).toBe("nominations delete failed");
   });
 });

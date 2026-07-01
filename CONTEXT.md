@@ -153,6 +153,19 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 ---
 
+## Persistence decisions
+
+**API rate limiting — accepted risk (2026-06-30)**
+No per-device rate limiting is implemented on INSERT-capable API routes. RLS policies allow unlimited anon inserts. Decision: accept the risk at current scale. A Supabase row-count alert is the only guardrail (threshold: 50 000 rows on `game_scores`, 5 000 on `nominations`). Revisit with a Redis sliding-window approach (Upstash) when DAU exceeds ~500.
+
+**Nominations retention policy (2026-07-01)**
+`pending` and `rejected` Nominations are never deleted. Rejected rows are retained permanently because `NominationModal` uses them to warn players on re-submission (by word + direction). `accepted` Nominations are deleted 30 days after `reviewed_at` is set by `apply-nominations.mjs` — at that point the word is in the JSON and deployed, and the row is pure audit trail. The `reviewed_at` column serves dual purpose: `null` = accepted but not yet applied to the word list; non-null = applied. See ADR 0011.
+
+**`player_profiles` cleanup — deferred (2026-07-01)**
+No deletion policy is implemented. `last_active` is updated on every profile upsert (POST /api/profile) so it reflects genuine activity when cleanup is eventually designed.
+
+---
+
 ## Flagged ambiguities
 
 **"Score" is overloaded** — Leksokipos Score = accumulated word points (higher = better). Leksiarxeio Leaderboard Score = sum of In-game Points across 5 Lengths (higher = better). API field is named `score` for interface compatibility only.
