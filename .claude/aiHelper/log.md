@@ -5,6 +5,27 @@
 
 ---
 
+## Session 55 — 2026-07-02: Test-suite audit — gap fill + duplication cleanup ✅
+Full scan of source vs tests (report + baseline runs: `.claude/aiHelper/test-audit/audit.md`). Ran concurrently with session 54 (separate session, same tree); final verification includes both.
+1. **Audit** — 1128-test baseline; ranked gap list (top: Stavrolekso UI layer entirely untested, Vres Tin Frasi components untested); duplication findings; cleared false suspects (app/leksindeseis `ConnectionsBoard` = re-export shim; `useLeksiarxeioScoreSubmission` deliberate, not a dup). Also removed accidental `x= 1` / `y = '1'` junk from uncommitted `GuessGrid.tsx` (broke 2 suites).
+2. **soul.md rule amended (user-authorized)** — "never delete tests" → coverage never goes down; consolidation of demonstrable duplicates allowed with logged justification.
+3. **Consolidations** — `gameLogic.test.ts` (leksokipos) converted to a Greek fixture (production alphabet) and absorbed `greekLogic.test.ts` (deleted: 10/12 scenario dups + brittle hard-coded fallback puzzle ID `2028-12-26-el`; its loader cases already in `leksokiposDataLoader.test.ts`). `mobileLayout.test.tsx` trimmed 7→3: backdrop/card shell assertions now owned by `modal.test.tsx` (HowToPlayModal delegates to the Modal primitive since session 53); kept the HowToPlay-specific overflow contracts.
+4. **New suites (quick wins)** — `vrestifrasi/dataLoader.test.ts` (community consume, rotation fallback, accent normalisation), `vrestifrasi/scoring.test.ts`, `shared/useProfile.test.ts` (create/transfer/claim/disconnect wiring), `shared/useLeaderboardProfile.test.ts` (save logic + slot bundle). `leaderboardModal.test.tsx` moved to `src/test/leksokipos/` (folder convention).
+5. **Docs** — memory.md coverage map corrected (stale `useScoreSubmission` attribution, new rows); reflections.md mobile-keyboard tension → resolved (covered by `keyboardInteraction.test.tsx`); backlog (Stavrolekso UI tests, Vres components, small surfaces) recorded in audit.md §D. E2E is in a separate Playwright session.
+Verification: **1174 tests pass (6 skipped live-DB) · eslint clean · build exit 0**.
+
+---
+
+## Session 54 — 2026-07-02: Architecture deepening — Community Puzzle intake validation ✅
+Ran `/improve-codebase-architecture` (report: `.claude/aiHelper/architecture-review-2026-07-02.html`, 6 candidates); implemented top candidate.
+1. **Four pure validation adapters** — each community-puzzle submission route's inline `validate()` moved to the game's lib: `src/games/{leksiarxeio,leksindeseis,vrestifrasi,stavrolekso}/lib/validateSubmission.ts`. Routes are now pure config declarations. Word-pool-heavy modules (leksiarxeio, vrestifrasi) deliberately NOT exported from lib barrels — imported only by their own route, preserving edge-bundle isolation.
+2. **Stavrolekso edit hole closed** — PATCH `[id]` validated nothing about `data`, so a creator edit could regress a puzzle below the submission invariants (grid size, slots, both directions). Now calls shared `validateStavroleksoData` after the PIN check → 400. Invariant messages Greek-ified (were English; the maker displays them verbatim).
+3. **Maker dedup** — PIN regex + across/down check were verbatim copies of the server's; maker now imports `EDIT_PIN_PATTERN`/`EDIT_PIN_ERROR`/`validateStavroleksoData` from the lib barrel (client-safe). Authoring-only gates (connectivity, filled slots) stay maker-local.
+4. Lifecycle module comment + CONTEXT.md lifecycle entry updated. Remaining report candidates (not built): HTTP intake module, admin-secret unification (header vs body), Tile/Keyboard twins (ADR 0009 tension), LeaderboardModalBase config, Leksikastirio page split.
+Tests: 4 new pure `validateSubmission.test.ts` files (22 tests); `stavroleksoIdRoute.test.ts` PATCH fixture made invariant-valid + new 400-regression test for invalid edits. Verification: **1158 tests pass · eslint clean · build exit 0**.
+
+---
+
 ## Session 53 — 2026-06-29: UI consolidation — per-game accent, Modal primitive, recipes split (ADR 0009) ✅
 Grilled (`/grill-with-docs`) the recipes.ts/chrome consolidation; wrote **ADR 0009**. Goal: shared chrome (common feel) + a per-game signature colour, all one-line-changeable. Four parts, each test/eslint/build-green:
 1. **Per-game accent token** — `--game-accent`/`--game-accent-foreground` in `globals.css`, set via `[data-game="…"]` selectors; the 4 games' root wrappers (`page.tsx`/`[outer]/page.tsx`) carry `data-game`. `LeaderboardModalBase` consumes the token directly — `pillActive`/`playerMark` props **deleted**, removing the per-game literal palette strings (amber/green/purple). Player-row tint `bg-brand/10`→`bg-game-accent/10`. Brand accents decoupled from feedback tokens (Leksiarxeio was reusing `correct`, Leksindeseis/Vres `misplaced`).
@@ -75,60 +96,13 @@ Derived **16,933 proper-noun removals** from `words-el.json` (812,168→795,235;
 
 ---
 
-## Session 45 — 2026-06-22: Leksikastirio admin width + re-proposal warning + skill refresh ✅
-
-### Changes
-1. **Feature — admin viewport** ([src/app/leksikastirio/page.tsx](../../src/app/leksikastirio/page.tsx)) — container is now `max-w-6xl` when `isAdmin` (desktop review), `max-w-lg` otherwise (players keep the narrow mobile column).
-2. **Feature — re-proposal warning** (Nomination dedup against rejected history):
-   - **`src/app/api/nominations/lookup/route.ts`** (new, edge) — `GET ?word=&direction=` → `{ rejected, pending }` counts (head-only). Matches POST's storage form (lowercase+trim, same direction). Anon client (RLS already permits — review route writes with it).
-   - **`src/components/shared/NominationModal.tsx`** — looks up the word (on blur for the editable Leksikastirio form; on open for a non-editable in-game flag; re-checked at submit). `rejected>0` → amber warning + **note becomes mandatory** (submit disabled until filled; inline error on the race path). `pending>0` (and not rejected) → gentle sky info banner ("vote instead"), non-blocking. Network failure → no warning, never blocks.
-   - Decisions (grill, 4Q): on-blur timing · note **required** for rejected re-proposals · **no** admin rejection-reason capture (generic warning) · also flag **pending** duplicates. Source of truth = retained rejected rows (session 44 keeps them).
-3. **Skill refresh** ([.claude/skills/apply-nominations/skill.md](../../.claude/skills/apply-nominations/skill.md)) — overlapped existing skill, updated in place: now uses `npm run apply-nominations[:dry]`, documents the puzzle re-sync (old text wrongly said puzzles aren't updated), the (direction × status) matrix, `.env`/`.env.local` loading, and the OOM-batch testing note.
-4. **Tests** — [src/test/shared/nominationModal.test.tsx](../../src/test/shared/nominationModal.test.tsx): routed mock for lookup vs POST + `postCall()` finder; 4 new tests (rejected→warn+disabled, rejected+note→posts, pending→info+non-blocking, none→clean).
-
-### Verification
-- Batch (nominationModal + leksikastirio + scripts): **56 pass**. ESLint clean. `npm run build` clean — `/api/nominations/lookup` registered as edge.
-- Full `npm run test -- --run` still OOMs in this codespace (env ceiling, see session 44) — reconfirm baseline on a roomier machine.
-
-### Follow-ups (not built)
-- Word matching is exact lowercase+trim (mirrors POST); accent variants won't dedupe. Capturing an admin rejection reason was deliberately deferred.
-
----
-
-## Session 44 — 2026-06-22: Nomination apply pipeline — puzzle re-sync + single command ✅
-
-### Problem
-`scripts/apply-nominations.mjs` applied accepted Leksikastirio Nominations to `words-el.json` + `leksiarxeio/words-{4..8}.json` but **never re-synced the embedded `validWords` in the 1008 pre-built Leksokipos puzzles** (`puzzles-el.json`). Removed words stayed scoreable; added words never became scoreable. Correctness bug for the `remove` direction.
-
-### Decisions (via `/grill-with-docs`)
-- Triage stays **manual** in the Leksikastirio admin UI (✓/✕). No vote-threshold auto-triage.
-- Re-sync **coupled into `apply-nominations.mjs`** (one command, can't be forgotten) — not a separate script.
-- Re-sync is **surgical, not a dict rescan**: a word's validity per puzzle is self-contained (covers letters + contains centre), so we patch only affected puzzles, preserving word order → minimal diff. No 812k-word scan / center index needed.
-- "Clean rejected from backlog" = **report count only**, no deletion (rows already hidden via `status='rejected'`, retained as history).
-- Empirically verified: all 200 sampled puzzles were byte-identical to a fresh recompute → data already consistent, so only genuine deltas ever diff.
-
-### Changes
-1. **`scripts/lib/resync-puzzles.mjs`** (new, pure/dep-free) — `normalise`, `puzzleAcceptsWord`, `resyncPuzzles(puzzles, {added, removed})`. Removal wins over addition; untouched puzzles keep referential identity so the writer skips them. Predicate mirrors `computeValidWords.ts`.
-2. **`scripts/apply-nominations.mjs`** — imports `resyncPuzzles`; after word-list writes, patches `puzzles-el.json` (preview in `--dry-run`, write otherwise); reports rejected-nomination count; updated header comment documents the (direction × status) matrix + re-sync rationale.
-3. **`package.json`** — `apply-nominations` + `apply-nominations:dry` scripts using `node --env-file-if-exists=.env --env-file-if-exists=.env.local` (loads user's gitignored `.env`). Update-dataset-only — never builds/commits.
-4. **`src/test/scripts/resyncPuzzles.test.mjs`** (new) — 13 tests: predicate accept/reject, surgical add/remove, removal-wins, normalisation, order preservation, no-op identity.
-
-### Verification
-- `resyncPuzzles.test.mjs`: 13 pass. Representative batch (incl. `computeValidWords`, leksikastirio): 66 pass.
-- ESLint clean; `npm run build` clean.
-- **Full `npm run test -- --run` OOM-killed in this codespace** (RAM ~60% pre-consumed by VS Code/Claude; suite static-imports 812k-word lists). Not a regression — changes touch only `scripts/` + `package.json`, no `src/` runtime. Re-run the full suite on a roomier machine to reconfirm the session-43 baseline (932).
-- Empirical run vs real `puzzles-el.json`: remove `επαινε` → 5 puzzles touched (exact); synthetic add → correct; no-op → identity preserved; ~100–160 ms / 1008 puzzles.
-
-### Operator flow (unchanged trigger, now complete)
-Review ✓/✕ in `/leksikastirio?admin=<secret>` → on a machine with creds in `.env`, run `npm run apply-nominations:dry` (preview) then `npm run apply-nominations` → review git diff → build & deploy.
-
----
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
 | 48 | 2026-06-27 | Fixed broken score cleanup (`upsertAndClean` used `void` not `await` → Supabase thenable never fired; all scores retained). Removed cleanup from `upsertAndClean`; new `cleanup-scores` GET route (CRON_SECRET, service role, deletes `game_scores`+`game_state` >7d); `vercel.json` daily cron. Tests. **Needs `SUPABASE_SERVICE_ROLE_KEY`+`CRON_SECRET` in Vercel env.** |
+| 45 | 2026-06-22 | Leksikastirio admin `max-w-6xl` viewport; nomination re-proposal warning (`/api/nominations/lookup` edge route + NominationModal blur-check; rejected→mandatory note, pending→non-blocking info); apply-nominations skill refreshed; 4 tests. Deferred: accent-variant dedup, admin rejection reason. |
+| 44 | 2026-06-22 | Nomination apply pipeline completed: `scripts/lib/resync-puzzles.mjs` surgical `puzzles-el.json` re-sync coupled into `apply-nominations.mjs`; `npm run apply-nominations[:dry]` with `.env` loading; 13 tests. Operator flow: admin ✓/✕ → dry-run → apply → diff → deploy. |
 | 43 | 2026-06-22 | NYT brand scrub (comments/docs only → Greek names; IDs/file names frozen); pinch-zoom lock (`viewport` in `layout.tsx`); Leksokipos `useDayChange` auto-advance on stale-CDN day change; tests. 932 pass. |
 | 42 | 2026-05-30 | Google OAuth augments device identity: `useAuth` hook, `/auth/callback` PKCE, `/api/auth/link` edge route (upserts `auth_user_id`, back-fills `game_scores`), `authLinked` in envelope/store, `ProfileSection` + 4 LeaderboardModals threaded, `HomeTrophyButton`, ADR 0007, CONTEXT 10-table update. DB migration SQL handed to user. |
 | 41 | 2026-05-29 | Bug fixes: dark-mode FOUC on Leksokipos client nav (`.dark` body background in globals.css); Stavrolekso server crash (self-`fetch` → direct Supabase calls); benign Turbopack edge-runtime warning documented. |

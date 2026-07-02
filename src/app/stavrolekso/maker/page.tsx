@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StavroleksoGrid, computeHighlightedCells } from "@/games/stavrolekso/StavroleksoGrid";
-import { autoNumberSlots, isConnected, makeBlackSet, getSlotCells, getSlotLength } from "@/games/stavrolekso/lib";
+import {
+  autoNumberSlots,
+  isConnected,
+  makeBlackSet,
+  getSlotCells,
+  getSlotLength,
+  EDIT_PIN_PATTERN,
+  EDIT_PIN_ERROR,
+  validateStavroleksoData,
+} from "@/games/stavrolekso/lib";
 import type { Direction, SlotDef } from "@/games/stavrolekso/types";
 
 type Phase = 1 | 2 | 3;
@@ -354,17 +363,16 @@ export default function StavroleksoMakerPage() {
   }
 
   function validateSubmit(): string | null {
-    if (!editPin || !/^[a-zA-Z0-9]{4,8}$/.test(editPin)) return "Edit PIN: 4–8 αλφαριθμητικοί χαρακτήρες.";
+    if (!EDIT_PIN_PATTERN.test(editPin)) return EDIT_PIN_ERROR;
+    // Authoring-only quality gates: connectivity + every slot filled.
     if (!connected) return "Τα λευκά κελιά δεν είναι συνεκτικά.";
     const assembled = assembleSlots();
     for (const s of assembled) {
       const len = getSlotLength(s.direction, s.startRow, s.startCol, size, size, blackSet);
       if (s.answer.length < len) return `Slot ${s.number} ${s.direction === "across" ? "Οριζόντια" : "Κάθετα"}: δεν έχει συμπληρωθεί.`;
     }
-    const hasAcross = assembled.some((s) => s.direction === "across");
-    const hasDown   = assembled.some((s) => s.direction === "down");
-    if (!hasAcross || !hasDown) return "Χρειάζεται τουλάχιστον μία Οριζόντια και μία Κάθετα λέξη.";
-    return null;
+    // Wire invariants — the same module the submit + edit routes enforce.
+    return validateStavroleksoData({ width: size, height: size, blackSquares, slots: assembled });
   }
 
   async function handleSubmit() {

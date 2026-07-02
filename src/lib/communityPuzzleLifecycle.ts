@@ -5,8 +5,9 @@
 // consume (claim the oldest approved row when a game serves its Daily Puzzle).
 // Per-game variation enters through CommunityPuzzleGameConfig:
 //   - table:    which community_*_puzzles table backs the game
-//   - validate: submission validation adapter — defined in the game's own
-//     route file so heavy word-pool imports stay out of the other edge bundles
+//   - validate: submission validation adapter — a pure function in the game's
+//     lib (src/games/<game>/lib/validateSubmission.ts), imported only by that
+//     game's route so heavy word-pool imports stay out of the other edge bundles
 //   - select / listOrder / publicApprovedList / returnInsertedId: the
 //     Stavrolekso differences (title column, newest-first browse list that is
 //     public for status=approved, and the inserted id echoed back for the

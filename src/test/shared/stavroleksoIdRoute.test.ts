@@ -55,10 +55,15 @@ function makePatch(id: string, body: unknown) {
   });
 }
 
+// Minimal data blob passing the shared invariants (validateStavroleksoData):
+// square supported grid + at least one slot in each direction.
 const PUZZLE_DATA = {
   width: 9, height: 9,
   blackSquares: [],
-  slots: [],
+  slots: [
+    { number: 1, direction: "across", startRow: 0, startCol: 0, answer: "ααα", clue: "χ" },
+    { number: 1, direction: "down",   startRow: 0, startCol: 0, answer: "ααα", clue: "ψ" },
+  ],
   cells: {},
 };
 
@@ -123,6 +128,16 @@ describe("PATCH /api/community-puzzles/stavrolekso/[id] — auth + state guards"
     const res = await PATCH(makePatch("p1", { edit_pin: "wrong-pin", data: PUZZLE_DATA }), withParams("p1"));
     expect(res.status).toBe(403);
     expect((await res.json()).error).toMatch(/incorrect pin/i);
+  });
+
+  it("400 when an edit would regress the puzzle below the submission invariants", async () => {
+    enqueue({ data: { status: "pending", edit_pin: "pin123" }, error: null });
+    const res = await PATCH(
+      makePatch("p1", { edit_pin: "pin123", data: { ...PUZZLE_DATA, slots: [] } }),
+      withParams("p1"),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toMatch(/τουλάχιστον ένα slot/);
   });
 });
 
