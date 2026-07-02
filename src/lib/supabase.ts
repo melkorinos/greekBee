@@ -245,6 +245,21 @@ export function getSupabaseClient(): ReturnType<typeof createClient> {
   return _client;
 }
 
+/**
+ * Returns a service-role Supabase client that bypasses Row Level Security.
+ * SERVER-ONLY — never import into browser code. Reads SUPABASE_SERVICE_ROLE_KEY,
+ * which is not a NEXT_PUBLIC_ var and so is never shipped to the client.
+ * Throws at runtime (not build time) when the env vars are missing.
+ */
+export function getServiceRoleClient(): ReturnType<typeof createClient> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.");
+  }
+  return createClient(url, key, { auth: { persistSession: false } });
+}
+
 // ── Auth helpers (browser-only) ──────────────────────────────────────────────
 
 /** Initiates Google OAuth. Saves the current path so the callback can redirect back. */

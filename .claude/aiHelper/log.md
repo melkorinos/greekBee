@@ -5,6 +5,25 @@
 
 ---
 
+## Session 57 — 2026-07-02: Sign-in Restore impl — Slices 1–2 (security boundary + restore/merge) ✅
+Implementing ADR 0012 per handoff, `/tdd`, slice by slice. **Slices 1–2 done.**
+1. **Slice 1 — JWT is the identity source** — `/api/auth/link` derives `auth_user_id` (+ Google name) from the verified Supabase JWT: reads `Authorization: Bearer`, `getSupabaseClient().auth.getUser(token)`, 401s on missing/invalid. Body carries only `device_uuid`. Closes account-squatting (body `auth_user_id` was trusted). Privileged writes via new shared `getServiceRoleClient()` in `src/lib/supabase.ts` (folded the `cleanup-scores` duplicate). **Latent bug fixed**: back-fill filtered `game_scores.device_uuid` (nonexistent col; table uses `device_id`) so it always errored silently → no score was ever stamped. Now `device_id`.
+2. **Slice 2 — Sign-in Restore** — `/api/auth/link` is restore-aware: anchor lookup by `auth_user_id`; if the account already lives on another device, `restore()` merges this device's scores into it and returns `{device_uuid: canonical, display_name, restored:true}` to adopt. **Merge = pure `src/lib/scoreMerge.ts` `planScoreMerge`** (best score per `(game_id, puzzle_date)`; loser row deleted so each surviving row's score stays consistent with its `data` blob — old wins ⇒ re-point old + delete canonical, else delete old). Route executes the plan (batched `.in("id",…)` update/delete) + deletes the old profile row. Client: **`adoptDeviceIdentity(deviceId, name?)`** in `useGameStore` (atomic: deviceId + name + profileLinked + authLinked); callback awaits the response, adopts when `device_uuid` differs, sets `leksokipos-needs-restore` + `signin-restore-welcome` flags (visible toast deferred — user chose "flag now, tiny toast later").
+3. **User decisions (AskUserQuestion)** — (a) Bearer-JWT + service-role over new RLS DELETE policy; (b) fold restore into `/api/auth/link`; (c) welcome = flag-now/toast-later.
+Tests: `scoreMerge.test.ts` (7), `authLinkRoute.test.ts` rewritten to intent-aware harness (17: 401 paths, body-id-ignored, name precedence, device_id back-fill, idempotent, restore adopt/delete/merge branches), `useGameStore.test.ts` +5 (`adoptDeviceIdentity`). Verification: **1194 tests pass (6 skipped live-DB) · eslint clean · build exit 0**. **Slices 3–5 remain** (Disconnect unification, visibility rule/`onSignIn` required, `identity_audit` migration).
+
+---
+
+## Session 56 — 2026-07-02: Sign-in Restore design grill — ADR 0012, zero code ✅
+Resumed `.claude/handoffs/googleLoginIdentity.md` via `/grill-with-docs`; all open identity questions resolved, **nothing implemented**.
+1. **Discovery** — unique index `player_profiles_auth_user_id_key` + upsert-on-device in `/api/auth/link` means second-device Google sign-in 500s today; also link route trusts client-supplied `auth_user_id` (squatting risk).
+2. **Decisions (all user-approved)** → **ADR 0012**: auth account = durable anchor, device = session; Sign-in Restore adopts the linked profile's DeviceId (TransferCode-claim mechanic) + silent union merge (best score per puzzle, auth name wins, old row deleted); Disconnect (profile *or* Google) = fresh DeviceId; restore/link endpoints derive `auth_user_id` from verified JWT only; achievements earnable anonymously by DeviceId, immutable facts table, catalog in code, frozen IDs, client-trust model; `game_scores` append-forever; TransferCode retained as no-account fallback; Google button offered wherever not AuthLinked (`onSignIn` to become required).
+3. **Docs** — ADR 0012 written; ADR 0007 marked superseded-in-part; CONTEXT.md glossary (Sign-in Restore, Disconnect, Achievement, Admin Restore; DeviceId/AuthLinked/TransferCode revised) + append-forever persistence decision; `docs/admin-restore.md` break-glass SQL recipe (email → auth_user_id → device_uuid → TransferCode insert).
+4. **Next session** — implement per rewritten handoff `.claude/handoffs/googleLoginIdentity.md`, slices 1–5 in order, **`/tdd` mandated by user**; achievements epic only after.
+No tests/build run — docs-only session.
+
+---
+
 ## Session 55 — 2026-07-02: Test-suite audit — gap fill + duplication cleanup ✅
 Full scan of source vs tests (report + baseline runs: `.claude/aiHelper/test-audit/audit.md`). Ran concurrently with session 54 (separate session, same tree); final verification includes both.
 1. **Audit** — 1128-test baseline; ranked gap list (top: Stavrolekso UI layer entirely untested, Vres Tin Frasi components untested); duplication findings; cleared false suspects (app/leksindeseis `ConnectionsBoard` = re-export shim; `useLeksiarxeioScoreSubmission` deliberate, not a dup). Also removed accidental `x= 1` / `y = '1'` junk from uncommitted `GuessGrid.tsx` (broke 2 suites).

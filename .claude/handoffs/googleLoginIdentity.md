@@ -1,85 +1,54 @@
-# Handoff: Google Login — Verify on Prod, Then Make Identity Durable
+# Handoff: Sign-in Restore — Slices 1–2 DONE, implement 3–5 via /tdd
 
 **Date:** 2026-07-02
-**Status:** Investigation done in-session; nothing implemented yet
-**Next session focus:** (1) explain/fix why Google sign-in is invisible on prod, (2) test the OAuth flow end-to-end, (3) align on the durable-identity direction before building on it
+**Status:** Slices 1–2 implemented test-first, all green, **uncommitted on `dev`**. Slices 3–5 remain.
+**Next session:** continue in vertical slices, strictly via `/tdd` (user mandate). Read ADR 0012 first.
 
 ---
 
-## Why this exists
+## Where the decisions live (do not re-litigate)
 
-Session pivot from the engagement epic (see `.claude/handoffs/nemesisFeature.md` for the original nemesis exploration). Decisions made this session:
+- **ADR 0012** (`docs/adr/0012-signin-restore-adopts-device-identity.md`) — the identity spine. Read first.
+- **CONTEXT.md** — glossary: `Sign-in Restore`, `Disconnect`, `Achievement`, `Admin Restore`; `game_scores` append-forever.
+- **ADR 0007** — superseded-in-part; anonymous-first stance stands.
+- **`docs/admin-restore.md`** — break-glass SQL recipe.
+- Session 57 in `.claude/aiHelper/log.md` — exactly what slices 1–2 changed.
 
-- The engagement epic's pillars: nemesis/taunts, weekly leaderboard, records/hall-of-fame, lifetime stats (pangram counts), streaks, **achievements**.
-- **Achievements are the user's favourite pillar** — but achievements are worthless if losable, so durable identity is the declared prerequisite for the whole epic.
-- Identity spine decision (Q1 of the grill, effectively answered): auth account becomes the durable anchor; device becomes a session. This **inverts ADR 0007** ("OAuth augments device identity") and will need a successor ADR when settled.
-- Facebook login: deferred. Demographically sensible for Greek audience, but it's a Supabase provider toggle + one button once Google restore works. Just never hardcode `"google"` where a provider name could be a string.
+## Session decisions already made (AskUserQuestion, do not re-ask)
+- Security = **Bearer JWT + service-role** (not new RLS DELETE policy).
+- Restore is **folded into `/api/auth/link`** (restore-aware), not a separate route.
+- Welcome signal = **flag now, tiny toast later** (no toast infra exists).
 
----
+## ✅ Slice 1 — DONE (security boundary)
+`src/app/api/auth/link/route.ts`: derives `auth_user_id` + Google name from the verified JWT (`Authorization: Bearer` → `getSupabaseClient().auth.getUser(token)`), 401 on missing/invalid; body carries only `device_uuid`. Privileged writes via new shared **`getServiceRoleClient()`** in `src/lib/supabase.ts` (folded the `cleanup-scores` copy). Fixed latent bug: back-fill filtered nonexistent `game_scores.device_uuid` → now `device_id`. Callback sends the bearer token. Tests: `src/test/shared/authLinkRoute.test.ts` (intent-aware harness).
 
-## Finding: why the user doesn't see Google login on prod
+## ✅ Slice 2 — DONE (Sign-in Restore + merge)
+- Pure `src/lib/scoreMerge.ts` `planScoreMerge(oldRows, canonicalRows)` → `{repoint, deleteOld, deleteCanonical}`; best score per `(game_id, puzzle_date)`, **loser row deleted** (keeps score↔`data` consistent). `src/test/shared/scoreMerge.test.ts` (7).
+- `/api/auth/link` restore branch: anchor lookup by `auth_user_id`; if account lives on another device → `restore()` executes the plan (batched `.in("id",…)`), deletes old profile row, returns `{device_uuid: canonical, display_name, restored:true}`. Also fixes the old hard-500.
+- Client: **`adoptDeviceIdentity(deviceId, name?)`** in `useGameStore` (atomic deviceId+name+profileLinked+authLinked). Callback (`src/app/auth/callback/page.tsx`) awaits the response, adopts when `device_uuid` differs, sets `leksokipos-needs-restore` + `signin-restore-welcome` (sessionStorage) flags. Tests: `useGameStore.test.ts` +5.
 
-Google OAuth **is implemented and shipped** (ADR 0007). The button is just conditionally invisible. Two independent gaps:
-
-1. **ProfileSection hides Google sign-in from ProfileLinked players.**
-   `src/components/shared/ProfileSection.tsx` renders "Σύνδεση με Google" only in the `idle` (unlinked) state (~line 159). The `linked` state (ProfileLinked, no Google, ~line 247) shows only name + Μεταφορά + Αποσύνδεση — **no Google button**. Any player who ever saved a display name never sees the sign-in option again unless they disconnect their profile first.
-
-2. **Only the home page wires auth.**
-   `HomeTrophyButton.tsx:27` is the *only* `useAuth()` call site. It passes `onSignIn` into the leaderboard modal for the landing-page 🏆 buttons. The in-game LeaderboardModals go through `useLeaderboardProfile` / `LeaderboardProfileSlot`, where `onSignIn` is optional and **no game passes it** — so inside any game, ProfileSection never shows the Google button even in `idle` state.
-
-Most likely the user has a display name (gap 1) and/or opened a leaderboard from inside a game (gap 2). Either alone is sufficient.
-
-> Note: ADR 0007's Consequences section claims the per-game LeaderboardModal "contains ProfileSection and the Google sign-in button" — the code contradicts this (gap 2). Flag when writing the successor ADR.
+**Verification at handoff:** `npm run test -- --run` → **1194 pass / 6 skipped**, `npx eslint .` clean, `npm run build` exit 0.
 
 ---
 
-## File map (auth flow, verified 2026-07-02)
+## Slice 3 — Disconnect unification  ⚠️ decision needed first
+Goal (ADR 0012 §5): profile-disconnect **and** Google sign-out are one concept — issue a fresh DeviceId **and clear local state** so an adopted identity can't leak to the next person on a shared computer. Signing back in restores everything server-side.
 
-| Piece | File |
-|---|---|
-| OAuth initiation (PKCE, saves return path) | `src/lib/supabase.ts` — `signInWithGoogle()` (~line 251) |
-| OAuth callback page | `src/app/auth/callback/page.tsx` |
-| Device↔auth linking (backfills `game_scores.auth_user_id`, pre-populates name) | `src/app/api/auth/link/route.ts` |
-| Auth state hook | `src/hooks/useAuth.ts` |
-| `authLinked` in envelope | `src/hooks/useGameStore.ts` (~line 152), `src/types/index.ts` |
-| Sign-in UI (state machine: idle/claiming/linked/authLinked) | `src/components/shared/ProfileSection.tsx` |
-| Only auth-wired entry point | `src/components/shared/HomeTrophyButton.tsx` |
-| Prop plumbing (onSignIn optional, unused by games) | `src/hooks/useLeaderboardProfile.ts`, `src/components/shared/LeaderboardProfileSlot.tsx` |
-| Existing tests | `src/test/shared/useAuth.test.ts`, `src/test/shared/authLinkRoute.test.ts` |
+**Tension to resolve before coding:** `useGameStore.test.ts` currently asserts `disconnectProfile` *"does not disturb game slices"* (~line 315). The ADR now wants local state cleared. So decide **how aggressively to wipe**: (a) reset the whole envelope to a fresh `deviceId` only (wipes displayName + all per-game progress) vs (b) clear identity fields only (deviceId/displayName/profileLinked/authLinked) but keep game slices. ADR wording ("clears local state") leans (a); confirm with user. Then:
+- Add one shared store fn (e.g. `disconnectIdentity()`), update the existing `disconnectProfile` test to the new contract.
+- `useProfile.disconnect()` and `useAuth.signOut()` (`src/hooks/useAuth.ts:77` — today only clears authLinked, does NOT reset deviceId) both call it. Tests: `useProfile.test.ts`, `useAuth.test.ts`.
 
----
+## Slice 4 — Visibility rule (broader UI touch)
+Make `onSignIn` **required** in `LeaderboardProfileSlot` / `useLeaderboardProfile`, and wire auth through **all** in-game LeaderboardModals (today only `src/components/shared/HomeTrophyButton.tsx` wires it). ProfileSection must offer Google sign-in whenever not AuthLinked, in every state incl. `linked`. Files: `src/hooks/useLeaderboardProfile.ts`, `src/components/shared/LeaderboardProfileSlot.tsx`, `ProfileSection.tsx`, + each game's LeaderboardModal call site (not yet surveyed — start with a `/zoom-out` on LeaderboardModal usages). Never hardcode `"google"` where a provider name flows.
 
-## Prod testing checklist (before any code changes)
+## Slice 5 — `identity_audit` migration  ⚠️ prod push
+Append-only unlink log `(auth_user_id, device_uuid, at)`, written on Google disconnect (slice 3's path). Via `supabase/migrations/` + `npx supabase db push` only — **show SQL + get explicit user OK before pushing to prod.**
 
-1. Supabase dashboard → Auth → Providers: is Google enabled on the **prod** project? (Client ID/secret set, not just locally.)
-2. Google Cloud Console: authorized redirect URI must include the prod Supabase callback (`https://<project>.supabase.co/auth/v1/callback`).
-3. Supabase Auth URL configuration: Site URL + additional redirect URLs must include the prod domain, or the post-OAuth redirect to `/auth/callback` will land on localhost.
-4. Then test on prod from the **landing page** 🏆 (the only wired entry point), with a device that has **no** saved display name (or after Αποσύνδεση) — otherwise the button is hidden per the gaps above.
-5. Verify after sign-in: `player_profiles.auth_user_id` set, `game_scores` rows backfilled, ProfileSection shows "✓ name · Αποσύνδεση Google".
-
----
-
-## Open design questions (grill these before implementing)
-
-1. **The merge problem (hardest, decide first):** profile A on phone (anonymous, history), user signs in with Google on laptop → profile B created and linked. Later signs in on phone too → `auth_user_id` wants two `player_profiles` rows. Merge stats? Pick a winner? Block? Decide before achievements data exists.
-2. **Restore direction:** sign-in on a fresh device should *adopt* the existing profile (name, stats, future achievements), not just link the new device. Today ADR 0007 only links forward. This is the actual feature.
-3. **History backfill:** do pre-profile `game_scores` device rows get adopted at link time? (Partially exists: `/api/auth/link` backfills by device.)
-4. **Button visibility fix:** show Google sign-in in the `linked` state too, and wire `onSignIn` through the in-game leaderboard modals? (Probably yes to both — it's the funnel for the epic.)
-5. **TransferCode's future:** stays as no-account fallback (ADR 0007 reasoning still holds) or gets deprecated once restore-on-sign-in works?
-6. **Successor ADR** to 0007 once 1–3 are settled (hard to reverse, surprising later, real trade-off — meets all three criteria).
-
----
-
-## Suggested skills
-
-- `/aihelper` — mandatory context reload at session start (soul, memory, goals, reflections, log)
-- `/diagnose` — for the prod visibility issue, if the checklist above doesn't explain it
-- `/grill-with-docs` — resume the identity grilling (merge semantics first); update CONTEXT.md glossary terms (AuthLinked will change meaning) and draft the ADR 0007 successor inline
-- `/to-issues` — once the design settles, slice into: visibility fix, restore flow, merge handling
-- `/tdd` — implementation, once issues exist
+## Slice 6 — Achievements epic — only after 3–5. Durable identity is its prerequisite.
 
 ## Constraints carried over
-
-- DB changes via `supabase/migrations/` + `npx supabase db push` only (never dashboard/MCP alone).
-- No new npm dependencies without approval.
-- Standing rules in `CLAUDE.md` (tests + eslint + build after every change; post-feature protocol in `soul.md`).
+- DB changes via migration files + `npx supabase db push` only.
+- No new npm deps without approval.
+- Never hardcode `"google"` where a provider name flows (Facebook is a later toggle).
+- `npm run test -- --run`, `npx eslint .`, `npm run build` after every change; PowerShell only.
+- Nemesis/engagement epic context: `.claude/handoffs/nemesisFeature.md`.

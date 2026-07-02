@@ -12,7 +12,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Session** — One continuous play of a Puzzle on a given device. Persists across refreshes until the Puzzle changes. Each game persists different fields (Leksokipos: score + found words; Leksiarxeio: guesses per length; Leksindeseis: solved groups + mistakes; Vres Tin Frasi: guesses + status; Stavrolekso: typed cells + solved slots per puzzle ID). Leksokipos daily Sessions are also synced to the server (see `game_state` table) for cross-device restore via TransferCode.
 
-**DeviceId** — Stable anonymous UUID generated once per browser. Shared across all games, never tied to a user account. (Not: userId, playerId)
+**DeviceId** — Stable anonymous UUID generated once per browser, shared across all games. Not permanently unique per browser: a browser *adopts* another's DeviceId on TransferCode claim or Sign-in Restore, so one DeviceId can identify all of a player's browsers. (Not: userId, playerId)
 
 **DisplayName** — Player-chosen name shown on leaderboards. Optional. (Not: username)
 
@@ -98,9 +98,17 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **ProfileLinked** — Boolean in PersistenceEnvelope: true when this device has a Profile row. (Not: logged in)
 
-**AuthLinked** — Boolean: true when this device's Profile has an associated Google account (`auth_user_id` set on its `player_profiles` row). `AuthLinked` always implies `ProfileLinked`. (Not: logged in — use AuthLinked)
+**AuthLinked** — Boolean: true when this device's Profile has an associated Google account (`auth_user_id` set on its `player_profiles` row). `AuthLinked` always implies `ProfileLinked`. The auth account is the durable identity anchor; a device is one session of it (ADR 0012). (Not: logged in — use AuthLinked)
 
-**TransferCode** — 6-char alphanumeric code (no I/1/O/0) for cross-device identity migration. 24h TTL, single-use.
+**Sign-in Restore** — Signing in with Google on a device whose account already has a linked Profile: the device adopts that Profile's DeviceId (same mechanic as TransferCode claim), then any pre-existing local history is merged — best Score per Puzzle wins, the account Profile's DisplayName wins, and the device's old Profile row is deleted. (Not: account recovery, login sync)
+
+**TransferCode** — 6-char alphanumeric code (no I/1/O/0) for cross-device identity migration. 24h TTL, single-use. Retained indefinitely as the no-account fallback; its claim-adoption mechanic is also the foundation of Sign-in Restore.
+
+**Achievement** — A permanent award earned once per player for reaching a game or platform milestone. Earned anonymously (keyed by DeviceId), durable once AuthLinked, losable before. Earned means earned forever — never revoked by later score changes, merges, or rule changes. (Not: badge, trophy)
+
+**Disconnect** — Ending a device's identity: the device gets a fresh DeviceId and cleared local state, becoming a brand-new anonymous player. Both profile disconnect and Google sign-out mean this — "this device is no longer this person." Nothing server-side is deleted; signing back in (or claiming a TransferCode) restores everything. (Not: logout, unlink)
+
+**Admin Restore** — Break-glass recovery when a player loses their identity: admin looks up email → `auth_user_id` → DeviceId in the DB and issues a TransferCode for it via SQL (see `docs/admin-restore.md`). The player claims the code normally. (Not: account recovery — that's the player-facing Sign-in Restore)
 
 **Leksikastirio** — Community word-court (λεξικό + δικαστήριο). Players vote on Nominations; admins triage them. Also hosts Community Puzzle review tabs in Admin Mode. (Not: word review, suggestions page)
 
@@ -160,6 +168,9 @@ No per-device rate limiting is implemented on INSERT-capable API routes. RLS pol
 
 **Nominations retention policy (2026-07-01)**
 `pending` and `rejected` Nominations are never deleted. Rejected rows are retained permanently because `NominationModal` uses them to warn players on re-submission (by word + direction). `accepted` Nominations are deleted 30 days after `reviewed_at` is set by `apply-nominations.mjs` — at that point the word is in the JSON and deployed, and the row is pure audit trail. The `reviewed_at` column serves dual purpose: `null` = accepted but not yet applied to the word list; non-null = applied. See ADR 0011.
+
+**`game_scores` is append-forever (2026-07-02)**
+Rows are never pruned. The 7-day leaderboard window is query-side only. Lifetime stats, streaks, and achievement backfills derive from full `game_scores` history, so deletion would silently corrupt them. When the 50 000-row alert fires, the answer is "raise the alert / optimize storage" — never "prune history."
 
 **`player_profiles` cleanup — deferred (2026-07-01)**
 No deletion policy is implemented. `last_active` is updated on every profile upsert (POST /api/profile) so it reflects genuine activity when cleanup is eventually designed.

@@ -120,6 +120,23 @@ export function setDeviceId(id: string): void {
 }
 
 /**
+ * Adopt an identity handed back by Sign-in Restore (ADR 0012). The account's
+ * canonical device_uuid becomes this device's identity; profile + auth are both
+ * linked (sign-in always implies both). Written atomically so no intermediate
+ * state leaks. Game slices are untouched — history is merged server-side.
+ */
+export function adoptDeviceIdentity(deviceId: string, displayName?: string): void {
+  const envelope = readEnvelope();
+  writeEnvelope({
+    ...envelope,
+    deviceId,
+    ...(displayName?.trim() ? { displayName: displayName.trim() } : {}),
+    profileLinked: true,
+    authLinked:    true,
+  });
+}
+
+/**
  * One-time migration for existing Leksiarxeio players.
  * Before the device-identity unification, Leksiarxeio stored its own identity
  * in a "leksiarxeio-identity" slice separate from the platform deviceId.

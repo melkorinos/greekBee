@@ -3,21 +3,12 @@
 // which Vercel injects automatically in production.
 // Uses the Supabase service role key to bypass RLS on DELETE.
 
-import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
 import { LEADERBOARD_WINDOW_DAYS, NOMINATION_APPLIED_RETENTION_DAYS, SCORE_RETENTION_DAYS } from "@/config/retention";
+import { getServiceRoleClient } from "@/lib/supabase";
 
 export const runtime = "edge";
-
-function getServiceRoleClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.");
-  }
-  return createClient(url, key, { auth: { persistSession: false } });
-}
 
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;

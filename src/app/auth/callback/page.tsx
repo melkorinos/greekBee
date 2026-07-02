@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase";
-import { getOrCreateDeviceId } from "@/hooks/useGameStore";
+import { adoptDeviceIdentity, getOrCreateDeviceId } from "@/hooks/useGameStore";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -37,19 +37,39 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      const user     = data.session.user;
-      const deviceId = getOrCreateDeviceId();
-      const authName = (user.user_metadata?.["full_name"] as string | undefined) ?? null;
+      const deviceId    = getOrCreateDeviceId();
+      const accessToken = data.session.access_token;
 
-      await fetch("/api/auth/link", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          device_uuid:  deviceId,
-          auth_user_id: user.id,
-          display_name: authName,
-        }),
-      }).catch(() => {});
+      // The route derives auth_user_id + Google name from the verified JWT;
+      // the body carries only this device's id. (ADR 0012 §6.) The response
+      // hands back the canonical identity: on Sign-in Restore it differs from
+      // this device, and we adopt it (identity + merged history live server-side).
+      try {
+        const res = await fetch("/api/auth/link", {
+          method:  "POST",
+          headers: {
+            "Content-Type":  "application/json",
+            "Authorization": `Bearer ${accessToken}`,
+          },
+          body:    JSON.stringify({ device_uuid: deviceId }),
+        });
+        if (res.ok) {
+          const link = (await res.json()) as {
+            device_uuid?: string; display_name?: string; restored?: boolean;
+          };
+          if (link.device_uuid && link.device_uuid !== deviceId) {
+            adoptDeviceIdentity(link.device_uuid, link.display_name);
+            // Signal games to re-hydrate found words under the adopted identity.
+            localStorage.setItem("leksokipos-needs-restore", "true");
+            // Flag the "welcome back" signal for the destination page (toast TBD).
+            if (link.restored) {
+              sessionStorage.setItem("signin-restore-welcome", link.display_name ?? "");
+            }
+          }
+        }
+      } catch {
+        // Sign-in still succeeded; identity linking is best-effort.
+      }
 
       const redirectTo = sessionStorage.getItem("auth-redirect") ?? "/";
       sessionStorage.removeItem("auth-redirect");

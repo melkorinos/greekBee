@@ -3,10 +3,12 @@
 // No React — plain Vitest + jsdom (localStorage is available via setup.ts).
 
 import {
+  adoptDeviceIdentity,
   clearSlice,
   disconnectProfile,
   getDisplayName,
   getOrCreateDeviceId,
+  isAuthLinked,
   isProfileLinked,
   migrateLeksiarxeioIdentity,
   readSlice,
@@ -287,6 +289,39 @@ describe("migrateLeksiarxeioIdentity", () => {
     migrateLeksiarxeioIdentity();
     const envelope = JSON.parse(localStorage.getItem("wordgames:state")!);
     expect(envelope["leksiarxeio"]).toEqual(gameData);
+  });
+});
+
+// ── adoptDeviceIdentity (Sign-in Restore) ─────────────────────────────────────
+
+describe("adoptDeviceIdentity", () => {
+  it("overwrites the deviceId with the adopted identity", () => {
+    getOrCreateDeviceId(); // seed a different id first
+    adoptDeviceIdentity("canon-uuid", "OldName");
+    expect(getOrCreateDeviceId()).toBe("canon-uuid");
+  });
+
+  it("adopts the display name", () => {
+    adoptDeviceIdentity("canon-uuid", "OldName");
+    expect(getDisplayName()).toBe("OldName");
+  });
+
+  it("marks both profileLinked and authLinked (sign-in implies both)", () => {
+    adoptDeviceIdentity("canon-uuid", "OldName");
+    expect(isProfileLinked()).toBe(true);
+    expect(isAuthLinked()).toBe(true);
+  });
+
+  it("keeps any existing display name when none is supplied", () => {
+    setDisplayName("Κώστας");
+    adoptDeviceIdentity("canon-uuid");
+    expect(getDisplayName()).toBe("Κώστας");
+  });
+
+  it("does not disturb game slices", () => {
+    writeSlice("leksokipos", { score: 12 });
+    adoptDeviceIdentity("canon-uuid", "OldName");
+    expect(readSlice("leksokipos")).toEqual({ score: 12 });
   });
 });
 
