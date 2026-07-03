@@ -47,6 +47,12 @@ describe("Shell rendering", () => {
     expect(getHamburger()).toBeInTheDocument();
   });
 
+  it("renders an always-visible profile link to /profile in the header", () => {
+    setup();
+    const profileLink = screen.getByRole("link", { name: "Το προφίλ μου" });
+    expect(profileLink).toHaveAttribute("href", "/profile");
+  });
+
   it("renders children inside the shell", () => {
     setup();
     expect(screen.getByText("content")).toBeInTheDocument();

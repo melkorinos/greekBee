@@ -77,6 +77,15 @@ export function Shell({ children }: ShellProps) {
           </Link>
 
           <div className="flex items-center gap-1">
+            {/* Profile — always-visible entry point to /profile */}
+            <Link
+              href="/profile"
+              aria-label="Το προφίλ μου"
+              className="flex items-center justify-center w-9 h-9 rounded-full text-muted hover:bg-surface-raised active:bg-border transition-colors text-base leading-none"
+            >
+              👤
+            </Link>
+
             {/* Theme toggle */}
             <button
               onClick={toggle}
