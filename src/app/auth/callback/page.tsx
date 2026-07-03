@@ -39,6 +39,7 @@ export default function AuthCallbackPage() {
 
       const deviceId    = getOrCreateDeviceId();
       const accessToken = data.session.access_token;
+      let   wasRestored = false;
 
       // The route derives auth_user_id + Google name from the verified JWT;
       // the body carries only this device's id. (ADR 0012 §6.) The response
@@ -61,8 +62,9 @@ export default function AuthCallbackPage() {
             adoptDeviceIdentity(link.device_uuid, link.display_name);
             // Signal games to re-hydrate found words under the adopted identity.
             localStorage.setItem("leksokipos-needs-restore", "true");
-            // Flag the "welcome back" signal for the destination page (toast TBD).
+            // Flag the "welcome back" signal for the destination page.
             if (link.restored) {
+              wasRestored = true;
               sessionStorage.setItem("signin-restore-welcome", link.display_name ?? "");
             }
           }
@@ -71,7 +73,10 @@ export default function AuthCallbackPage() {
         // Sign-in still succeeded; identity linking is best-effort.
       }
 
-      const redirectTo = sessionStorage.getItem("auth-redirect") ?? "/";
+      // Sign-in Restore lands on /profile — the proof surface (adopted name,
+      // merged stats, trophy case, welcome banner). Normal sign-in returns to
+      // the saved origin page. Either way, clear the saved redirect key.
+      const redirectTo = wasRestored ? "/profile" : (sessionStorage.getItem("auth-redirect") ?? "/");
       sessionStorage.removeItem("auth-redirect");
       router.replace(redirectTo);
     }).catch(() => { setError("Αποτυχία σύνδεσης. Δοκίμασε ξανά."); });
@@ -81,14 +86,14 @@ export default function AuthCallbackPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 text-foreground">
         <p className="text-sm">{error}</p>
-        <Link href="/" className="text-xs underline text-stone-500">Επιστροφή στην αρχική</Link>
+        <Link href="/" className="text-xs underline text-muted">Επιστροφή στην αρχική</Link>
       </div>
     );
   }
 
   return (
     <div className="flex items-center justify-center min-h-screen">
-      <p className="text-sm text-stone-500 animate-pulse">Σύνδεση…</p>
+      <p className="text-sm text-muted animate-pulse">Σύνδεση…</p>
     </div>
   );
 }
