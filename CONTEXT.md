@@ -12,7 +12,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Session** — One continuous play of a Puzzle on a given device. Persists across refreshes until the Puzzle changes. Each game persists different fields (Leksokipos: score + found words; Leksiarxeio: guesses per length; Leksindeseis: solved groups + mistakes; Vres Tin Frasi: guesses + status; Stavrolekso: typed cells + solved slots per puzzle ID). Leksokipos daily Sessions are also synced to the server (see `game_state` table) for cross-device restore via TransferCode.
 
-**DeviceId** — Stable anonymous UUID generated once per browser, shared across all games. Not permanently unique per browser: a browser *adopts* another's DeviceId on TransferCode claim or Sign-in Restore, so one DeviceId can identify all of a player's browsers. (Not: userId, playerId)
+**DeviceId** — Stable anonymous UUID generated once per browser, shared across all games. Not permanently unique per browser: a browser *adopts* another's DeviceId on TransferCode claim or Sign-in Restore, so one DeviceId can identify all of a player's browsers. Treated as a **secret credential** — knowing it authorises score posts and profile access, so it must never appear in public URLs, links, or payloads visible to other players. (Not: userId, playerId)
 
 **DisplayName** — Player-chosen name shown on leaderboards. Optional. (Not: username)
 
@@ -100,11 +100,21 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **AuthLinked** — Boolean: true when this device's Profile has an associated Google account (`auth_user_id` set on its `player_profiles` row). `AuthLinked` always implies `ProfileLinked`. The auth account is the durable identity anchor; a device is one session of it (ADR 0012). (Not: logged in — use AuthLinked)
 
-**Sign-in Restore** — Signing in with Google on a device whose account already has a linked Profile: the device adopts that Profile's DeviceId (same mechanic as TransferCode claim), then any pre-existing local history is merged — best Score per Puzzle wins, the account Profile's DisplayName wins, and the device's old Profile row is deleted. (Not: account recovery, login sync)
+**Sign-in Restore** — Signing in with Google on a device whose account already has a linked Profile: the device adopts that Profile's DeviceId (same mechanic as TransferCode claim), then any pre-existing local history is merged — best Score per Puzzle wins, the account Profile's DisplayName wins, and the device's old Profile row is deleted. The player lands on the Profile Page with a welcome-back message showing what came back. (Not: account recovery, login sync)
 
 **TransferCode** — 6-char alphanumeric code (no I/1/O/0) for cross-device identity migration. 24h TTL, single-use. Retained indefinitely as the no-account fallback; its claim-adoption mechanic is also the foundation of Sign-in Restore.
 
-**Achievement** — A permanent award earned once per player for reaching a game or platform milestone. Earned anonymously (keyed by DeviceId), durable once AuthLinked, losable before. Earned means earned forever — never revoked by later score changes, merges, or rule changes. (Not: badge, trophy)
+**Achievement** — A permanent award earned once per player for reaching a game or platform milestone. Earned anonymously (keyed by DeviceId), durable once AuthLinked, losable before. Earned means earned forever — never revoked by later score changes, merges, or rule changes. One-shot or tiered (Χάλκινο → Ασημένιο → Χρυσό). (Not: badge — that's its visual token)
+
+**Badge** — The visual token of an Achievement: a full tile in the Trophy Case, or a single inline glyph on Leaderboard rows (🏛️ for Τζιμάνι is the precedent). (Not: achievement — that's the earnable condition)
+
+**Profile Page** — The standalone surface where a player views their own identity state (anonymous / ProfileLinked / AuthLinked), edits their DisplayName, sees Lifetime Stats, and browses their Trophy Case. Also where Sign-in Restore lands the player to show what came back. v1 shows only the viewer's own profile — viewing other players' profiles is deferred until a public identifier exists (DeviceId is secret). (Not: account page, settings page)
+
+**Trophy Case** — The full Achievement display on the Profile Page: every catalog entry rendered, earned Badges lit, locked ones greyed with their unlock hint. (Not: badge list, achievements tab)
+
+**Lifetime Stats** — Per-player aggregates over full `game_scores` history (append-forever makes them safe): total points, puzzles played, Τζιμάνι count, and current/best Streak. Keyed by DeviceId — never `auth_user_id` (Sign-in Restore makes the adopted DeviceId canonical, so one key serves anonymous and AuthLinked players alike); Daily Puzzles only (Custom Puzzles never post scores). (Not: statistics, records — records are all-time bests, a parked pillar)
+
+**Streak** — Consecutive calendar days on which a player scored at least one Daily Puzzle in any Game (platform-wide, not per-Game). Derived from distinct `puzzle_date`s in `game_scores`; Custom Puzzles excluded. Current and Best Streak show in Lifetime Stats. (Not: per-game streak)
 
 **Disconnect** — Ending a device's identity: the device gets a fresh DeviceId and cleared local state, becoming a brand-new anonymous player. Both profile disconnect and Google sign-out mean this — "this device is no longer this person." Nothing server-side is deleted; signing back in (or claiming a TransferCode) restores everything. (Not: logout, unlink)
 
@@ -170,7 +180,7 @@ No per-device rate limiting is implemented on INSERT-capable API routes. RLS pol
 `pending` and `rejected` Nominations are never deleted. Rejected rows are retained permanently because `NominationModal` uses them to warn players on re-submission (by word + direction). `accepted` Nominations are deleted 30 days after `reviewed_at` is set by `apply-nominations.mjs` — at that point the word is in the JSON and deployed, and the row is pure audit trail. The `reviewed_at` column serves dual purpose: `null` = accepted but not yet applied to the word list; non-null = applied. See ADR 0011.
 
 **`game_scores` is append-forever (2026-07-02)**
-Rows are never pruned. The 7-day leaderboard window is query-side only. Lifetime stats, streaks, and achievement backfills derive from full `game_scores` history, so deletion would silently corrupt them. When the 50 000-row alert fires, the answer is "raise the alert / optimize storage" — never "prune history."
+Rows are never pruned. The 7-day leaderboard window is query-side only. Lifetime Stats, Streaks, and the derived-on-read lifetime-point Achievements all read full `game_scores` history, so deletion would silently corrupt them. (Achievements themselves are not backfilled — they start at zero at launch — but their live derivation from post-launch history still depends on nothing being pruned.) When the 50 000-row alert fires, the answer is "raise the alert / optimize storage" — never "prune history."
 
 **`player_profiles` cleanup — deferred (2026-07-01)**
 No deletion policy is implemented. `last_active` is updated on every profile upsert (POST /api/profile) so it reflects genuine activity when cleanup is eventually designed.

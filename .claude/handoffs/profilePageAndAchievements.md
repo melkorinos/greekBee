@@ -1,111 +1,128 @@
-# Handoff: Profile Page + Achievements Surface (build the display surface first)
+# Handoff: Profile Page + Trophy Case — GRILLED, ready for `/to-issues`
 
-**Date:** 2026-07-02
-**Status:** Design brief — ready to grill/slice. No code yet.
-**Goal:** Build a real **Profile page** that displays identity state **and** a trophy case, *before* the achievements engine exists. Two payoffs: (1) it becomes the manual **verification surface** that proves the Google sign-in / Sign-in Restore work end-to-end (slices 1–2 of `googleLoginIdentity.md` are done but have no visible home yet); (2) it answers the still-open "**where do badges live?**" question in `achievementsLeksokipos.md` so that handoff can go to implementation.
+**Date:** 2026-07-03 (grilled with docs; supersedes the 2026-07-02 design brief)
+**Status:** **Ready for agent** — all §5 design questions resolved (AskUserQuestion, do not re-ask). One soft gate: the user may still rename catalog entries in §4 before implementation freezes the IDs.
+**Goal:** Build the **Profile Page** (`/profile`): the manual verification surface for Google sign-in / Sign-in Restore (identity handoff slices 1–2 are done but invisible), and the durable home for the Trophy Case + Lifetime Stats.
 
 **Prerequisites / siblings:**
-- `.claude/handoffs/googleLoginIdentity.md` — identity spine. **Slices 1–2 DONE** (JWT-verified `/api/auth/link`, Sign-in Restore + merge, `adoptDeviceIdentity`). Slices 3–5 (Disconnect unification, visibility rule, `identity_audit`) still open and **intersect this page** (see §6).
-- `.claude/handoffs/achievementsLeksokipos.md` — the achievement catalog/detection sketch. This page is the "display surface" (its design question #1). Build the surface here; the engine stays there.
-- Parent epic: `.claude/handoffs/nemesisFeature.md`.
+- `.claude/handoffs/googleLoginIdentity.md` — slices 1–2 DONE; slices 3–5 in flight in a parallel session. **No blocking dependency** (see §6).
+- `.claude/handoffs/achievementsLeksokipos.md` — the detection engine. This page ships the display surface + frozen catalog; the engine wires earned facts later.
+- Parent epic: `.claude/handoffs/engagementEpic.md`.
+- Glossary terms now in CONTEXT.md: **Profile Page**, **Trophy Case**, **Badge**, **Lifetime Stats**, amended **DeviceId** (secret credential), **Achievement**, **Sign-in Restore**.
 
 ---
 
-## 1. What exists today (verified 2026-07-02)
+## 1. Decisions (all resolved 2026-07-03 — do not re-litigate)
 
-| Piece | Reality |
-|---|---|
-| **Profile UI** | `src/components/shared/ProfileSection.tsx` — a *modal section*, not a page. Modes: idle (Google sign-in / nickname / claim code), claiming, linked, transferring, confirming, and an authLinked state (Google ✓ + sign-out). Fed by `useProfile` + `useAuth`. |
-| **Where it lives** | Only as the `topSlot` of each game's LeaderboardModal (`src/components/shared/LeaderboardModal.tsx`, `LeaderboardModalBase`), opened via 🏆 `HomeTrophyButton` on home cards + in-game. There is **no standalone profile route.** |
-| **Badge precedent** | Leaderboard rows already render 🏛️ for `is_perfect` (Τζιμάνι) and "(εσύ)" for the player — `LeaderboardModal.tsx` ~L285/L306. Inline badge marks on rows are an established pattern. |
-| **Header / nav** | `src/components/shared/Shell.tsx` wraps game screens: sticky header (platform link, theme toggle, hamburger) + a slide-out drawer listing games + Κοινότητα. **No profile entry point.** The home picker (`src/app/page.tsx`) doesn't use Shell and also has no profile entry. |
-| **Identity data on device** | `useGameStore` envelope: `deviceId`, `displayName`, `profileLinked`, `authLinked`. Hooks: `useAuth` (authLinked, authUserName, signInWithGoogle, signOut), `useProfile` (profileLinked, create/transfer/claim/disconnect), `useGameIdentity` (deviceId/displayName init). |
-| **Server profile** | `GET/POST /api/profile` (`player_profiles` row by `device_uuid`). No lifetime-stats endpoint. Scores live in `game_scores` (append-forever; unique `(game_id, device_id, puzzle_date)`; `auth_user_id` now stamped after slice 1). |
-| **Restore flag (new)** | Callback sets `sessionStorage["signin-restore-welcome"]` on Sign-in Restore and `localStorage["leksokipos-needs-restore"]`. **Nothing consumes the welcome flag yet** — the Profile page is its natural home (deferred toast). |
+| # | Question | Decision |
+|---|---|---|
+| 1 | Profile controls: reuse vs rebuild | **Hybrid** — new page-native identity **header** (display-only: avatar disc, name, status line) + reuse `ProfileSection` verbatim below it for all interactive flows. New code can't break tested flows. |
+| 2 | Page vs leaderboard-modal profile | **Coexist untouched.** Modal keeps its compact widget (mid-game sign-in without leaving the puzzle); add a "Δες το προφίλ σου →" link from modal to page. Slice 4 of the identity handoff proceeds independently. |
+| 3 | Stats identity key | **`device_uuid`.** Settled by existing docs: the Achievement glossary entry keys on DeviceId, and Sign-in Restore's merge repoints all score rows to the canonical `device_uuid`. `auth_user_id` is an anchor-lookup index, not a stats key. |
+| 4 | Trophy case v1 content | **Real catalog, all locked.** Genuine Greek names, hints, tiers (§4); everything renders greyed. IDs freeze on first deploy (Puzzle-ID rule). |
+| 5 | OAuth round-trip from `/profile` | **Verified in code, no work**: `signInWithGoogle` saves `window.location.pathname` (`src/lib/supabase.ts:268`), callback redirects back (`src/app/auth/callback/page.tsx:74-76`). |
+| 6 | Public profiles (view other players) | **Deferred** to its own future slice. Hard rule recorded in CONTEXT.md: DeviceId is a secret credential — public profile URLs need a new safe public identifier + public API + privacy decisions. Nothing in v1 may leak `device_uuid` into shareable URLs. |
+| 7 | Lifetime stats v1 | **Cheap real stats now**: total points, puzzles played, Τζιμάνι count — SUM/COUNT over existing `game_scores` rows. **No streaks** (fiddly; pairs with future streak achievements — design once, there). |
+| 8 | Settings section | **None in v1.** Name edit comes free via `ProfileSection`; theme lives in Shell. A Ρυθμίσεις section appears when a real setting exists. |
+| 9 | Welcome banner / restore landing | **Callback redirects to `/profile` when `restored === true`** (instead of the origin page). The player lands on the proof: adopted name, merged stats, trophy case, banner. Page consumes `sessionStorage["signin-restore-welcome"]` on mount. |
+| 10 | Avatar v1 | **Initial-letter disc** (first letter of display name, "Α" for Ανώνυμος) — pure Tailwind, identical across identity states. Google photo is a later upgrade. |
+| 11 | Catalog authoring | **Drafted now** (§4) for user review; implementation transcribes it. |
+| 12 | Profile entry on game screens | **Always-visible icon in the Shell header next to the hamburger** (👤/avatar disc button → `/profile`), NOT a drawer entry — one tap, discoverable for the anonymous players we want to nudge toward Google. ("Both" was offered and declined.) |
 
 ---
 
-## 2. Proposed surface: `/profile`
+## 2. Page layout (`src/app/profile/page.tsx`, client, wrapped in `Shell`)
 
-A new route `src/app/profile/page.tsx` (client page; wrap in `Shell` for header/nav parity). Sections, top to bottom:
-
-1. **Identity header** — avatar/emoji + display name; a status line that makes identity legible for verification:
+1. **Identity header** (new, display-only): initial-letter avatar disc + display name + status line:
    - AuthLinked → "Συνδεδεμένος με Google ως {authUserName}"
-   - ProfileLinked (no Google) → "Προφίλ ενεργό: {displayName}" + a hint to sign in with Google to make it un-losable
-   - Anonymous → "Παίζεις ανώνυμα" + sign-in CTA
-   - This is the **at-a-glance proof** that sign-in / restore worked.
-2. **Account controls** — reuse the *logic* behind `ProfileSection` (Google sign-in/out, nickname, transfer code, disconnect). Decide (see §5) whether to reuse `ProfileSection` verbatim or build a roomier page-native variant sharing the same handlers.
-3. **Lifetime stats strip** — total points, games played, current/best streak (Leksokipos v1). Needs a small server aggregate (see §4). Ship as a stub ("Σύντομα") if the engine isn't ready — the page must not block on it.
-4. **Trophy case** — the achievements grid: earned badges lit, locked ones greyed with their unlock hint. **v1 renders from a static catalog with everything locked/empty** so the page ships before any detection exists. This is the surface `achievementsLeksokipos.md` fills in later.
-5. **Welcome-back banner** — on mount, if `sessionStorage["signin-restore-welcome"]` is set, show a one-time "Καλώς όρισες πίσω, {name}! Τα σκορ σου επαναφέρθηκαν." then clear the flag. (This is the "tiny toast later" from the identity handoff, homed here.)
+   - ProfileLinked only → "Προφίλ ενεργό: {displayName}" + hint that Google makes it un-losable
+   - Anonymous → "Παίζεις ανώνυμα" + sign-in nudge (the actual button is in ProfileSection below)
+2. **Welcome-back banner**: on mount, if `sessionStorage["signin-restore-welcome"]` set → "Καλώς όρισες πίσω{, name}! Τα σκορ σου επαναφέρθηκαν." once, then clear the flag.
+3. **Account controls**: `ProfileSection` verbatim (all props wired via `useProfile` + `useAuth` + name-save, same as `HomeTrophyButton` does today).
+4. **Lifetime stats strip**: three real numbers (§3). Loading skeleton while fetching; hide or dash on fetch error — never block the page.
+5. **Trophy case**: grid over the §4 catalog, all locked/greyed, each tile showing Badge glyph, Greek name, unlock hint; tiered entries show the tier row (Χάλκινο/Ασημένιο/Χρυσό thresholds).
 
-### Entry points
-- **Shell drawer**: add a "👤 Το προφίλ μου" link above/below Παιχνίδια (`Shell.tsx`). Primary entry on game screens.
-- **Home picker header**: a small profile chip/button on `src/app/page.tsx` (shows name when linked, "Σύνδεση" when not).
-- **From ProfileSection**: a "Δες το προφίλ σου →" link, so the existing modal funnels to the full page.
+### Entry points (all three)
+- **Shell header icon** (primary): always-visible 👤/avatar-disc button next to the hamburger, `aria-label="Το προφίλ μου"`, links to `/profile` — `src/components/shared/Shell.tsx` header row (same 36px round-button style as the theme toggle). No drawer entry (decision 12).
+- **Home picker**: small profile chip on `src/app/page.tsx` header (name when linked, "Σύνδεση" otherwise). Note: home page is currently a server component — chip must be a small client island.
+- **ProfileSection**: "Δες το προφίλ σου →" link so the modal funnels to the page.
 
----
-
-## 3. Achievements display-surface decision (answers achievements-handoff Q1)
-
-- **Full trophy case → the Profile page** (this doc). One durable home for all badges + progress bars for tiered achievements.
-- **Inline marks → leaderboard rows** keep the 🏛️-style single-glyph badge (already there for Τζιμάνι); optionally a top-badge per player later. No full case in the modal.
-- So: **(c) both** from the achievements sketch — tiny inline marks + full case in profile. Prototype only if the trophy-case layout needs it (`/prototype`).
+### Restore redirect
+`src/app/auth/callback/page.tsx`: when the link response has `restored: true` → `router.replace("/profile")` instead of the saved `auth-redirect` path (still clear the key).
 
 ---
 
-## 4. Data the page needs
+## 3. Lifetime-stats endpoint
 
-- **Identity** — already on device (`useAuth`/`useProfile`/`useGameStore`). No new fetch for the identity header/controls.
-- **Lifetime stats** — new server aggregate, e.g. `GET /api/profile/stats?device_uuid=` (or fold into `GET /api/profile`): `SUM(score)`, `COUNT(*)`, streak from `game_scores` for daily puzzles only (exclude custom, matching the leaderboard rule). Edge runtime, fetch-only. Watch soul.md's Fluid-CPU rule — this is a per-visit read over a small windowed set; document a caching note. **Key it by identity carefully**: after Sign-in Restore, stats should read by the *adopted* identity (`device_uuid`, or `auth_user_id` when AuthLinked). Confirm which key when the achievements handoff fixes the achievement identity key.
-- **Earned achievements** — future `player_achievements` table (out of scope here). v1 trophy case reads the **code catalog only** (`src/games/leksokipos/lib/achievements.ts`, pure) and shows all locked. Wiring earned facts is the achievements epic.
-
----
-
-## 5. Open design decisions (grill these first)
-
-1. **Reuse vs page-native profile controls** — reuse `ProfileSection` verbatim inside the page (fast, DRY, but it's compact/modal-tuned), or extract the shared handlers into a hook (already effectively `useProfile`+`useAuth`) and build a roomier page layout? Recommend: keep `ProfileSection` for controls in v1, wrap with page chrome; refactor only if it feels cramped.
-2. **Does the page replace the leaderboard-modal profile, or coexist?** Recommend coexist: modal keeps quick inline controls; page is the home/trophy case. (Avoids destabilising the tested modal flow.)
-3. **Stats identity key** — `device_uuid` vs `auth_user_id` post-restore (ties to the achievements identity-key decision). Pick one source of truth.
-4. **Trophy-case catalog shape** — the v1 static catalog (`achievements.ts`) needs an id, Greek name, description/unlock-hint, tier info, and a locked/earned predicate signature — even if everything is locked at first. Freeze ids once shipped (same rule as Puzzle IDs).
-5. **Auth on a full page vs modal** — `useAuth`'s OAuth redirect returns to `sessionStorage["auth-redirect"]` = current path, so signing in *from* `/profile` returns to `/profile`. Verify that round-trip.
+- `GET /api/profile/stats?device_uuid=` (edge runtime, fetch-only, read-only): returns `{ total_points, puzzles_played, tzimani_count }` from `game_scores` where `device_id = device_uuid` — `SUM(score)`, `COUNT(*)`, `COUNT(*) FILTER (is_perfect)`.
+- **No custom-puzzle filter needed** — verified: custom puzzles never post (`useScoreSubmission` `enabled:false`, `src/hooks/useScoreSubmission.ts`), so `game_scores` is daily-only already.
+- Cross-game by design (all games' rows count; "Score" is overloaded per CONTEXT.md — label the strip "Πόντοι" generically).
+- Caching note (soul.md Fluid-CPU): per-visit read, small per-device row set, no cache needed at current scale; add `Cache-Control: private, max-age=60` as a courtesy. Document in the route header.
+- Reading by `device_uuid` is fine (it's the bearer of its own identity); the response contains only aggregates.
 
 ---
 
-## 6. Intersections with the identity handoff (don't duplicate work)
+## 4. Trophy-case catalog v1 — Leksokipos only (DRAFT for user review; IDs freeze on ship)
 
-- **Slice 4 (visibility rule)** makes `onSignIn` **required** and wires auth through every LeaderboardModal. The Profile page needs the same `onSignIn`/`onSignOut` wiring — do it consistently. Building this page may be the cleanest place to land slice 4's intent (one shared identity-controls surface).
-- **Slice 3 (Disconnect unification)** — the page's disconnect button must use the unified path (fresh DeviceId + clear local state). Decide slice 3 first, or the page's disconnect will disagree with the modal's.
-- **Slice 5 (`identity_audit`)** — unaffected by the page; keep separate.
-- **Sign-in Restore verification** (the user's stated reason for building this now): see §7.
+File: `src/games/leksokipos/lib/achievements.ts` — pure, zero React imports. Shape per entry: `{ id, name, hint, kind: "oneshot" | "tiered", tiers?: [{ id, tier, threshold, label }] }` plus a future predicate signature (detection is the achievements epic's job). **Each tier carries its own frozen `id`** — it is the `player_achievements.achievement_id` for an immutable one-row-per-tier award (ADR 0012). Adding *new* tiers later is non-breaking; renaming/removing IDs is forbidden after ship.
+
+**No backfill / retroactivity.** The DB gets a **hard reset at launch**, so every counter and unlock starts at zero for everyone — no history-derived seeding, no "since you were away" grant storm. This removes the entire backfill-complexity axis.
+
+| id | Badge name | Unlock hint (shown greyed) | Kind | Detection (from launch onward) |
+|---|---|---|---|---|
+| `leksokipos-first-daily` | Πρώτα Βήματα | Παίξε το πρώτο σου ημερήσιο παζλ. | one-shot | server: first `game_scores` row |
+| `leksokipos-stin-korifi` | Στην Κορυφή | Φτάσε στην κατάταξη Απολυτότητα σε ένα ημερήσιο παζλ. | one-shot | client-detect (rank vs maxScore) — named distinctly from the Rank itself |
+| `leksokipos-tzimani` | Τζιμάνι | Βρες όλες τις λέξεις ενός ημερήσιου παζλ. | one-shot | server: `game_scores.is_perfect` |
+| `leksokipos-sidirodromos` | Σιδηρόδρομος | Βρες μια λέξη με 10+ γράμματα. | one-shot | client via `pushFoundWords` (word length) |
+| `leksokipos-theristis` | Θεριστής | Βρες το 80% των λέξεων ενός ημερήσιου παζλ. | one-shot | client-detect (foundWords/validWords — count axis, distinct from Endgame Zone's points axis) |
+| `leksokipos-kynigos-pangram-{chalkino/asimenio/chryso}` | Κυνηγός Πανγκράμ (Χάλκινο/Ασημένιο/Χρυσό) | Βρες {10 / 20 / 50} πανγκράμ. | tiered 10 / 20 / 50 | client counter `player_stats.pangrams_found` via `pushFoundWords` |
+| `leksokipos-syllektis-ponton-{chalkino/asimenio/chryso}` | Συλλέκτης Πόντων (Χάλκινο/Ασημένιο/Χρυσό) | Μάζεψε {1.000 / 10.000 / 25.000} πόντους συνολικά. | tiered 1 000 / 10 000 / 25 000 | server: `SUM(score)` derived on read (no counter) |
+
+Naming notes: «Σιδηρόδρομος» is the archetypal Greek "long word" joke; «Θεριστής» keeps the garden theme (λεξόκηπος); «Στην Κορυφή» avoids colliding with the Rank name Απολυτότητα in the glossary. Per-tier frozen ids use the `-chalkino/-asimenio/-chryso` suffix; the badge label shows the Greek tier word.
 
 ---
 
-## 7. Manual verification plan — proves Google login + Restore work
+## 5. Slices for `/to-issues`
 
-Once the page renders identity state, use it to validate slices 1–2 end-to-end (the handoff listed prod-config checks; this is the functional pass):
-1. Anonymous play on browser A → score a daily puzzle → `/profile` shows "ανώνυμα" + a lifetime point.
-2. Sign in with Google on A → `/profile` shows "Συνδεδεμένος ως {name}"; `player_profiles.auth_user_id` set; scores stamped (`game_scores.auth_user_id`).
-3. Browser B (fresh device), play a *different* daily, then sign in with the **same** Google account → **Sign-in Restore**: `/profile` shows the adopted name, the welcome banner fires, and lifetime stats reflect the **merged** history (best-score-per-puzzle). Confirms `planScoreMerge` + adoption.
-4. Disconnect on B → identity resets (pending slice 3 semantics); sign back in → everything returns (nothing deleted server-side).
+1. **`/profile` route + identity header + welcome banner + restore redirect** — ships against existing hooks, no new API. *This alone validates Google/restore end-to-end.*
+2. **Entry points** — Shell header profile icon (next to hamburger), home-picker chip (client island), ProfileSection funnel link.
+3. **Lifetime-stats endpoint + strip** (§3).
+4. **Catalog + trophy case grid** (§4, all locked).
+5. → hand off to `achievementsLeksokipos.md` for detection, `player_achievements` table, earned wiring, backfill.
 
-If any step misbehaves, `/diagnose`.
+Each slice: `/tdd`, then `npm run test -- --run`, `npx eslint .`, `npm run build` — all green before the next.
+
+---
+
+## 6. Intersections with the identity session (parallel, no blocking)
+
+- **Slice 3 (Disconnect):** the page reuses `ProfileSection`, so it **inherits** whatever disconnect semantics that session lands. No dependency; don't decide it here.
+- **Slice 4 (visibility rule):** modal coexists untouched (decision 2), so slice 4's `onSignIn`-required refactor proceeds independently. The page wires `onSignIn`/`onSignOut` directly from `useAuth` regardless.
+- **Slice 5 (`identity_audit`):** unrelated.
+- Watch for merge conflicts on `ProfileSection.tsx` / `callback/page.tsx` if both sessions are uncommitted on `dev` — coordinate commits.
+
+---
+
+## 7. Manual verification plan (the page's raison d'être)
+
+1. Anonymous play on browser A → daily score → `/profile` shows "Παίζεις ανώνυμα" + real stats (points, 1 puzzle).
+2. Sign in with Google on A → returns to `/profile` (round-trip verified in code) → header shows "Συνδεδεμένος ως {name}"; DB: `player_profiles.auth_user_id` set, scores stamped.
+3. Browser B (fresh), play a *different* daily, sign in with the **same** account → **Sign-in Restore**: redirected to `/profile`, welcome banner fires, adopted name shown, stats strip shows the **merged** totals (best-score-per-puzzle arithmetic visible on the page).
+4. Disconnect on B → fresh anonymous identity (semantics per identity-session slice 3); sign back in → everything returns.
+
+Any misbehaviour → `/diagnose`.
 
 ---
 
 ## 8. Constraints carried over
-- Pure logic (catalog predicates, tier thresholds, stat derivations) in `src/games/leksokipos/lib/` — zero React imports; testable.
-- New shared components graduate to `src/components/shared/` only when ≥2 surfaces need them (the page + modal may justify a shared `<TrophyCase>` / identity-header later — not speculatively).
-- Tailwind tokens only (ADR 0008/0009); no inline styles / magic hex. Per-game accent via `[data-game]` if a game context applies.
-- DB changes only via `supabase/migrations/` + `npx supabase db push` (show SQL first). Edge runtime for fetch-only routes; document any aggregate's caching per soul.md.
-- Greek-only player-facing strings. Never hardcode `"google"` where a provider name flows.
-- `npm run test -- --run`, `npx eslint .`, `npm run build` after every change; PowerShell only. `/tdd` for implementation.
-
-## 9. Definition of "ready for agent"
-Answered: route + entry points, which profile controls (reuse vs native), stats endpoint shape + identity key, trophy-case catalog shape, and how the welcome flag is consumed. Then `/to-issues` — likely slices: (1) `/profile` route + identity header + welcome banner (ships against existing hooks, no new API — **this alone validates Google/restore**); (2) entry points (Shell drawer + home chip); (3) lifetime-stats endpoint + strip; (4) static trophy-case catalog + grid (all locked); (5) hand off to achievements epic for detection + earned facts.
+- Pure logic (catalog, stat shapes) in `src/games/leksokipos/lib/` — zero React imports.
+- Nothing graduates to `src/components/shared/` speculatively; the trophy-case grid starts page-local.
+- Tailwind tokens only; Greek-only player-facing strings; never hardcode `"google"` where a provider name flows.
+- No DB migration needed for v1 (stats are query-only; `player_achievements` belongs to the achievements epic).
+- Edge runtime for the stats route; no per-word hotpath cost.
+- **Never expose `device_uuid` in URLs or shareable payloads** (CONTEXT.md DeviceId rule).
 
 ## Suggested skills
-- `/aihelper` — context reload.
-- `/grill-with-docs` — work §5 decisions; update CONTEXT.md (glossary: Profile page? Trophy case / Badge) inline.
-- `/prototype` — trophy-case layout variations if needed.
-- `/tdd` — implementation; `/verify` or `/run` for the §7 manual pass.
+- `/to-issues` — slice per §5.
+- `/tdd` — implementation.
+- `/verify` or `/run` — the §7 manual pass.

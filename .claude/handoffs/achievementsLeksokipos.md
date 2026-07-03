@@ -55,6 +55,21 @@ Scope: **Leksokipos only** for v1. Other games later.
 
 ---
 
+## v1 Catalog — CANONICAL LOCATION
+
+The reviewed v1 catalog (Leksokipos-only, frozen ids, Greek names, tier vocab **Χάλκινο → Ασημένιο → Χρυσό**) lives in **`profilePageAndAchievements.md` §4** — single source of truth to avoid drift. Do not fork it here. When implementation starts it lands as the pure `src/games/leksokipos/lib/achievements.ts` catalog (shape defined in §4).
+
+Engine-side notes that inform detection (not in §4):
+- **Identity key = DeviceId** for every earned row and counter (ADR 0012; CONTEXT.md Achievement/Lifetime Stats). Never `auth_user_id`.
+- **Detection point (decided):** piggyback the existing `pushFoundWords` sync for word-derived awards (`sidirodromos` 10-letter, `theristis` 80%, `kynigos-pangram` counter) — no new per-word endpoint (soul.md Fluid-CPU). Server derives the rest from `game_scores` (`first-daily`, `tzimani` via `is_perfect`, `syllektis-ponton` via `SUM(score)`). Known gap accepted: anonymous / non-daily / non-ProfileLinked play doesn't capture word-derived counters — consistent with "losable until AuthLinked."
+- **No backfill (decided):** the DB gets a **hard reset at launch**, so every unlock and counter starts at zero for everyone. No history-derived seeding, no "since you were away" grant storm on first post-ship open. Removes the whole backfill axis.
+- **Data model (decided):**
+  - `player_achievements(device_uuid, achievement_id, earned_at)` — unique `(device_uuid, achievement_id)`, immutable, **one row per tier** (per-tier frozen ids, §4). Idempotent inserts; merges can't double-count.
+  - `player_stats(device_uuid, pangrams_found)` — the **only stored counter**; incremented via the `pushFoundWords` path (can't be derived from history).
+  - **Lifetime points derived on read** from `SUM(game_scores.score)` (daily only) — no counter row.
+- **Unlock-moment UX (decided):** lightweight **toast on unlock**, reusing the deferred-toast infra built for the Sign-in Restore welcome banner — **no confetti / no new npm dep**. Mid-game unlocks toast immediately; no batched backfill toasts exist (no backfill).
+- **ADR candidate:** detection-point + no-backfill + one-row-per-tier is a real hard-to-reverse trade-off — write the ADR when the achievements epic starts implementation (not needed while it's a handoff).
+
 ## Constraints carried over
 
 - Pure logic (achievement predicates, tier thresholds) in `src/games/leksokipos/lib/` — zero React imports; testable.

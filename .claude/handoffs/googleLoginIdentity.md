@@ -1,8 +1,8 @@
-# Handoff: Sign-in Restore — Slices 1–2 DONE, implement 3–5 via /tdd
+# Handoff: Sign-in Restore — Slices 1, 2, 4 DONE; implement 3 + 5 via /tdd
 
-**Date:** 2026-07-02
-**Status:** Slices 1–2 implemented test-first, all green, **uncommitted on `dev`**. Slices 3–5 remain.
-**Next session:** continue in vertical slices, strictly via `/tdd` (user mandate). Read ADR 0012 first.
+**Date:** 2026-07-03
+**Status:** Slices 1–2 committed. **Slice 4 (visibility rule) DONE test-first, green, uncommitted on `dev`.** Slice 3 (deferred pre-decision) + slice 5 remain.
+**Next session:** continue in vertical slices, strictly via `/tdd` (user mandate). Read ADR 0012 first. **Slice 3 is the keystone blocker** — its wipe-granularity pre-decision gates slice 5, the profile-page disconnect button, and durable achievements.
 
 ---
 
@@ -38,11 +38,15 @@ Goal (ADR 0012 §5): profile-disconnect **and** Google sign-out are one concept 
 - Add one shared store fn (e.g. `disconnectIdentity()`), update the existing `disconnectProfile` test to the new contract.
 - `useProfile.disconnect()` and `useAuth.signOut()` (`src/hooks/useAuth.ts:77` — today only clears authLinked, does NOT reset deviceId) both call it. Tests: `useProfile.test.ts`, `useAuth.test.ts`.
 
-## Slice 4 — Visibility rule (broader UI touch)
-Make `onSignIn` **required** in `LeaderboardProfileSlot` / `useLeaderboardProfile`, and wire auth through **all** in-game LeaderboardModals (today only `src/components/shared/HomeTrophyButton.tsx` wires it). ProfileSection must offer Google sign-in whenever not AuthLinked, in every state incl. `linked`. Files: `src/hooks/useLeaderboardProfile.ts`, `src/components/shared/LeaderboardProfileSlot.tsx`, `ProfileSection.tsx`, + each game's LeaderboardModal call site (not yet surveyed — start with a `/zoom-out` on LeaderboardModal usages). Never hardcode `"google"` where a provider name flows.
+## ✅ Slice 4 — DONE (visibility rule) — 2026-07-03, test-first, uncommitted on `dev`
+- `onSignIn` is now **required** in `LeaderboardProfileProps` (`useLeaderboardProfile.ts`) and `ProfileSectionProps` (`ProfileSection.tsx`) — compile-enforced at every call site, so a modal can never silently omit sign-in again.
+- `ProfileSection` now offers **Σύνδεση με Google** in **`linked`** mode too (ProfileLinked-no-Google → upgrade path), not just `idle`; the now-redundant `onSignIn &&` guards were removed.
+- Wired `useAuth` (`authLinked/authUserName/signInWithGoogle/signOut`) into all four in-game Boards — `GameBoard.tsx`, `LeksiarxeioBoard.tsx`, `ConnectionsBoard.tsx`, `VresTinFrasiBoard.tsx` — which previously passed no auth props (only `HomeTrophyButton` did). No `"google"` hardcoded anywhere; the provider flows through `useAuth`.
+- Tests: new `src/test/shared/profileSectionSignIn.test.tsx` (4: linked/idle offer sign-in, click calls `onSignIn`, hidden+sign-out when AuthLinked). Harness fixes: `leaderboardModal.test.tsx` + `useLeaderboardProfile.test.ts` defaults gain `onSignIn`; `GameBoard.test.tsx` stubs `useAuth` (it renders a full board). **Verification: 1198 pass / 6 skipped · eslint 0 · build exit 0.**
+- Pre-existing, unrelated `tsc --noEmit` test-type errors remain (`authLinkRoute`/`persistence`/`useAuth` test files) — not touched; they don't affect the test/eslint/build gates.
 
 ## Slice 5 — `identity_audit` migration  ⚠️ prod push
-Append-only unlink log `(auth_user_id, device_uuid, at)`, written on Google disconnect (slice 3's path). Via `supabase/migrations/` + `npx supabase db push` only — **show SQL + get explicit user OK before pushing to prod.**
+**Decided (grill 2026-07-03):** append-only unlink log, columns exactly `(auth_user_id, device_uuid, at)` — no `reason`, no PII beyond the pair. Written at the single unified **Disconnect** path (slice 3) **only when the device was AuthLinked**. Purpose: give Admin Restore a last-known email→device mapping after Google disconnect. Depends on slice 3's disconnect path, so it lands *after* slice 3 (currently deferred). Via `supabase/migrations/` + `npx supabase db push` only — **show SQL + get explicit user OK before pushing to prod.**
 
 ## Slice 6 — Achievements epic — only after 3–5. Durable identity is its prerequisite.
 

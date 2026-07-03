@@ -5,6 +5,22 @@
 
 ---
 
+## Session 59 — 2026-07-03: Slice 4 (visibility rule) impl + identity/achievements grill ✅
+1. **Slice 4 — visibility rule (ADR 0012), `/tdd`** — `onSignIn` now **required** in `LeaderboardProfileProps` + `ProfileSectionProps` (compile-enforced, no modal can silently drop sign-in); `ProfileSection` offers Σύνδεση με Google in **linked** mode too (ProfileLinked→Google upgrade path), not just idle; wired `useAuth` into all four in-game Boards (`GameBoard`/`Leksiarxeio`/`Connections`/`VresTinFrasi` — previously only `HomeTrophyButton`). New `src/test/shared/profileSectionSignIn.test.tsx` (4); `GameBoard.test.tsx` stubs `useAuth`. **1198 pass · eslint 0 · build 0.**
+2. **Grill decisions (user-approved), docs updated** — identity key = `device_uuid` everywhere (never `auth_user_id`); Badge/Trophy Case/Streak ratified into CONTEXT.md (Streak folded into Lifetime Stats); detection = piggyback `pushFoundWords`, no per-word endpoint; **no backfill — hard reset at launch** (all counters/unlocks start at zero); data model = `player_achievements` one immutable row **per tier** (frozen IDs `-chalkino/-asimenio/-chryso`) + `player_stats.pangrams_found` + lifetime points derived on read; unlock = lightweight toast (no confetti dep); slice 5 `identity_audit(auth_user_id, device_uuid, at)` written on Disconnect when AuthLinked. Catalog canonical in `profilePageAndAchievements.md §4`.
+3. **Still open** — slice 3 Disconnect wipe-granularity (deferred; keystone blocker for slice 5 + profile disconnect button).
+
+---
+
+## Session 58 — 2026-07-03: Profile Page grill — handoff ready-for-agent, zero code ✅
+`/grill-with-docs` on `.claude/handoffs/profilePageAndAchievements.md`; all design questions resolved (AskUserQuestion), **nothing implemented**.
+1. **Decisions (all user-approved)** — hybrid controls (new display-only identity header + reuse `ProfileSection` verbatim); leaderboard-modal profile coexists untouched (+ "Δες το προφίλ σου →" link); stats key = `device_uuid` (merge repoints rows, per ADR 0012/glossary); trophy case v1 = **real catalog all locked** (7 Leksokipos achievements drafted with Greek names + frozen-on-ship IDs); lifetime stats v1 = cheap real aggregates (total points, puzzles played, Τζιμάνι count — **no streaks**); **public profiles deferred** (DeviceId = secret credential, never in URLs); callback **redirects to `/profile` on `restored:true`** (welcome banner lands on proof); initial-letter avatar disc; no settings section.
+2. **Verified in code** — OAuth round-trip returns to origin path (`supabase.ts` + callback); custom puzzles never post scores (`useScoreSubmission` `enabled:false`) so stats need no filter.
+3. **Docs** — CONTEXT.md glossary: +Profile Page, +Trophy Case, +Badge, +Lifetime Stats; DeviceId (secret credential), Achievement (tier clause), Sign-in Restore (lands on Profile Page) amended. Handoff rewritten with decisions table, catalog draft (§4, user may still rename before IDs freeze), 5 slices for `/to-issues`.
+No tests/build run — docs-only session. Parallel identity session owns slices 3–5; page inherits its Disconnect semantics.
+
+---
+
 ## Session 57 — 2026-07-02: Sign-in Restore impl — Slices 1–2 (security boundary + restore/merge) ✅
 Implementing ADR 0012 per handoff, `/tdd`, slice by slice. **Slices 1–2 done.**
 1. **Slice 1 — JWT is the identity source** — `/api/auth/link` derives `auth_user_id` (+ Google name) from the verified Supabase JWT: reads `Authorization: Bearer`, `getSupabaseClient().auth.getUser(token)`, 401s on missing/invalid. Body carries only `device_uuid`. Closes account-squatting (body `auth_user_id` was trusted). Privileged writes via new shared `getServiceRoleClient()` in `src/lib/supabase.ts` (folded the `cleanup-scores` duplicate). **Latent bug fixed**: back-fill filtered `game_scores.device_uuid` (nonexistent col; table uses `device_id`) so it always errored silently → no score was ever stamped. Now `device_id`.
