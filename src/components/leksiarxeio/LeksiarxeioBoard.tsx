@@ -12,6 +12,7 @@ import {
 } from "@/hooks/useGameStore";
 import { useGameIdentity } from "@/hooks/useGameIdentity";
 import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/hooks/useAuth";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
@@ -190,6 +191,7 @@ export function LeksiarxeioBoard({
       onDeviceIdChange:    setDeviceId,
       onDisplayNameChange: (name) => { setDisplayName(name); saveDisplayName(name); },
     });
+  const { authLinked, authUserName, signInWithGoogle, signOut } = useAuth();
 
   // Track which lengths are finished (won or lost) so auto-advance can skip them.
   // A ref is used alongside state to avoid stale-closure issues inside setTimeout.
@@ -308,6 +310,10 @@ export function LeksiarxeioBoard({
         onTransferGenerate={generateTransferCode}
         onTransferClaim={claimTransferCode}
         onDisconnect={disconnect}
+        authLinked={authLinked}
+        authUserName={authUserName}
+        onSignIn={signInWithGoogle}
+        onSignOut={signOut}
         onClose={onCloseLeaderboard}
       />
     </>

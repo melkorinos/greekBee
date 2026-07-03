@@ -7,6 +7,7 @@ import {
 } from "@/hooks/useGameStore";
 import { useGameIdentity } from "@/hooks/useGameIdentity";
 import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/hooks/useAuth";
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
@@ -44,6 +45,7 @@ export function VresTinFrasiBoard({
       onDeviceIdChange:    setDeviceId,
       onDisplayNameChange: (name) => { setDisplayName(name); saveDisplayName(name); },
     });
+  const { authLinked, authUserName, signInWithGoogle, signOut } = useAuth();
 
   const { submit: postScore } = useScoreSubmission({
     gameId:     "vrestifrasi",
@@ -138,6 +140,10 @@ export function VresTinFrasiBoard({
         onTransferGenerate={generateTransferCode}
         onTransferClaim={claimTransferCode}
         onDisconnect={disconnect}
+        authLinked={authLinked}
+        authUserName={authUserName}
+        onSignIn={signInWithGoogle}
+        onSignOut={signOut}
         onClose={onCloseLeaderboard}
       />
     </>

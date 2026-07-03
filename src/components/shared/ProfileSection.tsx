@@ -27,7 +27,9 @@ export interface ProfileSectionProps {
   /** Google auth state — when true, TransferCode block is hidden. */
   authLinked?:          boolean;
   authUserName?:        string | null;
-  onSignIn?:            () => Promise<void>;
+  /** Required (ADR 0012): sign-in is offered wherever this renders and the
+   *  device is not AuthLinked. */
+  onSignIn:             () => Promise<void>;
   onSignOut?:           () => Promise<void>;
   /** Name save handler — when provided, renders the nickname input in idle mode. */
   onSaveName?:          (name: string) => void;
@@ -158,16 +160,14 @@ export function ProfileSection({
       {/* ── Idle (unlinked) ──────────────────────────────────────────────────── */}
       {!authLinked && mode === "idle" && (
         <div className="space-y-2">
-          {onSignIn && (
-            <button
-              onClick={() => void onSignIn()}
-              className="w-full flex items-center justify-center gap-2 text-xs font-medium border border-border rounded-lg px-3 py-2 hover:bg-surface-raised transition-colors text-foreground"
-            >
-              <GoogleIcon />
-              Σύνδεση με Google
-            </button>
-          )}
-          {onSignIn && onSaveName && (
+          <button
+            onClick={() => void onSignIn()}
+            className="w-full flex items-center justify-center gap-2 text-xs font-medium border border-border rounded-lg px-3 py-2 hover:bg-surface-raised transition-colors text-foreground"
+          >
+            <GoogleIcon />
+            Σύνδεση με Google
+          </button>
+          {onSaveName && (
             <div className="flex items-center gap-2">
               <hr className="flex-1 border-border" />
               <span className="text-xs text-muted whitespace-nowrap">ή χρησιμοποίησε ψευδώνυμο</span>
@@ -246,26 +246,36 @@ export function ProfileSection({
 
       {/* ── Linked (ProfileLinked, no Google) ────────────────────────────────── */}
       {!authLinked && mode === "linked" && (
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-correct font-semibold">
-            ✓ {displayName || "Ανώνυμος"}
-          </span>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => void handleGenerate()}
-              disabled={loading}
-              title="Δημιούργησε κωδικό για να συνδεθείς από άλλη συσκευή"
-              className="text-xs text-stone-500 underline underline-offset-2 hover:text-foreground transition-colors"
-            >
-              {loading ? "…" : "Μεταφορά σε άλλη συσκευή"}
-            </button>
-            <span className="text-muted select-none">|</span>
-            <button
-              onClick={() => setMode("confirming")}
-              className="text-xs text-stone-400 hover:text-red-500 transition-colors"
-            >
-              Αποσύνδεση
-            </button>
+        <div className="space-y-2">
+          <button
+            onClick={() => void onSignIn()}
+            title="Σύνδεση με Google για μη-χανόμενη ταυτότητα"
+            className="w-full flex items-center justify-center gap-2 text-xs font-medium border border-border rounded-lg px-3 py-2 hover:bg-surface-raised transition-colors text-foreground"
+          >
+            <GoogleIcon />
+            Σύνδεση με Google
+          </button>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-correct font-semibold">
+              ✓ {displayName || "Ανώνυμος"}
+            </span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => void handleGenerate()}
+                disabled={loading}
+                title="Δημιούργησε κωδικό για να συνδεθείς από άλλη συσκευή"
+                className="text-xs text-stone-500 underline underline-offset-2 hover:text-foreground transition-colors"
+              >
+                {loading ? "…" : "Μεταφορά σε άλλη συσκευή"}
+              </button>
+              <span className="text-muted select-none">|</span>
+              <button
+                onClick={() => setMode("confirming")}
+                className="text-xs text-stone-400 hover:text-red-500 transition-colors"
+              >
+                Αποσύνδεση
+              </button>
+            </div>
           </div>
         </div>
       )}

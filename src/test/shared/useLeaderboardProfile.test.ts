@@ -82,6 +82,7 @@ function slotProps(profileLinked: boolean) {
     onTransferGenerate: vi.fn().mockResolvedValue("ABC123"),
     onTransferClaim:    vi.fn().mockResolvedValue(undefined),
     onDisconnect:       vi.fn(),
+    onSignIn:           vi.fn().mockResolvedValue(undefined),
   };
 }
 

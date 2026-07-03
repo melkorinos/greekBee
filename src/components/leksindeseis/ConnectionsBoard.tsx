@@ -12,6 +12,7 @@ import { GroupGrid }                       from "@/components/leksindeseis/Group
 import { setDisplayName } from "@/hooks/useGameStore";
 import { useGameIdentity } from "@/hooks/useGameIdentity";
 import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/hooks/useAuth";
 import { useScoreSubmission }              from "@/hooks/useScoreSubmission";
 import { useLeksindeseisState }            from "@/games/leksindeseis/hooks/useLeksindeseisState";
 
@@ -72,6 +73,7 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
       if (status === "won") submitWithName(mistakesRemaining, name);
     },
   });
+  const { authLinked, authUserName, signInWithGoogle, signOut } = useAuth();
 
   function handleSaveName(name: string) {
     setDisplayNameState(name);
@@ -193,6 +195,10 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
         onTransferGenerate={generateTransferCode}
         onTransferClaim={claimTransferCode}
         onDisconnect={disconnect}
+        authLinked={authLinked}
+        authUserName={authUserName}
+        onSignIn={signInWithGoogle}
+        onSignOut={signOut}
         onClose={() => setLbOpen(false)}
       />
     </div>

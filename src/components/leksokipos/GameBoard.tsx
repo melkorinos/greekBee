@@ -6,6 +6,7 @@
 import { setDisplayName as saveDisplayName } from "@/hooks/useGameStore";
 import { useGameIdentity } from "@/hooks/useGameIdentity";
 import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/hooks/useAuth";
 import { useProfileVerification } from "@/hooks/useProfileVerification";
 import { getSuggestedWords, markSuggested } from "@/hooks/suggestions";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -124,6 +125,8 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
 
   // Auto-post whenever the score increases.
   useEffect(() => { postScore(score); }, [score, postScore]);
+
+  const { authLinked, authUserName, signInWithGoogle, signOut } = useAuth();
 
   const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } = useProfile({
     deviceId,
@@ -340,6 +343,10 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
           onTransferGenerate={generateTransferCode}
           onTransferClaim={handleTransferClaim}
           onDisconnect={disconnect}
+          authLinked={authLinked}
+          authUserName={authUserName}
+          onSignIn={signInWithGoogle}
+          onSignOut={signOut}
           onClose={() => setLeaderboardOpen(false)}
         />
       )}

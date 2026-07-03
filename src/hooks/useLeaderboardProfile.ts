@@ -16,10 +16,12 @@ export interface LeaderboardProfileProps {
   onTransferGenerate:   () => Promise<string>;
   onTransferClaim:      (code: string) => Promise<void>;
   onDisconnect:         () => void;
-  /** Optional Google auth — passed through to ProfileSection. */
+  /** Google auth — passed through to ProfileSection. Sign-in is offered wherever
+   *  ProfileSection renders and the device is not AuthLinked (ADR 0012), so
+   *  `onSignIn` is required at every call site — not a per-site choice. */
   authLinked?:          boolean;
   authUserName?:        string | null;
-  onSignIn?:            () => Promise<void>;
+  onSignIn:             () => Promise<void>;
   onSignOut?:           () => Promise<void>;
 }
 

@@ -14,6 +14,18 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
 }));
 
+// GameBoard wires useAuth into its leaderboard modal (ADR 0012 visibility rule);
+// stub it to a stable anonymous state so these game-interaction tests don't touch Supabase.
+vi.mock("@/hooks/useAuth", () => ({
+  useAuth: () => ({
+    authLinked:       false,
+    authUserName:     null,
+    signInWithGoogle: vi.fn(async () => {}),
+    signOut:          vi.fn(async () => {}),
+    isLoading:        false,
+  }),
+}));
+
 // ── Test fixture ───────────────────────────────────────────────────────────────
 
 const puzzle: LeksokiposPuzzle = {

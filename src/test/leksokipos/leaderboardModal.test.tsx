@@ -56,6 +56,7 @@ function renderModal(overrides: Partial<React.ComponentProps<typeof LeaderboardM
     onTransferGenerate:  vi.fn().mockResolvedValue("ABCDEF"),
     onTransferClaim:     vi.fn().mockResolvedValue(undefined),
     onDisconnect:        vi.fn(),
+    onSignIn:            vi.fn().mockResolvedValue(undefined),
     onClose:             vi.fn(),
     ...overrides,
   };
