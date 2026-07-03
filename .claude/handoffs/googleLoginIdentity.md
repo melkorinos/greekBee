@@ -1,8 +1,14 @@
-# Handoff: Sign-in Restore — Slices 1–4 DONE; only slice 5 remains
+# Handoff: Sign-in Restore — Slices 1–4 DONE + committed; only slice 5 remains
 
 **Date:** 2026-07-03
-**Status:** Slices 1–2 committed. **Slices 3 (Disconnect unification, full-reset) + 4 (visibility rule) DONE test-first, green, uncommitted on `dev`.** Only slice 5 (`identity_audit` migration, prod push) remains.
-**Next session:** slice 5 via `/tdd` — but see slice 3's ⚠️ known follow-up (Google sign-out in-memory deviceId propagation) and get the user's prod-push OK before `db push`. Read ADR 0012 first.
+**Status:** **Slices 1–4 all implemented, green, and committed on `dev`** (slice 3 `e7058f0`, slice 4 `7d5c6f5`, + doc commits). Only slice 5 (`identity_audit` migration, prod push) remains. Working tree clean.
+**Gates at handoff:** `1201 pass / 6 skipped · eslint 0 · build 0`.
+
+## ▶ START HERE next session (two independent items, either order)
+1. **Slice 5 — `identity_audit` migration** (see §Slice 5 below). Decided shape; it's a **prod DB push** → draft the SQL migration, **show the user + get explicit OK before `npx supabase db push`**. `/tdd` for the write-on-Disconnect wiring.
+2. **Slice 3 known follow-up** — the Google sign-out path leaves `useGameIdentity`'s in-memory `deviceId` stale (details in §Slice 3 ⚠️). Small `/tdd` fix; decide reload-vs-callback. Epic B's profile disconnect button inherits this, so it can also be handled there.
+
+Read **ADR 0012** first. Do not re-litigate settled decisions (below).
 
 ---
 
@@ -31,7 +37,7 @@
 
 ---
 
-## ✅ Slice 3 — DONE (Disconnect unification) — 2026-07-03, test-first, uncommitted on `dev`
+## ✅ Slice 3 — DONE + committed (`e7058f0`) — Disconnect unification, 2026-07-03, test-first
 **Pre-decision (user):** **Full reset** — Disconnect makes the device a brand-new anonymous player.
 - New store fn **`disconnectIdentity()`** (renamed from `disconnectProfile`) writes `{ deviceId: crypto.randomUUID() }` — drops displayName, profileLinked, authLinked, **and every game slice** in one shot (slices live in the same envelope). Old `disconnectProfile` only swapped deviceId + kept displayName/slices (a lingering identity leak); that's gone.
 - `useProfile.disconnect()` calls it and now also `onDisplayNameChange("")` so React state reflects the cleared name (already propagated the fresh deviceId).
@@ -40,7 +46,7 @@
 
 **⚠️ Known follow-up (not a blocker for slice 5):** the **Google sign-out path doesn't propagate the fresh deviceId into `useGameIdentity` React state** — `useAuth.signOut` has no `onDeviceIdChange`/`onDisplayNameChange` callbacks, so until the next remount/reload the in-memory `deviceId` is stale and a score posted in that window would attach to the *old* identity. The profile-disconnect path is fine (propagates via callbacks). Fix options: (a) reload/redirect on Google sign-out (jsdom can't navigate — untestable in unit tests), or (b) refresh `useGameIdentity` from the store at the sign-out call sites (HomeTrophyButton + 4 Boards). Decide when wiring the Profile page's disconnect button (Epic B inherits this path).
 
-## ✅ Slice 4 — DONE (visibility rule) — 2026-07-03, test-first, uncommitted on `dev`
+## ✅ Slice 4 — DONE + committed (`7d5c6f5`) — visibility rule, 2026-07-03, test-first
 - `onSignIn` is now **required** in `LeaderboardProfileProps` (`useLeaderboardProfile.ts`) and `ProfileSectionProps` (`ProfileSection.tsx`) — compile-enforced at every call site, so a modal can never silently omit sign-in again.
 - `ProfileSection` now offers **Σύνδεση με Google** in **`linked`** mode too (ProfileLinked-no-Google → upgrade path), not just `idle`; the now-redundant `onSignIn &&` guards were removed.
 - Wired `useAuth` (`authLinked/authUserName/signInWithGoogle/signOut`) into all four in-game Boards — `GameBoard.tsx`, `LeksiarxeioBoard.tsx`, `ConnectionsBoard.tsx`, `VresTinFrasiBoard.tsx` — which previously passed no auth props (only `HomeTrophyButton` did). No `"google"` hardcoded anywhere; the provider flows through `useAuth`.
@@ -48,7 +54,7 @@
 - Pre-existing, unrelated `tsc --noEmit` test-type errors remain (`authLinkRoute`/`persistence`/`useAuth` test files) — not touched; they don't affect the test/eslint/build gates.
 
 ## Slice 5 — `identity_audit` migration  ⚠️ prod push
-**Decided (grill 2026-07-03):** append-only unlink log, columns exactly `(auth_user_id, device_uuid, at)` — no `reason`, no PII beyond the pair. Written at the single unified **Disconnect** path (slice 3) **only when the device was AuthLinked**. Purpose: give Admin Restore a last-known email→device mapping after Google disconnect. Depends on slice 3's disconnect path, so it lands *after* slice 3 (currently deferred). Via `supabase/migrations/` + `npx supabase db push` only — **show SQL + get explicit user OK before pushing to prod.**
+**Decided (grill 2026-07-03):** append-only unlink log, columns exactly `(auth_user_id, device_uuid, at)` — no `reason`, no PII beyond the pair. Written at the single unified **Disconnect** path **only when the device was AuthLinked** — i.e. inside `useAuth.signOut()` (which already calls `disconnectIdentity()`; slice 3 done, so the hook point exists). Purpose: give Admin Restore a last-known email→device mapping after Google disconnect. **Ready to implement.** Via `supabase/migrations/` + `npx supabase db push` only — **show SQL + get explicit user OK before pushing to prod.** Note: the write is a client-triggered insert from the sign-out path, so it needs an anon-insert RLS policy (append-only, no select) — mind the trust model (CONTEXT.md rate-limit accepted-risk).
 
 ## Slice 6 — Achievements epic — only after 3–5. Durable identity is its prerequisite.
 
