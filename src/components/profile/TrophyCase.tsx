@@ -36,6 +36,12 @@ export function TrophyCase() {
       <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">
         Προθήκη Τροπαίων
       </p>
+      <p
+        data-testid="trophy-beta-notice"
+        className="mb-3 rounded-lg border border-border bg-surface-raised px-3 py-2 text-[11px] leading-snug text-muted"
+      >
+        🚧 Δοκιμαστική λειτουργία (beta): τα τρόπαια δεν κερδίζονται ακόμα και θα μηδενιστούν με την επίσημη κυκλοφορία.
+      </p>
       <div className="grid grid-cols-2 gap-3">
         {LEKSOKIPOS_ACHIEVEMENTS.map((a) => (
           <TrophyTile key={a.id} achievement={a} />

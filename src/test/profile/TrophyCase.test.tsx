@@ -25,4 +25,11 @@ describe("TrophyCase", () => {
     expect(screen.getByText(/Ασημένιο · 10\.000/)).toBeInTheDocument();
     expect(screen.getByText(/Χρυσό · 25\.000/)).toBeInTheDocument();
   });
+
+  it("shows a beta notice that trophies aren't active yet and reset on launch", () => {
+    render(<TrophyCase />);
+    const notice = screen.getByTestId("trophy-beta-notice");
+    expect(notice).toHaveTextContent(/beta/i);
+    expect(notice).toHaveTextContent("μηδενιστούν");
+  });
 });
