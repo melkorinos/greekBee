@@ -1,8 +1,8 @@
-# Handoff: Sign-in Restore — Slices 1, 2, 4 DONE; implement 3 + 5 via /tdd
+# Handoff: Sign-in Restore — Slices 1–4 DONE; only slice 5 remains
 
 **Date:** 2026-07-03
-**Status:** Slices 1–2 committed. **Slice 4 (visibility rule) DONE test-first, green, uncommitted on `dev`.** Slice 3 (deferred pre-decision) + slice 5 remain.
-**Next session:** continue in vertical slices, strictly via `/tdd` (user mandate). Read ADR 0012 first. **Slice 3 is the keystone blocker** — its wipe-granularity pre-decision gates slice 5, the profile-page disconnect button, and durable achievements.
+**Status:** Slices 1–2 committed. **Slices 3 (Disconnect unification, full-reset) + 4 (visibility rule) DONE test-first, green, uncommitted on `dev`.** Only slice 5 (`identity_audit` migration, prod push) remains.
+**Next session:** slice 5 via `/tdd` — but see slice 3's ⚠️ known follow-up (Google sign-out in-memory deviceId propagation) and get the user's prod-push OK before `db push`. Read ADR 0012 first.
 
 ---
 
@@ -31,12 +31,14 @@
 
 ---
 
-## Slice 3 — Disconnect unification  ⚠️ decision needed first
-Goal (ADR 0012 §5): profile-disconnect **and** Google sign-out are one concept — issue a fresh DeviceId **and clear local state** so an adopted identity can't leak to the next person on a shared computer. Signing back in restores everything server-side.
+## ✅ Slice 3 — DONE (Disconnect unification) — 2026-07-03, test-first, uncommitted on `dev`
+**Pre-decision (user):** **Full reset** — Disconnect makes the device a brand-new anonymous player.
+- New store fn **`disconnectIdentity()`** (renamed from `disconnectProfile`) writes `{ deviceId: crypto.randomUUID() }` — drops displayName, profileLinked, authLinked, **and every game slice** in one shot (slices live in the same envelope). Old `disconnectProfile` only swapped deviceId + kept displayName/slices (a lingering identity leak); that's gone.
+- `useProfile.disconnect()` calls it and now also `onDisplayNameChange("")` so React state reflects the cleared name (already propagated the fresh deviceId).
+- `useAuth.signOut()` now calls `disconnectIdentity()` too — Google sign-out **is** a full Disconnect, not just an authLinked clear.
+- Tests updated to the new contract: `useGameStore.test.ts` (`disconnectIdentity` wipes slices / clears displayName+authLinked+profileLinked), `useProfile.test.ts` (asserts `onDisplayNameChange("")`), `useAuth.test.ts` (+1: signOut calls `disconnectIdentity`). README helper name updated. **1201 pass · eslint 0 · build 0.**
 
-**Tension to resolve before coding:** `useGameStore.test.ts` currently asserts `disconnectProfile` *"does not disturb game slices"* (~line 315). The ADR now wants local state cleared. So decide **how aggressively to wipe**: (a) reset the whole envelope to a fresh `deviceId` only (wipes displayName + all per-game progress) vs (b) clear identity fields only (deviceId/displayName/profileLinked/authLinked) but keep game slices. ADR wording ("clears local state") leans (a); confirm with user. Then:
-- Add one shared store fn (e.g. `disconnectIdentity()`), update the existing `disconnectProfile` test to the new contract.
-- `useProfile.disconnect()` and `useAuth.signOut()` (`src/hooks/useAuth.ts:77` — today only clears authLinked, does NOT reset deviceId) both call it. Tests: `useProfile.test.ts`, `useAuth.test.ts`.
+**⚠️ Known follow-up (not a blocker for slice 5):** the **Google sign-out path doesn't propagate the fresh deviceId into `useGameIdentity` React state** — `useAuth.signOut` has no `onDeviceIdChange`/`onDisplayNameChange` callbacks, so until the next remount/reload the in-memory `deviceId` is stale and a score posted in that window would attach to the *old* identity. The profile-disconnect path is fine (propagates via callbacks). Fix options: (a) reload/redirect on Google sign-out (jsdom can't navigate — untestable in unit tests), or (b) refresh `useGameIdentity` from the store at the sign-out call sites (HomeTrophyButton + 4 Boards). Decide when wiring the Profile page's disconnect button (Epic B inherits this path).
 
 ## ✅ Slice 4 — DONE (visibility rule) — 2026-07-03, test-first, uncommitted on `dev`
 - `onSignIn` is now **required** in `LeaderboardProfileProps` (`useLeaderboardProfile.ts`) and `ProfileSectionProps` (`ProfileSection.tsx`) — compile-enforced at every call site, so a modal can never silently omit sign-in again.
