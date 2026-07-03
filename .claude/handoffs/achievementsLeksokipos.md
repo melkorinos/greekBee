@@ -36,7 +36,7 @@ Scope: **Leksokipos only** for v1. Other games later.
 | "80% of a puzzle's words" | Client knows `foundWords.length / validWords.length` live. Note the Endgame Zone already triggers at `score ≥ maxScore` — 80%-of-words is a *different* axis (count vs points); keep them distinct in naming. |
 | "First game" | Derivable server-side from first `game_scores` row (or first score POST). |
 | Badge display precedent | 🏛️ already marks Τζιμάνι players on the Leaderboard — there IS a precedent for badges on leaderboard rows. |
-| "Profiles" to display badges on | **No profile page exists.** Profile today = ProfileSection inside leaderboard modals (name + transfer + Google). Displaying badges implies a new surface — this is the biggest unscoped piece. |
+| "Profiles" to display badges on | **✅ RESOLVED — `/profile` shipped** (profile epic, 2026-07-03). The Trophy Case grid (`src/components/profile/TrophyCase.tsx`) already renders every catalog badge **locked/greyed**; this epic only wires the **earned** state onto it. Design question 1 (display surface) is therefore settled — don't re-grill it. |
 
 ---
 
@@ -57,9 +57,21 @@ Scope: **Leksokipos only** for v1. Other games later.
 
 ## v1 Catalog — CANONICAL LOCATION
 
-The reviewed v1 catalog (Leksokipos-only, frozen ids, Greek names, tier vocab **Χάλκινο → Ασημένιο → Χρυσό**) lives in **`profilePageAndAchievements.md` §4** — single source of truth to avoid drift. Do not fork it here. When implementation starts it lands as the pure `src/games/leksokipos/lib/achievements.ts` catalog (shape defined in §4).
+The frozen v1 catalog (Leksokipos-only, frozen ids, Greek names, tier vocab **Χάλκινο → Ασημένιο → Χρυσό**) now **ships as the pure `src/games/leksokipos/lib/achievements.ts` catalog** — that code file is the single source of truth for ids, names, hints, and thresholds (5 one-shot + 2 tiered, each tier a per-tier frozen `id`). It carries data + a **type-only `AchievementPredicate`** — no detection logic yet. (Authored by the profile epic, whose handoff `profilePageAndAchievements.md` is now retired; the manual-test flow lives in `manualTestingDevToMain.md` §2.)
 
-Engine-side notes that inform detection (not in §4):
+**Detection method per badge** (the one thing NOT in the code catalog — this is what this epic wires):
+
+| id | Detection (from launch onward) |
+|---|---|
+| `leksokipos-first-daily` | server: first `game_scores` row |
+| `leksokipos-stin-korifi` | client-detect (rank vs `maxScore` → Απολυτότητα) |
+| `leksokipos-tzimani` | server: `game_scores.is_perfect` |
+| `leksokipos-sidirodromos` | client via `pushFoundWords` (word length ≥ 10) |
+| `leksokipos-theristis` | client-detect (`foundWords/validWords ≥ 80%` — count axis, distinct from Endgame Zone's points axis) |
+| `leksokipos-kynigos-pangram-{chalkino/asimenio/chryso}` | client counter `player_stats.pangrams_found` via `pushFoundWords` (10 / 20 / 50) |
+| `leksokipos-syllektis-ponton-{chalkino/asimenio/chryso}` | server: `SUM(score)` derived on read, no counter (1.000 / 10.000 / 25.000) |
+
+Engine-side notes that inform detection:
 - **Identity key = DeviceId** for every earned row and counter (ADR 0012; CONTEXT.md Achievement/Lifetime Stats). Never `auth_user_id`.
 - **Detection point (decided):** piggyback the existing `pushFoundWords` sync for word-derived awards (`sidirodromos` 10-letter, `theristis` 80%, `kynigos-pangram` counter) — no new per-word endpoint (soul.md Fluid-CPU). Server derives the rest from `game_scores` (`first-daily`, `tzimani` via `is_perfect`, `syllektis-ponton` via `SUM(score)`). Known gap accepted: anonymous / non-daily / non-ProfileLinked play doesn't capture word-derived counters — consistent with "losable until AuthLinked."
 - **No backfill (decided):** the DB gets a **hard reset at launch**, so every unlock and counter starts at zero for everyone. No history-derived seeding, no "since you were away" grant storm on first post-ship open. Removes the whole backfill axis.
