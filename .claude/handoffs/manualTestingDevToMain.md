@@ -5,7 +5,7 @@
 
 **Sections so far:**
 1. Google identity epic (sign-in / Restore / Disconnect / `identity_audit`) — added 2026-07-03, session 60
-2. *(pending)* Profile Page + Trophy Case — the implementing session appends this; its plan draft lives in `profilePageAndAchievements.md` §7
+2. Profile Page + Trophy Case — added 2026-07-03
 
 **⚠️ One environment fact that shapes everything:** there is no dev database. `npm run dev` talks to the **production** Supabase project (single project, one URL set in `.env.local`). Every test below writes real rows. Use an obviously-fake display name (e.g. `ΔΟΚΙΜΗ-1`) so test rows are identifiable; `game_scores` is append-forever, so prefer marking over deleting.
 
@@ -78,3 +78,42 @@ Open the 🏆 modal on **home + all four boards** while (a) anonymous and (b) Pr
 - Repeat sign-ins produce zero audit rows — that's the change-only contract, not a missed write.
 
 Any real misbehaviour → `/diagnose`. Recovery drill if a test identity gets lost: `docs/admin-restore.md` (now includes the `identity_audit` history query).
+
+---
+
+## 2. Profile Page + Trophy Case (added 2026-07-03)
+
+**Code status:** slices 1–4 shipped and green (`1233 pass / 6 skipped · eslint 0 · build 0`). Untested manually. Builds on §1's identity mechanics — this section only verifies the **new `/profile` surface**: entry points, identity header, lifetime-stats strip, the restore→`/profile` redirect + welcome banner, and the (all-locked) trophy case. **Happy path, ~15 min.** Use a fake name (e.g. `ΔΟΚΙΜΗ-1`); prod DB as always.
+
+### A. Entry points reach `/profile` (~2 min)
+1. **Home page:** the 👤 chip top-right → tap → lands on `/profile`. While anonymous the chip reads **Σύνδεση**.
+2. **Any game screen:** the 👤 icon next to the hamburger in the Shell header → `/profile`.
+3. **Leaderboard modal:** open any 🏆 modal → **Δες το προφίλ σου →** → `/profile`.
+- **Expect:** all three navigate to the page.
+
+### B. Anonymous identity + real stats (~3 min)
+1. Anonymous (Disconnect first if needed). Play one daily and score some points — ideally a **Leksokipos** perfect (Τζιμάνι) if quick.
+2. Open `/profile`.
+- **Expect:** header **"Παίζεις ανώνυμα"** + initial-letter avatar; the stats strip shows **real** Πόντοι and Παζλ counts (not dashes); Τζιμάνι reflects the leksokipos perfect count. Trophy case renders below.
+   ```sql
+   -- replace <dev> with the device_id from §1.A; the three numbers must match the strip
+   select coalesce(sum(score),0) as points,
+          count(*) as puzzles,
+          count(*) filter (where is_perfect and game_id = 'leksokipos') as tzimani
+   from game_scores where device_id = '<dev>';
+   ```
+
+### C. Sign in from `/profile` round-trips back (~3 min)
+1. On `/profile` → ProfileSection → **Σύνδεση με Google** → complete OAuth.
+- **Expect:** returns to **`/profile`** (not home); header becomes **"Συνδεδεμένος με Google ως {name}"**, avatar shows the name's initial; the home chip now shows the name. (Identity/DB side is §1.B.)
+
+### D. Sign-in Restore lands on `/profile` + welcome banner (~4 min)
+1. Fresh browser/incognito: play a **different** daily anonymously.
+2. Sign in with the **same** Google account (Restore).
+- **Expect:** redirected to **`/profile`** (not the origin page); the **"Καλώς όρισες πίσω…"** banner shows **once** (refresh → gone); the stats strip shows the **merged** totals (higher than either device alone); header shows the adopted name.
+
+### E. Trophy case content (~1 min, visual)
+On `/profile`, the trophy case shows **7 badges, all greyed/locked**: Πρώτα Βήματα, Στην Κορυφή, Τζιμάνι, Σιδηρόδρομος, Θεριστής, and the two tiered — **Κυνηγός Πανγκράμ** (Χάλκινο/Ασημένιο/Χρυσό · 10/20/50) and **Συλλέκτης Πόντων** (1.000/10.000/25.000). Nothing is earned/coloured — detection ships with the achievements epic.
+
+### F. Graceful degradation (~30 sec, optional)
+Break the stats request (go offline briefly, then open `/profile`): the strip shows dashes **—** and the rest of the page still renders. Never a blank or blocked page.

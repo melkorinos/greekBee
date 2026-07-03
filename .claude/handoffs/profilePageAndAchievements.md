@@ -15,22 +15,19 @@
 
 ## 0. Progress log (updated 2026-07-03)
 
-Issues live on the tracker as `02`–`05` (`.claude/issue-tracker/issues/`); slice 5 stays a handoff to `achievementsLeksokipos.md`, not an issue.
+**EPIC IMPLEMENTATION COMPLETE — all four slices shipped and committed on `dev`; green (`1233 pass / 6 skipped · eslint 0 · build 0`).** Remaining: the one-time **manual pass** (appended as §2 of `manualTestingDevToMain.md`) and the **detection engine** (handoff to `achievementsLeksokipos.md`, was always "slice 5", never a tracker issue). Issues `02`–`05` are implemented; delete them from the tracker after the manual pass confirms.
 
-- **Slice 1 (issue 02) — DONE & committed.** `/profile` route + identity header + welcome banner + restore redirect.
-  - New: `src/components/profile/IdentityHeader.tsx`, `src/components/profile/WelcomeBackBanner.tsx`, `src/app/profile/page.tsx`.
-  - Changed: `src/app/auth/callback/page.tsx` (adds `restored → router.replace("/profile")`, still clears `auth-redirect`).
-  - Tests: `src/test/profile/IdentityHeader.test.tsx`, `WelcomeBackBanner.test.tsx`, `src/test/shared/authCallbackRedirect.test.tsx`.
-- **Slice 2 (issue 03) — DONE, commit pending.** Three entry points.
-  - New: `src/components/shared/ProfileChip.tsx` (home client island; uses `useSyncExternalStore` to dodge hydration mismatch + the `react-hooks/set-state-in-effect` lint rule).
-  - Changed: `src/components/shared/Shell.tsx` (always-visible 👤 `Link` next to hamburger), `src/app/page.tsx` (chip top-right), `src/components/shared/ProfileSection.tsx` (optional `showProfileLink`, default **true**; profile page passes `false`).
-  - Tests: `Shell.test.tsx` (+1), `ProfileChip.test.tsx`, `profileSectionFunnel.test.tsx`.
-- **Palette-token sweep — DONE** (ADR 0008). Converted every literal palette class in the identity/profile UI to semantic tokens: `text-stone-*→text-muted`, `hover:text-stone-600→hover:text-foreground`, `text-red-*→text-danger`, disconnect-confirm reds → `border-danger/40 hover:bg-danger/10 active:bg-danger/20`. Touched `ProfileSection.tsx` (fixes pre-existing non-flipping darks) + `auth/callback/page.tsx`. **`--danger` token exists** (`globals.css`: red-500 light / red-400 dark). Left intentionally literal: **Shell dark drawer** `zinc-*` (fixed-dark surface, not theme-flipping) and the **`GoogleIcon` SVG brand fills**. **Rule for all remaining slices: semantic tokens only — `surface/surface-raised/foreground/muted/border/correct/danger/accent/inverted/game-accent`, never `stone-/red-/...`.**
+- **Slice 1 (issue 02) — DONE** (`e6b0daa`). `/profile` route + identity header + welcome banner + restore redirect.
+  - New: `src/components/profile/IdentityHeader.tsx`, `WelcomeBackBanner.tsx`, `src/app/profile/page.tsx`. Changed: `src/app/auth/callback/page.tsx` (`restored → router.replace("/profile")`, still clears `auth-redirect`).
+- **Slice 2 (issue 03) — DONE** (`3b4f3ed`). Three entry points.
+  - New: `src/components/shared/ProfileChip.tsx` (home island; `useSyncExternalStore` avoids hydration mismatch + the `set-state-in-effect` lint rule). Changed: `Shell.tsx` (👤 `Link` by hamburger), `src/app/page.tsx` (chip top-right), `ProfileSection.tsx` (optional `showProfileLink`, default true; page passes false).
+- **Slice 3 (issue 04) — DONE** (`086e897`). Lifetime-stats endpoint + strip.
+  - New: `src/lib/lifetimeStats.ts` (pure `aggregateLifetimeStats`), `src/app/api/profile/stats/route.ts` (edge, read-only, fetch-and-reduce, `Cache-Control: private, max-age=60`), `src/components/profile/LifetimeStatsStrip.tsx` (skeleton / dash-on-error). **Τζιμάνι scope resolved: leksokipos-only** (points & puzzles stay cross-game). Schema confirmed valid (`is_perfect` exists via migration `20260629000001`; `UNIQUE(game_id,device_id,puzzle_date)` → clean `COUNT(*)`).
+- **Slice 4 (issue 05) — DONE** (`da3f2b0`). Trophy catalog + locked grid.
+  - New: `src/games/leksokipos/lib/achievements.ts` (pure catalog: 5 one-shot + 2 tiered, frozen award ids, `AchievementPredicate` type-only — no detection), `src/components/profile/TrophyCase.tsx` (all tiles locked/greyed, tier rows).
+- **Palette-token sweep — DONE** (ADR 0008). Identity/profile UI converted to semantic tokens: `text-stone-*→text-muted`, `hover:text-stone-600→hover:text-foreground`, `text-red-*→text-danger`, disconnect-confirm reds → `border-danger/40 hover:bg-danger/10 active:bg-danger/20` (`ProfileSection.tsx` + `auth/callback/page.tsx`; fixes pre-existing non-flipping darks). Left intentionally literal: Shell dark drawer `zinc-*` and `GoogleIcon` brand fills. **Token rule for the detection epic: `surface/surface-raised/foreground/muted/border/correct/danger/accent/inverted/game-accent` only, never `stone-/red-/...`.** (A separate agent flagged remaining ADR 0008 literals in `GameBoard.tsx`, `LeaderboardModal.tsx`, `NewPuzzleButton.tsx`, `FlowerGridPlayground` — out of this epic's scope; candidate for its own token-migration issue.)
 
-**Next: Slice 3 (issue 04) — lifetime-stats endpoint + strip.** Two things settled during exploration:
-- **Schema is valid as written.** `game_scores` has `device_id` (text), `score` (int), and **`is_perfect boolean NOT NULL DEFAULT false`** (added by migration `20260629000001_add_is_perfect_to_game_scores.sql` — the stale baseline snapshot lacks it). `UNIQUE (game_id, device_id, puzzle_date)` means one row per game/date, so `COUNT(*)` = puzzles_played with no dup inflation. RLS `scores_select USING (true)` → an edge route with the anon key can read (unauthenticated bearer model, consistent with §3).
-- **Implementation default:** aggregate by **fetching the device's rows and reducing in JS** (small per-device set), mirroring `src/app/api/game-scores/route.ts` — avoids a Postgres RPC/migration.
-- **⚠️ OPEN DECISION before writing the query — Τζιμάνι scope.** `is_perfect` is written by the *shared* game-scores route, so a raw `COUNT FILTER (is_perfect)` is **cross-game**, but "Τζιμάνι" is a Leksokipos garden term. Choose: **(A)** keep cross-game (matches §3's "stats are cross-game, label generically" spirit — but label is off-brand), or **(B)** scope the count to `game_id = 'leksokipos'` so the term stays literally accurate. Ask the user; not yet decided.
+**Next session:** run the §2 manual pass in `manualTestingDevToMain.md` (agent verifies DB via Supabase MCP), then pick up `achievementsLeksokipos.md` for detection + `player_achievements` wiring against the frozen catalog.
 
 ---
 
@@ -108,8 +105,8 @@ Naming notes: «Σιδηρόδρομος» is the archetypal Greek "long word" j
 
 1. ✅ **DONE** — **`/profile` route + identity header + welcome banner + restore redirect** — ships against existing hooks, no new API. *This alone validates Google/restore end-to-end.*
 2. ✅ **DONE** — **Entry points** — Shell header profile icon (next to hamburger), home-picker chip (client island), ProfileSection funnel link.
-3. ⬅ **NEXT** — **Lifetime-stats endpoint + strip** (§3). See §0 for the schema confirmation and the open Τζιμάνι-scope decision.
-4. **Catalog + trophy case grid** (§4, all locked).
+3. ✅ **DONE** — **Lifetime-stats endpoint + strip** (§3). Τζιμάνι resolved: leksokipos-only.
+4. ✅ **DONE** — **Catalog + trophy case grid** (§4, all locked).
 5. → hand off to `achievementsLeksokipos.md` for detection, `player_achievements` table, earned wiring, backfill.
 
 Each slice: `/tdd`, then `npm run test -- --run`, `npx eslint .`, `npm run build` — all green before the next.
