@@ -16,6 +16,7 @@ import { ProfileSection } from "@/components/shared/ProfileSection";
 import { IdentityHeader } from "@/components/profile/IdentityHeader";
 import { WelcomeBackBanner } from "@/components/profile/WelcomeBackBanner";
 import { LifetimeStatsStrip } from "@/components/profile/LifetimeStatsStrip";
+import { TrophyCase } from "@/components/profile/TrophyCase";
 import { useGameIdentity } from "@/hooks/useGameIdentity";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -74,6 +75,10 @@ export default function ProfilePage() {
 
         <section className="rounded-2xl border border-border bg-surface overflow-hidden">
           <LifetimeStatsStrip deviceId={deviceId} />
+        </section>
+
+        <section className="rounded-2xl border border-border bg-surface overflow-hidden">
+          <TrophyCase />
         </section>
       </div>
     </Shell>
