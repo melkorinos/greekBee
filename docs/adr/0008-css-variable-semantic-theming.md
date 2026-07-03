@@ -43,3 +43,9 @@ A few colour sets are deliberately **not** tokens — they encode meaning as a f
 - **Stavrolekso crossword grid** (`StavroleksoGrid`) — an intentional "paper" widget: cells stay light (white→stone-100) in *both* themes, with pale paper-tint highlights distinct from the solid feedback tokens.
 - **Selection highlights** (the blue "selected clue/cell" in the Stavrolekso maker/player).
 - **Status banners** — `amber` = warning, `sky` = info (e.g. NominationModal). These keep their own `dark:` variants by design; they are a small status palette, not brand surfaces. Candidates for future `warning`/`info` tokens if the need recurs.
+- **Shell slide-out drawer** (`Shell`) — an intentionally always-dark nav panel (`zinc-*`) that stays dark in *both* themes; there is no "always-dark surface" token, and tokenising it would make it flip to light. Candidate for a `--drawer-*` token pair if a second always-dark surface appears.
+- **`FeedbackBanner`** — takes an explicit `theme` prop so each game forces its own banner appearance (Leksiarxeio dark, Leksindeseis light) independent of the app theme; the success/error tints have no surface-tint token equivalents. Tokenising it is a design change (drop the prop + add `success`/`error` surface tokens), not a literal swap — deferred.
+- **`FlowerGridPlayground`** — a dev-only design tool (not shipped UI); its chart-style fixed colours are out of scope for the token system.
+- **Fixed-yellow chip** — `text-stone-900` on `bg-brand` (pangram found-word chip in leksokipos `styles.ts`): dark text on a fixed-yellow fill must stay dark in *both* themes.
+
+**Enforcement:** the neutral-chrome migration is effectively complete — `noRawPaletteClasses.test.ts` fails the build if any component `.tsx` introduces a literal `stone/zinc/gray/slate/neutral` class outside the allowlisted exception files above. New exceptions require editing that allowlist *and* this section.

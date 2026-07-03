@@ -4,7 +4,7 @@
 // Cross-game leakage is structurally impossible: each caller provides its own
 // slice type T and only that slice is read or written.
 
-import type { GameId, PersistenceEnvelope } from "@/types";
+import type { SliceId, PersistenceEnvelope } from "@/types";
 
 const STORE_KEY = "wordgames:state";
 
@@ -32,7 +32,7 @@ function writeEnvelope(envelope: PersistenceEnvelope): void {
  * Read a game's persisted slice.
  * Returns null if nothing has been saved yet or the data is corrupt.
  */
-export function readSlice<T>(gameId: GameId): T | null {
+export function readSlice<T>(gameId: SliceId): T | null {
   const envelope = readEnvelope();
   const slice = envelope[gameId];
   return slice !== undefined ? (slice as T) : null;
@@ -42,7 +42,7 @@ export function readSlice<T>(gameId: GameId): T | null {
  * Write a game's persisted slice.
  * Merges the slice into the envelope — other games' data is untouched.
  */
-export function writeSlice<T>(gameId: GameId, data: T): void {
+export function writeSlice<T>(gameId: SliceId, data: T): void {
   const envelope = readEnvelope();
   writeEnvelope({ ...envelope, [gameId]: data });
 }
@@ -51,7 +51,7 @@ export function writeSlice<T>(gameId: GameId, data: T): void {
  * Clear a single game's persisted slice.
  * Other games' slices are unaffected.
  */
-export function clearSlice(gameId: GameId): void {
+export function clearSlice(gameId: SliceId): void {
   const envelope = readEnvelope();
   const updated = { ...envelope };
   delete updated[gameId];

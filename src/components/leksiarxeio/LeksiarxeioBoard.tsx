@@ -5,6 +5,7 @@
 // Wires physical keyboard events and leaderboard score submission.
 
 import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
+import { LEKSIARXEIO } from "@/config/gameRules";
 import {
   migrateLeksiarxeioIdentity,
   readSlice,
@@ -26,7 +27,7 @@ import { useLeksiarxeioState } from "@/games/leksiarxeio/hooks/useLeksiarxeioSta
 // Greek letter regex (covers the Greek alphabet range)
 const GREEK_LETTER = /^[α-ωά-ώΑ-ΩΆ-Ώ]$/i;
 
-const LENGTHS: LeksiarxeioLength[] = [4, 5, 6, 7, 8];
+const LENGTHS: LeksiarxeioLength[] = [...LEKSIARXEIO.LENGTHS];
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 

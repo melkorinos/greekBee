@@ -8,8 +8,14 @@ export type Language = "el";
 
 // ─── Platform ────────────────────────────────────────────────────────────────
 
-/** All games hosted on this platform. */
-export type GameId = "leksokipos" | "leksiarxeio" | "leksindeseis" | "vrestifrasi" | "suggestions" | "reports";
+/**
+ * Keys of the persistence envelope that hold a game/device slice written via
+ * `useGameStore`. This is the STORAGE-SLICE union, not the game registry:
+ * `suggestions`/`reports` are pseudo-slices, and games without a store slice
+ * (stavrolekso, leksikastirio) are intentionally absent. For "every registered
+ * game" use `RegistryGameId` from `@/config/games`.
+ */
+export type SliceId = "leksokipos" | "leksiarxeio" | "leksindeseis" | "vrestifrasi" | "suggestions" | "reports";
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 

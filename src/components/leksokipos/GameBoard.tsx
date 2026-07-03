@@ -284,21 +284,21 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
       {givenUp && (
         <div
           data-testid="give-up-banner"
-          className="w-full rounded-2xl bg-stone-100 border border-stone-200 px-4 py-3 text-center space-y-1"
+          className="w-full rounded-2xl bg-surface-raised border border-border px-4 py-3 text-center space-y-1"
         >
-          <p className="text-sm font-semibold text-stone-700">Το παιχνίδι τελείωσε</p>
-          <p className="text-xs text-stone-500">
+          <p className="text-sm font-semibold text-foreground">Το παιχνίδι τελείωσε</p>
+          <p className="text-xs text-muted">
             Βρήκες{" "}
-            <span className="font-bold text-stone-700">{foundWords.length}</span>
+            <span className="font-bold text-foreground">{foundWords.length}</span>
             {" "}από{" "}
-            <span className="font-bold text-stone-700">{activePuzzle.validWords.length}</span>
+            <span className="font-bold text-foreground">{activePuzzle.validWords.length}</span>
             {" "}λέξεις
           </p>
           {isDaily && (
             <button
               data-testid="btn-leaderboard-given-up"
               onClick={() => setLeaderboardOpen(true)}
-              className="mt-1 text-xs text-stone-500 underline underline-offset-2 hover:text-stone-800 transition-colors"
+              className="mt-1 text-xs text-muted underline underline-offset-2 hover:text-foreground transition-colors"
             >
               🏆 Πίνακας Σκορ
             </button>

@@ -4,8 +4,9 @@ import { useState } from "react";
 import { Modal } from "@/components/shared/Modal";
 import { NominationModal } from "@/components/shared/NominationModal";
 import { btnCancel, btnModalSubmit, inputClass, labelClass, labelOptionalClass } from "@/styles/recipes";
+import { LEKSIARXEIO } from "@/config/gameRules";
 
-const LENGTHS = [4, 5, 6, 7, 8] as const;
+const LENGTHS = LEKSIARXEIO.LENGTHS;
 const LENGTH_LABELS: Record<number, string> = { 4: "4 γράμματα", 5: "5 γράμματα", 6: "6 γράμματα", 7: "7 γράμματα", 8: "8 γράμματα" };
 
 interface Props {

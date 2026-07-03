@@ -183,7 +183,7 @@ export function StavroleksoPlayer({ id, puzzle }: Props) {
             {selectedSlotDef.number} {selectedSlotDef.direction === "across" ? "Οριζόντια" : "Κάθετα"} ({slotLen} γράμμ.)
           </p>
           <p className="text-sm text-foreground">
-            {selectedSlotDef.clue || <span className="italic text-stone-400">Χωρίς υπόδειξη</span>}
+            {selectedSlotDef.clue || <span className="italic text-muted">Χωρίς υπόδειξη</span>}
           </p>
           {solvedSlots.includes(selectedSlotDef.number) && (
             <p className="text-xs text-correct font-semibold">✓ Σωστό!</p>

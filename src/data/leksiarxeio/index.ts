@@ -24,7 +24,6 @@ import answers8 from "./answers-8.json";
 export const LEKSIARXEIO_LENGTHS: LeksiarxeioLength[] = [...LEKSIARXEIO.LENGTHS];
 
 const WORD_LISTS: Record<LeksiarxeioLength, string[]> = {
-  3: [],
   4: words4 as string[],
   5: words5 as string[],
   6: words6 as string[],
@@ -33,7 +32,6 @@ const WORD_LISTS: Record<LeksiarxeioLength, string[]> = {
 };
 
 const ANSWER_POOLS: Record<LeksiarxeioLength, string[]> = {
-  3: [],
   4: answers4 as string[],
   5: answers5 as string[],
   6: answers6 as string[],

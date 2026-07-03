@@ -53,7 +53,7 @@ export function LeaderboardModal({
         date !== defaultPuzzleId ? (
           <Link
             href={`/leksokipos?puzzle=${date}`}
-            className="text-stone-600 text-sm underline hover:text-stone-800"
+            className="text-muted text-sm underline hover:text-foreground"
           >
             {date === today ? "Παίξε το σημερινό παζλ →" : "Παίξε αυτό το παζλ →"}
           </Link>
@@ -64,7 +64,7 @@ export function LeaderboardModal({
           <Link
             href={`/leksokipos?puzzle=${date}`}
             onClick={onClose}
-            className="text-sm text-stone-600 underline hover:text-stone-800 transition-colors"
+            className="text-sm text-muted underline hover:text-foreground transition-colors"
           >
             {date === today ? "Παίξε το σημερινό παζλ →" : "Παίξε αυτό το παζλ →"}
           </Link>

@@ -255,7 +255,7 @@ src/
   lib/
     greeklish.ts    Bijective Greek↔greeklish codec for clean ASCII custom URLs
     postScore.ts    Fire-and-forget POST utility — silently swallows network errors
-  types/            Shared types: Language, GameId, PersistenceEnvelope
+  types/            Shared types: Language, SliceId, PersistenceEnvelope
 scripts/            Puzzle generation & curation CLIs (batch-generate, curate-answers, …)
 ```
 

@@ -5,6 +5,16 @@
 
 ---
 
+## Session 62 — 2026-07-03: Consolidation-file consistency — `GameId`→`SliceId`, palette-token sweep + guard ✅
+Review of the "single source of truth" files (`src/config/*`, `src/styles/recipes.ts`, game `types.ts`) for drift, then remediation. Concurrent with session 61 (profile epic) on the same tree; this is the "config/token consolidation" its note referenced. Uncommitted at session end.
+1. **Config sources enforced** — `LEKSOKIPOS.MIN_WORD_LENGTH` was defined-but-unused (`4` hardcoded in `validation.ts` + `computeValidWords.ts`) → now imported. `LEKSIARXEIO.LENGTHS` replaces literal `[4,5,6,7,8]` in `validateSubmission`, `LeksiarxeioBoard`, `CommunityLeksiarxeioSubmitModal`, and the leksikastirio page. `LeksiarxeioLength` `3|4..8`→`4..8` (dead `3`; removing it surfaced + killed phantom `3:[]` rows in `data/leksiarxeio` WORD_LISTS/ANSWER_POOLS).
+2. **`GameId`→`SliceId` rename** (`types/index.ts` + 3 hooks + README/memory) — it's the persistence-slice union (incl. `suggestions`/`reports`), NOT the game registry; misleading "all games" comment corrected to point at `RegistryGameId`.
+3. **Palette sweep (ADR 0008)** — tokenised genuine neutral-chrome literals: GameBoard end-panel, NewPuzzleButton (+tooltip), ShareButton tooltip, leksokipos LeaderboardModal links, WordCard focus-ring, leksikastirio page, StavroleksoPlayer, LetterPickerModal (also killed a literal `active:bg-stone-100`). **Documented exceptions left as-is:** StavroleksoGrid, Shell drawer (`zinc`), FeedbackBanner (theme-prop), FlowerGridPlayground (dev tool), fixed-yellow chip.
+4. **Enforcement + docs** — new `noRawPaletteClasses.test.ts` fails the build on any literal `stone/zinc/gray/slate/neutral` class in shipped `.tsx` (allowlist mirrors the ADR 0008 exceptions). Updated: CLAUDE.md standing rules (tokens + config-import), soul.md post-feature protocol (new step 5 consolidation check), ADR 0008 (exceptions + enforcement note), memory.md (config layer, `SliceId`, exceptions).
+5. **Gates:** 1236 pass / 6 skipped · eslint 0 · build 0.
+
+---
+
 ## Session 61 — 2026-07-03: Epic B — Profile Page + Trophy Case COMPLETE (slices 1–4, `/tdd`) ✅
 Implemented the profile-page handoff slice by slice via `/tdd`; committed to `dev` (7 commits `e6b0daa`→`973ab31`). **Epic B done; only the manual pass + the detection epic remain.**
 1. **Slice 1 (issue 02)** — `/profile` route (Shell-wrapped): display-only `IdentityHeader` (3 identity states, initial-letter avatar) + one-shot `WelcomeBackBanner` (consumes `signin-restore-welcome`) + `ProfileSection` reused verbatim. Callback now `restored:true → router.replace("/profile")` (still clears `auth-redirect`).
@@ -17,19 +27,11 @@ Implemented the profile-page handoff slice by slice via `/tdd`; committed to `de
 
 ---
 
-## Session 60 — 2026-07-03: Slice 3 follow-up + slice 5 — grill moved `identity_audit` to link-time ✅
-`/grill-with-docs` on the identity handoff, then implemented test-first. **Epic A COMPLETE:** migration pushed to prod (user-OK'd) and verified via MCP; handoff **deleted** (durable records: ADR 0012, CONTEXT.md, `docs/admin-restore.md`, issue 01). Manual verification deferred to `.claude/handoffs/manualTestingDevToMain.md` §1 (new cumulative pre-merge checklist — future epics append their own sections).
-1. **Grill findings (code contradicted docs)** — Disconnect is local-only, so `player_profiles` keeps the auth mapping and a sign-out-time audit row would be redundant; the events that actually destroy the email→device hop are **link-time** (`/api/auth/link` upsert overwrites another account's `auth_user_id` on a shared device; restore branch merges + deletes the old profile row). User-approved: audit moved to link-time server-side (service role, no client RLS policy needed), **change-only** rows, sign-out write dropped. ADR 0012 residual-gap bullet corrected; **issue 01 filed** (shared-computer overwrite prevention — deferred, own grill).
-2. **Slice 3 follow-up — hard reload on Disconnect (user-approved)** — stale deviceId was half the leak: mounted boards keep old session state in React memory. New `src/lib/reload.ts` `reloadApp()`; `useAuth.signOut()` + `useProfile.disconnect()` call it after the envelope reset. Tests assert call + ordering (reset before reload).
-3. **Slice 5 — `identity_audit`** — route: step-5 select gains `auth_user_id`; append `{auth_user_id, device_uuid}` only when the established pair differs from the row's prior mapping (first link / overwrite; restore + repeat sign-in write nothing); non-fatal on failure. Migration `20260703092500_add_identity_audit.sql`: `id` identity PK, `auth_user_id uuid`, `device_uuid text`, `at timestamptz default now()`; **RLS on, zero policies** (service-role only); **no FK to auth.users** (rows must survive account deletion); index on `auth_user_id`; append-forever. +5 route tests. Docs: `admin-restore.md` audit-history query; CONTEXT.md 11 tables.
-4. **Gates:** 1208 pass / 6 skipped · eslint 0 · build 0.
-
----
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 60 | 2026-07-03 | **Epic A COMPLETE** (migration pushed+verified, handoff deleted). Grill moved `identity_audit` to link-time (change-only rows, service-role, no FK to auth.users); hard `reloadApp()` on Disconnect (stale in-memory board state). Migration `20260703092500`. 1208 pass. |
 | 59 | 2026-07-03 | Epic A slices 3+4: Disconnect unification (`disconnectIdentity()` full-reset — deviceId+name+flags+all game slices); visibility rule (`onSignIn` required, Google sign-in in ProfileLinked mode, wired into all 4 boards). Identity/achievements grill: device_uuid key, no-backfill, per-tier rows. 1198 pass. |
 | 58 | 2026-07-03 | Profile Page grill → handoff ready-for-agent, zero code. Decisions table, catalog draft (§4), restore→/profile redirect. CONTEXT glossary: Profile Page/Trophy Case/Badge/Lifetime Stats. |
 | 57 | 2026-07-02 | Sign-in Restore impl slices 1–2: JWT is identity source (401 guards, shared `getServiceRoleClient`); restore/merge via pure `planScoreMerge` (best score per puzzle); `adoptDeviceIdentity`. Fixed silent `device_uuid`→`device_id` backfill bug. 1194 pass. |

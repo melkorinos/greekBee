@@ -17,6 +17,7 @@
 import { useCallback, useState } from "react";
 
 import { Modal } from "./Modal";
+import { btnCancel } from "@/styles/recipes";
 import { pickRandom7 } from "@/games/leksokipos/lib/randomPuzzle";
 
 // ── Letter layout ─────────────────────────────────────────────────────────────
@@ -157,14 +158,14 @@ export function LetterPickerModal({
           <button
             onClick={reset}
             data-testid="letter-picker-reset"
-            className="flex-1 py-2 rounded-xl border border-border text-muted text-sm font-medium hover:bg-surface-raised active:bg-stone-100 transition-colors"
+            className={btnCancel}
           >
             Επαναφορά
           </button>
           <button
             onClick={handleRandom}
             data-testid="letter-picker-random"
-            className="flex-1 py-2 rounded-xl border border-border text-muted text-sm font-medium hover:bg-surface-raised active:bg-stone-100 transition-colors"
+            className={btnCancel}
           >
             🎲 Τυχαίο
           </button>

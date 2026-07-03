@@ -12,9 +12,10 @@
 import type { SubmissionValidation } from "@/lib/communityPuzzleLifecycle";
 import { getValidWords } from "@/data/leksiarxeio";
 import { normalizeLetters } from "@/lib/normalize";
+import { LEKSIARXEIO } from "@/config/gameRules";
 import type { LeksiarxeioLength } from "@/games/leksiarxeio/types";
 
-const LENGTHS: LeksiarxeioLength[] = [4, 5, 6, 7, 8];
+const LENGTHS: LeksiarxeioLength[] = [...LEKSIARXEIO.LENGTHS];
 
 interface SubmitPayload {
   submitter_name?: string;

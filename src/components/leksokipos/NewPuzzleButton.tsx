@@ -24,11 +24,11 @@ export function NewPuzzleButton() {
           onClick={() => setModalOpen(true)}
           aria-label="Νέο Παζλ"
           data-testid="btn-new-puzzle"
-          className="flex items-center justify-center rounded-full border border-stone-300 text-stone-600 text-sm font-medium px-3 h-8 hover:bg-stone-100 active:bg-stone-200 transition-colors"
+          className="flex items-center justify-center rounded-full border border-border text-muted text-sm font-medium px-3 h-8 hover:bg-surface-raised active:bg-border transition-colors"
         >
           🎲
         </button>
-        <div className="pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-stone-800 px-2.5 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        <div className="pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-inverted px-2.5 py-1 text-xs text-inverted-foreground opacity-0 group-hover:opacity-100 transition-opacity z-10">
           Νέο Παζλ
         </div>
       </div>

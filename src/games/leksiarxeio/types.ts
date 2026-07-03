@@ -3,8 +3,9 @@
 
 // ─── Puzzle ───────────────────────────────────────────────────────────────────
 
-/** Supported word lengths for Leksiarxeio. Currently only 5 is active. */
-export type LeksiarxeioLength = 3 | 4 | 5 | 6 | 7 | 8;
+/** Supported word lengths for Leksiarxeio. Must match the runtime list in
+ *  `LEKSIARXEIO.LENGTHS` (src/config/gameRules.ts) — the single source of truth. */
+export type LeksiarxeioLength = 4 | 5 | 6 | 7 | 8;
 
 /** A single daily Leksiarxeio puzzle. */
 export interface LeksiarxeioPuzzle {

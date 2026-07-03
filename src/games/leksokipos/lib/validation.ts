@@ -2,6 +2,7 @@
 // Every rule of the Leksokipos game is enforced here.
 
 import type { LeksokiposPuzzle, ValidationResult, ValidationStatus } from "../types";
+import { LEKSOKIPOS } from "@/config/gameRules";
 
 import { isPangram } from "./pangram";
 import { normalizeLetters } from "./normalize";
@@ -63,8 +64,8 @@ function getValidationStatus(
   puzzle: LeksokiposPuzzle,
   foundWords: string[]
 ): ValidationStatus {
-  // Rule 1: minimum length of 4 letters
-  if (word.length < 4) return "too_short";
+  // Rule 1: minimum word length
+  if (word.length < LEKSOKIPOS.MIN_WORD_LENGTH) return "too_short";
 
   const { allLetters, centerLetter, validSet } = getPuzzleIndex(puzzle);
 

@@ -6,6 +6,7 @@ import { NominationCard, type Nomination } from "@/components/leksikastirio/Nomi
 import { NominationModal } from "@/components/shared/NominationModal";
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
 import { markSuggested } from "@/hooks/suggestions";
+import { LEKSIARXEIO } from "@/config/gameRules";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -101,9 +102,9 @@ function LeksiarxeioQueueCard({
         <p className="text-xs text-muted">από {puzzle.submitter_name}</p>
       )}
       <div className="grid grid-cols-5 gap-1">
-        {[4, 5, 6, 7, 8].map((len) => (
+        {LEKSIARXEIO.LENGTHS.map((len) => (
           <div key={len} className="text-center">
-            <p className="text-xs text-stone-400">{len}γρ</p>
+            <p className="text-xs text-muted">{len}γρ</p>
             <p className="text-sm font-semibold text-foreground">{puzzle.data[String(len)]}</p>
           </div>
         ))}
@@ -547,7 +548,7 @@ function LeksikastiríoClient() {
 
 export default function LeksikastiríoPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-stone-400 text-center py-8">Φόρτωση…</p>}>
+    <Suspense fallback={<p className="text-sm text-muted text-center py-8">Φόρτωση…</p>}>
       <LeksikastiríoClient />
     </Suspense>
   );

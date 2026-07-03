@@ -1,6 +1,6 @@
 // Leksokipos-specific TypeScript types.
 // All types here are scoped to this game — root src/types/index.ts only holds
-// platform-wide types (Language, GameId, PersistenceEnvelope).
+// platform-wide types (Language, SliceId, PersistenceEnvelope).
 
 import type { Language } from "@/types";
 
