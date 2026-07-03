@@ -4,7 +4,7 @@
 **Status:** Rough sketch — needs a grill/brainstorm session before any design is settled
 **Goal of next session:** grill the sketch below, decide the display surface, then update THIS doc until it is ready-for-agent (`/to-issues` → implementation)
 
-**Prerequisite:** `.claude/handoffs/googleLoginIdentity.md` — durable identity must be settled first (achievements are worthless if losable). The merge problem decided there dictates what identity an achievement row keys on. Parent epic context: `.claude/handoffs/nemesisFeature.md`.
+**Prerequisite — ✅ SATISFIED 2026-07-03:** durable identity shipped (Sign-in Restore / Disconnect / `identity_audit`; the identity handoff is deleted). The merge semantics that dictate the achievement key live in **ADR 0012**: achievement rows key on the canonical `device_uuid` (never `auth_user_id`) — Sign-in Restore repoints everything to it. Parent epic context: `.claude/handoffs/nemesisFeature.md`.
 
 ---
 

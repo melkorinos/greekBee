@@ -11,7 +11,7 @@
 This epic has one **prerequisite** and several **pillars**. Each pillar graduates to its own handoff when it becomes the active focus; this doc keeps the backlog so nothing is lost.
 
 ```
-googleLoginIdentity.md  (PREREQUISITE — durable identity; all cross-day stats key on it)
+Durable identity  (PREREQUISITE — ✅ DONE 2026-07-03, ADR 0012; handoff deleted)
         │
         ├── achievementsLeksokipos.md   (pillar #1, user's favourite — own handoff)
         ├── Nemesis / taunts            (parked below)
@@ -21,7 +21,7 @@ googleLoginIdentity.md  (PREREQUISITE — durable identity; all cross-day stats 
         └── Streaks                     (parked below, agent-suggested)
 ```
 
-**Decided:** identity comes first (achievements are worthless if losable). Everything below waits for the merge-semantics decision in `googleLoginIdentity.md`.
+**Decided:** identity comes first (achievements are worthless if losable). **✅ Satisfied 2026-07-03:** Sign-in Restore / Disconnect / `identity_audit` all shipped; merge semantics live in **ADR 0012** (auth account = anchor, device adopts canonical `device_uuid`, best score per puzzle wins). The identity handoff is deleted — cite ADR 0012.
 
 ---
 
@@ -78,7 +78,7 @@ Consecutive days with a played puzzle. Derivable from `game_scores` but fragile 
 
 ## Sequencing recommendation
 
-1. `googleLoginIdentity.md` — unblocks everything
+1. ~~Durable identity~~ — ✅ DONE 2026-07-03 (ADR 0012)
 2. `achievementsLeksokipos.md` — favourite; its data model (counters) should be designed with Lifetime stats in mind
 3. Weekly leaderboard — cheap, visible, competitive
 4. Streaks → Records → Nemesis (nemesis last: most moving parts, benefits from all prior data existing)

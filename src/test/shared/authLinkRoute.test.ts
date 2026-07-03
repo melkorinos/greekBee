@@ -26,17 +26,18 @@ interface Anchor   { device_uuid: string; display_name: string }
 interface DbState {
   /** player_profiles row for the signed-in auth_user_id (the identity anchor). */
   anchorByAuth?:    Anchor | null;
-  /** player_profiles display_name by device_uuid. */
-  profileByDevice?: Record<string, { display_name: string }>;
+  /** player_profiles row by device_uuid. */
+  profileByDevice?: Record<string, { display_name: string; auth_user_id?: string | null }>;
   /** game_scores rows by device_id. */
   scoresByDevice?:  Record<string, ScoreRow[]>;
   failUpsert?:      boolean;
   failBackfill?:    boolean;
+  failAuditInsert?: boolean;
 }
 
 interface RecordedWrite {
   table:   string;
-  op:      "upsert" | "update" | "delete";
+  op:      "upsert" | "update" | "delete" | "insert";
   payload?: unknown;
   eqs:     [string, unknown][];
   ins:     [string, unknown[]][];
@@ -75,6 +76,9 @@ function resolveWrite(w: RecordedWrite) {
   if (w.table === "game_scores" && w.op === "update" && eqVal(w.eqs, "device_id") !== undefined && _db.failBackfill) {
     return { data: null, error: { message: "scores error" } };
   }
+  if (w.table === "identity_audit" && w.op === "insert" && _db.failAuditInsert) {
+    return { data: null, error: { message: "audit insert failed" } };
+  }
   return { data: null, error: null };
 }
 
@@ -91,6 +95,11 @@ function makeChain(table: string) {
   chain.in = (c: string, v: unknown[]) => { st.ins.push([c, v]); return chain; };
   chain.upsert = (p: unknown) => {
     st.op = "upsert"; st.payload = p;
+    _writes.push(st as RecordedWrite);
+    return Promise.resolve(resolveWrite(st as RecordedWrite));
+  };
+  chain.insert = (p: unknown) => {
+    st.op = "insert"; st.payload = p;
     _writes.push(st as RecordedWrite);
     return Promise.resolve(resolveWrite(st as RecordedWrite));
   };
@@ -134,6 +143,10 @@ function signedInAs(id: string, fullName?: string) {
 
 function upsertOf(table: string) {
   return _writes.find((w) => w.table === table && w.op === "upsert");
+}
+
+function auditInserts() {
+  return _writes.filter((w) => w.table === "identity_audit" && w.op === "insert");
 }
 
 beforeEach(() => { _db = {}; _writes = []; _authUser = null; _authError = null; });
@@ -290,6 +303,55 @@ describe("POST /api/auth/link — restore mode", () => {
     expect(repoint?.ins).toContainEqual(["id", [1]]);
     const del = _writes.find((w) => w.table === "game_scores" && w.op === "delete");
     expect(del?.ins).toContainEqual(["id", [9]]);
+  });
+});
+
+// ── identity_audit (ADR 0012, corrected 2026-07-03) ─────────────────────────────
+//
+// Change-only, link-time: a row is appended only when the link establishes a
+// mapping the profile row didn't already hold. Disconnect never writes here —
+// it is local-only and player_profiles keeps the pair.
+
+describe("POST /api/auth/link — identity_audit", () => {
+  it("appends the mapping on a first link (no prior auth on the row)", async () => {
+    signedInAs("auth-abc");
+    const res = await POST(makePostReq(BASE));
+    expect(res.status).toBe(200);
+    expect(auditInserts()).toHaveLength(1);
+    expect(auditInserts()[0]!.payload).toEqual({ auth_user_id: "auth-abc", device_uuid: "d1" });
+  });
+
+  it("appends nothing on a repeat sign-in (row already maps to this account)", async () => {
+    signedInAs("auth-abc");
+    _db.anchorByAuth    = { device_uuid: "d1", display_name: "ΠαιχτηςΧ" };
+    _db.profileByDevice = { d1: { display_name: "ΠαιχτηςΧ", auth_user_id: "auth-abc" } };
+    const res = await POST(makePostReq(BASE));
+    expect(res.status).toBe(200);
+    expect(auditInserts()).toHaveLength(0);
+  });
+
+  it("appends the new mapping when the link overwrites another account's row (shared computer)", async () => {
+    signedInAs("auth-B");
+    _db.profileByDevice = { d1: { display_name: "PlayerA", auth_user_id: "auth-A" } };
+    const res = await POST(makePostReq(BASE));
+    expect(res.status).toBe(200);
+    expect(auditInserts()).toHaveLength(1);
+    expect(auditInserts()[0]!.payload).toEqual({ auth_user_id: "auth-B", device_uuid: "d1" });
+  });
+
+  it("appends nothing on restore (the anchor row already holds the pair)", async () => {
+    signedInAs("auth-abc");
+    _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
+    const res = await POST(makePostReq(BASE));
+    expect(res.status).toBe(200);
+    expect(auditInserts()).toHaveLength(0);
+  });
+
+  it("still 200 when the audit insert fails (non-fatal)", async () => {
+    signedInAs("auth-abc");
+    _db.failAuditInsert = true;
+    const res = await POST(makePostReq(BASE));
+    expect(res.status).toBe(200);
   });
 });
 

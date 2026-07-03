@@ -20,6 +20,7 @@ import {
   setDisplayName as storeSetDisplayName,
   setProfileLinked,
 } from "./useGameStore";
+import { reloadApp } from "@/lib/reload";
 
 export interface UseProfileOptions {
   deviceId:            string;
@@ -99,6 +100,9 @@ export function useProfile({
     onDeviceIdChange(newId);
     onDisplayNameChange("");
     setProfileLinkedState(false);
+    // Mounted boards still hold the old identity's deviceId and session state
+    // in React memory — only a reload makes the device truly anonymous.
+    reloadApp();
   }
 
   return { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect };

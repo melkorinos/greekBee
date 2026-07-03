@@ -11,6 +11,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useProfile } from "@/hooks/useProfile";
 import * as store from "@/hooks/useGameStore";
+import * as reload from "@/lib/reload";
+
+vi.mock("@/lib/reload", () => ({
+  reloadApp: vi.fn(),
+}));
 
 vi.mock("@/hooks/useGameStore", () => ({
   disconnectIdentity:  vi.fn(),
@@ -174,5 +179,15 @@ describe("useProfile — disconnect", () => {
     expect(OPTS.onDeviceIdChange).toHaveBeenCalledWith("fresh-device-id");
     expect(OPTS.onDisplayNameChange).toHaveBeenCalledWith("");
     expect(result.current.profileLinked).toBe(false);
+  });
+
+  it("hard-reloads after the reset — in-memory game sessions must not survive Disconnect", () => {
+    const { result } = renderHook(() => useProfile(OPTS));
+    act(() => { result.current.disconnect(); });
+
+    expect(reload.reloadApp).toHaveBeenCalledTimes(1);
+    // The envelope reset must land before the reload, or the old identity survives it.
+    expect(vi.mocked(store.disconnectIdentity).mock.invocationCallOrder[0])
+      .toBeLessThan(vi.mocked(reload.reloadApp).mock.invocationCallOrder[0]!);
   });
 });

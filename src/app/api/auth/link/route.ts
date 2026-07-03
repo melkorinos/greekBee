@@ -74,11 +74,11 @@ export async function POST(req: NextRequest) {
     return await restore(db, auth_user_id, device_uuid, anchor);
   }
 
-  // 5. Fetch existing profile to check if display_name is already set.
+  // 5. Fetch existing profile to check display_name and the currently mapped account.
   const { data: existing } = await db("player_profiles")
-    .select("display_name")
+    .select("display_name, auth_user_id")
     .eq("device_uuid", device_uuid)
-    .maybeSingle() as { data: { display_name: string } | null };
+    .maybeSingle() as { data: { display_name: string; auth_user_id?: string | null } | null };
 
   // Use the verified Google name only when the player has no name yet.
   const nameToUse =
@@ -96,7 +96,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: profileError.message }, { status: 500 });
   }
 
-  // 7. Back-fill auth_user_id onto this device's game_scores. game_scores keys
+  // 7. Audit the mapping change (ADR 0012): append an identity_audit row only
+  //    when this link established a pair the profile row didn't already hold —
+  //    first link (null → account) or overwrite of another account's mapping
+  //    (shared-computer case). Every mapping that ever existed stays
+  //    reconstructable for Admin Restore. Non-fatal: the link must not fail
+  //    because the log write did.
+  if ((existing?.auth_user_id ?? null) !== auth_user_id) {
+    const { error: auditError } = await db("identity_audit")
+      .insert({ auth_user_id, device_uuid });
+    if (auditError) {
+      console.error("identity_audit insert error:", auditError.message);
+    }
+  }
+
+  // 8. Back-fill auth_user_id onto this device's game_scores. game_scores keys
   //    the device on the `device_id` column (not `device_uuid`).
   const { error: scoresError } = await db("game_scores")
     .update({ auth_user_id })

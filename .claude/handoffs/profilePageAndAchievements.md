@@ -5,7 +5,8 @@
 **Goal:** Build the **Profile Page** (`/profile`): the manual verification surface for Google sign-in / Sign-in Restore (identity handoff slices 1–2 are done but invisible), and the durable home for the Trophy Case + Lifetime Stats.
 
 **Prerequisites / siblings:**
-- `.claude/handoffs/googleLoginIdentity.md` — slices 1–2 DONE; slices 3–5 in flight in a parallel session. **No blocking dependency** (see §6).
+- **Identity epic (Google sign-in / Restore / Disconnect / `identity_audit`) — COMPLETE and its handoff deleted.** All slices landed 2026-07-03 (sessions 57–60); `identity_audit` migration pushed to prod. Durable records: ADR 0012 (corrected), CONTEXT.md glossary, `.claude/aiHelper/log.md` sessions 57–60, `docs/admin-restore.md`, issue `01-signin-overwrites-foreign-linked-identity.md`. What this page inherits is in §6 below. ⚠️ Session 60's changes are **uncommitted on `dev`** — commit them before starting this epic.
+- `.claude/handoffs/manualTestingDevToMain.md` — the cumulative pre-merge manual test checklist. **This epic must append its own section there when it lands** (the §7 plan below is the draft for it); the user tests everything once at the end.
 - `.claude/handoffs/achievementsLeksokipos.md` — the detection engine. This page ships the display surface + frozen catalog; the engine wires earned facts later.
 - Parent epic: `.claude/handoffs/engagementEpic.md`.
 - Glossary terms now in CONTEXT.md: **Profile Page**, **Trophy Case**, **Badge**, **Lifetime Stats**, amended **DeviceId** (secret credential), **Achievement**, **Sign-in Restore**.
@@ -94,21 +95,21 @@ Each slice: `/tdd`, then `npm run test -- --run`, `npx eslint .`, `npm run build
 
 ---
 
-## 6. Intersections with the identity session (parallel, no blocking)
+## 6. What the identity session landed (all DONE — facts, not risks)
 
-- **Slice 3 (Disconnect):** the page reuses `ProfileSection`, so it **inherits** whatever disconnect semantics that session lands. No dependency; don't decide it here.
-- **Slice 4 (visibility rule):** modal coexists untouched (decision 2), so slice 4's `onSignIn`-required refactor proceeds independently. The page wires `onSignIn`/`onSignOut` directly from `useAuth` regardless.
-- **Slice 5 (`identity_audit`):** unrelated.
-- Watch for merge conflicts on `ProfileSection.tsx` / `callback/page.tsx` if both sessions are uncommitted on `dev` — coordinate commits.
+- **Disconnect = full local reset + hard reload.** `disconnectIdentity()` wipes the whole envelope (deviceId, name, flags, every game slice); both `useProfile.disconnect()` and `useAuth.signOut()` then call `reloadApp()` (`src/lib/reload.ts`) so no in-memory state survives. The page's disconnect/sign-out buttons get all of this for free by reusing `ProfileSection` + `useAuth` — expect the page to reload on Disconnect, don't fight it (e.g. don't rely on post-disconnect React state).
+- **`onSignIn` is a required prop** on `ProfileSection`/`useLeaderboardProfile` (slice 4) — the page must wire it from `useAuth.signInWithGoogle`; the compiler enforces it.
+- **`identity_audit` (slice 5)** is link-time and server-side, inside `/api/auth/link` — invisible to this page; nothing to wire.
+- **Restore contract for decision 9:** the callback already sets `signin-restore-welcome` (sessionStorage) and adopts via `adoptDeviceIdentity`; this epic adds the `restored:true → router.replace("/profile")` redirect in `src/app/auth/callback/page.tsx`.
 
 ---
 
-## 7. Manual verification plan (the page's raison d'être)
+## 7. Manual verification plan — DRAFT; append the final version to `manualTestingDevToMain.md` when the epic lands (user tests everything once, pre-merge)
 
 1. Anonymous play on browser A → daily score → `/profile` shows "Παίζεις ανώνυμα" + real stats (points, 1 puzzle).
-2. Sign in with Google on A → returns to `/profile` (round-trip verified in code) → header shows "Συνδεδεμένος ως {name}"; DB: `player_profiles.auth_user_id` set, scores stamped.
+2. Sign in with Google on A → returns to `/profile` (round-trip verified in code) → header shows "Συνδεδεμένος ως {name}"; DB: `player_profiles.auth_user_id` set, scores stamped, `identity_audit` +1 row (first link only).
 3. Browser B (fresh), play a *different* daily, sign in with the **same** account → **Sign-in Restore**: redirected to `/profile`, welcome banner fires, adopted name shown, stats strip shows the **merged** totals (best-score-per-puzzle arithmetic visible on the page).
-4. Disconnect on B → fresh anonymous identity (semantics per identity-session slice 3); sign back in → everything returns.
+4. Disconnect on B → the app **hard-reloads** and comes back as a fresh anonymous identity (full envelope wipe — landed slice-3 semantics); sign back in → everything returns.
 
 Any misbehaviour → `/diagnose`.
 

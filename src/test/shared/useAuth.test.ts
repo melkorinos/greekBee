@@ -19,6 +19,7 @@ const {
   mockSetAuthLinked,
   mockSetProfileLinked,
   mockDisconnectIdentity,
+  mockReloadApp,
 } = vi.hoisted(() => ({
   mockUnsubscribe:        vi.fn(),
   mockOnAuthStateChange:  vi.fn(),
@@ -28,6 +29,7 @@ const {
   mockSetAuthLinked:      vi.fn(),
   mockSetProfileLinked:   vi.fn(),
   mockDisconnectIdentity: vi.fn(),
+  mockReloadApp:          vi.fn(),
 }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -39,6 +41,10 @@ vi.mock("@/lib/supabase", () => ({
   }),
   signInWithGoogle: vi.fn(async () => {}),
   signOut:          mockSignOutFn,
+}));
+
+vi.mock("@/lib/reload", () => ({
+  reloadApp: () => mockReloadApp(),
 }));
 
 vi.mock("@/hooks/useGameStore", () => ({
@@ -163,5 +169,15 @@ describe("useAuth — sign-out", () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     await act(async () => { await result.current.signOut(); });
     expect(mockDisconnectIdentity).toHaveBeenCalledTimes(1);
+  });
+
+  it("hard-reloads after the identity reset — mounted boards must not keep the old identity in memory", async () => {
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await act(async () => { await result.current.signOut(); });
+    expect(mockReloadApp).toHaveBeenCalledTimes(1);
+    // The envelope reset must land before the reload, or the old identity survives it.
+    expect(mockDisconnectIdentity.mock.invocationCallOrder[0])
+      .toBeLessThan(mockReloadApp.mock.invocationCallOrder[0]!);
   });
 });

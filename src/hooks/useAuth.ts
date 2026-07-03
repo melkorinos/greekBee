@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getSupabaseClient, signInWithGoogle as supabaseSignIn, signOut as supabaseSignOut } from "@/lib/supabase";
 import { disconnectIdentity, isAuthLinked, setAuthLinked, setProfileLinked } from "@/hooks/useGameStore";
+import { reloadApp } from "@/lib/reload";
 
 export interface UseAuthReturn {
   authLinked:       boolean;
@@ -82,6 +83,9 @@ export function useAuth(): UseAuthReturn {
     setAuthLinkedState(false);
     setAuthUserName(null);
     setAuthLinked(false);
+    // Mounted boards still hold the old identity's deviceId and session state
+    // in React memory — only a reload makes the device truly anonymous.
+    reloadApp();
   }, []);
 
   return { authLinked, authUserName, signInWithGoogle, signOut, isLoading };

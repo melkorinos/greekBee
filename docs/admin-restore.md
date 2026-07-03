@@ -20,9 +20,17 @@ from public.player_profiles
 where auth_user_id = '<id from step 1>';
 ```
 
-**If this returns nothing** (player disconnected Google before losing the device):
+**If this returns nothing** (the row was overwritten by another account's sign-in on a shared device, or deleted by a restore-merge — see ADR 0012; note a plain Google disconnect does *not* clear this mapping, it is local-only):
 
-- check `identity_audit` for the last known mapping (once that table exists — see ADR 0012);
+- check `identity_audit` for the mapping history — every pair `/api/auth/link` ever established is logged, newest last:
+
+```sql
+select device_uuid, at
+from public.identity_audit
+where auth_user_id = '<id from step 1>'
+order by at;
+```
+
 - otherwise fall back to searching by name — not unique, so confirm with the player via `last_active` / score history before proceeding:
 
 ```sql

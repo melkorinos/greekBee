@@ -152,7 +152,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 ---
 
-## Database tables (10)
+## Database tables (11)
 
 > **Authoritative schema** — columns, types, constraints, RLS policies and indexes live in `supabase/migrations/` (the `*_baseline_remote_schema.sql` baseline plus any later migrations), **not here**. Change the schema only via a new migration file applied with `npx supabase db push`; never edit the live DB without one, or the repo drifts. This table documents each table's **purpose** and the shape of its `jsonb` blobs (which the DDL can't express).
 
@@ -168,6 +168,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 | `community_leksindeseis_puzzles` | Player-submitted Leksindeseis puzzles (`data` jsonb 4-group array). Deleted on consumption. |
 | `community_vrestifrasi_puzzles` | Player-submitted Vres Tin Frasi phrases (`data` jsonb `{ "phrase": "…" }`). Deleted on consumption. |
 | `community_stavrolekso_puzzles` | Community-submitted crosswords (`data` jsonb slot-based; PIN-gated creator edits). **Never deleted after approval.** |
+| `identity_audit` | Append-only log of identity-mapping changes, written by `/api/auth/link` when a link establishes a mapping the profile row didn't already hold. Service-role only (RLS on, zero policies); never pruned. Backs Admin Restore (ADR 0012). |
 
 ---
 
