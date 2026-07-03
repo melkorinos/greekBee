@@ -5,13 +5,14 @@
 import {
   adoptDeviceIdentity,
   clearSlice,
-  disconnectProfile,
+  disconnectIdentity,
   getDisplayName,
   getOrCreateDeviceId,
   isAuthLinked,
   isProfileLinked,
   migrateLeksiarxeioIdentity,
   readSlice,
+  setAuthLinked,
   setDeviceId,
   setDisplayName,
   setProfileLinked,
@@ -325,16 +326,19 @@ describe("adoptDeviceIdentity", () => {
   });
 });
 
-describe("disconnectProfile", () => {
+// Disconnect (ADR 0012 §5): profile-disconnect AND Google sign-out are one
+// concept — the device becomes a brand-new anonymous player. Full local reset
+// so an adopted identity can't leak to the next person on a shared computer.
+describe("disconnectIdentity", () => {
   it("generates a new deviceId different from the one before", () => {
     const before = getOrCreateDeviceId();
-    disconnectProfile();
+    disconnectIdentity();
     const after = getOrCreateDeviceId();
     expect(after).not.toBe(before);
   });
 
   it("new deviceId is a valid UUID v4", () => {
-    disconnectProfile();
+    disconnectIdentity();
     const id = getOrCreateDeviceId();
     expect(id).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
@@ -343,13 +347,25 @@ describe("disconnectProfile", () => {
 
   it("clears profileLinked", () => {
     setProfileLinked(true);
-    disconnectProfile();
+    disconnectIdentity();
     expect(isProfileLinked()).toBe(false);
   });
 
-  it("does not disturb game slices", () => {
+  it("clears authLinked", () => {
+    setAuthLinked(true);
+    disconnectIdentity();
+    expect(isAuthLinked()).toBe(false);
+  });
+
+  it("clears the displayName", () => {
+    setDisplayName("Νίκος");
+    disconnectIdentity();
+    expect(getDisplayName()).toBe("");
+  });
+
+  it("wipes game slices — a brand-new player has no prior progress", () => {
     writeSlice("leksokipos", { score: 8 });
-    disconnectProfile();
-    expect(readSlice("leksokipos")).toEqual({ score: 8 });
+    disconnectIdentity();
+    expect(readSlice("leksokipos")).toBeNull();
   });
 });

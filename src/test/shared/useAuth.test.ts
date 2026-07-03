@@ -18,14 +18,16 @@ const {
   mockIsAuthLinked,
   mockSetAuthLinked,
   mockSetProfileLinked,
+  mockDisconnectIdentity,
 } = vi.hoisted(() => ({
-  mockUnsubscribe:       vi.fn(),
-  mockOnAuthStateChange: vi.fn(),
-  mockGetSession:        vi.fn(),
-  mockSignOutFn:         vi.fn(async () => {}),
-  mockIsAuthLinked:      vi.fn(() => false),
-  mockSetAuthLinked:     vi.fn(),
-  mockSetProfileLinked:  vi.fn(),
+  mockUnsubscribe:        vi.fn(),
+  mockOnAuthStateChange:  vi.fn(),
+  mockGetSession:         vi.fn(),
+  mockSignOutFn:          vi.fn(async () => {}),
+  mockIsAuthLinked:       vi.fn(() => false),
+  mockSetAuthLinked:      vi.fn(),
+  mockSetProfileLinked:   vi.fn(),
+  mockDisconnectIdentity: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase", () => ({
@@ -40,9 +42,10 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 vi.mock("@/hooks/useGameStore", () => ({
-  isAuthLinked:     () => mockIsAuthLinked(),
-  setAuthLinked:    (v: boolean) => mockSetAuthLinked(v),
-  setProfileLinked: (v: boolean) => mockSetProfileLinked(v),
+  isAuthLinked:       () => mockIsAuthLinked(),
+  setAuthLinked:      (v: boolean) => mockSetAuthLinked(v),
+  setProfileLinked:   (v: boolean) => mockSetProfileLinked(v),
+  disconnectIdentity: () => mockDisconnectIdentity(),
 }));
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -153,5 +156,12 @@ describe("useAuth — sign-out", () => {
     expect(result.current.authLinked).toBe(false);
     expect(result.current.authUserName).toBeNull();
     expect(mockSetAuthLinked).toHaveBeenCalledWith(false);
+  });
+
+  it("disconnects the identity — Google sign-out is a full Disconnect (ADR 0012 §5)", async () => {
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    await act(async () => { await result.current.signOut(); });
+    expect(mockDisconnectIdentity).toHaveBeenCalledTimes(1);
   });
 });

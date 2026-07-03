@@ -158,12 +158,15 @@ export function migrateLeksiarxeioIdentity(): void {
 }
 
 /**
- * Unlink the cross-device profile from this device.
- * Generates a fresh anonymous deviceId so the player can continue anonymously.
+ * Disconnect this device's identity (ADR 0012 §5) — the unified action behind
+ * both profile-disconnect and Google sign-out. The device becomes a brand-new
+ * anonymous player: a fresh deviceId and a fully cleared envelope (displayName,
+ * profileLinked, authLinked, and every game slice), so an adopted identity or
+ * in-progress session can't leak to the next person on a shared computer.
+ * Nothing server-side is deleted; signing back in restores everything.
  */
-export function disconnectProfile(): void {
-  const envelope = readEnvelope();
-  writeEnvelope({ ...envelope, deviceId: crypto.randomUUID(), profileLinked: false, authLinked: false });
+export function disconnectIdentity(): void {
+  writeEnvelope({ deviceId: crypto.randomUUID() });
 }
 
 // ── Google auth identity ─────────────────────────────────────────────────────

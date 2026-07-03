@@ -13,7 +13,7 @@ import { useProfile } from "@/hooks/useProfile";
 import * as store from "@/hooks/useGameStore";
 
 vi.mock("@/hooks/useGameStore", () => ({
-  disconnectProfile:   vi.fn(),
+  disconnectIdentity:  vi.fn(),
   getOrCreateDeviceId: vi.fn(() => "fresh-device-id"),
   isProfileLinked:     vi.fn(() => false),
   setDeviceId:         vi.fn(),
@@ -170,8 +170,9 @@ describe("useProfile — disconnect", () => {
 
     act(() => { result.current.disconnect(); });
 
-    expect(store.disconnectProfile).toHaveBeenCalled();
+    expect(store.disconnectIdentity).toHaveBeenCalled();
     expect(OPTS.onDeviceIdChange).toHaveBeenCalledWith("fresh-device-id");
+    expect(OPTS.onDisplayNameChange).toHaveBeenCalledWith("");
     expect(result.current.profileLinked).toBe(false);
   });
 });

@@ -17,7 +17,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getSupabaseClient, signInWithGoogle as supabaseSignIn, signOut as supabaseSignOut } from "@/lib/supabase";
-import { isAuthLinked, setAuthLinked, setProfileLinked } from "@/hooks/useGameStore";
+import { disconnectIdentity, isAuthLinked, setAuthLinked, setProfileLinked } from "@/hooks/useGameStore";
 
 export interface UseAuthReturn {
   authLinked:       boolean;
@@ -76,6 +76,9 @@ export function useAuth(): UseAuthReturn {
 
   const signOut = useCallback(async () => {
     await supabaseSignOut();
+    // Google sign-out IS a Disconnect (ADR 0012 §5): fully reset local identity
+    // so an adopted account can't leak to the next person on a shared device.
+    disconnectIdentity();
     setAuthLinkedState(false);
     setAuthUserName(null);
     setAuthLinked(false);

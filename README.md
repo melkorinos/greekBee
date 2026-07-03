@@ -347,7 +347,7 @@ Test files are organised under `src/test/` by game and shared utilities:
 
 | File | Covers |
 |------|--------|
-| `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`; `deviceId`, `displayName`, `profileLinked`, `disconnectProfile` helpers |
+| `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`; `deviceId`, `displayName`, `profileLinked`, `disconnectIdentity` helpers |
 | `useGameIdentity.test.ts` | SSR-safe DeviceId + DisplayName init — initial values from store, setter stability |
 | `persistence.test.ts` | `useRoundPersistence` — hydration, saving, `clear()`, session isolation, `shouldSave` guard |
 | `Shell.test.tsx` | Hamburger open/close, navigation links, keyboard dismiss |

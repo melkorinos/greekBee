@@ -13,7 +13,7 @@
 
 import { useState } from "react";
 import {
-  disconnectProfile as storeDisconnect,
+  disconnectIdentity as storeDisconnect,
   getOrCreateDeviceId,
   isProfileLinked,
   setDeviceId as storeSetDeviceId,
@@ -97,7 +97,7 @@ export function useProfile({
     storeDisconnect();
     const newId = getOrCreateDeviceId();
     onDeviceIdChange(newId);
-    setProfileLinked(false);
+    onDisplayNameChange("");
     setProfileLinkedState(false);
   }
 
