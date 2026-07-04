@@ -89,8 +89,10 @@ when configuring an environment, to avoid confusion. The app needs:
 - Sign-in works but `POST /api/auth/link` returns **500** (`Cannot read
   properties of undefined (reading 'rest')`) → `supabase.from` was called
   detached (`this` lost). It must be `supabase.from.bind(supabase)`. Fixed +
-  guarded by `src/test/api/auth-link.test.ts`. This linking step is what stamps
-  `auth_user_id` onto the player's `game_scores`/`player_profiles`, so a 500 here
-  silently skips the back-fill even though the session still establishes.
+  guarded by `src/test/api/auth-link.test.ts`. This linking step writes the
+  device→account map onto the player's `player_profiles` row (plus an
+  `identity_audit` entry); it no longer touches `game_scores` (the `auth_user_id`
+  column was dropped — ADR 0012). A 500 here leaves the device unlinked even
+  though the session still establishes.
 - Live auth errors are visible in Supabase → Logs → Auth (or via the Supabase MCP
   `get_logs` with `service: "auth"`); route/DB errors under `service: "api"`.

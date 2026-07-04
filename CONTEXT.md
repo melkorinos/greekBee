@@ -160,7 +160,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 | Table | Purpose |
 |---|---|
-| `player_profiles` | Device identity: `device_uuid` → `display_name`. Optional `auth_user_id` links a Google account (ADR 0007). |
+| `player_profiles` | Device identity: `device_uuid` → `display_name`. Optional `auth_user_id` links a Google account and is the durable identity anchor — authoritative device→account map, unique partial index on `auth_user_id` (ADR 0012; column introduced by ADR 0007). |
 | `transfer_codes` | Single-use 6-char codes for cross-device identity transfer, 24h TTL. |
 | `game_scores` | Unified leaderboard for all games, keyed by `game_id` (`leksokipos`/`leksiarxeio`/`leksindeseis`/`vrestifrasi`) + `device_id`. Leksiarxeio writes one row per `word_length`. Device-keyed only — no `auth_user_id` column; Sign-in Restore makes the adopted DeviceId canonical, so device_id serves anonymous and AuthLinked players alike (the device→account map lives in `player_profiles`). |
 | `game_state` | Serialised Session for cross-device sync (Leksokipos daily puzzles only). Blob: `{ foundWords: string[] }`. Pushed after every valid word; pulled on mount when local progress is empty. Both require ProfileLinked. |
