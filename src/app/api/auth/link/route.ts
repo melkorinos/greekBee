@@ -6,11 +6,11 @@
 // account-takeover territory, so the platform's relaxed trust model does not
 // apply here — a missing or invalid token is rejected with 401.
 //
-// On sign-in:
-//   1. Upserts player_profiles: sets auth_user_id on the device's row,
-//      creating it if absent. Pre-populates display_name from the verified
-//      Google identity when the player has none set.
-//   2. Back-fills game_scores: stamps auth_user_id on all rows for this device.
+// On sign-in it upserts player_profiles: sets auth_user_id on the device's row,
+// creating it if absent, and pre-populates display_name from the verified Google
+// identity when the player has none set. game_scores is keyed on device_id alone
+// (it carries no auth_user_id column) so nothing there needs stamping — the
+// device→account map lives solely in player_profiles.
 //
 // Privileged writes go through the service-role client (bypasses RLS, which has
 // no DELETE policy on player_profiles and scopes UPDATE to auth.uid()).
@@ -58,8 +58,12 @@ export async function POST(req: NextRequest) {
 
   const supabase = getServiceRoleClient();
 
+  // Bind `from` to the client: supabase-js's from() reads `this.rest`, so a
+  // detached `supabase.from` reference (ESM strict mode → this === undefined)
+  // throws "Cannot read properties of undefined (reading 'rest')". The `as any`
+  // keeps the dynamic table-name calls below untyped.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase.from as any;
+  const db = supabase.from.bind(supabase) as any;
 
   // 3. Is this auth account already anchored to a profile? The unique partial
   //    index on player_profiles.auth_user_id guarantees at most one.
@@ -71,7 +75,7 @@ export async function POST(req: NextRequest) {
   // 4. Sign-in Restore: the account lives on another device — adopt it and merge
   //    this device's history into it (ADR 0012).
   if (anchor && anchor.device_uuid !== device_uuid) {
-    return await restore(db, auth_user_id, device_uuid, anchor);
+    return await restore(db, device_uuid, anchor);
   }
 
   // 5. Fetch existing profile to check display_name and the currently mapped account.
@@ -110,18 +114,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 8. Back-fill auth_user_id onto this device's game_scores. game_scores keys
-  //    the device on the `device_id` column (not `device_uuid`).
-  const { error: scoresError } = await db("game_scores")
-    .update({ auth_user_id })
-    .eq("device_id", device_uuid)
-    .is("auth_user_id", null);
-
-  if (scoresError) {
-    // Non-fatal — leaderboard still works via device_id; log and continue.
-    console.error("game_scores back-fill error:", scoresError.message);
-  }
-
   return NextResponse.json({ ok: true, device_uuid, display_name: nameToUse, restored: false });
 }
 
@@ -136,7 +128,7 @@ export async function POST(req: NextRequest) {
 interface Anchor { device_uuid: string; display_name: string }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function restore(db: any, auth_user_id: string, oldDevice: string, anchor: Anchor) {
+async function restore(db: any, oldDevice: string, anchor: Anchor) {
   const canonical = anchor.device_uuid;
 
   // Read both identities' scores and decide the winners off-DB.
@@ -150,7 +142,7 @@ async function restore(db: any, auth_user_id: string, oldDevice: string, anchor:
   // Re-point surviving old rows onto the adopted identity.
   if (plan.repoint.length) {
     await db("game_scores")
-      .update({ device_id: canonical, auth_user_id })
+      .update({ device_id: canonical })
       .in("id", plan.repoint);
   }
   // Delete the losers so each surviving (game_id, puzzle_date) is unique.

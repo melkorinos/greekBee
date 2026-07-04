@@ -14,6 +14,7 @@
 ## 1. Google identity epic (added 2026-07-03, session 60)
 
 **Code status:** all shipped and green (`1208 pass / 6 skipped · eslint 0 · build 0`); `identity_audit` migration pushed to prod and verified (RLS on, zero policies). Untested manually.
+**⚠️ Prerequisite for every Google flow below:** the Google provider must be **enabled** in Supabase (Auth → Providers → Google) or every sign-in 400s with `provider is not enabled`. Full provisioning steps + current config: [`docs/google-oauth-setup.md`](../../docs/google-oauth-setup.md). While the consent screen is in **Testing**, only accounts added as Google *test users* can sign in.
 **Best surface:** the Profile Page (`/profile`) once Epic B ships — it displays identity state directly. Until then, every flow is reachable via the 🏆 leaderboard modals (home page + all four game boards).
 
 ### What shipped (what you are testing)
@@ -38,7 +39,7 @@
 2. **Expect:** signed-in state in ProfileSection; sign-in button gone, Αποσύνδεση offered.
    ```sql
    select device_uuid, display_name, auth_user_id from player_profiles where auth_user_id is not null;
-   select count(*) from game_scores where auth_user_id is not null;  -- back-fill stamped
+   -- (game_scores carries no auth_user_id — the device→account map lives only in player_profiles)
    select auth_user_id, device_uuid, at from identity_audit order by at;  -- +1 row (first link)
    ```
 3. Sign out, sign in again with the same account on the same browser.

@@ -31,7 +31,6 @@ interface DbState {
   /** game_scores rows by device_id. */
   scoresByDevice?:  Record<string, ScoreRow[]>;
   failUpsert?:      boolean;
-  failBackfill?:    boolean;
   failAuditInsert?: boolean;
 }
 
@@ -72,9 +71,6 @@ function resolveRead(table: string, eqs: [string, unknown][]) {
 function resolveWrite(w: RecordedWrite) {
   if (w.table === "player_profiles" && w.op === "upsert" && _db.failUpsert) {
     return { data: null, error: { message: "upsert failed" } };
-  }
-  if (w.table === "game_scores" && w.op === "update" && eqVal(w.eqs, "device_id") !== undefined && _db.failBackfill) {
-    return { data: null, error: { message: "scores error" } };
   }
   if (w.table === "identity_audit" && w.op === "insert" && _db.failAuditInsert) {
     return { data: null, error: { message: "audit insert failed" } };
@@ -216,14 +212,10 @@ describe("POST /api/auth/link — link mode", () => {
       .toBe("Ανώνυμος");
   });
 
-  it("back-fills auth_user_id filtering game_scores by device_id (not device_uuid)", async () => {
+  it("never writes to game_scores on link (auth_user_id column dropped — device_id is the sole key)", async () => {
     signedInAs("auth-abc");
     await POST(makePostReq(BASE));
-    const backfill = _writes.find(
-      (w) => w.table === "game_scores" && w.op === "update" && eqVal(w.eqs, "device_id") !== undefined,
-    );
-    expect((backfill?.payload as { auth_user_id: string }).auth_user_id).toBe("auth-abc");
-    expect(eqVal(backfill!.eqs, "device_id")).toBe("d1");
+    expect(_writes.some((w) => w.table === "game_scores")).toBe(false);
   });
 
   it("is idempotent when the anchor is already this same device", async () => {
@@ -271,7 +263,7 @@ describe("POST /api/auth/link — restore mode", () => {
     await POST(makePostReq(BASE));
 
     const repoint = _writes.find((w) => w.table === "game_scores" && w.op === "update");
-    expect(repoint?.payload).toMatchObject({ device_id: "canon", auth_user_id: "auth-abc" });
+    expect(repoint?.payload).toEqual({ device_id: "canon" });
     expect(repoint?.ins).toContainEqual(["id", [1]]);
   });
 
@@ -363,12 +355,5 @@ describe("POST /api/auth/link — error paths", () => {
     _db.failUpsert = true;
     const res = await POST(makePostReq(BASE));
     expect(res.status).toBe(500);
-  });
-
-  it("still 200 when the back-fill fails (non-fatal)", async () => {
-    signedInAs("auth-abc");
-    _db.failBackfill = true;
-    const res = await POST(makePostReq(BASE));
-    expect(res.status).toBe(200);
   });
 });

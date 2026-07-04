@@ -12,7 +12,6 @@ import { GAME_REGISTRY } from "@/config/games";
 import { PLATFORM_NAME } from "@/config/platform";
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
 import { HomeTrophyButton } from "@/components/shared/HomeTrophyButton";
-import { ProfileChip } from "@/components/shared/ProfileChip";
 import { SubmitPuzzleButton } from "@/components/shared/SubmitPuzzleButton";
 import Link from "next/link";
 
@@ -140,10 +139,6 @@ function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submit
 export default function HomePage() {
   return (
     <div className="relative flex flex-col items-center justify-start min-h-screen bg-background px-4 py-12">
-      <div className="absolute top-4 right-4">
-        <ProfileChip />
-      </div>
-
       <h1 className="text-3xl font-bold text-foreground mb-2">{PLATFORM_NAME}</h1>
       <p className="text-muted text-sm mb-10">Επίλεξε παιχνίδι για να ξεκινήσεις</p>
 

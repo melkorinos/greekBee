@@ -5,8 +5,8 @@
 // Reads the Supabase session on mount, subscribes to auth state changes,
 // and keeps the authLinked flag in useGameStore in sync.
 //
-// On first sign-in: calls POST /api/auth/link to merge the active DeviceId
-// with the Google auth_user_id, back-filling game_scores and player_profiles.
+// On first sign-in: calls POST /api/auth/link to attach the active DeviceId
+// to the Google auth_user_id on the player_profiles row (the sole device→account map).
 //
 // Exposes:
 //   authLinked      — true when a Google account is connected

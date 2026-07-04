@@ -22,7 +22,6 @@ export interface Database {
           display_name: string;
           score:        number;
           data:         Record<string, unknown>;
-          auth_user_id: string | null;
         };
         Insert: {
           id?:           number;
@@ -32,7 +31,6 @@ export interface Database {
           display_name?: string;
           score:         number;
           data?:         Record<string, unknown>;
-          auth_user_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["game_scores"]["Insert"]>;
       };
@@ -241,7 +239,16 @@ export function getSupabaseClient(): ReturnType<typeof createClient> {
     );
   }
 
-  _client = createClient(url, key);
+  // PKCE flow: signInWithOAuth returns to /auth/callback with ?code=, which the
+  // callback page exchanges manually via exchangeCodeForSession. The library
+  // default is the implicit flow (tokens in the URL hash) — that mismatches the
+  // callback and leaves it with no ?code= ("Λείπει ο κωδικός επιβεβαίωσης").
+  // detectSessionInUrl is off so the callback is the SOLE code-exchanger;
+  // otherwise the client auto-exchanges on load and the single-use code is spent
+  // before the manual call runs.
+  _client = createClient(url, key, {
+    auth: { flowType: "pkce", detectSessionInUrl: false },
+  });
   return _client;
 }
 
@@ -268,12 +275,17 @@ export async function signInWithGoogle(): Promise<void> {
     sessionStorage.setItem("auth-redirect", window.location.pathname);
   }
   const supabase = getSupabaseClient();
-  await supabase.auth.signInWithOAuth({
+  const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
       redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback`,
     },
   });
+  // Client-side-detectable failures (network, malformed config) come back here
+  // rather than throwing. Surface them so callers can tell the user instead of
+  // leaving a dead button. Note: a disabled provider is NOT caught here — that
+  // 400 is returned by Supabase's /authorize endpoint after the browser redirect.
+  if (error) throw error;
 }
 
 /** Signs the current user out. */

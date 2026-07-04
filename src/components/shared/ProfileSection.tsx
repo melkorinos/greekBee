@@ -74,6 +74,7 @@ export function ProfileSection({
   const [nameInput,    setNameInput]    = useState(displayName);
   const [codeInput,    setCodeInput]    = useState("");
   const [claimError,   setClaimError]   = useState<string | null>(null);
+  const [signInError,  setSignInError]  = useState<string | null>(null);
   const [loading,      setLoading]      = useState(false);
   const [transferCode, setTransferCode] = useState("");
   const [copied,       setCopied]       = useState(false);
@@ -86,6 +87,16 @@ export function ProfileSection({
   }, [profileLinked]);
 
   useEffect(() => { setNameInput(displayName); }, [displayName]);
+
+  async function handleSignIn() {
+    setSignInError(null);
+    try {
+      await onSignIn();
+      // Success normally redirects the browser away, so this component unmounts.
+    } catch {
+      setSignInError("Η σύνδεση με Google απέτυχε. Δοκίμασε ξανά.");
+    }
+  }
 
   async function handleClaim() {
     if (!codeInput.trim()) return;
@@ -166,12 +177,13 @@ export function ProfileSection({
       {!authLinked && mode === "idle" && (
         <div className="space-y-2">
           <button
-            onClick={() => void onSignIn()}
+            onClick={() => void handleSignIn()}
             className="w-full flex items-center justify-center gap-2 text-xs font-medium border border-border rounded-lg px-3 py-2 hover:bg-surface-raised transition-colors text-foreground"
           >
             <GoogleIcon />
             Σύνδεση με Google
           </button>
+          {signInError && <p className="text-xs text-danger">{signInError}</p>}
           {onSaveName && (
             <div className="flex items-center gap-2">
               <hr className="flex-1 border-border" />
@@ -188,7 +200,7 @@ export function ProfileSection({
                 onKeyDown={(e) => e.key === "Enter" && handleNameSave()}
                 placeholder="Ανώνυμος"
                 maxLength={30}
-                className={`flex-1 ${inputCompactClass}`}
+                className={`flex-1 min-w-0 ${inputCompactClass}`}
               />
               <button onClick={handleNameSave} className={btnPrimaryCompact}>
                 Αποθήκευση
@@ -253,13 +265,14 @@ export function ProfileSection({
       {!authLinked && mode === "linked" && (
         <div className="space-y-2">
           <button
-            onClick={() => void onSignIn()}
+            onClick={() => void handleSignIn()}
             title="Σύνδεση με Google για μη-χανόμενη ταυτότητα"
             className="w-full flex items-center justify-center gap-2 text-xs font-medium border border-border rounded-lg px-3 py-2 hover:bg-surface-raised transition-colors text-foreground"
           >
             <GoogleIcon />
             Σύνδεση με Google
           </button>
+          {signInError && <p className="text-xs text-danger">{signInError}</p>}
           <div className="flex items-center justify-between">
             <span className="text-xs text-correct font-semibold">
               ✓ {displayName || "Ανώνυμος"}
