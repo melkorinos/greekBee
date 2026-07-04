@@ -69,6 +69,12 @@ export const btnCancel =
 export const btnModalSubmit =
   "flex-1 py-2 rounded-xl bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity";
 
+/** Standalone (auto-width) primary modal button — e.g. the "Κλείσιμο" button in a
+ * success state. Unlike btnModalSubmit it isn't flex-1; add layout margin at the
+ * call site. */
+export const btnModalPrimary =
+  "px-6 py-2 rounded-xl bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 transition-opacity";
+
 // ── Leaderboard table ─────────────────────────────────────────────────────────
 
 /** Every leaderboard data row */

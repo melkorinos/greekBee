@@ -1,6 +1,6 @@
 "use client";
 
-import { btnCancel, btnModalSubmit, inputClass, inputReadonlyClass, labelClass, labelOptionalClass } from "@/styles/recipes";
+import { btnCancel, btnModalPrimary, btnModalSubmit, inputClass, inputReadonlyClass, labelClass, labelOptionalClass } from "@/styles/recipes";
 
 import { Modal } from "./Modal";
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
@@ -164,10 +164,7 @@ export function NominationModal({
             <p className="text-3xl mb-3">🙏</p>
             <p className="font-semibold text-foreground mb-1">Ευχαριστούμε!</p>
             <p className="text-sm text-muted">{c.success(word.trim())}</p>
-            <button
-              onClick={handleClose}
-              className="mt-5 px-6 py-2 rounded-xl bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 transition-colors"
-            >
+            <button onClick={handleClose} className={`mt-5 ${btnModalPrimary}`}>
               Κλείσιμο
             </button>
           </div>

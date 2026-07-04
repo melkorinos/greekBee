@@ -134,6 +134,8 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Flag** — In-game Leksokipos action that opens NominationModal with `direction: "remove"`.
 
+**Feedback** — A player-submitted message to the maintainer, delivered by email (via FormSubmit). Not persisted server-side, not moderated, and carries no lifecycle. Distinct from a **Nomination** (a word proposal, DB-backed, voted on, admin-triaged) and from the Leksokipos removal-`reports` slice (client-only dedup list). One global entry point in the Shell; auto-attaches current URL, user-agent, and DeviceId as debugging context. MVP is free text only; an optional user-uploaded screenshot is deferred (the free email relays don't attach files). (Not: bug report, report, suggestion, nomination)
+
 **Stavrolekso** — Community crossword game (σταυρόλεξο). Crosswords are community-submitted, admin-approved, and never deleted — players browse the full approved pool. Not auto-generated. (Not: crossword)
 
 **Stavrolekso Puzzle** — A single crossword: a grid with black squares, numbered cells, and a clue per slot (Across + Down). Optional title. Grid is always square; supported sizes: 9×9, 13×13, 15×15. Lifecycle: `pending` → `approved` (permanent) or deleted on rejection. Unlike other Community Puzzles, rows are never consumed. Stored as slot-based JSONB: `{ width, height, blackSquares: [row,col][], slots: [{ number, direction, startRow, startCol, answer, clue }][] }`. Validated against `words-el.json` (soft warning on unknown words).

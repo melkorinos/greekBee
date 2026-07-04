@@ -6,6 +6,7 @@
 
 import { GAME_REGISTRY } from "@/config/games";
 import { PLATFORM_NAME } from "@/config/platform";
+import { FeedbackModal } from "./FeedbackModal";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
@@ -49,7 +50,8 @@ const GAME_IDS      = ["leksokipos", "leksiarxeio", "leksindeseis", "vrestifrasi
 const COMMUNITY_IDS = ["leksikastirio"] as const;
 
 export function Shell({ children }: ShellProps) {
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerOpen,   setDrawerOpen]   = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const { theme, toggle } = useTheme();
 
   useEffect(() => {
@@ -161,9 +163,28 @@ export function Shell({ children }: ShellProps) {
                 );
               })}
             </ul>
+
+            <hr className="my-4 border-zinc-700" />
+
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-4 px-2">
+              Βοήθεια
+            </p>
+            <ul className="space-y-1">
+              <li>
+                <button
+                  onClick={() => { setDrawerOpen(false); setFeedbackOpen(true); }}
+                  className={`${navLinkClass} w-full text-left`}
+                >
+                  💬 Σχόλια / Πρόβλημα
+                </button>
+              </li>
+            </ul>
           </nav>
         </>
       )}
+
+      {/* ── Feedback modal ────────────────────────────────────────────────── */}
+      <FeedbackModal isOpen={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
 
       {/* ── Page content ──────────────────────────────────────────────────── */}
       <main className="flex flex-1 flex-col">

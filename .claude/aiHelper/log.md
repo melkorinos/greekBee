@@ -5,6 +5,19 @@
 
 ---
 
+## Session 63 — 2026-07-04: Feedback feature — text → email (grill-with-docs → /tdd) ✅
+Player-facing Feedback surface: free-text message emailed to the maintainer. Grilled the design first, then built via `/tdd`. Uncommitted at session end.
+1. **Design (grill-with-docs)** — chose a **form-to-email relay** over an in-house pipeline (no npm dep, no DB table, no Storage bucket, no domain verify) — matches "least effort, accept-the-risk" stance. New glossary term **Feedback** in CONTEXT.md (distinct from Nomination + the leksokipos `reports` slice).
+2. **Relay pivot** — started on Web3Forms; its form-creation wizard 403s (API access is Pro) and email **attachments are Pro** on both Web3Forms and FormSubmit's AJAX endpoint doesn't take files → **screenshot deferred, text-only MVP** on **FormSubmit AJAX** (`formsubmit.co/ajax/<id>`, no account — first submit triggers a confirm email).
+3. **`FeedbackModal`** (`components/shared/`) — reuses shared `Modal`; message required (≤1000); auto-attaches `page_url`/`user_agent`/`device_id`; POSTs FormData; success "Ευχαριστούμε!" + 2.5s auto-close; inline error retry; 60s localStorage throttle. Recipient via `NEXT_PUBLIC_FORMSUBMIT_ID` (email or hashed alias). 8 tests mirror `nominationModal.test.tsx`.
+4. **Shell** — new "Βοήθεια" drawer section → "💬 Σχόλια / Πρόβλημα" opens the modal.
+5. **Consolidation (user note)** — extracted the duplicated success-close button into `btnModalPrimary` recipe; applied to both FeedbackModal **and** NominationModal. Documented the env var in `.env.local.example`.
+6. **Manual step remaining (user):** set `NEXT_PUBLIC_FORMSUBMIT_ID` (email/alias) in `.env.local` + Vercel env; confirm FormSubmit's activation email on first send.
+7. **Follow-up parked:** screenshot attachment (needs a paid relay or Supabase Storage + in-house email).
+8. **Gates:** 1251 pass / 6 skipped · eslint 0 · build 0.
+
+---
+
 ## Session 62 — 2026-07-03: Consolidation-file consistency — `GameId`→`SliceId`, palette-token sweep + guard ✅
 Review of the "single source of truth" files (`src/config/*`, `src/styles/recipes.ts`, game `types.ts`) for drift, then remediation. Concurrent with session 61 (profile epic) on the same tree; this is the "config/token consolidation" its note referenced. Uncommitted at session end.
 1. **Config sources enforced** — `LEKSOKIPOS.MIN_WORD_LENGTH` was defined-but-unused (`4` hardcoded in `validation.ts` + `computeValidWords.ts`) → now imported. `LEKSIARXEIO.LENGTHS` replaces literal `[4,5,6,7,8]` in `validateSubmission`, `LeksiarxeioBoard`, `CommunityLeksiarxeioSubmitModal`, and the leksikastirio page. `LeksiarxeioLength` `3|4..8`→`4..8` (dead `3`; removing it surfaced + killed phantom `3:[]` rows in `data/leksiarxeio` WORD_LISTS/ANSWER_POOLS).

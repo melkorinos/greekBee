@@ -16,6 +16,7 @@ import {
   // Buttons
   btnCancel,
   btnHeaderIcon,
+  btnModalPrimary,
   btnModalSubmit,
   btnPrimary,
   btnPrimaryCompact,
@@ -53,6 +54,7 @@ const ALL_TOKENS: [string, string][] = [
   [btnPrimaryCompact, "btnPrimaryCompact"],
   [btnCancel, "btnCancel"],
   [btnModalSubmit, "btnModalSubmit"],
+  [btnModalPrimary, "btnModalPrimary"],
   [btnHeaderIcon, "btnHeaderIcon"],
   [lbRowBase, "lbRowBase"],
   [lbRowPlayer, "lbRowPlayer"],
