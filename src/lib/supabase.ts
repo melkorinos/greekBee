@@ -253,6 +253,26 @@ export function getSupabaseClient(): ReturnType<typeof createClient> {
 }
 
 /**
+ * Returns a Supabase client that carries the caller's access token, so RLS sees
+ * them as the authenticated user (auth.uid() resolves to their id). Used by server
+ * routes that must write a row guarded by an `auth.uid()` policy on behalf of the
+ * signed-in caller — the least-privilege alternative to the service-role client:
+ * RLS stays authoritative, so the caller can only touch rows the policy allows.
+ * Not a singleton — a fresh client per token.
+ */
+export function getTokenScopedClient(accessToken: string): ReturnType<typeof createClient> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+  }
+  return createClient(url, key, {
+    auth:   { persistSession: false, detectSessionInUrl: false },
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  });
+}
+
+/**
  * Returns a service-role Supabase client that bypasses Row Level Security.
  * SERVER-ONLY — never import into browser code. Reads SUPABASE_SERVICE_ROLE_KEY,
  * which is not a NEXT_PUBLIC_ var and so is never shipped to the client.

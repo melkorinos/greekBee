@@ -17,6 +17,15 @@ vi.mock("@/lib/reload", () => ({
   reloadApp: vi.fn(),
 }));
 
+// createProfile reads the current session to attach a Bearer token for RLS.
+// Default: no session (anonymous) — a test overrides it to assert the auth path.
+const supa = vi.hoisted(() => ({ session: null as { access_token: string } | null }));
+vi.mock("@/lib/supabase", () => ({
+  getSupabaseClient: () => ({
+    auth: { getSession: async () => ({ data: { session: supa.session } }) },
+  }),
+}));
+
 vi.mock("@/hooks/useGameStore", () => ({
   disconnectIdentity:  vi.fn(),
   getOrCreateDeviceId: vi.fn(() => "fresh-device-id"),
@@ -42,6 +51,7 @@ const OPTS = {
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  supa.session = null;
   // clearAllMocks keeps stubbed return values — re-pin the defaults so a
   // mockReturnValue from one test never leaks into the next.
   vi.mocked(store.isProfileLinked).mockReturnValue(false);
@@ -78,6 +88,27 @@ describe("useProfile — createProfile", () => {
     expect(OPTS.onDisplayNameChange).toHaveBeenCalledWith("Άννα");
     expect(store.setProfileLinked).toHaveBeenCalledWith(true);
     expect(result.current.profileLinked).toBe(true);
+  });
+
+  it("omits the Authorization header when there is no session (anonymous)", async () => {
+    const spy = mockFetch({ ok: true });
+    const { result } = renderHook(() => useProfile(OPTS));
+
+    await act(async () => { await result.current.createProfile("Άννα"); });
+
+    const [, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>).Authorization).toBeUndefined();
+  });
+
+  it("attaches the session Bearer token so RLS accepts an auth-linked profile write", async () => {
+    supa.session = { access_token: "tok-xyz" };
+    const spy = mockFetch({ ok: true });
+    const { result } = renderHook(() => useProfile(OPTS));
+
+    await act(async () => { await result.current.createProfile("Άννα"); });
+
+    const [, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-xyz");
   });
 
   it("falls back to Ανώνυμος for a blank name", async () => {

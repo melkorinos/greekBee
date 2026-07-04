@@ -14,6 +14,7 @@ type ChainResult = { data?: unknown; error?: { message: string } | null };
 
 let _callQueue: ChainResult[] = [];
 let _lastUpsertPayload: unknown = null;
+let _lastUpdatePayload: unknown = null;
 
 function makeChain(result: ChainResult) {
   const chain: Record<string, unknown> = {};
@@ -23,18 +24,26 @@ function makeChain(result: ChainResult) {
   chain.order  = ret;
   chain.insert = () => Promise.resolve(result);
   chain.upsert = (data: unknown) => { _lastUpsertPayload = data; return Promise.resolve(result); };
+  chain.update = (data: unknown) => { _lastUpdatePayload = data; return chain; };
   chain.single = () => Promise.resolve(result);
   chain.then   = (resolve: (v: ChainResult) => void) => resolve(result);
   return chain;
 }
 
-vi.mock("@/lib/supabase", () => ({
-  getSupabaseClient: () => ({
+const hoisted = vi.hoisted(() => ({ tokens: [] as string[] }));
+
+function makeClient() {
+  return {
     from: () => {
       const result = _callQueue.shift() ?? { data: null, error: null };
       return makeChain(result);
     },
-  }),
+  };
+}
+
+vi.mock("@/lib/supabase", () => ({
+  getSupabaseClient:    () => makeClient(),
+  getTokenScopedClient: (token: string) => { hoisted.tokens.push(token); return makeClient(); },
 }));
 
 function enqueue(...results: ChainResult[]) {
@@ -57,8 +66,8 @@ function makePostReq(body: unknown): NextRequest {
   });
 }
 
-beforeEach(() => { _callQueue = []; _lastUpsertPayload = null; });
-afterEach(()  => { _callQueue = []; _lastUpsertPayload = null; });
+beforeEach(() => { _callQueue = []; _lastUpsertPayload = null; _lastUpdatePayload = null; hoisted.tokens = []; });
+afterEach(()  => { _callQueue = []; _lastUpsertPayload = null; _lastUpdatePayload = null; hoisted.tokens = []; });
 
 // ── GET ?device_uuid= — startup existence check ───────────────────────────────
 
@@ -134,5 +143,45 @@ describe("POST /api/profile — idempotent upsert", () => {
     const payload = _lastUpsertPayload as Record<string, unknown>;
     expect(typeof payload.last_active).toBe("string");
     expect(new Date(payload.last_active as string).getTime()).not.toBeNaN();
+  });
+
+  // Names are denormalized onto game_scores rows; a rename must fan out there
+  // or the leaderboard keeps the stale name (the reason this route exists).
+  it("propagates the new display_name to the player's game_scores rows", async () => {
+    enqueue({ data: null, error: null }); // player_profiles upsert
+    enqueue({ data: null, error: null }); // game_scores update
+    const res = await POST(makePostReq({ display_name: "Μαρία", device_uuid: "uuid-x" }));
+    expect(res.status).toBe(200);
+    expect(_lastUpdatePayload).toEqual({ display_name: "Μαρία" });
+  });
+
+  it("returns 500 when the game_scores propagation fails", async () => {
+    enqueue({ data: null, error: null });                        // profile upsert ok
+    enqueue({ data: null, error: { message: "scores boom" } });  // scores update fails
+    const res = await POST(makePostReq({ display_name: "Μαρία", device_uuid: "uuid-x" }));
+    expect(res.status).toBe(500);
+  });
+
+  // A signed-in player's row is auth.uid()-scoped by RLS (profile_update), so the
+  // write must go through the token-scoped client — the anon client would hit
+  // "new row violates row-level security policy" on an auth-linked row.
+  it("routes the write through the token-scoped client when a Bearer token is present", async () => {
+    enqueue({ data: null, error: null }); // profile upsert
+    enqueue({ data: null, error: null }); // scores update
+    const req = new NextRequest("http://localhost/api/profile", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer tok-123" },
+      body:    JSON.stringify({ display_name: "Μαρία", device_uuid: "uuid-auth" }),
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    expect(hoisted.tokens).toContain("tok-123");
+  });
+
+  it("uses the anon client (no token captured) when no Authorization header is present", async () => {
+    enqueue({ data: null, error: null });
+    enqueue({ data: null, error: null });
+    await POST(makePostReq({ display_name: "Μαρία", device_uuid: "uuid-anon" }));
+    expect(hoisted.tokens).toHaveLength(0);
   });
 });

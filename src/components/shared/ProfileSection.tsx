@@ -153,14 +153,20 @@ export function ProfileSection({
   return (
     <div className="px-5 py-3">
       <p className={`${labelClass} mb-1.5`}>
-        {!authLinked && mode !== "idle" ? "Συγχρονισμός συσκευών" : "Εμφάνισου στον πίνακα"}
+        {authLinked
+          ? "Λογαριασμός Google"
+          : mode !== "idle" ? "Συγχρονισμός συσκευών" : "Εμφάνισου στον πίνακα"}
       </p>
 
       {/* ── AuthLinked — Google account connected ────────────────────────────── */}
+      {/* Shows the Google account name (authUserName), which is distinct from the
+          editable leaderboard nickname (displayName) — the "Λογαριασμός Google"
+          label above disambiguates the two. */}
       {authLinked && (
         <div className="flex items-center justify-between">
-          <span className="text-xs text-correct font-semibold">
-            ✓ {authUserName ?? displayName ?? "Συνδεδεμένος"}
+          <span className="text-xs text-muted">
+            Συνδεδεμένος ως{" "}
+            <span className="text-correct font-semibold">{authUserName ?? displayName ?? "—"}</span>
           </span>
           {onSignOut && (
             <button

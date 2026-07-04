@@ -21,6 +21,7 @@ import {
   setProfileLinked,
 } from "./useGameStore";
 import { reloadApp } from "@/lib/reload";
+import { getSupabaseClient } from "@/lib/supabase";
 
 export interface UseProfileOptions {
   deviceId:            string;
@@ -46,9 +47,15 @@ export function useProfile({
   );
 
   async function createProfile(name: string): Promise<void> {
+    // A signed-in player's profile row is auth.uid()-scoped by RLS, so the write
+    // must carry their access token; anonymous players send none (anon client).
+    const { data: { session } } = await getSupabaseClient().auth.getSession();
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+
     const res = await fetch("/api/profile", {
       method:  "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body:    JSON.stringify({ display_name: name, device_uuid: deviceId }),
     });
     if (!res.ok) throw new Error("profile create failed");
