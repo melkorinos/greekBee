@@ -30,6 +30,8 @@ At the start of every session, read these files in order:
 
 All commands live in `.claude/skills/`. Project-specific first, then mattpocock/skills:
 
+> **Skill install note:** mattpocock skills are managed by `npx skills@latest add mattpocock/skills` (tracked in `skills-lock.json`). Some are thin **wrappers** that delegate to base skills — `/grill-me` → `grilling`, `/grill-with-docs` → `grilling` + `domain-modeling`. Those base skills must be installed too, or the wrapper loads with no content behind it. The updater only fetches what's in `skills-lock.json`, so a missing base skill needs an explicit `npx skills@latest add mattpocock/skills/skills/<path>/<name>` (which also pins it). If a `/command` loads but does nothing, check for a missing base skill first.
+
 | Command | Purpose |
 |---------|---------|
 | `/aihelper` | Full context reload — reads all `.claude/aiHelper/` files then waits for your task |
