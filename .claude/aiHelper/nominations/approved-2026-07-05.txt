@@ -1,0 +1,14 @@
+# Approved derived words — 2026-07-05 batch
+# (✅ high-confidence only; all τρολ derivatives excluded; τρολ itself is in the main DB batch)
+
+# σφυραω/σφυρω — whistle
+σφυραει σφυραμε σφυρατε σφυρανε
+
+# στεκεις/εστεκες — stand
+στεκουμε στεκετε εστεκα εστεκαν
+
+# ολοτρελο — totally crazy (full declension)
+ολοτρελη ολοτρελα ολοτρελος ολοτρελοι ολοτρελες ολοτρελου ολοτρελης ολοτρελων ολοτρελους
+
+# nouns
+ροτων μαινες κακαλα ζεα ντακος ντακοι

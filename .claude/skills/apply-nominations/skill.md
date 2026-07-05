@@ -7,10 +7,12 @@ Apply admin-reviewed Leksikastirio nominations to the local dataset, verify the 
 1. Run `npm run apply-nominations:dry` — show what would change (word lists **and** affected pre-built puzzles), nothing written
 2. Ask the developer to confirm before writing anything
 3. Run `npm run apply-nominations` — patch `words-el.json`, any affected `leksiarxeio/words-{N}.json`, and re-sync `puzzles-el.json`
-4. Run a representative test batch (the full suite OOMs in memory-tight environments — see Notes) — must pass
-5. Run `npx eslint .` — zero errors
-6. Print a `git diff --stat` of the changed data files
-7. Stop — developer commits and deploys manually
+4. **Propose derived words** — generate morphological relatives of the accepted adds (verb paradigms, adjective declensions, noun plurals/cases), normalise + dedupe against `words-el.json`, and write a **review list** under `.claude/aiHelper/nominations/`. Present it and wait for the developer to prune.
+5. **Inject approved proposals** — run `npm run apply-proposed -- --file <approved-list>` to add the survivors to the dataset (same word-list + puzzle re-sync path as step 3, **no DB writes**).
+6. Run a representative test batch (the full suite OOMs in memory-tight environments — see Notes) — must pass
+7. Run `npx eslint .` — zero errors
+8. Print a `git diff --stat` of the changed data files
+9. Stop — developer commits and deploys manually
 
 ## What gets written
 
@@ -26,6 +28,17 @@ Nominations act by (direction × status):
 | **remove** | word deleted from dictionary + leksiarxeio + puzzle re-sync | no change (hidden from UI, row retained) |
 
 Rejected rows are **reported, never deleted** — they are the source of the "already rejected" warning shown to a player who re-proposes the same word.
+
+## Proposed (derived) words
+
+After the DB nominations are applied, the accepted **adds** are used as seeds to propose morphological relatives the developer probably also wants — the classic case is an accepted verb whose whole conjugation paradigm is still missing, but it also covers adjective declensions and noun plurals/cases.
+
+- **Generation is agent-driven** (Greek morphology) — there is no inflection library and none may be installed. The agent lists candidates per seed with a confidence flag (✅ high · ⚠️ check · ❓ likely wrong).
+- **Filtering is script-driven** — candidates are normalised (lowercase, strip accents, `ς → σ`) and deduped against `words-el.json`; only genuinely-new words reach the review list.
+- **The developer prunes** the list. Only survivors are injected — nothing here is auto-added, and nothing touches the DB (these are not nominations).
+- Indeclinable foreign borrowings (`κοαλα`, `τοφου`, `ντονερ` …) yield no candidates — that's expected.
+
+`npm run apply-proposed -- --file <path>` (or `apply-proposed:dry`) reads a `#`-commented, whitespace-separated word list and writes the same three data files as the main apply, re-syncing puzzles for the added words. Add-only — no removes.
 
 ## Word routing (for reference)
 
@@ -55,22 +68,38 @@ STEP 2 — apply
 Run: npm run apply-nominations
 Show the output.
 
-STEP 3 — test
+STEP 3 — propose derived words
+From the accepted ADD words in step 1/2, generate morphological relatives
+(verb paradigms, adjective declensions, noun plurals/cases). Normalise + dedupe
+against words-el.json (a throwaway node script with a Set is enough), then write
+a review list to .claude/aiHelper/nominations/proposed-words-<date>.md with a
+confidence flag per candidate (✅ / ⚠️ / ❓).
+Present it and ask the developer which to keep. Do NOT inject unreviewed.
+
+STEP 4 — inject approved proposals
+Put the approved words in a #-commented list, e.g.
+  .claude/aiHelper/nominations/approved-<date>.txt
+Preview:  npm run apply-proposed:dry -- --file <list>
+Apply:    npm run apply-proposed     -- --file <list>
+(Add-only, no DB writes; re-syncs puzzles for the added words.)
+If the developer approved nothing, skip this step.
+
+STEP 5 — test
 Run a representative batch, e.g.:
   npx vitest run src/test/scripts src/test/leksokipos src/test/leksikastirio src/test/shared/nominationModal.test.tsx
 If any test fails → show failures, stop. Do NOT commit.
 
-STEP 4 — lint
+STEP 6 — lint
 Run: npx eslint .
 If any error → show errors, stop. Do NOT commit.
 
-STEP 5 — diff summary
+STEP 7 — diff summary
 Run: git diff --stat src/data/
 Show the summary so the developer can see exactly what changed.
 
-STEP 6 — hand off
+STEP 8 — hand off
 Print:
-"✓ Nominations applied (words + puzzles re-synced). Files changed above. Next step: review the diff, then git add + commit + deploy."
+"✓ Nominations applied + approved derived words injected (words + puzzles re-synced). Files changed above. Next step: review the diff, then git add + commit + deploy."
 ```
 
 ## Notes

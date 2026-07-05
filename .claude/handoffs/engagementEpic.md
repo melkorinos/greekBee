@@ -37,6 +37,8 @@ Durable identity  (PREREQUISITE — ✅ DONE 2026-07-03, ADR 0012; handoff delet
 | Records / Hall of Fame | Highest score ever, most words in a day, etc. | Partially — per-day rows exist, no all-time views | parked |
 | Lifetime stats | Pangrams found, Τζιμάνι count, totals per player | **v1 SHIPPED** — `/profile` strip (`GET /api/profile/stats`): total points + puzzles played (cross-game) + Τζιμάνι (leksokipos `is_perfect`), all derived on read from `game_scores`. **Still parked:** pangram counters (never posted) + streaks | Profile Page (done); remaining counters overlap `achievementsLeksokipos.md` |
 | Streaks | Consecutive days played — strongest retention mechanic in daily games | Derivable from `game_scores` dates | parked |
+| Live head-to-head sessions | Two players agree to start together, race to find most words in a fixed window (e.g. 10 min) | No — needs realtime session/matchmaking state | parked (details below) |
+| Friends / private leagues leaderboard | Scope the leaderboard to people you know, not the whole global top 20 | No — needs a friendship/league membership model | parked (details below) |
 
 ---
 
@@ -75,6 +77,14 @@ Per-player counters: pangrams, words, points, Τζιμάνι count. Heavy overla
 ### Streaks
 
 Consecutive days with a played puzzle. Derivable from `game_scores` but fragile (missed day = reset — decide on streak-freeze mercy). Pairs naturally with achievements tiers (7/30/100-day badges) and with nemesis ("your rival kept their streak").
+
+### Live head-to-head sessions ("My Idiot Brother" idea)
+
+Two players arrange to join the same timed session and compete live — most words found in a fixed window (e.g. 10 min) wins. Biggest departure from every other pillar here: everything else is async/derived from `game_scores`; this needs actual realtime state (session join, synchronized countdown, live opponent score) — the leaderboard/nemesis investigation explicitly found no realtime infra and no WebSockets today. Open questions: matchmaking (invite link/code vs friends list — depends on identity/friends model not yet built), what happens on disconnect, same puzzle for both players or independent, scoring parity with existing single-player scoring. Likely the most complex pillar; probably sequenced after the async ones prove out the identity/data model.
+
+### Friends / private leagues leaderboard
+
+At scale, global top-20 stops being meaningful to most players — want to see rank among people they actually know. Two shapes floated: (1) friendships (mutual add, like the nemesis recipient model — needs durable identity, already satisfied) or (2) leagues (named groups players create/join/subscribe to, more like a league table than a friend graph). Open questions: friends vs leagues vs both; invite mechanism (link/code, same question as head-to-head sessions above); does this reuse the existing `game_scores` leaderboard query just with a WHERE-clause scope, or need its own table; league retention/membership churn. Cheap if it's "friends" filtering on top of the existing leaderboard poll; more work if leagues need their own membership/admin model.
 
 ---
 

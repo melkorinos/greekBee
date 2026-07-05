@@ -1,5 +1,5 @@
 // Tests for LeksokiposLayout — variant toggle behaviour.
-// The design panel (?design mode in FlowerGridPlayground) is NOT tested here
+// The design panel (?godmode in FlowerGridPlayground) is NOT tested here
 // because it is a developer tool, not a production feature.
 
 import { describe, expect, it, vi } from "vitest";

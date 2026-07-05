@@ -2,7 +2,7 @@
 // Verifies that clicking hexes, typing, submitting and error messages all work.
 
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { GameBoard } from "@/components/leksokipos/GameBoard";
@@ -504,7 +504,7 @@ describe("God Mode", () => {
       render(<GameBoard puzzle={dailyPuzzle} />);
       await user.click(screen.getByTestId("btn-god-mode"));
       await user.click(screen.getByText(/βρες Όλες-1/i));
-      await user.click(screen.getByText(/reset/i));
+      await user.click(within(screen.getByTestId("god-mode-panel")).getByText(/reset/i));
       expect(screen.getByTestId("found-words-count")).toHaveTextContent("0");
       expect(screen.getByTestId("score-label")).toHaveTextContent("0 pts");
     });
