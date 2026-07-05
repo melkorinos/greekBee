@@ -1,6 +1,6 @@
 # Disaster Recovery — surviving total DB loss
 
-How we get everyone's scores and achievements back if the **whole database** dies
+How to get everyone's scores and achievements back if the **whole database** dies
 (project deleted, corrupted, wiped by a bad migration). This is *not* the same as
 [`admin-restore.md`](admin-restore.md), which recovers **one player's identity**
 while the DB is alive and queryable. Two different "restores":
@@ -8,34 +8,29 @@ while the DB is alive and queryable. Two different "restores":
 | Scenario | Doc | What it needs |
 |---|---|---|
 | One player lost their device / identity | [admin-restore.md](admin-restore.md) | DB is **up**; run SQL, issue a TransferCode |
-| The whole DB is gone / corrupted | **this doc** | A **backup to restore from** — and on free tier, we make our own |
+| The whole DB is gone / corrupted | **this doc** | A **backup to restore from** (see below) |
 
 `admin-restore.md` assumes `auth.users` and `player_profiles` still exist. If the
-project itself is lost, there is nothing to query — this doc is the only net.
+project itself is lost, there is nothing to query — this doc is the only path.
 
 ---
 
-## The uncomfortable baseline: on free tier we have no net
+## Backup baseline
 
-Supabase auto-backups (daily snapshots + Point-in-Time Recovery) are a **paid**
-feature — Pro/Team/Enterprise only. Our project (`rnfsuvhgufhbekodkmlp`) is on the
-**Free plan**, so:
+The project (`rnfsuvhgufhbekodkmlp`) is on the **Free plan**, which shapes the
+whole procedure:
 
-- **No automatic backups. No PITR. Nothing.** Supabase's own guidance for free
-  projects is: *"regularly export their data using the Supabase CLI `db dump`
-  command and maintain off-site backups."*
+- **No automatic backups, no PITR** — those are Pro/Team/Enterprise only.
+  Supabase's guidance for free projects is to self-export via the CLI `db dump`
+  and keep off-site copies. So DR here rests entirely on the manual exports below.
 - **Deleting a project is irreversible** and takes any stored backups with it.
-- This is amplified by the **single shared dev/prod project** (see below): a bad
-  dev migration hits prod instantly, with no isolation buffer and no snapshot to
-  roll back to.
-
-So today, "restore everyone's achievements and scores after a complete failure"
-= *whatever manual dump we last took*. If we've never taken one, the answer is
-**we can't**. Fixing that is the point of this doc.
+- **One shared dev/prod project** — the same DB backs both dev and prod, so there
+  is no isolation buffer: a bad migration reaches real data immediately, with no
+  snapshot to roll back to. This is why a current off-site dump matters.
 
 ---
 
-## What actually needs to survive
+## What must survive
 
 Almost everything durable derives from a small set of tables. Back these up and
 scores + achievements + stats all come back:
@@ -46,86 +41,47 @@ scores + achievements + stats all come back:
 | `player_profiles` | Identity: `device_uuid` → `display_name` → `auth_user_id`. The device→account map. Lose it → players can't be re-linked to their history. |
 | `identity_audit` | Append-only mapping history. Backs [admin-restore](admin-restore.md). Reconstructs every device↔account pair that ever existed. |
 | `community_stavrolekso_puzzles` | Never deleted after approval — the only community content that's permanent, not consumed. |
-| `transfer_codes` | 24h TTL — ephemeral, low value to back up, but cheap to include in a full dump. |
+| `transfer_codes` | 24h TTL — ephemeral, but cheap to include in a full dump. |
 
 Achievements are (today) **derived on read from `game_scores`**, not a separate
 stored table — so protecting `game_scores` protects achievements for free. If an
 `achievements` facts table is added later (ADR 0012 anticipates
-`(device_uuid, achievement_id)` rows), **add it to this list.**
+`(device_uuid, achievement_id)` rows), add it to this list.
 
 ---
 
-## The cheap fix (do this): scheduled off-site `db dump`
+## Taking a backup
 
-Zero-cost DR that works on the free tier. The `supabase` CLI is already an
-approved devDependency.
+Full logical backup — schema + data — via the `supabase` CLI (already an approved
+devDependency; needs no Docker):
 
 ```bash
-# Full logical backup — schema + data — to a timestamped file off the DB host.
 supabase db dump --db-url "$SUPABASE_DB_URL" -f "backup-$(date +%Y%m%d).sql"
 ```
 
-- Store the dump **off-site** (not in this repo — it contains player data; and
-  not only in Supabase, which is the thing that might die). A private object
-  store or an encrypted file the maintainer holds is enough at this scale.
-- **Cadence:** `game_scores` is append-forever, so a lost day of dumps only loses
-  that day's *new* rows, never rewrites history. A daily or weekly cron is
-  proportionate at current DAU.
-- **Restore path:** `psql "$TARGET_DB_URL" -f backup-YYYYMMDD.sql` into a fresh
-  project, then repoint `NEXT_PUBLIC_SUPABASE_URL` + keys in Vercel and
-  `.env.local`. (Passwords for custom roles are *not* in dumps — we have none, so
-  this doesn't bite us.)
+- Store the dump **off-site** — not in this repo (it contains player data) and not
+  only in Supabase (the thing that might die). A private object store or an
+  encrypted file the maintainer holds is enough at this scale.
+- **Cadence:** `game_scores` is append-forever, so a missed day only loses that
+  day's *new* rows, never rewrites history. A daily-to-weekly schedule is
+  proportionate at current DAU. Always take a fresh dump immediately before any
+  risky migration.
 
-> Not yet automated. Until a cron exists, DR is only as good as the last manual
-> dump. Treat "take a dump before any risky migration" as the interim rule.
+## Restoring from a backup
 
----
+```bash
+psql "$TARGET_DB_URL" -f backup-YYYYMMDD.sql
+```
 
-## The structural fix (decide): split dev from main
-
-The standing risk is the **one shared dev/prod project** — every migration and
-every dev test-run hits the same tables real players use, with no rollback point.
-The user's goal is a "safe main DB" isolated from dev experimentation.
-
-Free-tier constraints on the *proper* isolation tools:
-
-- **Supabase Branching is paid** (Pro+) — it spins up billed preview instances,
-  so it's not available to us. This is why we can't branch the DB "the right way."
-- **Local stack / `db reset`** needs Docker, which isn't installed (and isn't
-  required for `db push`).
-
-Workaround that costs $0 and gives real isolation:
-
-- **Run two separate free Supabase projects** — a `dev` project and a `main`
-  (prod) project. Free organizations allow up to two active projects, which is
-  exactly a dev+prod split. Migrations get applied to `dev` first (`db push`
-  against the dev URL), verified, then applied to `main`. Vercel prod points at
-  `main`; local/preview points at `dev`. Real players never share tables with
-  e2e runs, and a bad migration can't reach prod until you push it there.
-- **Cost:** free projects pause after inactivity, so the dev one needs an
-  occasional ping or a manual unpause — acceptable for a staging DB. Also doubles
-  the number of Google-OAuth/redirect allow-lists to maintain (see
-  [google-oauth-setup.md](google-oauth-setup.md)) and means secrets/migrations
-  must be applied to two places.
-
-**Status: undecided, not a blocker.** This is the structural upgrade to the "safe
-main DB" goal; the scheduled `db dump` above is the immediate mitigation that
-should land regardless of whether we split.
-
----
-
-## Open follow-ups
-
-- [ ] **Automate the dump** — a scheduled `supabase db dump` to off-site storage.
-      Until then, DR = last manual dump; take one before any risky migration.
-- [ ] **Decide dev/main split** — two free projects vs. staying single. Weigh the
-      isolation win against double-maintaining migrations, secrets, and OAuth
-      config.
-- [ ] **When an `achievements` table lands** — add it to "What needs to survive."
+Restore into a fresh project, then repoint `NEXT_PUBLIC_SUPABASE_URL` + keys in
+Vercel and `.env.local`. Custom-role passwords are *not* included in dumps — we
+have no custom roles, so this doesn't bite us.
 
 ## See also
 - [admin-restore.md](admin-restore.md) — single-player identity recovery (DB alive).
 - [ADR 0012](adr/0012-signin-restore-adopts-device-identity.md) — why `game_scores` is
   append-forever and identity is device-keyed.
-- [google-oauth-setup.md](google-oauth-setup.md) — auth provisioning, doubled under a split.
+- [google-oauth-setup.md](google-oauth-setup.md) — auth provisioning (per-project config).
 - CONTEXT.md → *Persistence decisions* — the append-forever guarantees this doc leans on.
+- Open work (automating dumps, the dev/main split decision) is tracked in the issue
+  tracker: `.claude/issue-tracker/issues/02-no-disaster-recovery-backups.md`.
