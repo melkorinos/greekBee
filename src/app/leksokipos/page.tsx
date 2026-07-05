@@ -10,7 +10,15 @@
 // ?random=1&exclude=<id> → redirect to a random puzzle's letter URL
 // ?puzzle=<id>           → redirect to that specific puzzle's letter URL
 
-import { getPuzzleForDate, getRandomPuzzle, getTodaysPuzzle } from "@/data";
+// Data comes from the slim puzzle index (letters + dates, ~108 KB) — NOT the
+// full "@/data" loader, whose module graph includes puzzles-el.json (4 MB) and
+// words-el.json (19 MB). This route is dynamic (searchParams) and only issues a
+// redirect, so keeping its cold-start parse cost near zero matters for Fluid CPU.
+import {
+  getPuzzleStubForDate,
+  getRandomPuzzleStub,
+  getTodaysPuzzleStub,
+} from "@/data/leksokipos/puzzleIndex";
 
 import type { Language } from "@/types";
 import { greekToGreeklish } from "@/lib/greeklish";
@@ -25,9 +33,9 @@ export default async function LeksokiposPage({
   const language: Language = "el";
 
   const puzzle =
-    puzzleId ? getPuzzleForDate(puzzleId, language)
-    : random  ? getRandomPuzzle(language, exclude)
-    :           getTodaysPuzzle(language);
+    puzzleId ? getPuzzleStubForDate(puzzleId, language)
+    : random  ? getRandomPuzzleStub(language, exclude)
+    :           getTodaysPuzzleStub(language);
 
   // Redirect to the greeklish canonical URL — plain ASCII, no percent-encoding needed.
   // Greeklish avoids ERR_INVALID_CHAR in Location headers and produces clean shared links.
