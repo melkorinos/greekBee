@@ -21,6 +21,7 @@ import { NextRequest } from "next/server";
 // ── Types the mock understands ──────────────────────────────────────────────────
 
 interface ScoreRow { id: number; game_id: string; puzzle_date: string; score: number }
+interface AchievementRow { id: number; achievement_id: string }
 interface Anchor   { device_uuid: string; display_name: string }
 
 interface DbState {
@@ -30,6 +31,8 @@ interface DbState {
   profileByDevice?: Record<string, { display_name: string; auth_user_id?: string | null }>;
   /** game_scores rows by device_id. */
   scoresByDevice?:  Record<string, ScoreRow[]>;
+  /** player_achievements rows by device_uuid. */
+  achievementsByDevice?: Record<string, AchievementRow[]>;
   failUpsert?:      boolean;
   failAuditInsert?: boolean;
 }
@@ -64,6 +67,10 @@ function resolveRead(table: string, eqs: [string, unknown][]) {
   if (table === "game_scores") {
     const device = eqVal(eqs, "device_id") as string;
     return { data: _db.scoresByDevice?.[device] ?? [], error: null };
+  }
+  if (table === "player_achievements") {
+    const device = eqVal(eqs, "device_uuid") as string;
+    return { data: _db.achievementsByDevice?.[device] ?? [], error: null };
   }
   return { data: null, error: null };
 }
@@ -295,6 +302,41 @@ describe("POST /api/auth/link — restore mode", () => {
     expect(repoint?.ins).toContainEqual(["id", [1]]);
     const del = _writes.find((w) => w.table === "game_scores" && w.op === "delete");
     expect(del?.ins).toContainEqual(["id", [9]]);
+  });
+
+  // ── Achievement merge (ADR 0013): the earned set must survive Restore ──────────
+
+  it("re-points the old device's achievements onto the canonical identity (union)", async () => {
+    signedInAs("auth-abc");
+    _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
+    _db.achievementsByDevice = {
+      d1:    [{ id: 1, achievement_id: "leksokipos-tzimani" },
+              { id: 2, achievement_id: "leksokipos-sidirodromos" }],
+      canon: [{ id: 9, achievement_id: "leksokipos-first-daily" }],
+    };
+    await POST(makePostReq(BASE));
+
+    const repoint = _writes.find((w) => w.table === "player_achievements" && w.op === "update");
+    expect(repoint?.payload).toEqual({ device_uuid: "canon" });
+    // Both disjoint old rows carry over → canonical ends up with the union.
+    expect(repoint?.ins.find(([c]) => c === "id")?.[1]).toEqual(expect.arrayContaining([1, 2]));
+    // Nothing to delete — no overlap.
+    expect(_writes.some((w) => w.table === "player_achievements" && w.op === "delete")).toBe(false);
+  });
+
+  it("drops the old duplicate when the canonical identity already earned it", async () => {
+    signedInAs("auth-abc");
+    _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
+    _db.achievementsByDevice = {
+      d1:    [{ id: 1, achievement_id: "leksokipos-tzimani" }],
+      canon: [{ id: 9, achievement_id: "leksokipos-tzimani" }], // already earned
+    };
+    await POST(makePostReq(BASE));
+
+    const del = _writes.find((w) => w.table === "player_achievements" && w.op === "delete");
+    expect(del?.ins).toContainEqual(["id", [1]]);
+    // The duplicate can't be re-pointed (unique constraint) — nothing re-pointed.
+    expect(_writes.some((w) => w.table === "player_achievements" && w.op === "update")).toBe(false);
   });
 });
 

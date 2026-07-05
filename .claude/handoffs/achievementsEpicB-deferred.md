@@ -1,11 +1,20 @@
 # Handoff: Achievements Epic B — Tiered badges, stats, unlock UX (deferred)
 
-**Date:** 2026-07-05 (grilled; **realigned to ADR 0013 storage model 2026-07-05**)
-**Status:** Deferred — do NOT start until **Epic A** ships (`achievementsEpicA-minimum.md`). Epic A lays the spine (client detection + the `player_achievements` immutable-fact store) this epic builds on.
-**✅ Blocker cleared (2026-07-05):** issue `03-game-scores-prune-contradicts-append-forever` is **resolved** — `/api/cleanup-scores` no longer prunes `game_scores`, so lifetime points are genuinely append-forever. `syllektis-ponton` is unblocked. (This epic still waits on Epic A shipping first.)
+**Date:** 2026-07-06 (grilled 2026-07-05; **Epic A shipped 2026-07-06 — ready to start**)
+**Status:** 🟢 **Ready to start.** Epic A shipped (its handoff is deleted; the durable decisions live in **ADR 0013**). The spine this epic builds on — client detection + the `player_achievements` immutable-fact store — is now real and in prod.
+**✅ Blocker cleared (2026-07-05):** issue `03-game-scores-prune-contradicts-append-forever` is **resolved** — `/api/cleanup-scores` no longer prunes `game_scores`, so lifetime points are genuinely append-forever. `syllektis-ponton` is unblocked.
 **Goal:** finish achievements "properly" — the 2 tiered badges, extra stats, unlock-moment UX, richer badge display.
 
-**Depends on Epic A:** the `player_achievements(device_uuid, achievement_id, earned_at)` rows table, the insert-if-absent earn endpoint, the client detection engine, and the confirmed spine (**ADR 0013**). Read Epic A's handoff first — its locked-decisions + extensibility sections are the shared architecture.
+**Built on Epic A (read ADR 0013 for the locked decisions).** The shared architecture is now code, not a plan — see the reuse map below.
+
+## What Epic A already shipped (reuse, don't rebuild)
+
+- **Table + prod migration:** `player_achievements(device_uuid, achievement_id, earned_at)`, UNIQUE(device_uuid, achievement_id), open RLS. Live in the shared prod DB.
+- **Earn endpoint:** `POST/GET /api/achievements` (insert-if-absent via upsert `ignoreDuplicates`). Its id whitelist is `ALL_ACHIEVEMENT_IDS`, which **already includes the tier ids** — so writing a tier fact row is just `POST /api/achievements` with a tier id. No endpoint change needed.
+- **Detection:** `detectEarnedAchievements()` + `useAchievementSync` hook (`src/games/leksokipos/lib/achievements.ts`, `.../hooks/useAchievementSync.ts`). Add tier detection as more branches / a new lane; the hook's once-per-session dedup + gating is reusable.
+- **Tuning knobs:** `src/config/achievementTuning.ts` **already holds** `pangramTierThresholds` (10/20/50) and `pointsTierThresholds` (1000/10000/25000). Read them; don't re-hardcode.
+- **Restore union:** `planAchievementMerge` (`src/lib/achievementMerge.ts`) already unions **all** `player_achievements` rows incl. tier ids on Sign-in Restore. ⚠️ **But a new progress-set table (e.g. `player_pangrams`) needs its OWN merge** in `restore()` (mirror `planAchievementMerge`) and its own exclusion from `/api/cleanup-scores`.
+- **Display:** `TrophyCase` fetches earned ids and lights tiles — but it currently keys on the **top-level** `achievement.id` only, so tiered tiles stay locked. ⚠️ **Epic B must extend `TrophyCase` to light individual tiers and show the computed "X / N" progress.**
 
 > **⚠️ Storage model changed.** An earlier draft of this handoff assumed a single `player_stats(data jsonb)` blob. That was **rejected in ADR 0013** in favour of immutable rows (blob's whole-set rewrite was a progress-loss risk). Everything below is realigned: **awards are fact rows; progress is append-only sets (also rows) or derived — never a mutable counter, never a JSON blob.**
 

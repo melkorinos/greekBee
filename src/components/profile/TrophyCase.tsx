@@ -2,19 +2,30 @@
 
 // TrophyCase — the Trophy Case grid on /profile.
 //
-// v1 is display-only: every catalog entry renders locked/greyed (no earned state
-// yet — detection lands with the achievements epic). Tiered badges show their tier
-// thresholds. Page-local by design; nothing graduates to shared/ speculatively.
+// Fetches the device's earned achievement ids (GET /api/achievements) and lights
+// the matching one-shot tiles; everything else renders locked/greyed. Tiered
+// badges stay locked in v1 — their per-tier lighting is Epic B (only tier ids are
+// ever earned, and the catalog's top-level id never is). Page-local by design.
+
+import { useEffect, useState } from "react";
 
 import { LEKSOKIPOS_ACHIEVEMENTS, type Achievement } from "@/games/leksokipos/lib/achievements";
 
-function TrophyTile({ achievement }: { achievement: Achievement }) {
+function TrophyTile({ achievement, earned }: { achievement: Achievement; earned: boolean }) {
   return (
     <div
       data-testid="trophy-tile"
-      className="flex flex-col items-center gap-1 rounded-xl border border-border bg-surface-raised px-3 py-4 text-center opacity-60"
+      data-earned={earned}
+      className={
+        "flex flex-col items-center gap-1 rounded-xl border px-3 py-4 text-center " +
+        (earned
+          ? "border-border bg-surface-raised"
+          : "border-border bg-surface-raised opacity-60")
+      }
     >
-      <span className="text-2xl grayscale" aria-hidden="true">🔒</span>
+      <span className={earned ? "text-2xl" : "text-2xl grayscale"} aria-hidden="true">
+        {earned ? "🏆" : "🔒"}
+      </span>
       <span className="text-xs font-semibold text-foreground">{achievement.name}</span>
       <span className="text-[11px] leading-tight text-muted">{achievement.hint}</span>
       {achievement.tiers && (
@@ -30,7 +41,21 @@ function TrophyTile({ achievement }: { achievement: Achievement }) {
   );
 }
 
-export function TrophyCase() {
+export function TrophyCase({ deviceId = "" }: { deviceId?: string }) {
+  const [earned, setEarned] = useState<ReadonlySet<string>>(() => new Set());
+
+  useEffect(() => {
+    if (!deviceId) return;
+    let cancelled = false;
+    fetch(`/api/achievements?device_uuid=${encodeURIComponent(deviceId)}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("achievements fetch failed"))))
+      .then((d: { earned?: string[] }) => {
+        if (!cancelled) setEarned(new Set(d.earned ?? []));
+      })
+      .catch(() => { /* leave tiles locked — never block the page */ });
+    return () => { cancelled = true; };
+  }, [deviceId]);
+
   return (
     <div className="px-5 py-4">
       <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted">
@@ -40,11 +65,11 @@ export function TrophyCase() {
         data-testid="trophy-beta-notice"
         className="mb-3 rounded-lg border border-border bg-surface-raised px-3 py-2 text-[11px] leading-snug text-muted"
       >
-        🚧 Δοκιμαστική λειτουργία (beta): τα τρόπαια δεν κερδίζονται ακόμα και θα μηδενιστούν με την επίσημη κυκλοφορία.
+        🚧 Δοκιμαστική λειτουργία (beta): τα τρόπαια ενδέχεται να μηδενιστούν με την επίσημη κυκλοφορία.
       </p>
       <div className="grid grid-cols-2 gap-3">
         {LEKSOKIPOS_ACHIEVEMENTS.map((a) => (
-          <TrophyTile key={a.id} achievement={a} />
+          <TrophyTile key={a.id} achievement={a} earned={earned.has(a.id)} />
         ))}
       </div>
     </div>

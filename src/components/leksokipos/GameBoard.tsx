@@ -24,6 +24,7 @@ import type { EndgameInfo } from "./ScoreBar";
 import { NominationModal } from "@/components/shared/NominationModal";
 import { WordInput } from "./WordInput";
 import { btnSecondary } from "@/styles/recipes";
+import { useAchievementSync } from "@/games/leksokipos/hooks/useAchievementSync";
 import { useDayChange } from "@/games/leksokipos/hooks/useDayChange";
 import { useGameState } from "@/games/leksokipos/hooks/useGameState";
 import { useGameStateSync } from "@/hooks/useGameStateSync";
@@ -134,6 +135,16 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
 
   // Auto-post whenever the score increases.
   useEffect(() => { postScore(score); }, [score, postScore]);
+
+  // Detect + post earned achievements as the game state crosses their thresholds.
+  useAchievementSync({
+    isDaily,
+    isGodMode,
+    deviceId,
+    foundWords,
+    validWordCount: activePuzzle.validWords.length,
+    rank:           currentRank,
+  });
 
   const { authLinked, authUserName, signInWithGoogle, signOut } = useAuth();
 

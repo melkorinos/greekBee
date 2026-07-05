@@ -16,7 +16,26 @@ import { calculateRank } from "./lib/ranking";
 import { maxScore, scoreWord } from "./lib/scoring";
 
 const ENDPOINT = "/api/game-state";
+const ACHIEVEMENTS_ENDPOINT = "/api/achievements";
 const GAME_ID = "leksokipos";
+
+/**
+ * Post newly-earned achievement ids for a device. Fire-and-forget: the server
+ * insert-if-absents them, so re-posting is harmless and network errors are
+ * swallowed (earning never affects gameplay). No-op on an empty list.
+ */
+export function postAchievements(params: {
+  deviceUuid:     string;
+  achievementIds: string[];
+}): void {
+  const { deviceUuid, achievementIds } = params;
+  if (achievementIds.length === 0) return;
+  fetch(ACHIEVEMENTS_ENDPOINT, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify({ device_uuid: deviceUuid, achievement_ids: achievementIds }),
+  }).catch(() => {});
+}
 
 /**
  * Upload the current found words for a daily puzzle. Fire-and-forget: network

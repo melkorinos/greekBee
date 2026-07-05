@@ -20,6 +20,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient, getSupabaseClient } from "@/lib/supabase";
 import { planScoreMerge, type MergeRow } from "@/lib/scoreMerge";
+import { planAchievementMerge, type AchievementMergeRow } from "@/lib/achievementMerge";
 
 export const runtime = "edge";
 
@@ -151,6 +152,25 @@ async function restore(db: any, oldDevice: string, anchor: Anchor) {
   }
   if (plan.deleteOld.length) {
     await db("game_scores").delete().in("id", plan.deleteOld);
+  }
+
+  // Merge earned achievements too (ADR 0013): union onto the canonical identity.
+  // Without this, restoring an account would drop the old device's badges. The
+  // set has no "better" — carry over what canonical lacks, drop duplicates the
+  // UNIQUE(device_uuid, achievement_id) constraint would otherwise reject.
+  const { data: oldAch }   = await db("player_achievements")
+    .select("id, achievement_id").eq("device_uuid", oldDevice) as { data: AchievementMergeRow[] | null };
+  const { data: canonAch } = await db("player_achievements")
+    .select("id, achievement_id").eq("device_uuid", canonical) as { data: AchievementMergeRow[] | null };
+
+  const achPlan = planAchievementMerge(oldAch ?? [], canonAch ?? []);
+  if (achPlan.repoint.length) {
+    await db("player_achievements")
+      .update({ device_uuid: canonical })
+      .in("id", achPlan.repoint);
+  }
+  if (achPlan.deleteOld.length) {
+    await db("player_achievements").delete().in("id", achPlan.deleteOld);
   }
 
   // Drop this device's now-merged profile row (unique device_uuid index).
