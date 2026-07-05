@@ -311,7 +311,11 @@ const CARD: Record<CommunityTab, CardRenderer> = {
 
 function LeksikastiríoClient() {
   const searchParams = useSearchParams();
-  const adminSecret  = searchParams.get("admin") ?? "";
+  // Admin unlock accepts either ?admin=<secret> or the shared ?godmode=<secret>,
+  // so the same URL param (?godmode=zzkdgr3) works here and in Leksokipos god mode.
+  // The value is still validated server-side against ADMIN_SECRET, which must be
+  // set to that shared secret for review actions to succeed.
+  const adminSecret  = searchParams.get("admin") ?? searchParams.get("godmode") ?? "";
   const isAdmin      = adminSecret.length > 0;
   const deviceId     = getOrCreateDeviceId();
 

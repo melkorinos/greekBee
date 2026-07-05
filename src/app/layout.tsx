@@ -1,7 +1,6 @@
 import "./globals.css";
 
 import { Inter, JetBrains_Mono } from "next/font/google";
-import Script from "next/script";
 
 import type { Metadata, Viewport } from "next";
 import { Shell } from "@/components/shared/Shell";
@@ -43,16 +42,22 @@ export default function RootLayout({
       className={`${sans.variable} ${mono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Runs synchronously before first paint — prevents dark-mode flash on all
+            pages. Must live in <head> as a raw <script> so it executes during HTML
+            parse; next/script's beforeInteractive can't be an <html> child and a
+            useEffect injection runs too late (post-paint = visible flash). React's
+            dev-only "script tag while rendering" notice is the accepted cost; it is
+            stripped from production builds, so users never see it. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(localStorage.getItem('theme-preference')==='dark')document.documentElement.classList.add('dark')}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         <Shell>{children}</Shell>
       </body>
-      {/* Runs before first paint — prevents a dark-mode flash on all pages.
-          beforeInteractive injects it into the initial HTML head; a raw <script>
-          rendered in the React tree trips React 19's "scripts are never executed
-          when rendering on the client" warning during hydration. */}
-      <Script id="theme-no-flash" strategy="beforeInteractive">
-        {`(function(){try{if(localStorage.getItem('theme-preference')==='dark')document.documentElement.classList.add('dark')}catch(e){}})()`}
-      </Script>
     </html>
   );
 }
