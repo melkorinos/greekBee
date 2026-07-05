@@ -5,6 +5,16 @@
 
 ---
 
+## Session 65 — 2026-07-05: Fixed `game_scores` prune contradicting ADR 0012 append-forever (issue 03, `/tdd`) ✅
+Latent bug: daily `/api/cleanup-scores` cron deleted `game_scores` older than 10 days, so "Lifetime" Stats were really last-10-days and Epic B's `syllektis-ponton` was blocked. Fix = stop pruning `game_scores`; keep pruning the ephemeral tables. Uncommitted at session end.
+1. **TDD red→green** — flipped `cleanupScoresRoute.test.ts` to assert the route **never** deletes `game_scores` (mock records `.delete()` tables) while still pruning `game_state`/`transfer_codes`; flipped `cleanupScoresLiveDb.test.ts` (game_state pruned, game_scores retained); added a regression lock to `profileStatsRoute.test.ts` (stats query applies **no** `puzzle_date` filter, full history counted).
+2. **`retention.ts`** — `SCORE_RETENTION_DAYS`→`SESSION_RETENTION_DAYS` (governs `game_state`+`transfer_codes` only); dropped dead `LEADERBOARD_WINDOW_DAYS` + its guard.
+3. **`cleanup-scores/route.ts`** — removed the `game_scores` delete + the `SCORE_RETENTION_DAYS<=LEADERBOARD_WINDOW_DAYS` guard; updated header comment (route name kept legacy → no `vercel.json` churn); response drops `scores` field.
+4. **Docs** — ADR 0012 + CONTEXT.md amended (append-forever now *implemented*, was policy-only). Both achievements handoffs' blocker/sequencing notes flipped to ✅ (Epic B `syllektis-ponton` unblocked; Lane B no longer races a prune). Issue 03 file deleted.
+5. **Gates:** 1291 pass / 6 skipped · eslint 0 · build 0. (Live-DB cleanup test skips locally — no prod secrets.)
+
+---
+
 ## Session 64 — 2026-07-05: Fluid Active CPU investigation + fixes 3/4 shipped, 1/2 handed off ✅
 Gauge at 2h31m/4h. Investigated all server CPU consumers; artifacts in `.claude/aiHelper/fluid-cpu/` (analysis.md = findings/measurements, HANDOFF-fixes-1-2.md = next agent's brief). **~90% of traffic is Leksokipos** (user-provided) — reframed priorities.
 1. **Fix 3 shipped** — `/leksokipos` redirect page no longer parses 23.5 MB per cold start: new `src/data/leksokipos/puzzleIndex.ts` + generated `puzzles-index-el.json` (108 KB; `npm run generate-puzzle-index`, script in `scripts/generate-puzzle-index.mjs`). Drift-guard + parity tests in `src/test/leksokipos/puzzleIndex.test.ts`; deploymentReadiness list extended. Verified in `.next`: route's biggest chunk 22.15 MB → 0.2 MB.

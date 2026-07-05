@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-05 (spine LOCKED via grill + schema audit; sketched 2026-07-02)
 **Status:** 🟢 **Spine locked — ready for `/tdd` pickup.** No open architecture calls. Storage/merge/retention decided in **ADR 0013**.
-**⛔ Sequencing (user, 2026-07-05): do issue `03-game-scores-prune-contradicts-append-forever` FIRST.** Epic A's 5 one-shots aren't strictly blocked by it (facts are stored, not derived), but the user wants the retention correction landed before starting achievements. Epic B *is* blocked (`syllektis-ponton`). See `.claude/issue-tracker/issues/03-*`.
+**✅ Sequencing done (2026-07-05): issue `03-game-scores-prune-contradicts-append-forever` is landed** — the user wanted the retention correction in before achievements, and it is: `/api/cleanup-scores` no longer prunes `game_scores` (append-forever now real). Epic A (5 one-shots) and Epic B's `syllektis-ponton` are both clear to start.
 **Goal:** ship the smallest real achievements slice — 5 one-shot badges that earn and light up in the Trophy Case. Silent (no toast). Tiered badges + toast + stats page are **Epic B** (`achievementsEpicB-deferred.md`).
 
 **Prerequisite — ✅ SATISFIED 2026-07-03:** durable identity shipped (Sign-in Restore / Disconnect / `identity_audit`). Achievement data keys on the canonical `device_uuid` (never `auth_user_id`); Sign-in Restore repoints everything to it (**ADR 0012**). Parent epic context: `.claude/handoffs/nemesisFeature.md`.
@@ -35,7 +35,7 @@ The spine was re-grilled at pickup and the storage model **changed from the old 
 Stress-tested against future achievements to confirm the store isn't a dead end. The fact store is **agnostic to who writes a fact and which feature it came from** (keyed only by `device_uuid` + `achievement_id`), so new achievements are "just another frozen id." Detection has three lanes:
 
 - **Lane A — client, live, at an event hook** (end-of-game, *and other hooks* like nomination-submit). Covers most, incl. hypotheticals *0 wrong guesses* and *report-a-word* (the latter proves awards can be **platform-wide / cross-feature**, not per-game).
-- **Lane B — deferred server-side at puzzle-close** for **relative / time-dependent** signals whose value isn't final at end-of-game (e.g. *1st/2nd/3rd place* — rank keeps moving as others play). A once-per-day job reads the final leaderboard and writes the same fact rows; must run before the 10-day prune. The one deviation from "client detects everything."
+- **Lane B — deferred server-side at puzzle-close** for **relative / time-dependent** signals whose value isn't final at end-of-game (e.g. *1st/2nd/3rd place* — rank keeps moving as others play). A once-per-day job reads the final leaderboard and writes the same fact rows. The one deviation from "client detects everything." *(Since issue 03, `game_scores` is append-forever, so this job no longer races a prune.)*
 - **Lane C — append-only set → size → crossing fact** for cumulative counts (Epic B tiers; see Epic B handoff).
 
 Not a lane: **derivation** (a derived award would vanish when its `game_scores` row is pruned — see the flag above). Epic A uses Lane A only; A/B/C don't change the schema — the same `player_achievements` rows serve all of them.

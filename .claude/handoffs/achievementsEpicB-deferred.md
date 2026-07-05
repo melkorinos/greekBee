@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-05 (grilled; **realigned to ADR 0013 storage model 2026-07-05**)
 **Status:** Deferred — do NOT start until **Epic A** ships (`achievementsEpicA-minimum.md`). Epic A lays the spine (client detection + the `player_achievements` immutable-fact store) this epic builds on.
-**⛔ Hard blocker:** `syllektis-ponton` cannot ship until issue `03-game-scores-prune-contradicts-append-forever` is resolved (lifetime points need append-forever `game_scores`). User sequenced issue 03 before achievements entirely.
+**✅ Blocker cleared (2026-07-05):** issue `03-game-scores-prune-contradicts-append-forever` is **resolved** — `/api/cleanup-scores` no longer prunes `game_scores`, so lifetime points are genuinely append-forever. `syllektis-ponton` is unblocked. (This epic still waits on Epic A shipping first.)
 **Goal:** finish achievements "properly" — the 2 tiered badges, extra stats, unlock-moment UX, richer badge display.
 
 **Depends on Epic A:** the `player_achievements(device_uuid, achievement_id, earned_at)` rows table, the insert-if-absent earn endpoint, the client detection engine, and the confirmed spine (**ADR 0013**). Read Epic A's handoff first — its locked-decisions + extensibility sections are the shared architecture.
@@ -20,17 +20,17 @@ Each **tier is its own frozen `achievement_id`** (`…-chalkino/-asimenio/-chrys
 | id | Progress source | Thresholds |
 |---|---|---|
 | `leksokipos-kynigos-pangram-*` | **append-only set** of distinct pangrams found; count = set size | 10 / 20 / 50 |
-| `leksokipos-syllektis-ponton-*` | lifetime `total_points` (**see retention blocker**) | 1.000 / 10.000 / 25.000 |
+| `leksokipos-syllektis-ponton-*` | lifetime `total_points` (append-forever `game_scores`; issue 03 fixed) | 1.000 / 10.000 / 25.000 |
 
 **Progress = append-only sets, NEVER tallies (settled in grill; formalized in ADR 0013 as Lane C).**
 - The "X / 10" a player sees is **computed, never stored**: it's the *size* of an append-only collection, not an integer that increments.
 - `kynigos-pangram`: keep a set of distinct pangrams — e.g. rows `player_pangrams(device_uuid, puzzle_date, word)` UNIQUE, insert-if-absent (its own migration). Count = `COUNT(*)`. Re-syncing a puzzle re-inserts an existing pangram → no-op; two devices **union** on Restore (repoint, same as `player_achievements`); Offline-Lock duplicate flushes tolerated by the same rule. **Double-counting impossible by construction.** When count first crosses a threshold, write the tier fact row.
 - **Why not `count = count + 1`:** a mutable counter re-introduces the exact clobber/double-count trap immutable facts avoid (retry posts twice; merges double-count). Sets are retry- and merge-safe.
 
-**🚫 `syllektis-ponton` is blocked by a retention bug** (flagged in Epic A handoff + ADR 0013): it needs *lifetime* `SUM(game_scores.score)`, but `game_scores` is pruned at `SCORE_RETENTION_DAYS = 10`, so `/api/profile/stats` only sees the last 10 days. This contradicts ADR 0012's "append-forever." **Resolve the append-forever contradiction first** (make `game_scores` genuinely non-pruned, or add a lifetime-points source). Until then this tier cannot be correctly awarded.
+**✅ `syllektis-ponton` retention bug fixed (2026-07-05, issue 03):** it needs *lifetime* `SUM(game_scores.score)`, which `/api/profile/stats` now reads over full history because `game_scores` is no longer pruned (the cron used to delete rows older than 10 days). ADR 0012's "append-forever" is now actually implemented, so this tier can be awarded correctly.
 
 ### 2. Relative / time-dependent achievements (Lane B — new)
-Any award that depends on a value not final at end-of-game (e.g. leaderboard **placement** 1st/2nd/3rd) needs a **deferred server-side job at puzzle-close** that reads the final leaderboard and inserts the fact rows — must run before the 10-day prune. Same `player_achievements` rows; no schema change. (Not in the current catalog; noted so the pattern is ready.)
+Any award that depends on a value not final at end-of-game (e.g. leaderboard **placement** 1st/2nd/3rd) needs a **deferred server-side job at puzzle-close** that reads the final leaderboard and inserts the fact rows. Same `player_achievements` rows; no schema change. (Not in the current catalog; noted so the pattern is ready.) *(As of issue 03 `game_scores` is append-forever, so this job no longer races a prune — the leaderboard source stays intact indefinitely.)*
 
 ### 3. Additional stats / badges
 - Cumulative "times reached level N" → same append-only-set pattern (a set of qualifying puzzle-dates).

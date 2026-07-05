@@ -1,5 +1,9 @@
 // cleanupScoresRoute.test.ts — unit tests for GET /api/cleanup-scores.
 // The Supabase client is mocked so no real network calls are made.
+//
+// This cron prunes ONLY ephemeral session data (game_state, transfer_codes) plus
+// applied nominations. game_scores is the append-forever lifetime-stats substrate
+// (ADR 0012) and must NEVER be deleted here — these tests lock that in.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
@@ -17,10 +21,14 @@ vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY",  "test-service-role-key");
 type DeleteResult = { error: { message: string } | null; count: number | null };
 
 const _results: Record<string, DeleteResult> = {
-  game_scores:  { error: null, count: 0 },
-  game_state:   { error: null, count: 0 },
-  nominations:  { error: null, count: 0 },
+  game_state:      { error: null, count: 0 },
+  transfer_codes:  { error: null, count: 0 },
+  nominations:     { error: null, count: 0 },
 };
+
+// Records every table a .delete() was invoked on, so tests can assert that
+// game_scores is never touched.
+const deletedTables = new Set<string>();
 
 // Fluent chain: .delete().eq().not().lt() all resolve to the table's result.
 vi.mock("@supabase/supabase-js", () => ({
@@ -28,7 +36,7 @@ vi.mock("@supabase/supabase-js", () => ({
     from: (table: string) => {
       const resolve = () => Promise.resolve(_results[table] ?? { error: null, count: 0 });
       const c: Record<string, unknown> = {};
-      c["delete"] = () => c;
+      c["delete"] = () => { deletedTables.add(table); return c; };
       c["eq"]     = () => c;
       c["not"]    = () => c;
       c["lt"]     = resolve;
@@ -48,9 +56,10 @@ function makeReq(authHeader?: string): NextRequest {
 }
 
 beforeEach(() => {
-  _results.game_scores  = { error: null, count: 0 };
-  _results.game_state   = { error: null, count: 0 };
-  _results.nominations  = { error: null, count: 0 };
+  _results.game_state      = { error: null, count: 0 };
+  _results.transfer_codes  = { error: null, count: 0 };
+  _results.nominations     = { error: null, count: 0 };
+  deletedTables.clear();
 });
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
@@ -67,22 +76,37 @@ describe("GET /api/cleanup-scores — auth", () => {
   });
 });
 
+// ── game_scores is never pruned (ADR 0012 append-forever) ───────────────────────
+
+describe("GET /api/cleanup-scores — never touches game_scores", () => {
+  it("does not issue a delete against game_scores", async () => {
+    await GET(makeReq(`Bearer ${TEST_SECRET}`));
+    expect(deletedTables.has("game_scores")).toBe(false);
+  });
+
+  it("does prune the ephemeral game_state and transfer_codes tables", async () => {
+    await GET(makeReq(`Bearer ${TEST_SECRET}`));
+    expect(deletedTables.has("game_state")).toBe(true);
+    expect(deletedTables.has("transfer_codes")).toBe(true);
+  });
+});
+
 // ── Happy path ────────────────────────────────────────────────────────────────
 
 describe("GET /api/cleanup-scores — happy path", () => {
   it("returns 200 with deleted counts and a YYYY-MM-DD cutoff", async () => {
-    _results.game_scores = { error: null, count: 12 };
-    _results.game_state  = { error: null, count: 4 };
+    _results.game_state      = { error: null, count: 4 };
+    _results.transfer_codes  = { error: null, count: 2 };
 
     const res = await GET(makeReq(`Bearer ${TEST_SECRET}`));
     expect(res.status).toBe(200);
 
     const json = await res.json() as {
       cutoff:  string;
-      deleted: { scores: number; gameState: number; nominations: number };
+      deleted: { gameState: number; transferCodes: number; nominations: number };
     };
-    expect(json.deleted.scores).toBe(12);
     expect(json.deleted.gameState).toBe(4);
+    expect(json.deleted.transferCodes).toBe(2);
     expect(json.deleted.nominations).toBe(0);
     expect(json.cutoff).toMatch(/^\d{4}-\d{2}-\d{2}/);
   });
@@ -90,9 +114,9 @@ describe("GET /api/cleanup-scores — happy path", () => {
   it("returns deleted: 0 for all tables when nothing is stale", async () => {
     const res = await GET(makeReq(`Bearer ${TEST_SECRET}`));
     expect(res.status).toBe(200);
-    const json = await res.json() as { deleted: { scores: number; gameState: number; nominations: number } };
-    expect(json.deleted.scores).toBe(0);
+    const json = await res.json() as { deleted: { gameState: number; transferCodes: number; nominations: number } };
     expect(json.deleted.gameState).toBe(0);
+    expect(json.deleted.transferCodes).toBe(0);
     expect(json.deleted.nominations).toBe(0);
   });
 
@@ -109,15 +133,6 @@ describe("GET /api/cleanup-scores — happy path", () => {
 // ── Error handling ────────────────────────────────────────────────────────────
 
 describe("GET /api/cleanup-scores — error handling", () => {
-  it("returns 500 when game_scores delete fails", async () => {
-    _results.game_scores = { error: { message: "scores delete failed" }, count: null };
-
-    const res = await GET(makeReq(`Bearer ${TEST_SECRET}`));
-    expect(res.status).toBe(500);
-    const json = await res.json() as { error: string };
-    expect(json.error).toBe("scores delete failed");
-  });
-
   it("returns 500 when game_state delete fails", async () => {
     _results.game_state = { error: { message: "state delete failed" }, count: null };
 
@@ -125,6 +140,15 @@ describe("GET /api/cleanup-scores — error handling", () => {
     expect(res.status).toBe(500);
     const json = await res.json() as { error: string };
     expect(json.error).toBe("state delete failed");
+  });
+
+  it("returns 500 when transfer_codes delete fails", async () => {
+    _results.transfer_codes = { error: { message: "transfer_codes delete failed" }, count: null };
+
+    const res = await GET(makeReq(`Bearer ${TEST_SECRET}`));
+    expect(res.status).toBe(500);
+    const json = await res.json() as { error: string };
+    expect(json.error).toBe("transfer_codes delete failed");
   });
 
   it("returns 500 when nominations delete fails", async () => {
