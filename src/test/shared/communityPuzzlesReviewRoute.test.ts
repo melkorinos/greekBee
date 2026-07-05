@@ -23,14 +23,20 @@ function makeChain(result: ChainResult) {
   return chain;
 }
 
-vi.mock("@/lib/supabase", () => ({
-  getSupabaseClient: () => ({
+vi.mock("@/lib/supabase", () => {
+  const client = {
     from: () => {
       const result = _callQueue.shift() ?? { data: null, error: null };
       return makeChain(result);
     },
-  }),
-}));
+  };
+  // Review handlers use the service-role client (RLS bypass); both resolve to the
+  // same queue-backed mock here.
+  return {
+    getSupabaseClient:    () => client,
+    getServiceRoleClient: () => client,
+  };
+});
 
 function enqueue(...results: ChainResult[]) {
   _callQueue.push(...results);

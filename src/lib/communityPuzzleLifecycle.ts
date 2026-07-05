@@ -18,7 +18,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { getServiceRoleClient, getSupabaseClient } from "@/lib/supabase";
 
 /** Result of a game's submission-validation adapter. */
 export type SubmissionValidation =
@@ -65,7 +65,9 @@ export async function consumeApprovedPuzzle<TData>(
   table: string,
 ): Promise<ConsumedPuzzle<TData> | null> {
   try {
-    const supabase = getSupabaseClient();
+    // Claiming an approved row DELETEs it — a privileged op the anon role has no
+    // RLS policy for. Use the service-role client (server-only serve path).
+    const supabase = getServiceRoleClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase.from(table) as any)
       .select("id, submitter_name, data")
@@ -144,7 +146,10 @@ export function createListHandler(config: CommunityPuzzleGameConfig) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const supabase = getSupabaseClient();
+    // Admin queues read non-public statuses (pending); several tables grant anon
+    // no SELECT policy at all, so the admin path must use the service-role client.
+    // The public approved-browse list stays on the anon client (RLS-guarded).
+    const supabase = requiresAdmin ? getServiceRoleClient() : getSupabaseClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase.from(config.table) as any)
       .select(config.select ?? DEFAULT_SELECT)
@@ -185,7 +190,10 @@ export function createReviewHandler(config: Pick<CommunityPuzzleGameConfig, "tab
       return NextResponse.json({ error: "action must be 'approve' or 'reject'" }, { status: 400 });
     }
 
-    const supabase = getSupabaseClient();
+    // approve UPDATEs status, reject DELETEs — neither is granted to anon by RLS
+    // (INSERT-only). The admin secret is validated above, so use the service-role
+    // client to persist the review.
+    const supabase = getServiceRoleClient();
 
     if (action === "approve") {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

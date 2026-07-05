@@ -30,7 +30,8 @@ change them.
 | OAuth client ID (public, not a secret) | `97410724847-j8472jdtp8thlg6venao21upacmbm9b0.apps.googleusercontent.com` |
 | Client secret | **not stored here** — Google Cloud → Credentials → the client → Reset secret; then paste into Supabase |
 | Authorized redirect URI (in Google) | `https://rnfsuvhgufhbekodkmlp.supabase.co/auth/v1/callback` |
-| Supabase redirect allow-list | `http://localhost:3000/**`, `https://<PROD-DOMAIN>/**` |
+| Supabase redirect allow-list | `http://localhost:3000/**`, `https://greek-bee.vercel.app/**` |
+| Supabase Site URL | `https://greek-bee.vercel.app` |
 | Consent screen audience | External |
 
 > The redirect URI in Google is **Supabase's** callback, not the app's. Google →

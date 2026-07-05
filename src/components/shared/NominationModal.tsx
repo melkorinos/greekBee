@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 interface LookupResult {
   word:      string; // the lowercase+trim word this result applies to
   rejected:  number;
+  accepted:  number; // approved but not yet released (not in the dictionary yet)
   pending:   number;
   pendingId: string | null; // id of the existing pending proposal, to upvote instead
 }
@@ -75,10 +76,11 @@ export function NominationModal({
           `/api/nominations/lookup?word=${encodeURIComponent(target)}&direction=${direction}`,
         );
         if (!res.ok) return null;
-        const data = (await res.json()) as { rejected?: number; pending?: number; pendingId?: string | null };
+        const data = (await res.json()) as { rejected?: number; accepted?: number; pending?: number; pendingId?: string | null };
         const result: LookupResult = {
           word:      target,
           rejected:  data.rejected  ?? 0,
+          accepted:  data.accepted  ?? 0,
           pending:   data.pending   ?? 0,
           pendingId: data.pendingId ?? null,
         };
@@ -101,8 +103,11 @@ export function NominationModal({
   if (!isOpen) return null;
 
   // A warning applies only while the looked-up word still matches the input.
-  const rejectedHit = !!lookup && lookup.word === key && lookup.rejected > 0;
-  const pendingHit  = !!lookup && lookup.word === key && lookup.rejected === 0 && lookup.pending > 0;
+  // Priority: rejected → accepted → pending (at most one banner shows).
+  const matches     = !!lookup && lookup.word === key;
+  const rejectedHit = matches && lookup!.rejected > 0;
+  const acceptedHit = matches && lookup!.rejected === 0 && lookup!.accepted > 0;
+  const pendingHit  = matches && lookup!.rejected === 0 && lookup!.accepted === 0 && lookup!.pending > 0;
   // Previously-rejected words require an explanation before re-submitting.
   const noteRequired = rejectedHit;
 
@@ -118,10 +123,17 @@ export function NominationModal({
     }
     setNoteMissing(false);
 
+    // Already approved (awaiting release) → re-proposing is pointless. Bail; the
+    // setLookup above makes `acceptedHit` true, disabling the button and showing
+    // the "already approved" banner.
+    if (lk && lk.rejected === 0 && lk.accepted > 0) {
+      return;
+    }
+
     // An identical proposal is already pending → never insert a duplicate. Bail;
     // the setLookup above makes `pendingHit` true, greying out this button and
     // surfacing the "upvote the existing one" action in the info banner.
-    if (lk && lk.rejected === 0 && lk.pending > 0 && lk.pendingId) {
+    if (lk && lk.rejected === 0 && lk.accepted === 0 && lk.pending > 0 && lk.pendingId) {
       return;
     }
 
@@ -227,6 +239,18 @@ export function NominationModal({
               </div>
             )}
 
+            {acceptedHit && (
+              <div
+                data-testid="nomination-accepted-info"
+                className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950 px-3 py-2.5"
+              >
+                <p className="text-xs text-emerald-800 dark:text-emerald-200 leading-relaxed">
+                  ✓ Αυτή η λέξη έχει ήδη εγκριθεί και θα προστεθεί στη λίστα με την επόμενη
+                  ενημέρωση. Δεν χρειάζεται να την ξαναστείλεις.
+                </p>
+              </div>
+            )}
+
             {pendingHit && (
               <div
                 data-testid="nomination-pending-info"
@@ -245,7 +269,7 @@ export function NominationModal({
                   {status === "submitting" ? "…" : "▲ Ψήφισε υπέρ της υπάρχουσας"}
                 </button>
                 {status === "error" && (
-                  <p className="text-xs text-red-500 mt-2" data-testid="nomination-upvote-error">
+                  <p className="text-xs text-danger mt-2" data-testid="nomination-upvote-error">
                     Κάτι πήγε στραβά. Δοκίμασε ξανά.
                   </p>
                 )}
@@ -325,7 +349,7 @@ export function NominationModal({
             </div>
 
             {status === "error" && (
-              <p className="text-xs text-red-500 mt-2" data-testid="nomination-modal-error">
+              <p className="text-xs text-danger mt-2" data-testid="nomination-modal-error">
                 Κάτι πήγε στραβά. Δοκίμασε ξανά.
               </p>
             )}
@@ -344,6 +368,7 @@ export function NominationModal({
                   status === "submitting" ||
                   (!wordEditable && !word.trim()) ||
                   (noteRequired && !note.trim()) ||
+                  acceptedHit ||
                   pendingHit
                 }
                 data-testid="nomination-modal-submit"

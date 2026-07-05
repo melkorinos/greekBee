@@ -28,14 +28,20 @@ function makeChain(result: ChainResult) {
   return chain;
 }
 
-vi.mock("@/lib/supabase", () => ({
-  getSupabaseClient: () => ({
+vi.mock("@/lib/supabase", () => {
+  const client = {
     from: () => {
       const result = _callQueue.shift() ?? { data: null, error: null, count: null };
       return makeChain(result);
     },
-  }),
-}));
+  };
+  // The review route uses the service-role client (RLS bypass); everything else
+  // uses the anon client. Both resolve to the same queue-backed mock here.
+  return {
+    getSupabaseClient:      () => client,
+    getServiceRoleClient:   () => client,
+  };
+});
 
 vi.stubEnv("ADMIN_SECRET", "secret-admin");
 
@@ -207,19 +213,22 @@ describe("GET /api/nominations/lookup — happy path", () => {
     );
   }
 
-  it("returns rejected and pending counts", async () => {
+  it("returns rejected, accepted and pending counts", async () => {
     enqueue({ count: 2, error: null }); // rejected count
+    enqueue({ count: 3, error: null }); // accepted count
     enqueue({ count: 1, error: null }); // pending count
     const res  = await lookupNomination(makeReq("καλος", "add"));
-    const json = await res.json() as { rejected: number; pending: number; word: string };
+    const json = await res.json() as { rejected: number; accepted: number; pending: number; word: string };
     expect(res.status).toBe(200);
     expect(json.rejected).toBe(2);
+    expect(json.accepted).toBe(3);
     expect(json.pending).toBe(1);
     expect(json.word).toBe("καλος");
   });
 
   it("returns the earliest pending id so the client can upvote it instead of duplicating", async () => {
     enqueue({ count: 0, error: null });                                // rejected count
+    enqueue({ count: 0, error: null });                                // accepted count
     enqueue({ data: [{ id: "nom-1" }, { id: "nom-2" }], count: 2, error: null }); // pending rows
     const res  = await lookupNomination(makeReq("καλος", "add"));
     const json = await res.json() as { pending: number; pendingId: string | null };
@@ -229,6 +238,7 @@ describe("GET /api/nominations/lookup — happy path", () => {
 
   it("returns pendingId null when nothing is pending", async () => {
     enqueue({ count: 0, error: null });               // rejected count
+    enqueue({ count: 0, error: null });               // accepted count
     enqueue({ data: [], count: 0, error: null });     // pending rows
     const res  = await lookupNomination(makeReq("καλος", "add"));
     const json = await res.json() as { pendingId: string | null };
@@ -236,6 +246,7 @@ describe("GET /api/nominations/lookup — happy path", () => {
   });
 
   it("normalises word to lowercase+trim before querying", async () => {
+    enqueue({ count: 0, error: null });
     enqueue({ count: 0, error: null });
     enqueue({ count: 0, error: null });
     const res  = await lookupNomination(makeReq("  Καλός  ", "remove"));

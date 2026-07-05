@@ -124,7 +124,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
           </div>
 
           {status === "error" && (
-            <p className="text-xs text-red-500 mt-2" data-testid="feedback-modal-error">
+            <p className="text-xs text-danger mt-2" data-testid="feedback-modal-error">
               Κάτι πήγε στραβά. Δοκίμασε ξανά.
             </p>
           )}

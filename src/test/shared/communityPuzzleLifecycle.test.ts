@@ -32,14 +32,20 @@ function makeChain(table: string, result: ChainResult) {
   return chain;
 }
 
-vi.mock("@/lib/supabase", () => ({
-  getSupabaseClient: () => ({
+vi.mock("@/lib/supabase", () => {
+  const client = {
     from: (table: string) => {
       const result = _queue.shift() ?? { data: null, error: null };
       return makeChain(table, result);
     },
-  }),
-}));
+  };
+  // The admin/privileged paths (list, review, consume) use the service-role
+  // client; the public submit path uses the anon client. Both share the queue.
+  return {
+    getSupabaseClient:    () => client,
+    getServiceRoleClient: () => client,
+  };
+});
 
 const { consumeApprovedPuzzle, createListHandler, createReviewHandler, createSubmitHandler } =
   await import("@/lib/communityPuzzleLifecycle");

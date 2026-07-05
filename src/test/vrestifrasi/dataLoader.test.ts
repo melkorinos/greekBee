@@ -27,11 +27,11 @@ function makeChain(result: ChainResult) {
 
 let _mockResult: ChainResult = { data: null, error: { message: "no rows" } };
 
-vi.mock("@/lib/supabase", () => ({
-  getSupabaseClient: () => ({
-    from: () => makeChain(_mockResult),
-  }),
-}));
+vi.mock("@/lib/supabase", () => {
+  // consumeApprovedPuzzle uses the service-role client; point both at the mock.
+  const client = { from: () => makeChain(_mockResult) };
+  return { getSupabaseClient: () => client, getServiceRoleClient: () => client };
+});
 
 // ── getTodaysVresTinFrasiPuzzle — static fallback ─────────────────────────────
 
