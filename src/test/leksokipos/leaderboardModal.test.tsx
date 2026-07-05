@@ -56,6 +56,7 @@ function renderModal(overrides: Partial<React.ComponentProps<typeof LeaderboardM
     onTransferGenerate:  vi.fn().mockResolvedValue("ABCDEF"),
     onTransferClaim:     vi.fn().mockResolvedValue(undefined),
     onDisconnect:        vi.fn(),
+    onSignIn:            vi.fn().mockResolvedValue(undefined),
     onClose:             vi.fn(),
     ...overrides,
   };
@@ -105,14 +106,15 @@ describe("LeaderboardModal — day strip", () => {
 // ── "Παίξε αυτό το παζλ" play link ───────────────────────────────────────────
 
 describe("LeaderboardModal — play link", () => {
-  it("does NOT show play link when today's pill is selected", () => {
-    renderModal();
+  it("does NOT show any play link when today's pill is selected and defaultPuzzleId is today", () => {
+    renderModal({ defaultPuzzleId: TODAY });
     expect(screen.queryByText(/Παίξε αυτό το παζλ/)).toBeNull();
+    expect(screen.queryByText(/Παίξε το σημερινό παζλ/)).toBeNull();
   });
 
-  it("shows play link when a past pill is clicked", async () => {
+  it("shows play link when a past pill is clicked (player is on today's puzzle)", async () => {
     const past = RECENT_DATES[3];
-    renderModal();
+    renderModal({ defaultPuzzleId: TODAY });
     fireEvent.click(screen.getByRole("button", { name: past }));
     const links = await screen.findAllByText(/Παίξε αυτό το παζλ/);
     expect(links.length).toBeGreaterThan(0);
@@ -120,12 +122,34 @@ describe("LeaderboardModal — play link", () => {
 
   it("play link href points to the correct past puzzle", async () => {
     const past = RECENT_DATES[3];
-    renderModal();
+    renderModal({ defaultPuzzleId: TODAY });
     fireEvent.click(screen.getByRole("button", { name: past }));
     const links = await screen.findAllByText(/Παίξε αυτό το παζλ/);
     links.forEach((link) =>
       expect(link.closest("a")).toHaveAttribute("href", `/leksokipos?puzzle=${past}`)
     );
+  });
+
+  it("shows 'Παίξε το σημερινό παζλ' link when on a past puzzle and today pill is selected", async () => {
+    const past = RECENT_DATES[3];
+    renderModal({ defaultPuzzleId: past });
+    // today pill is selected by default when defaultPuzzleId is in the strip,
+    // but defaultPuzzleId=past means the strip opens on the past date.
+    // Click the today pill to trigger the back-to-today link.
+    fireEvent.click(screen.getByRole("button", { name: TODAY }));
+    const links = await screen.findAllByText(/Παίξε το σημερινό παζλ/);
+    expect(links.length).toBeGreaterThan(0);
+    links.forEach((link) =>
+      expect(link.closest("a")).toHaveAttribute("href", `/leksokipos?puzzle=${TODAY}`)
+    );
+  });
+
+  it("does NOT show a play link when the past pill matching the current puzzle is selected", async () => {
+    const past = RECENT_DATES[3];
+    renderModal({ defaultPuzzleId: past });
+    // The strip opens on the past date (defaultPuzzleId). No link should show for the current puzzle.
+    expect(screen.queryByText(/Παίξε αυτό το παζλ/)).toBeNull();
+    expect(screen.queryByText(/Παίξε το σημερινό παζλ/)).toBeNull();
   });
 });
 

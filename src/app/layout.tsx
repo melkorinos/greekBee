@@ -43,7 +43,12 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        {/* Runs synchronously before first paint — prevents dark-mode flash on all pages. */}
+        {/* Runs synchronously before first paint — prevents dark-mode flash on all
+            pages. Must live in <head> as a raw <script> so it executes during HTML
+            parse; next/script's beforeInteractive can't be an <html> child and a
+            useEffect injection runs too late (post-paint = visible flash). React's
+            dev-only "script tag while rendering" notice is the accepted cost; it is
+            stripped from production builds, so users never see it. */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{if(localStorage.getItem('theme-preference')==='dark')document.documentElement.classList.add('dark')}catch(e){}})()`,

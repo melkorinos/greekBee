@@ -14,7 +14,7 @@ import userEvent from "@testing-library/user-event";
 function mockFetch(
   ok: boolean,
   status = ok ? 200 : 500,
-  lookup: { rejected?: number; pending?: number } = {},
+  lookup: { rejected?: number; pending?: number; pendingId?: string | null } = {},
 ) {
   return vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
     const url = typeof input === "string" ? input : input.toString();
@@ -22,10 +22,14 @@ function mockFetch(
       return {
         ok: true,
         status: 200,
-        json: async () => ({ rejected: lookup.rejected ?? 0, pending: lookup.pending ?? 0 }),
+        json: async () => ({
+          rejected:  lookup.rejected  ?? 0,
+          pending:   lookup.pending   ?? 0,
+          pendingId: lookup.pendingId ?? null,
+        }),
       } as Response;
     }
-    return { ok, status, json: async () => ({ ok }) } as Response;
+    return { ok, status, json: async () => ({ ok, action: "added" }) } as Response;
   });
 }
 
@@ -33,6 +37,15 @@ function mockFetch(
 function postCall(fetchSpy: ReturnType<typeof mockFetch>) {
   return fetchSpy.mock.calls.find(
     ([url, init]) => url === "/api/nominations" && (init as RequestInit | undefined)?.method === "POST",
+  );
+}
+
+// Finds the POST /api/nominations/{id}/vote call.
+function voteCall(fetchSpy: ReturnType<typeof mockFetch>) {
+  return fetchSpy.mock.calls.find(
+    ([url, init]) =>
+      typeof url === "string" && url.includes("/vote") &&
+      (init as RequestInit | undefined)?.method === "POST",
   );
 }
 
@@ -226,18 +239,53 @@ describe("NominationModal — re-proposal warning", () => {
     expect(body.note).toBe("είναι υπαρκτή λέξη, δες λεξικό");
   });
 
-  it("shows a gentle info banner (not a block) for an already-pending word", async () => {
-    const fetchSpy = mockFetch(true, 200, { pending: 1 });
-    const { user } = setup({ word: "απορ", direction: "add" });
+  it("greys out submit and shows an upvote button for an already-pending word", async () => {
+    mockFetch(true, 200, { pending: 1, pendingId: "nom-1" });
+    setup({ word: "απορ", direction: "add" });
 
     await waitFor(() =>
       expect(screen.getByTestId("nomination-pending-info")).toBeInTheDocument(),
     );
     expect(screen.queryByTestId("nomination-rejected-warning")).toBeNull();
-    expect(screen.getByTestId("nomination-modal-submit")).not.toBeDisabled();
+    // Duplicate submission is blocked at the button; upvote is offered instead.
+    expect(screen.getByTestId("nomination-modal-submit")).toBeDisabled();
+    expect(screen.getByTestId("nomination-pending-upvote")).toBeInTheDocument();
+  });
 
+  it("upvotes the existing proposal instead of posting a duplicate", async () => {
+    const fetchSpy = mockFetch(true, 200, { pending: 1, pendingId: "nom-123" });
+    const { user, onSuccess } = setup({ word: "απορ", direction: "add" });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("nomination-pending-upvote")).toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByTestId("nomination-pending-upvote"));
+
+    await waitFor(() => expect(voteCall(fetchSpy)).toBeTruthy());
+    expect(voteCall(fetchSpy)![0]).toBe("/api/nominations/nom-123/vote");
+    const body = JSON.parse((voteCall(fetchSpy)![1] as RequestInit).body as string);
+    expect(body.voteType).toBe("up");
+
+    expect(screen.getByTestId("nomination-modal-success")).toBeInTheDocument();
+    expect(onSuccess).toHaveBeenCalledWith("απορ");
+    // No duplicate nomination inserted.
+    expect(postCall(fetchSpy)).toBeFalsy();
+  });
+
+  it("does not let a typed-but-unblurred duplicate slip through on submit", async () => {
+    const fetchSpy = mockFetch(true, 200, { pending: 1, pendingId: "nom-7" });
+    const { user } = setup({ wordEditable: true, direction: "add" });
+
+    await user.type(screen.getByTestId("nomination-modal-word-input"), "απορ");
     await user.click(screen.getByTestId("nomination-modal-submit"));
-    await waitFor(() => expect(postCall(fetchSpy)).toBeTruthy());
+
+    // The submit-time lookup catches the pending duplicate → no POST, upvote offered.
+    await waitFor(() =>
+      expect(screen.getByTestId("nomination-pending-upvote")).toBeInTheDocument(),
+    );
+    expect(postCall(fetchSpy)).toBeFalsy();
+    expect(screen.getByTestId("nomination-modal-submit")).toBeDisabled();
   });
 
   it("shows no warning for a word with no prior nominations", async () => {

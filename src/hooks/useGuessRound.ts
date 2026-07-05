@@ -16,7 +16,7 @@ import { useCallback, useMemo, useReducer } from "react";
 import { useRoundPersistence } from "./useRoundPersistence";
 import { useGameEndCallback } from "./useGameEndCallback";
 
-import type { GameId } from "@/types";
+import type { SliceId } from "@/types";
 
 /** The minimal state shape the spine reads. Games add their own fields. */
 export interface GuessRoundState<G> {
@@ -32,7 +32,7 @@ export interface GuessRoundSnapshot<G> {
 
 export interface UseGuessRoundOptions<S extends GuessRoundState<G>, A, G, P> {
   /** Which game slice to persist under. */
-  gameId:           GameId;
+  gameId:           SliceId;
   /** The puzzle the reducer initialises from. */
   puzzle:           P;
   /** Session key for persistence — the puzzle's id. */

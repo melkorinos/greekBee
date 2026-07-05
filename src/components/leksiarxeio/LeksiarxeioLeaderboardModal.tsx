@@ -3,16 +3,14 @@
 // LeksiarxeioLeaderboardModal — Leksiarxeio leaderboard wrapper.
 //
 // Wires the shared LeaderboardModalBase with:
-//   - Green colour scheme
 //   - Client-computed 7-day strip
 //   - /api/leksiarxeio-scores endpoint (date= param)
 //   - "Σκορ" score column
-//   - Shared ProfileSection (topSlot)
+//   - Shared profile slot (useLeaderboardProfileSlot)
 
 import type { LeaderboardProfileProps } from "@/hooks/useLeaderboardProfile";
 import { LeaderboardModalBase, getLast7Dates, buildLeaderboardUrl } from "@/components/shared/LeaderboardModal";
-import { ProfileSection } from "@/components/shared/ProfileSection";
-import { useLeaderboardProfile } from "@/hooks/useLeaderboardProfile";
+import { useLeaderboardProfileSlot } from "@/components/shared/LeaderboardProfileSlot";
 
 const buildUrl = buildLeaderboardUrl("leksiarxeio");
 
@@ -34,23 +32,10 @@ export function LeksiarxeioLeaderboardModal({
   today,
   deviceId,
   displayName,
-  profileLinked,
-  onSaveName,
-  onProfileCreate,
-  onTransferGenerate,
-  onTransferClaim,
-  onDisconnect,
-  authLinked,
-  authUserName,
-  onSignIn,
-  onSignOut,
   onClose,
+  ...profile
 }: LeksiarxeioLeaderboardModalProps) {
-  const { createError, handleSave } = useLeaderboardProfile({
-    profileLinked,
-    onProfileCreate,
-    onSaveName,
-  });
+  const profileSlot = useLeaderboardProfileSlot({ displayName, ...profile });
 
   return (
     <LeaderboardModalBase
@@ -63,27 +48,8 @@ export function LeksiarxeioLeaderboardModal({
       buildUrl={buildUrl}
       subtitle="Άθροισμα σκορ (4–8 γράμματα) · υψηλότερο = καλύτερο"
       scoreLabel="Σκορ"
-      pillActive="bg-correct text-white"
-      playerMark="text-correct"
-      showNameEditor={true}
-      saveButtonAlwaysActive={!profileLinked}
-      topSlot={
-        <ProfileSection
-          profileLinked={profileLinked}
-          displayName={displayName}
-          createError={createError ?? undefined}
-          onTransferGenerate={onTransferGenerate}
-          onTransferClaim={onTransferClaim}
-          onDisconnect={onDisconnect}
-          authLinked={authLinked}
-          authUserName={authUserName}
-          onSignIn={onSignIn}
-          onSignOut={onSignOut}
-          onSaveName={(name) => void handleSave(name)}
-        />
-      }
-      onSaveName={(name) => void handleSave(name)}
       onClose={onClose}
+      {...profileSlot}
     />
   );
 }

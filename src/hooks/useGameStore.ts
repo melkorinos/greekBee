@@ -4,7 +4,7 @@
 // Cross-game leakage is structurally impossible: each caller provides its own
 // slice type T and only that slice is read or written.
 
-import type { GameId, PersistenceEnvelope } from "@/types";
+import type { SliceId, PersistenceEnvelope } from "@/types";
 
 const STORE_KEY = "wordgames:state";
 
@@ -32,7 +32,7 @@ function writeEnvelope(envelope: PersistenceEnvelope): void {
  * Read a game's persisted slice.
  * Returns null if nothing has been saved yet or the data is corrupt.
  */
-export function readSlice<T>(gameId: GameId): T | null {
+export function readSlice<T>(gameId: SliceId): T | null {
   const envelope = readEnvelope();
   const slice = envelope[gameId];
   return slice !== undefined ? (slice as T) : null;
@@ -42,7 +42,7 @@ export function readSlice<T>(gameId: GameId): T | null {
  * Write a game's persisted slice.
  * Merges the slice into the envelope — other games' data is untouched.
  */
-export function writeSlice<T>(gameId: GameId, data: T): void {
+export function writeSlice<T>(gameId: SliceId, data: T): void {
   const envelope = readEnvelope();
   writeEnvelope({ ...envelope, [gameId]: data });
 }
@@ -51,7 +51,7 @@ export function writeSlice<T>(gameId: GameId, data: T): void {
  * Clear a single game's persisted slice.
  * Other games' slices are unaffected.
  */
-export function clearSlice(gameId: GameId): void {
+export function clearSlice(gameId: SliceId): void {
   const envelope = readEnvelope();
   const updated = { ...envelope };
   delete updated[gameId];
@@ -120,6 +120,23 @@ export function setDeviceId(id: string): void {
 }
 
 /**
+ * Adopt an identity handed back by Sign-in Restore (ADR 0012). The account's
+ * canonical device_uuid becomes this device's identity; profile + auth are both
+ * linked (sign-in always implies both). Written atomically so no intermediate
+ * state leaks. Game slices are untouched — history is merged server-side.
+ */
+export function adoptDeviceIdentity(deviceId: string, displayName?: string): void {
+  const envelope = readEnvelope();
+  writeEnvelope({
+    ...envelope,
+    deviceId,
+    ...(displayName?.trim() ? { displayName: displayName.trim() } : {}),
+    profileLinked: true,
+    authLinked:    true,
+  });
+}
+
+/**
  * One-time migration for existing Leksiarxeio players.
  * Before the device-identity unification, Leksiarxeio stored its own identity
  * in a "leksiarxeio-identity" slice separate from the platform deviceId.
@@ -141,12 +158,15 @@ export function migrateLeksiarxeioIdentity(): void {
 }
 
 /**
- * Unlink the cross-device profile from this device.
- * Generates a fresh anonymous deviceId so the player can continue anonymously.
+ * Disconnect this device's identity (ADR 0012 §5) — the unified action behind
+ * both profile-disconnect and Google sign-out. The device becomes a brand-new
+ * anonymous player: a fresh deviceId and a fully cleared envelope (displayName,
+ * profileLinked, authLinked, and every game slice), so an adopted identity or
+ * in-progress session can't leak to the next person on a shared computer.
+ * Nothing server-side is deleted; signing back in restores everything.
  */
-export function disconnectProfile(): void {
-  const envelope = readEnvelope();
-  writeEnvelope({ ...envelope, deviceId: crypto.randomUUID(), profileLinked: false, authLinked: false });
+export function disconnectIdentity(): void {
+  writeEnvelope({ deviceId: crypto.randomUUID() });
 }
 
 // ── Google auth identity ─────────────────────────────────────────────────────

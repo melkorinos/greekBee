@@ -1,6 +1,6 @@
 # ADR 0007 — Google OAuth augments device identity, does not replace it
 
-**Status**: Accepted
+**Status**: Superseded in part by ADR 0012 — merge/restore semantics inverted (auth account is now the anchor); the anonymous-first stance and TransferCode retention stand
 
 ## Context
 

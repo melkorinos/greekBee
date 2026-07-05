@@ -29,19 +29,30 @@ export async function GET(req: NextRequest) {
   const normalised = word.toLowerCase().trim();
   const supabase   = getSupabaseClient();
 
-  // Two head-only count queries — no rows transferred, just the totals.
-  const countByStatus = (status: string) =>
+  // Rejected: head-only count — no rows transferred, just the total.
+  const rejectedQuery =
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (supabase.from("nominations") as any)
       .select("id", { count: "exact", head: true })
       .eq("word", normalised)
       .eq("direction", direction)
-      .eq("status", status);
+      .eq("status", "rejected");
 
-  const [rejectedRes, pendingRes] = await Promise.all([
-    countByStatus("rejected"),
-    countByStatus("pending"),
-  ]) as Array<{ count: number | null; error: unknown }>;
+  // Pending: fetch the ids (earliest first) so the client can offer to upvote the
+  // existing proposal instead of inserting a duplicate. `pendingId` = the original.
+  const pendingQuery =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase.from("nominations") as any)
+      .select("id", { count: "exact" })
+      .eq("word", normalised)
+      .eq("direction", direction)
+      .eq("status", "pending")
+      .order("created_at", { ascending: true });
+
+  const [rejectedRes, pendingRes] = await Promise.all([rejectedQuery, pendingQuery]) as [
+    { count: number | null; error: unknown },
+    { data: Array<{ id: string }> | null; count: number | null; error: unknown },
+  ];
 
   if (rejectedRes.error || pendingRes.error) {
     return NextResponse.json({ error: "db_error" }, { status: 500 });
@@ -52,5 +63,6 @@ export async function GET(req: NextRequest) {
     direction,
     rejected:  rejectedRes.count ?? 0,
     pending:   pendingRes.count ?? 0,
+    pendingId: pendingRes.data?.[0]?.id ?? null,
   });
 }

@@ -18,6 +18,8 @@ import { useCallback, useEffect, useMemo, useReducer } from "react";
 import type { LeksokiposPuzzle, LeksokiposRoundSnapshot } from "../types";
 import { isDailyPuzzle } from "../lib/puzzle";
 import { normalizeLetters } from "../lib/normalize";
+import { computeScoreFromWords, maxScore } from "../lib/scoring";
+import { calculateRank } from "../lib/ranking";
 import { pullSnapshot } from "../sync";
 import { getOrCreateDeviceId, isProfileLinked, readSlice } from "@/hooks/useGameStore";
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
@@ -150,6 +152,27 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     []
   );
 
+  const godModeInject = useCallback(
+    (words: string[]) => {
+      const pMax = maxScore(initialPuzzle);
+      const score = computeScoreFromWords(words, initialPuzzle);
+      const currentRank = calculateRank(score, pMax);
+      dispatch({ type: "GOD_MODE_INJECT", foundWords: words, score, currentRank });
+    },
+    // initialPuzzle is stable for the lifetime of this hook instance.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
+
+  const resetGame = useCallback(
+    () => {
+      clearRound();
+      dispatch({ type: "NEW_GAME", puzzle: initialPuzzle });
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [clearRound]
+  );
+
   const newGame = useCallback(
     (puzzle: LeksokiposPuzzle) => {
       clearRound();
@@ -177,5 +200,7 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     newGame,
     giveUp,
     restoreFromServer,
+    godModeInject,
+    resetGame,
   };
 }

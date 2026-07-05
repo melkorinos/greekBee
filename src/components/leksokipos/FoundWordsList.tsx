@@ -5,7 +5,7 @@
 // The give-up button sits below the word list and opens the GiveUpModal
 // (confirmation + missed words) — no inline confirmation here.
 
-import { btnGiveUp, foundWordClass, foundWordPangramClass } from "@/styles/recipes";
+import { btnGiveUp, foundWordClass, foundWordPangramClass } from "./styles";
 
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { isPangram } from "@/games/leksokipos/lib/pangram";

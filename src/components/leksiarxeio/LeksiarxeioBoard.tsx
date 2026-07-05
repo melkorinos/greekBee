@@ -5,6 +5,7 @@
 // Wires physical keyboard events and leaderboard score submission.
 
 import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
+import { LEKSIARXEIO } from "@/config/gameRules";
 import {
   migrateLeksiarxeioIdentity,
   readSlice,
@@ -12,6 +13,7 @@ import {
 } from "@/hooks/useGameStore";
 import { useGameIdentity } from "@/hooks/useGameIdentity";
 import { useProfile } from "@/hooks/useProfile";
+import { useAuth } from "@/hooks/useAuth";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
@@ -25,7 +27,7 @@ import { useLeksiarxeioState } from "@/games/leksiarxeio/hooks/useLeksiarxeioSta
 // Greek letter regex (covers the Greek alphabet range)
 const GREEK_LETTER = /^[α-ωά-ώΑ-ΩΆ-Ώ]$/i;
 
-const LENGTHS: LeksiarxeioLength[] = [4, 5, 6, 7, 8];
+const LENGTHS: LeksiarxeioLength[] = [...LEKSIARXEIO.LENGTHS];
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -190,6 +192,7 @@ export function LeksiarxeioBoard({
       onDeviceIdChange:    setDeviceId,
       onDisplayNameChange: (name) => { setDisplayName(name); saveDisplayName(name); },
     });
+  const { authLinked, authUserName, signInWithGoogle, signOut } = useAuth();
 
   // Track which lengths are finished (won or lost) so auto-advance can skip them.
   // A ref is used alongside state to avoid stale-closure issues inside setTimeout.
@@ -308,6 +311,10 @@ export function LeksiarxeioBoard({
         onTransferGenerate={generateTransferCode}
         onTransferClaim={claimTransferCode}
         onDisconnect={disconnect}
+        authLinked={authLinked}
+        authUserName={authUserName}
+        onSignIn={signInWithGoogle}
+        onSignOut={signOut}
         onClose={onCloseLeaderboard}
       />
     </>

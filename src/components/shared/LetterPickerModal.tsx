@@ -16,6 +16,8 @@
 
 import { useCallback, useState } from "react";
 
+import { Modal } from "./Modal";
+import { btnCancel } from "@/styles/recipes";
 import { pickRandom7 } from "@/games/leksokipos/lib/randomPuzzle";
 
 // ── Letter layout ─────────────────────────────────────────────────────────────
@@ -92,29 +94,15 @@ export function LetterPickerModal({
   const selectedCount = (center ? 1 : 0) + outer.length;
   const canGenerate = center !== null && outer.length === 6;
 
-  if (!isOpen) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-      onClick={handleClose}
-      data-testid="letter-picker-backdrop"
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      closeLabel="Close"
+      backdropTestId="letter-picker-backdrop"
+      cardTestId="letter-picker-modal"
+      closeTestId="letter-picker-close"
     >
-      <div
-        className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6 relative"
-        onClick={(e) => e.stopPropagation()}
-        data-testid="letter-picker-modal"
-      >
-        {/* Close button */}
-        <button
-          onClick={handleClose}
-          aria-label="Close"
-          className="absolute top-4 right-4 text-muted hover:text-foreground text-xl leading-none"
-          data-testid="letter-picker-close"
-        >
-          ✕
-        </button>
-
         <h2 className="text-lg font-bold text-foreground mb-1">Επιλογή Γραμμάτων</h2>
 
         {/* Instructions */}
@@ -170,14 +158,14 @@ export function LetterPickerModal({
           <button
             onClick={reset}
             data-testid="letter-picker-reset"
-            className="flex-1 py-2 rounded-xl border border-border text-muted text-sm font-medium hover:bg-surface-raised active:bg-stone-100 transition-colors"
+            className={btnCancel}
           >
             Επαναφορά
           </button>
           <button
             onClick={handleRandom}
             data-testid="letter-picker-random"
-            className="flex-1 py-2 rounded-xl border border-border text-muted text-sm font-medium hover:bg-surface-raised active:bg-stone-100 transition-colors"
+            className={btnCancel}
           >
             🎲 Τυχαίο
           </button>
@@ -202,7 +190,6 @@ export function LetterPickerModal({
             Δημιουργία
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 }

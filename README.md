@@ -255,7 +255,7 @@ src/
   lib/
     greeklish.ts    Bijective Greek↔greeklish codec for clean ASCII custom URLs
     postScore.ts    Fire-and-forget POST utility — silently swallows network errors
-  types/            Shared types: Language, GameId, PersistenceEnvelope
+  types/            Shared types: Language, SliceId, PersistenceEnvelope
 scripts/            Puzzle generation & curation CLIs (batch-generate, curate-answers, …)
 ```
 
@@ -347,7 +347,7 @@ Test files are organised under `src/test/` by game and shared utilities:
 
 | File | Covers |
 |------|--------|
-| `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`; `deviceId`, `displayName`, `profileLinked`, `disconnectProfile` helpers |
+| `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`; `deviceId`, `displayName`, `profileLinked`, `disconnectIdentity` helpers |
 | `useGameIdentity.test.ts` | SSR-safe DeviceId + DisplayName init — initial values from store, setter stability |
 | `persistence.test.ts` | `useRoundPersistence` — hydration, saving, `clear()`, session isolation, `shouldSave` guard |
 | `Shell.test.tsx` | Hamburger open/close, navigation links, keyboard dismiss |

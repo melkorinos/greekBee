@@ -68,9 +68,9 @@ export function GuessGrid({
   const gridMaxW = GRID_MAX_WIDTH[wordLength] ?? "max-w-full";
 
   return (
-    <div className={`flex flex-col gap-1.5 w-full mx-auto ${gridMaxW}`} role="grid" aria-label="Guess grid">
+    <div data-testid="guess-grid" className={`flex flex-col gap-1.5 w-full mx-auto ${gridMaxW}`} role="grid" aria-label="Guess grid">
       {rows.map((row, ri) => (
-        <div key={ri} className="flex gap-1.5 w-full">
+        <div key={ri} data-row={ri} className="flex gap-1.5 w-full">
           <div className="flex flex-1 gap-1.5" role="row">
             {row.letters.map((letter, ci) => (
               <Tile

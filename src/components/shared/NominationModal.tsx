@@ -1,14 +1,16 @@
 "use client";
 
-import { btnCancel, btnModalSubmit, inputClass, inputReadonlyClass, labelClass, labelOptionalClass } from "@/styles/recipes";
+import { btnCancel, btnModalPrimary, btnModalSubmit, inputClass, inputReadonlyClass, labelClass, labelOptionalClass } from "@/styles/recipes";
 
+import { Modal } from "./Modal";
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
 import { useCallback, useEffect, useState } from "react";
 
 interface LookupResult {
-  word:     string; // the lowercase+trim word this result applies to
-  rejected: number;
-  pending:  number;
+  word:      string; // the lowercase+trim word this result applies to
+  rejected:  number;
+  pending:   number;
+  pendingId: string | null; // id of the existing pending proposal, to upvote instead
 }
 
 interface NominationModalProps {
@@ -55,6 +57,7 @@ export function NominationModal({
   const [status,       setStatus]       = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [lookup,       setLookup]       = useState<LookupResult | null>(null);
   const [noteMissing,  setNoteMissing]  = useState(false);
+  const [successMode,  setSuccessMode]  = useState<"submitted" | "upvoted">("submitted");
 
   const word = wordEditable ? editableWord : wordProp;
   const c    = copy[direction];
@@ -72,11 +75,12 @@ export function NominationModal({
           `/api/nominations/lookup?word=${encodeURIComponent(target)}&direction=${direction}`,
         );
         if (!res.ok) return null;
-        const data = (await res.json()) as { rejected?: number; pending?: number };
+        const data = (await res.json()) as { rejected?: number; pending?: number; pendingId?: string | null };
         const result: LookupResult = {
-          word:     target,
-          rejected: data.rejected ?? 0,
-          pending:  data.pending  ?? 0,
+          word:      target,
+          rejected:  data.rejected  ?? 0,
+          pending:   data.pending   ?? 0,
+          pendingId: data.pendingId ?? null,
         };
         setLookup(result);
         return result;
@@ -114,6 +118,13 @@ export function NominationModal({
     }
     setNoteMissing(false);
 
+    // An identical proposal is already pending → never insert a duplicate. Bail;
+    // the setLookup above makes `pendingHit` true, greying out this button and
+    // surfacing the "upvote the existing one" action in the info banner.
+    if (lk && lk.rejected === 0 && lk.pending > 0 && lk.pendingId) {
+      return;
+    }
+
     setStatus("submitting");
     try {
       const res = await fetch("/api/nominations", {
@@ -130,8 +141,30 @@ export function NominationModal({
       if (!res.ok) {
         throw new Error("server error");
       }
+      setSuccessMode("submitted");
       setStatus("success");
       onSuccess(trimmed);
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  // Upvote the existing pending proposal instead of submitting a duplicate.
+  async function handleUpvoteExisting(targetId: string | null) {
+    if (!targetId) return;
+    setStatus("submitting");
+    try {
+      const res = await fetch(`/api/nominations/${targetId}/vote`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ deviceId: getOrCreateDeviceId(), voteType: "up" }),
+      });
+      if (!res.ok) {
+        throw new Error("server error");
+      }
+      setSuccessMode("upvoted");
+      setStatus("success");
+      onSuccess(word.trim().toLowerCase());
     } catch {
       setStatus("error");
     }
@@ -144,40 +177,31 @@ export function NominationModal({
     setStatus("idle");
     setLookup(null);
     setNoteMissing(false);
+    setSuccessMode("submitted");
     onClose();
   }
 
   const displayWord = word.toUpperCase();
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-      onClick={handleClose}
-      data-testid="nomination-modal-backdrop"
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      closeLabel="Close"
+      backdropTestId="nomination-modal-backdrop"
+      cardTestId="nomination-modal"
+      closeTestId="nomination-modal-close"
     >
-      <div
-        className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6 relative"
-        onClick={(e) => e.stopPropagation()}
-        data-testid="nomination-modal"
-      >
-        <button
-          onClick={handleClose}
-          aria-label="Close"
-          data-testid="nomination-modal-close"
-          className="absolute top-4 right-4 text-muted hover:text-foreground text-xl leading-none"
-        >
-          ✕
-        </button>
-
         {status === "success" ? (
           <div className="text-center py-4" data-testid="nomination-modal-success">
-            <p className="text-3xl mb-3">🙏</p>
+            <p className="text-3xl mb-3">{successMode === "upvoted" ? "🗳️" : "🙏"}</p>
             <p className="font-semibold text-foreground mb-1">Ευχαριστούμε!</p>
-            <p className="text-sm text-muted">{c.success(word.trim())}</p>
-            <button
-              onClick={handleClose}
-              className="mt-5 px-6 py-2 rounded-xl bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 transition-colors"
-            >
+            <p className="text-sm text-muted">
+              {successMode === "upvoted"
+                ? `Ψήφισες υπέρ της υπάρχουσας πρότασης για τη λέξη ${word.trim().toUpperCase()}.`
+                : c.success(word.trim())}
+            </p>
+            <button onClick={handleClose} className={`mt-5 ${btnModalPrimary}`}>
               Κλείσιμο
             </button>
           </div>
@@ -209,9 +233,22 @@ export function NominationModal({
                 className="mb-4 rounded-xl border border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950 px-3 py-2.5"
               >
                 <p className="text-xs text-sky-800 dark:text-sky-200 leading-relaxed">
-                  ℹ Υπάρχει ήδη ενεργή πρόταση για αυτή τη λέξη. Μπορείς να την ψηφίσεις αντί να
-                  στείλεις διπλή πρόταση.
+                  ℹ Υπάρχει ήδη ενεργή πρόταση για αυτή τη λέξη. Ψήφισέ την αντί να στείλεις
+                  διπλή πρόταση.
                 </p>
+                <button
+                  onClick={() => handleUpvoteExisting(lookup?.pendingId ?? null)}
+                  disabled={status === "submitting" || !lookup?.pendingId}
+                  data-testid="nomination-pending-upvote"
+                  className="mt-2.5 w-full py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                >
+                  {status === "submitting" ? "…" : "▲ Ψήφισε υπέρ της υπάρχουσας"}
+                </button>
+                {status === "error" && (
+                  <p className="text-xs text-red-500 mt-2" data-testid="nomination-upvote-error">
+                    Κάτι πήγε στραβά. Δοκίμασε ξανά.
+                  </p>
+                )}
               </div>
             )}
 
@@ -306,7 +343,8 @@ export function NominationModal({
                 disabled={
                   status === "submitting" ||
                   (!wordEditable && !word.trim()) ||
-                  (noteRequired && !note.trim())
+                  (noteRequired && !note.trim()) ||
+                  pendingHit
                 }
                 data-testid="nomination-modal-submit"
                 className={btnModalSubmit}
@@ -316,7 +354,6 @@ export function NominationModal({
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }

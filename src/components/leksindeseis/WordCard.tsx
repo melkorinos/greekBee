@@ -19,7 +19,7 @@ export function WordCard({ word, selected, disabled = false, onSelect }: WordCar
         "h-14 w-full rounded-lg border-2",
         "text-sm font-bold uppercase tracking-wide",
         "transition-colors duration-100 select-none",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-muted",
         disabled
           ? "opacity-50 cursor-not-allowed"
           : "cursor-pointer active:opacity-80",

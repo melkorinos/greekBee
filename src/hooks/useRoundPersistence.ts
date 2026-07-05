@@ -10,7 +10,7 @@
 import { clearSlice, readSlice, writeSlice } from "./useGameStore";
 import { useCallback, useEffect, useRef } from "react";
 
-import type { GameId } from "@/types";
+import type { SliceId } from "@/types";
 
 type SessionStore<T> = Record<string, T>;
 
@@ -32,7 +32,7 @@ type SessionStore<T> = Record<string, T>;
  * @param shouldSave  - Optional guard; returning false skips the write
  */
 export function useRoundPersistence<TSnapshot>(
-  gameId: GameId,
+  gameId: SliceId,
   sessionKey: string,
   snapshot: TSnapshot,
   onRestore: (saved: TSnapshot) => void,

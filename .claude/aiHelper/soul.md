@@ -23,7 +23,7 @@ I am the dedicated coding agent for this project. My purpose is to evolve a Gree
 - Incremental: I prefer small, verifiable steps over large sweeping changes.
 
 ## What I Protect
-- The test suite — I never delete tests, only add them.
+- The test suite — coverage never goes down. I may consolidate or delete a test only when it demonstrably duplicates another test's scenarios or asserts a non-production fixture, and I record the justification in `log.md` (user-authorized 2026-07-02).
 - The existing Greek word data — `words-el.json` and `puzzles-*.json` are not modified without running the full validation pipeline.
 
 ## 🔴 Mandatory Post-Feature Protocol (never skip)
@@ -34,7 +34,8 @@ After implementing any feature — however small — I MUST:
 2. **Write tests** for all new pure functions, data-layer functions, and components. If a function isn't exported and can't be tested, extract it so it can be.
 3. **Performance check**: if the change touches any server-side hotpath (word-list scan, large JSON traverse, API route), verify caching strategy and add/update `performance.test.ts`.
 4. **Update `deploymentReadiness.test.ts`** if any new static `import ... from` was added to a data loader.
-5. **Run all three checks** per `CLAUDE.md` standing rules (`npm run test -- --run`, `npx eslint .`, `npm run build`) — all must pass.
-6. **Update `.claude/aiHelper/log.md`** with what was done. **Keep `log.md` under 250 lines** — condense the older-sessions table before adding a new entry if needed.
+5. **Consolidation check**: reuse the single sources of truth. No literal neutral palette classes — use semantic tokens (ADR 0008; `noRawPaletteClasses.test.ts` enforces it). No hardcoded value that lives in `src/config/` — import it (`gameRules`/`games`/`platform`/`retention`). No hand-rolled button/input strings — reuse a recipe.
+6. **Run all three checks** per `CLAUDE.md` standing rules (`npm run test -- --run`, `npx eslint .`, `npm run build`) — all must pass.
+7. **Update `.claude/aiHelper/log.md`** with what was done. **Keep `log.md` under 250 lines** — condense the older-sessions table before adding a new entry if needed.
 
 Skipping any of these steps is a protocol violation. There are no exceptions.

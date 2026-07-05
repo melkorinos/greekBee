@@ -2,7 +2,7 @@
 // Verifies: community queue consumption, static fallback, determinism, and multi-length support.
 // Supabase is mocked so tests cover both the community path and the static fallback path.
 
-import { LEKSIARXEIO_LENGTHS, getAllTodaysLeksiarxeioPuzzles, getTodayDateString, getValidWords } from "@/data/leksiarxeio";
+import { LEKSIARXEIO_LENGTHS, getAllTodaysLeksiarxeioPuzzles, getAnswerPool, getTodayDateString, getValidWords } from "@/data/leksiarxeio";
 import { describe, expect, it, vi } from "vitest";
 
 // ── Supabase mock (returns error → triggers static fallback by default) ────────
@@ -153,6 +153,30 @@ describe("getValidWords", () => {
       expect(
         words.every((w) => w === w.normalize("NFD").replace(/[̀-ͯ]/g, ""))
       ).toBe(true);
+    }
+  });
+});
+
+// ── getAnswerPool ─────────────────────────────────────────────────────────────
+
+describe("getAnswerPool", () => {
+  it("every answer pool word is in the valid-words list for that length", () => {
+    for (const len of LEKSIARXEIO_LENGTHS) {
+      const valid = new Set(getValidWords(len));
+      const pool  = getAnswerPool(len);
+      expect(pool.every((w) => valid.has(w))).toBe(true);
+    }
+  });
+
+  it("returns a non-empty pool for all supported lengths", () => {
+    for (const len of LEKSIARXEIO_LENGTHS) {
+      expect(getAnswerPool(len).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("answer pool is smaller than or equal to the full word list", () => {
+    for (const len of LEKSIARXEIO_LENGTHS) {
+      expect(getAnswerPool(len).length).toBeLessThanOrEqual(getValidWords(len).length);
     }
   });
 });

@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase";
-import { getOrCreateDeviceId } from "@/hooks/useGameStore";
+import { adoptDeviceIdentity, getOrCreateDeviceId } from "@/hooks/useGameStore";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -37,21 +37,46 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      const user     = data.session.user;
-      const deviceId = getOrCreateDeviceId();
-      const authName = (user.user_metadata?.["full_name"] as string | undefined) ?? null;
+      const deviceId    = getOrCreateDeviceId();
+      const accessToken = data.session.access_token;
+      let   wasRestored = false;
 
-      await fetch("/api/auth/link", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          device_uuid:  deviceId,
-          auth_user_id: user.id,
-          display_name: authName,
-        }),
-      }).catch(() => {});
+      // The route derives auth_user_id + Google name from the verified JWT;
+      // the body carries only this device's id. (ADR 0012 §6.) The response
+      // hands back the canonical identity: on Sign-in Restore it differs from
+      // this device, and we adopt it (identity + merged history live server-side).
+      try {
+        const res = await fetch("/api/auth/link", {
+          method:  "POST",
+          headers: {
+            "Content-Type":  "application/json",
+            "Authorization": `Bearer ${accessToken}`,
+          },
+          body:    JSON.stringify({ device_uuid: deviceId }),
+        });
+        if (res.ok) {
+          const link = (await res.json()) as {
+            device_uuid?: string; display_name?: string; restored?: boolean;
+          };
+          if (link.device_uuid && link.device_uuid !== deviceId) {
+            adoptDeviceIdentity(link.device_uuid, link.display_name);
+            // Signal games to re-hydrate found words under the adopted identity.
+            localStorage.setItem("leksokipos-needs-restore", "true");
+            // Flag the "welcome back" signal for the destination page.
+            if (link.restored) {
+              wasRestored = true;
+              sessionStorage.setItem("signin-restore-welcome", link.display_name ?? "");
+            }
+          }
+        }
+      } catch {
+        // Sign-in still succeeded; identity linking is best-effort.
+      }
 
-      const redirectTo = sessionStorage.getItem("auth-redirect") ?? "/";
+      // Sign-in Restore lands on /profile — the proof surface (adopted name,
+      // merged stats, trophy case, welcome banner). Normal sign-in returns to
+      // the saved origin page. Either way, clear the saved redirect key.
+      const redirectTo = wasRestored ? "/profile" : (sessionStorage.getItem("auth-redirect") ?? "/");
       sessionStorage.removeItem("auth-redirect");
       router.replace(redirectTo);
     }).catch(() => { setError("Αποτυχία σύνδεσης. Δοκίμασε ξανά."); });
@@ -61,14 +86,14 @@ export default function AuthCallbackPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 text-foreground">
         <p className="text-sm">{error}</p>
-        <Link href="/" className="text-xs underline text-stone-500">Επιστροφή στην αρχική</Link>
+        <Link href="/" className="text-xs underline text-muted">Επιστροφή στην αρχική</Link>
       </div>
     );
   }
 
   return (
     <div className="flex items-center justify-center min-h-screen">
-      <p className="text-sm text-stone-500 animate-pulse">Σύνδεση…</p>
+      <p className="text-sm text-muted animate-pulse">Σύνδεση…</p>
     </div>
   );
 }

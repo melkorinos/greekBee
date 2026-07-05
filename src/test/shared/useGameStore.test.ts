@@ -3,13 +3,16 @@
 // No React — plain Vitest + jsdom (localStorage is available via setup.ts).
 
 import {
+  adoptDeviceIdentity,
   clearSlice,
-  disconnectProfile,
+  disconnectIdentity,
   getDisplayName,
   getOrCreateDeviceId,
+  isAuthLinked,
   isProfileLinked,
   migrateLeksiarxeioIdentity,
   readSlice,
+  setAuthLinked,
   setDeviceId,
   setDisplayName,
   setProfileLinked,
@@ -290,16 +293,52 @@ describe("migrateLeksiarxeioIdentity", () => {
   });
 });
 
-describe("disconnectProfile", () => {
+// ── adoptDeviceIdentity (Sign-in Restore) ─────────────────────────────────────
+
+describe("adoptDeviceIdentity", () => {
+  it("overwrites the deviceId with the adopted identity", () => {
+    getOrCreateDeviceId(); // seed a different id first
+    adoptDeviceIdentity("canon-uuid", "OldName");
+    expect(getOrCreateDeviceId()).toBe("canon-uuid");
+  });
+
+  it("adopts the display name", () => {
+    adoptDeviceIdentity("canon-uuid", "OldName");
+    expect(getDisplayName()).toBe("OldName");
+  });
+
+  it("marks both profileLinked and authLinked (sign-in implies both)", () => {
+    adoptDeviceIdentity("canon-uuid", "OldName");
+    expect(isProfileLinked()).toBe(true);
+    expect(isAuthLinked()).toBe(true);
+  });
+
+  it("keeps any existing display name when none is supplied", () => {
+    setDisplayName("Κώστας");
+    adoptDeviceIdentity("canon-uuid");
+    expect(getDisplayName()).toBe("Κώστας");
+  });
+
+  it("does not disturb game slices", () => {
+    writeSlice("leksokipos", { score: 12 });
+    adoptDeviceIdentity("canon-uuid", "OldName");
+    expect(readSlice("leksokipos")).toEqual({ score: 12 });
+  });
+});
+
+// Disconnect (ADR 0012 §5): profile-disconnect AND Google sign-out are one
+// concept — the device becomes a brand-new anonymous player. Full local reset
+// so an adopted identity can't leak to the next person on a shared computer.
+describe("disconnectIdentity", () => {
   it("generates a new deviceId different from the one before", () => {
     const before = getOrCreateDeviceId();
-    disconnectProfile();
+    disconnectIdentity();
     const after = getOrCreateDeviceId();
     expect(after).not.toBe(before);
   });
 
   it("new deviceId is a valid UUID v4", () => {
-    disconnectProfile();
+    disconnectIdentity();
     const id = getOrCreateDeviceId();
     expect(id).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
@@ -308,13 +347,25 @@ describe("disconnectProfile", () => {
 
   it("clears profileLinked", () => {
     setProfileLinked(true);
-    disconnectProfile();
+    disconnectIdentity();
     expect(isProfileLinked()).toBe(false);
   });
 
-  it("does not disturb game slices", () => {
+  it("clears authLinked", () => {
+    setAuthLinked(true);
+    disconnectIdentity();
+    expect(isAuthLinked()).toBe(false);
+  });
+
+  it("clears the displayName", () => {
+    setDisplayName("Νίκος");
+    disconnectIdentity();
+    expect(getDisplayName()).toBe("");
+  });
+
+  it("wipes game slices — a brand-new player has no prior progress", () => {
     writeSlice("leksokipos", { score: 8 });
-    disconnectProfile();
-    expect(readSlice("leksokipos")).toEqual({ score: 8 });
+    disconnectIdentity();
+    expect(readSlice("leksokipos")).toBeNull();
   });
 });

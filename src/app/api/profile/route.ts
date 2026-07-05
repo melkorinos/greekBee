@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { getSupabaseClient, getTokenScopedClient } from "@/lib/supabase";
 
 export const runtime = "edge";
 
@@ -36,16 +36,39 @@ export async function POST(req: NextRequest) {
   }
 
   const display_name = (rawName ?? "").trim() || "Ανώνυμος";
-  const supabase     = getSupabaseClient();
+
+  // A signed-in player's player_profiles row has auth_user_id set, and the
+  // profile_update RLS policy scopes writes to auth.uid(). Carry the caller's
+  // access token (when present) so RLS sees them as the row owner; anonymous
+  // callers use the anon client, which the policy still allows for auth_user_id
+  // IS NULL rows. RLS stays authoritative either way — an anon client cannot
+  // rename an auth-linked profile, and a token can only touch its owner's row.
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const token      = authHeader.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : "";
+  const supabase   = token ? getTokenScopedClient(token) : getSupabaseClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase.from("player_profiles") as any).upsert(
-    { display_name, device_uuid },
+    { display_name, device_uuid, last_active: new Date().toISOString() },
     { onConflict: "device_uuid" }
   );
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Propagate the rename to the leaderboard. Display names are denormalized onto
+  // each game_scores row (the leaderboard GET reads display_name there, never
+  // from player_profiles), so without this fan-out the player's existing rows
+  // keep the stale name. anon UPDATE is permitted (scores_update USING(true),
+  // ADR 0012). No-op for a brand-new device with no scores yet.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error: scoresError } = await (supabase.from("game_scores") as any)
+    .update({ display_name })
+    .eq("device_id", device_uuid);
+
+  if (scoresError) {
+    return NextResponse.json({ error: scoresError.message }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true });

@@ -20,8 +20,9 @@ Five live games + custom puzzle URLs + the Leksikastirio word-court. Run `npm ru
 |-------|----------|
 | **Routing** | `/leksokipos`, `/leksiarxeio`, `/leksindeseis`, `/vres-tin-frasi`, `/stavrolekso` (+ `/[id]`, `/maker`), `/leksikastirio`, `/` picker. Custom: `/leksokipos/[center]/[outer]` |
 | **Persistence** | Single `wordgames:state` key. `useGameStore` is the ONLY localStorage writer. Exception: `leksokipos-variant` standalone key (display pref, not game state). |
-| **Types** | Root `src/types/index.ts` = `Language`, `GameId`, `PersistenceEnvelope` only. Game types in `src/games/*/types.ts`. |
-| **Theming** | All pages = white/light mode by default. Manual dark/light toggle in Shell header (☀️/🌙). `.dark` class on `<html>` drives all dark styles — `prefers-color-scheme` NOT used. `dark:` Tailwind prefix is enabled via `@custom-variant dark` in `globals.css` (see ADR 0002). Preference stored in `localStorage` key `"theme-preference"`. Style tokens in `src/components/leksokipos/styles.ts`. Feedback colours (green/yellow tile states, difficulty colours) unchanged in dark mode. |
+| **Types** | Root `src/types/index.ts` = `Language`, `SliceId`, `PersistenceEnvelope` only. Game types in `src/games/*/types.ts`. (`SliceId` is the **persistence-slice** union, incl. `suggestions`/`reports`; it is NOT the game registry — `stavrolekso`/`leksikastirio` have no store slice so they're absent by design. For "every registered game" use `RegistryGameId` from `@/config/games`.) |
+| **Config / single sources of truth** | `src/config/` holds the platform's tuning knobs — never hardcode a value that lives here, import it. `games.ts` = `GAME_REGISTRY` + `RegistryGameId` (nav/picker/titles derive from it). `gameRules.ts` = every numeric knob per game (`LEKSOKIPOS.MIN_WORD_LENGTH/PANGRAM_BONUS/MAX_SCORE_CAP/SCORE_SCALE`, `LEKSIARXEIO.MAX_GUESSES/LENGTHS`, `VRESTIFRASI.MAX_GUESSES`, `LEKSINDESEIS.MAX_MISTAKES`, `STAVROLEKSO.VALID_GRID_SIZES`). `platform.ts` = brand name + derived SEO description. `retention.ts` = DB retention windows (cron). `LeksiarxeioLength` type must track `LEKSIARXEIO.LENGTHS`. |
+| **Theming** | All pages = white/light mode by default. Manual dark/light toggle in Shell header (☀️/🌙). `.dark` class on `<html>` drives all dark styles — `prefers-color-scheme` NOT used. `dark:` Tailwind prefix is enabled via `@custom-variant dark` in `globals.css` (see ADR 0002). Preference stored in `localStorage` key `"theme-preference"`. **Semantic design tokens** are the single source for the palette: defined in `globals.css`, light on `:root` + dark under `.dark` (ADR 0008) — components reference tokens (`bg-surface`, `text-muted`), never `dark:` pairs. Feedback colours (green/yellow tile states, difficulty colours) are tokens too. **Per-game brand accent** (ADR 0009): `--game-accent` / `--game-accent-foreground`, set per game via `[data-game="…"]` in `globals.css`, on the game's root wrapper. Class recipes: platform-shared in `src/styles/recipes.ts`; Leksokipos-only in `src/components/leksokipos/styles.ts`. Shared modal shell = `src/components/shared/Modal.tsx` (`center`|`sheet`). **Deliberate raw-palette exceptions (do NOT "tokenise" — they'd regress):** `StavroleksoGrid` (functional crossword cells, black/white, already dark-handled — like tile colours), `Shell` slide-out drawer (intentionally always-dark `zinc-*`, no always-dark token), `FeedbackBanner` (explicit `theme` prop so games force their own look; no success/error surface-tint tokens exist), `FlowerGridPlayground` (dev-only tool), and the fixed-yellow chip `text-stone-900` in leksokipos `styles.ts`. |
 | **Game logic** | Pure functions in `src/games/*/lib/` — zero React imports. |
 | **Shared components** | Graduate to `src/components/shared/` only when 2 games genuinely need it. |
 | **Leksindeseis** | No `language` field on `LeksindeseisPuzzle`; identified by `date` alone. |
@@ -29,7 +30,7 @@ Five live games + custom puzzle URLs + the Leksikastirio word-court. Run `npm ru
 | **No Greek accents** | Zero accents in URLs, stored state, puzzle letters, valid-word output. `normalizeLetters()` is the single normalisation point. |
 | **Custom URL** | Greeklish bijective codec (`src/lib/greeklish.ts`). Canonical 301 redirect on unnormalised params. |
 | **Supabase** | Singleton in `src/lib/supabase.ts`. `getOrCreateDeviceId()` generates stable UUID stored under `deviceId` in the envelope. **Schema is version-controlled** in `supabase/migrations/` (authoritative DDL + RLS); change it via a new migration + `npx supabase db push` (no Docker), never via dashboard/MCP alone or it drifts. `CONTEXT.md` documents table *purpose* only. |
-| **Profile identity** | No PIN. Profile = device_uuid row in `player_profiles`. Cross-device: generate 6-char transfer code via `POST /api/transfer`, claim on other device via `POST /api/transfer/claim`. `useProfile` hook shared across games. `ProfileSection` component shared in `src/components/shared/`. Google OAuth can augment device identity (`auth_user_id`); see ADR 0007. |
+| **Profile identity** | No PIN. Profile = device_uuid row in `player_profiles`. Cross-device: generate 6-char transfer code via `POST /api/transfer`, claim on other device via `POST /api/transfer/claim`. `useProfile` hook shared across games. `ProfileSection` component shared in `src/components/shared/`. Google OAuth links device identity to an `auth_user_id` on `player_profiles`, which is the durable identity anchor; Sign-in Restore adopts the account's device_uuid and merges history. `/api/auth/link` derives `auth_user_id` from the verified JWT and writes `identity_audit`; it no longer stamps `game_scores` (column dropped). See ADR 0012 (supersedes 0007). |
 | **Leaderboard** | Per-puzzle daily only. Silent upsert on score increase. 7-day rolling window. Custom puzzles excluded. |
 | **Leaderboard navigation** | Rolling 7-day pill strip. `getRecentPuzzleDates(7)` server-side. |
 | **Future renames** | UI strings only — never directories, types, or routes. |
@@ -72,11 +73,10 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `header.test.tsx` | LeksiarxeioPageClient — 🏆, HowToPlay, scoring note |
 | `theme.test.tsx` | Tile + Keyboard **light** theme classes (empty/pending/unknown states) |
 | `dataLoader.test.ts` (leksiarxeio) | `getTodaysLeksiarxeioPuzzle`, `getAllTodaysLeksiarxeioPuzzles`, `getValidWords` |
-| `gameLogic.test.ts` (leksokipos) | `isPangram`, `scoreWord`, `maxScore`, `calculateRank`, `validateWord` |
+| `gameLogic.test.ts` (leksokipos) | `isPangram`, `scoreWord`, `maxScore`, `calculateRank`, `validateWord` — Greek fixture (production alphabet; absorbed the former `greekLogic.test.ts` 2026-07-02) |
 | `gameReducer.test.ts` | All reducer actions incl. SUBMIT_WORD, RESTORE_STATE |
 | `GameBoard.test.tsx` | Rendering, keyboard, hex clicks, word submission, feedback |
 | `LeksokiposLayout.test.tsx` | Variant toggle (pie↔flower), localStorage save/restore, tooFewWords |
-| `greekLogic.test.ts` | Same logic functions with Greek Unicode — proves no ASCII assumptions |
 | `greeklish.test.ts` | Bijective Greek↔greeklish codec round-trip |
 | `leksokiposDataLoader.test.ts` | `getPuzzleForDate`, `getPuzzleById`, `getRandomPuzzle`, `getNextPuzzle` |
 | `leksokiposRouting.test.ts` | Canonical URL round-trip for all pre-built puzzles |
@@ -89,7 +89,8 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `groupGrid.test.tsx` | Render, solved groups, selection, disabled |
 | `dataLoader.test.ts` (leksindeseis) | `getTodaysLeksindeseisPuzzle` — date match, fallback, shape |
 | `persistence.test.ts` | `useRoundPersistence` — hydration, saving, clear(), shouldSave |
-| `useScoreSubmission.test.ts` | Unified hook — submit/submitWithName (Leksokipos+Leksindeseis) + submitLength with penalty (Leksiarxeio) |
+| `useScoreSubmission.test.ts` | Unified hook — submit/submitWithName (Leksokipos, Leksindeseis, Vres Tin Frasi): dedup guard, enabled gate, is_perfect latch |
+| `useLeksiarxeioScoreSubmission.test.ts` | Leksiarxeio per-length posting — attempts→points mapping, deviceId gate, name ref |
 | `useGuessRound.test.ts` | Shared guess-game spine — score-only-on-end, onGameEnd once, persist `{guesses,status}` + restore, save guard, per-puzzle sessions |
 | `communityPuzzleLifecycle.test.ts` | submit/list/review handlers **+ `consumeApprovedPuzzle`** (claim oldest approved, delete by id, null on empty/error) |
 | `leksokiposSync.test.ts` | `pushFoundWords` (wire shape, never throws) + `pullSnapshot` (rebuild snapshot+score, params, null on empty/null/error) — the cross-device sync wire |
@@ -104,4 +105,13 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `deploymentReadiness.test.ts` | Statically imported data files exist and are not gitignored |
 | `profileRoute.test.ts` | `GET /api/profile?device_uuid=` (exists/not/error) + `POST /api/profile` (upsert, 400 missing uuid) |
 | `transferRoute.test.ts` | `POST /api/transfer` (code format, 400, 500) + `POST /api/transfer/claim` (valid, 404/410 used/expired, empty profile) |
-| `leaderboardModal.test.tsx` | Day strip, play link, ProfileSection (idle/claiming/linked/transfer), name editor |
+| `leaderboardModal.test.tsx` (leksokipos) | Day strip, play link, ProfileSection (idle/claiming/linked/transfer), name editor |
+| `useProfile.test.ts` | Cross-device profile hook — createProfile (payload/Ανώνυμος/failure), transfer generate+claim (deviceId adoption, restore flag, error surface), disconnect |
+| `useLeaderboardProfile.test.ts` | Profile-aware save (unlinked→create+createError, linked→save) + `useLeaderboardProfileSlot` bundle (ProfileSection wiring, saveButtonAlwaysActive) |
+| `dataLoader.test.ts` (vrestifrasi) | `getTodaysVresTinFrasiPuzzle` — community consume, static rotation fallback, `buildPuzzle` accent normalisation + wordLengths |
+| `scoring.test.ts` (vrestifrasi) | `scoreVresTinFrasi` — 6→1 by attempts, 0 on loss, floor guard |
+| `mobileLayout.test.tsx` | HowToPlayModal-specific overflow contracts only (list max-height/scroll, card clipping) — modal *shell* contracts live in `modal.test.tsx` |
+| `modal.test.tsx` (shared) | Modal primitive — open/close gating, center/sheet variants, overlay-click + stopPropagation, close button, testid/aria pass-through (ADR 0009) |
+| `recipes.test.ts` (shared) | Platform recipes — non-empty, button/leaderboard token contracts, no `dark:` pairs |
+| `styles.test.ts` (leksokipos) | Leksokipos-local recipes — feedback/found-word/score-bar/give-up token contracts, no `dark:` pairs (ADR 0009) |
+| `validateSubmission.test.ts` (×4: leksiarxeio, leksindeseis, vrestifrasi, stavrolekso) | Community Puzzle validation adapters as pure functions — per-game submission invariants; stavrolekso also `EDIT_PIN_PATTERN` + `validateStavroleksoData` (shared with PATCH edit route + maker) |

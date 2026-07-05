@@ -6,6 +6,8 @@ import { NominationCard, type Nomination } from "@/components/leksikastirio/Nomi
 import { NominationModal } from "@/components/shared/NominationModal";
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
 import { markSuggested } from "@/hooks/suggestions";
+import { LEKSIARXEIO } from "@/config/gameRules";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 // ── Tab types ─────────────────────────────────────────────────────────────────
@@ -100,9 +102,9 @@ function LeksiarxeioQueueCard({
         <p className="text-xs text-muted">από {puzzle.submitter_name}</p>
       )}
       <div className="grid grid-cols-5 gap-1">
-        {[4, 5, 6, 7, 8].map((len) => (
+        {LEKSIARXEIO.LENGTHS.map((len) => (
           <div key={len} className="text-center">
-            <p className="text-xs text-stone-400">{len}γρ</p>
+            <p className="text-xs text-muted">{len}γρ</p>
             <p className="text-sm font-semibold text-foreground">{puzzle.data[String(len)]}</p>
           </div>
         ))}
@@ -309,7 +311,11 @@ const CARD: Record<CommunityTab, CardRenderer> = {
 
 function LeksikastiríoClient() {
   const searchParams = useSearchParams();
-  const adminSecret  = searchParams.get("admin") ?? "";
+  // Admin unlock accepts either ?admin=<secret> or the shared ?godmode=<secret>,
+  // so the same URL param (?godmode=zzkdgr3) works here and in Leksokipos god mode.
+  // The value is still validated server-side against ADMIN_SECRET, which must be
+  // set to that shared secret for review actions to succeed.
+  const adminSecret  = searchParams.get("admin") ?? searchParams.get("godmode") ?? "";
   const isAdmin      = adminSecret.length > 0;
   const deviceId     = getOrCreateDeviceId();
 
@@ -433,6 +439,14 @@ function LeksikastiríoClient() {
         <p className="text-sm text-muted mt-1">
           Ψηφίστε λέξεις που πιστεύετε ότι πρέπει να προστεθούν ή να αφαιρεθούν.
         </p>
+        {isAdmin && (
+          <Link
+            href="/leksokipos?godmode=zzkdgr3"
+            className="inline-block mt-2 text-xs text-muted hover:text-foreground underline underline-offset-2"
+          >
+            🧪 Leksokipos God Mode
+          </Link>
+        )}
       </div>
 
       {/* Tabs */}
@@ -538,7 +552,7 @@ function LeksikastiríoClient() {
 
 export default function LeksikastiríoPage() {
   return (
-    <Suspense fallback={<p className="text-sm text-stone-400 text-center py-8">Φόρτωση…</p>}>
+    <Suspense fallback={<p className="text-sm text-muted text-center py-8">Φόρτωση…</p>}>
       <LeksikastiríoClient />
     </Suspense>
   );

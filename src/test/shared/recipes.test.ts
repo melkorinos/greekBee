@@ -5,40 +5,22 @@
 //   1. Every exported token is a non-empty string (catches accidental deletions / renames).
 //   2. Key recipes contain the semantic-token / Tailwind substrings that drive the
 //      visual design — so a refactor that quietly drops e.g. `rounded-full` is caught.
-//   3. NEW CONTRACT (ADR 0008): recipes carry NO `dark:` pairs — light/dark flips
+//   3. CONTRACT (ADR 0008): recipes carry NO `dark:` pairs — light/dark flips
 //      come from the semantic tokens in globals.css, not per-class variants.
+//
+// Game-specific recipes (Leksokipos word chips, score bar, feedback) moved to
+// src/components/leksokipos/styles.ts (ADR 0009) and are tested separately.
 
 import { describe, expect, it } from "vitest";
 import {
   // Buttons
   btnCancel,
-  btnGiveUp,
   btnHeaderIcon,
+  btnModalPrimary,
   btnModalSubmit,
   btnPrimary,
   btnPrimaryCompact,
   btnSecondary,
-  // Colours
-  colorCenterLetter,
-  colorInputPlaceholder,
-  colorOuterLetter,
-  colorPangramBg,
-  colorPangramText,
-  colorScoreBarFill,
-  colorScoreBarTrack,
-  colorWordChipBg,
-  colorWordChipText,
-  // Feedback
-  feedbackAlreadySuggestedClass,
-  feedbackErrorClass,
-  feedbackJustSuggestedClass,
-  feedbackPangramClass,
-  feedbackSuggestLinkClass,
-  feedbackValidClass,
-  feedbackValidContainer,
-  // Found words
-  foundWordClass,
-  foundWordPangramClass,
   // Inputs
   inputClass,
   inputCompactClass,
@@ -52,9 +34,6 @@ import {
   lbTdName,
   lbTdRank,
   lbTdScore,
-  // Score bar
-  scoreBarFill,
-  scoreBarTrack,
 } from "@/styles/recipes";
 
 // ── Helper ────────────────────────────────────────────────────────────────────
@@ -75,28 +54,8 @@ const ALL_TOKENS: [string, string][] = [
   [btnPrimaryCompact, "btnPrimaryCompact"],
   [btnCancel, "btnCancel"],
   [btnModalSubmit, "btnModalSubmit"],
-  [btnGiveUp, "btnGiveUp"],
+  [btnModalPrimary, "btnModalPrimary"],
   [btnHeaderIcon, "btnHeaderIcon"],
-  [colorCenterLetter, "colorCenterLetter"],
-  [colorOuterLetter, "colorOuterLetter"],
-  [colorInputPlaceholder, "colorInputPlaceholder"],
-  [colorPangramBg, "colorPangramBg"],
-  [colorPangramText, "colorPangramText"],
-  [colorWordChipBg, "colorWordChipBg"],
-  [colorWordChipText, "colorWordChipText"],
-  [colorScoreBarFill, "colorScoreBarFill"],
-  [colorScoreBarTrack, "colorScoreBarTrack"],
-  [feedbackValidContainer, "feedbackValidContainer"],
-  [feedbackPangramClass, "feedbackPangramClass"],
-  [feedbackValidClass, "feedbackValidClass"],
-  [feedbackErrorClass, "feedbackErrorClass"],
-  [feedbackJustSuggestedClass, "feedbackJustSuggestedClass"],
-  [feedbackAlreadySuggestedClass, "feedbackAlreadySuggestedClass"],
-  [feedbackSuggestLinkClass, "feedbackSuggestLinkClass"],
-  [foundWordClass, "foundWordClass"],
-  [foundWordPangramClass, "foundWordPangramClass"],
-  [scoreBarTrack, "scoreBarTrack"],
-  [scoreBarFill, "scoreBarFill"],
   [lbRowBase, "lbRowBase"],
   [lbRowPlayer, "lbRowPlayer"],
   [lbTdRank, "lbTdRank"],
@@ -136,39 +95,8 @@ describe("recipes.ts — visual design contracts", () => {
     it("btnModalSubmit", () => expect(btnModalSubmit).toContain("transition-opacity"));
   });
 
-  describe("colour recipes reference the expected semantic tokens", () => {
-    it("center letter → accent", () => expect(colorCenterLetter).toContain("accent"));
-    it("outer letter → foreground", () => expect(colorOuterLetter).toContain("foreground"));
-    it("placeholder → muted", () => expect(colorInputPlaceholder).toContain("muted"));
-    it("pangram bg → brand", () => expect(colorPangramBg).toContain("brand"));
-    it("pangram text → accent", () => expect(colorPangramText).toContain("accent"));
-    it("score bar fill → brand", () => expect(colorScoreBarFill).toContain("brand"));
-    it("score bar track → border", () => expect(colorScoreBarTrack).toContain("border"));
-  });
-
-  describe("feedback recipes reference the expected tokens", () => {
-    it("valid word → correct", () => expect(feedbackValidClass).toContain("correct"));
-    it("error → danger", () => expect(feedbackErrorClass).toContain("danger"));
-    it("pangram inherits colorPangramText", () => expect(feedbackPangramClass).toContain(colorPangramText));
-    it("just-suggested → correct", () => expect(feedbackJustSuggestedClass).toContain("correct"));
-    it("already-suggested → muted", () => expect(feedbackAlreadySuggestedClass).toContain("muted"));
-  });
-
-  describe("found-word chips compose colour recipes", () => {
-    it("normal chip includes colorWordChipBg", () => expect(foundWordClass).toContain(colorWordChipBg));
-    it("normal chip includes colorWordChipText", () => expect(foundWordClass).toContain(colorWordChipText));
-    it("pangram chip includes colorPangramBg", () => expect(foundWordPangramClass).toContain(colorPangramBg));
-    it("pangram chip is bold", () => expect(foundWordPangramClass).toContain("font-semibold"));
-  });
-
-  describe("score bar composes colour recipes", () => {
-    it("track includes colorScoreBarTrack", () => expect(scoreBarTrack).toContain(colorScoreBarTrack));
-    it("fill includes colorScoreBarFill", () => expect(scoreBarFill).toContain(colorScoreBarFill));
-    it("fill has smooth transition", () => expect(scoreBarFill).toContain("transition-all"));
-  });
-
   describe("leaderboard player row is visually distinct", () => {
-    it("lbRowPlayer has a brand tint", () => expect(lbRowPlayer).toContain("brand"));
+    it("lbRowPlayer has a game-accent tint", () => expect(lbRowPlayer).toContain("game-accent"));
     it("lbRowPlayer is bold", () => expect(lbRowPlayer).toContain("font-semibold"));
     it("lbTdScore is monospace", () => expect(lbTdScore).toContain("font-mono"));
     it("lbTdRank uses tabular-nums", () => expect(lbTdRank).toContain("tabular-nums"));

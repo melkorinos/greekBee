@@ -5,7 +5,7 @@
 // Pangrams are highlighted in gold, consistent with FoundWordsList.
 // Each word is clickable to nominate it for removal.
 
-import { foundWordClass, foundWordPangramClass } from "@/styles/recipes";
+import { foundWordClass, foundWordPangramClass } from "./styles";
 
 import { NominationModal } from "@/components/shared/NominationModal";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";

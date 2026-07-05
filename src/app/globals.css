@@ -21,6 +21,12 @@
   --inverted:            var(--color-stone-800);
   --inverted-foreground: #ffffff;
 
+  /* Per-game brand accent (ADR 0009) — one knob per game, overridden by the
+     [data-game] selectors below. This :root default is the fallback for any
+     chrome rendered outside a game wrapper. */
+  --game-accent:            var(--accent);
+  --game-accent-foreground: var(--color-stone-900);
+
   /* Feedback (tile / word states) — solid fills, identical in light & dark
      (classic Wordle behaviour). Values match the guess tiles. */
   --correct:   var(--color-green-600);
@@ -43,6 +49,15 @@
   --inverted-foreground: var(--color-stone-900);
 }
 
+/* Per-game brand accents (ADR 0009) — each game's signature colour, set once
+   here and cascaded via [data-game] on the game's root wrapper. Changing a
+   game's accent is a one-line edit. Values preserve each game's existing
+   leaderboard colour; identical in light & dark. */
+[data-game="leksokipos"]   { --game-accent: var(--color-amber-400);  --game-accent-foreground: var(--color-amber-900); }
+[data-game="leksiarxeio"]  { --game-accent: var(--color-green-600);  --game-accent-foreground: #ffffff; }
+[data-game="leksindeseis"] { --game-accent: var(--color-purple-600); --game-accent-foreground: #ffffff; }
+[data-game="vrestifrasi"]  { --game-accent: var(--color-purple-600); --game-accent-foreground: #ffffff; }
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -60,6 +75,8 @@
   --color-danger:         var(--danger);
   --color-inverted:            var(--inverted);
   --color-inverted-foreground: var(--inverted-foreground);
+  --color-game-accent:            var(--game-accent);
+  --color-game-accent-foreground: var(--game-accent-foreground);
   --color-correct:        var(--correct);
   --color-present:        var(--present);
   --color-absent:         var(--absent);

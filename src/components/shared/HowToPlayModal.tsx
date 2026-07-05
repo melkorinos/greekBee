@@ -4,14 +4,13 @@
 // Each game passes its own title, rules list, and optional bullet icon.
 
 import { useState } from "react";
+import { Modal } from "./Modal";
 import { btnHeaderIcon, btnHeaderIconSize } from "@/styles/recipes";
 
 interface HowToPlayModalProps {
   title:        string;
   items:        readonly string[];
   bulletIcon?:  string;
-  /** Use a light-coloured trigger button (for dark-background pages like Leksiarxeio) */
-  lightTrigger?: boolean;
 }
 
 /** Renders text with **bold** markdown-style markers */
@@ -30,13 +29,8 @@ export function HowToPlayModal({
   title,
   items,
   bulletIcon = "▸",
-  lightTrigger = false,
 }: HowToPlayModalProps) {
   const [open, setOpen] = useState(false);
-
-  const triggerClass = lightTrigger
-    ? "w-8 h-8 flex items-center justify-center rounded-full border border-stone-600 text-stone-300 text-sm font-bold hover:bg-stone-700 transition-colors"
-    : `${btnHeaderIconSize} ${btnHeaderIcon} text-sm font-bold`;
 
   return (
     <>
@@ -45,46 +39,34 @@ export function HowToPlayModal({
         <button
           onClick={() => setOpen(true)}
           aria-label="How to play"
-          className={triggerClass}
+          className={`${btnHeaderIconSize} ${btnHeaderIcon} text-sm font-bold`}
         >
           ?
         </button>
-        <div className="pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-stone-800 px-2.5 py-1 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        <div className="pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-inverted px-2.5 py-1 text-xs text-inverted-foreground opacity-0 group-hover:opacity-100 transition-opacity z-10">
           Κανόνες
         </div>
       </div>
 
       {/* Backdrop + modal */}
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            className="bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6 relative overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setOpen(false)}
-              aria-label="Close"
-              className="absolute top-4 right-4 text-muted hover:text-foreground text-xl leading-none"
-            >
-              ✕
-            </button>
+      <Modal
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        ariaLabel={title}
+        closeLabel="Close"
+        cardClassName="overflow-hidden"
+      >
+        <h2 className="text-lg font-bold text-foreground mb-3">{title}</h2>
 
-            <h2 className="text-lg font-bold text-foreground mb-3">{title}</h2>
-
-            <ul className="space-y-2 text-sm text-foreground overflow-y-auto max-h-[70dvh]">
-              {items.map((item, i) => (
-                <li key={i} className="flex gap-2">
-                  <span className="mt-0.5 shrink-0">{bulletIcon}</span>
-                  <RuleText text={item} />
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
+        <ul className="space-y-2 text-sm text-foreground overflow-y-auto max-h-[70dvh]">
+          {items.map((item, i) => (
+            <li key={i} className="flex gap-2">
+              <span className="mt-0.5 shrink-0">{bulletIcon}</span>
+              <RuleText text={item} />
+            </li>
+          ))}
+        </ul>
+      </Modal>
     </>
   );
 }

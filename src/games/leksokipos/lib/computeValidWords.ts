@@ -17,6 +17,8 @@
 // so production requests for the same letter combo pay the cost at most once
 // per warm Fluid instance lifetime.
 
+import { LEKSOKIPOS } from "@/config/gameRules";
+
 import { normalizeLetters } from "./normalize";
 
 /**
@@ -40,7 +42,7 @@ export function computeValidWords(
     .map(normalizeLetters)
     .filter(
       (word) =>
-        word.length >= 4 &&
+        word.length >= LEKSOKIPOS.MIN_WORD_LENGTH &&
         word.includes(center) &&
         [...word].every((ch) => allowed.has(ch))
     );

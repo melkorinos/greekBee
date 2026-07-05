@@ -5,8 +5,8 @@
 // Reads the Supabase session on mount, subscribes to auth state changes,
 // and keeps the authLinked flag in useGameStore in sync.
 //
-// On first sign-in: calls POST /api/auth/link to merge the active DeviceId
-// with the Google auth_user_id, back-filling game_scores and player_profiles.
+// On first sign-in: calls POST /api/auth/link to attach the active DeviceId
+// to the Google auth_user_id on the player_profiles row (the sole device→account map).
 //
 // Exposes:
 //   authLinked      — true when a Google account is connected
@@ -17,7 +17,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getSupabaseClient, signInWithGoogle as supabaseSignIn, signOut as supabaseSignOut } from "@/lib/supabase";
-import { isAuthLinked, setAuthLinked, setProfileLinked } from "@/hooks/useGameStore";
+import { disconnectIdentity, isAuthLinked, setAuthLinked, setProfileLinked } from "@/hooks/useGameStore";
+import { reloadApp } from "@/lib/reload";
 
 export interface UseAuthReturn {
   authLinked:       boolean;
@@ -76,9 +77,15 @@ export function useAuth(): UseAuthReturn {
 
   const signOut = useCallback(async () => {
     await supabaseSignOut();
+    // Google sign-out IS a Disconnect (ADR 0012 §5): fully reset local identity
+    // so an adopted account can't leak to the next person on a shared device.
+    disconnectIdentity();
     setAuthLinkedState(false);
     setAuthUserName(null);
     setAuthLinked(false);
+    // Mounted boards still hold the old identity's deviceId and session state
+    // in React memory — only a reload makes the device truly anonymous.
+    reloadApp();
   }, []);
 
   return { authLinked, authUserName, signInWithGoogle, signOut, isLoading };

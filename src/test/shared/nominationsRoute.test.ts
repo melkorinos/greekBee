@@ -218,6 +218,23 @@ describe("GET /api/nominations/lookup — happy path", () => {
     expect(json.word).toBe("καλος");
   });
 
+  it("returns the earliest pending id so the client can upvote it instead of duplicating", async () => {
+    enqueue({ count: 0, error: null });                                // rejected count
+    enqueue({ data: [{ id: "nom-1" }, { id: "nom-2" }], count: 2, error: null }); // pending rows
+    const res  = await lookupNomination(makeReq("καλος", "add"));
+    const json = await res.json() as { pending: number; pendingId: string | null };
+    expect(json.pending).toBe(2);
+    expect(json.pendingId).toBe("nom-1");
+  });
+
+  it("returns pendingId null when nothing is pending", async () => {
+    enqueue({ count: 0, error: null });               // rejected count
+    enqueue({ data: [], count: 0, error: null });     // pending rows
+    const res  = await lookupNomination(makeReq("καλος", "add"));
+    const json = await res.json() as { pendingId: string | null };
+    expect(json.pendingId).toBeNull();
+  });
+
   it("normalises word to lowercase+trim before querying", async () => {
     enqueue({ count: 0, error: null });
     enqueue({ count: 0, error: null });

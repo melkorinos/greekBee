@@ -138,7 +138,7 @@ function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submit
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen bg-background px-4 py-12">
+    <div className="relative flex flex-col items-center justify-start min-h-screen bg-background px-4 py-12">
       <h1 className="text-3xl font-bold text-foreground mb-2">{PLATFORM_NAME}</h1>
       <p className="text-muted text-sm mb-10">Επίλεξε παιχνίδι για να ξεκινήσεις</p>
 

@@ -3,6 +3,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import { GameBoard } from "@/components/leksokipos/GameBoard";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
@@ -12,6 +13,18 @@ import userEvent from "@testing-library/user-event";
 // GameBoard calls useDayChange → useRouter; provide a stub so it doesn't throw.
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+}));
+
+// GameBoard wires useAuth into its leaderboard modal (ADR 0012 visibility rule);
+// stub it to a stable anonymous state so these game-interaction tests don't touch Supabase.
+vi.mock("@/hooks/useAuth", () => ({
+  useAuth: () => ({
+    authLinked:       false,
+    authUserName:     null,
+    signInWithGoogle: vi.fn(async () => {}),
+    signOut:          vi.fn(async () => {}),
+    isLoading:        false,
+  }),
 }));
 
 // ── Test fixture ───────────────────────────────────────────────────────────────
@@ -320,6 +333,197 @@ describe("Puzzle navigation", () => {
 
     expect(screen.getByTestId("found-words-count")).toHaveTextContent("0");
     expect(screen.getByTestId("score-label")).toHaveTextContent("0 pts");
+  });
+});
+
+// ── Endgame Zone ──────────────────────────────────────────────────────────────
+// Fixture: validWords raw total = 33 → maxScore = ceil(33 × 0.85) = 29.
+// Submitting painted(14)+panted(6)+paint(5)+patina(6) = 31 pts crosses the
+// threshold while leaving "anti" and "paid" remaining (no pangrams remaining).
+
+const dailyPuzzle: LeksokiposPuzzle = { ...puzzle, id: "2026-05-20-el", date: "2026-05-20" };
+
+/** Submit a sequence of space-separated words via keyboard. */
+async function submitWords(user: ReturnType<typeof userEvent.setup>, words: string[]) {
+  for (const w of words) {
+    await user.keyboard(`${w}{Enter}`);
+  }
+}
+
+describe("Endgame Zone", () => {
+  it("endgame panel appears (replacing rank ladder) when score >= maxScore on a daily puzzle", async () => {
+    const user = userEvent.setup();
+    render(<GameBoard puzzle={dailyPuzzle} />);
+    await submitWords(user, ["painted", "panted", "paint", "patina"]); // 31 pts >= 29
+    // Open the panel
+    await user.click(screen.getByRole("button", { name: /εμφάνιση λέξεων/i }));
+    expect(screen.getByTestId("endgame-panel")).toBeInTheDocument();
+  });
+
+  it("endgame panel shows correct remaining word total and pangram count", async () => {
+    const user = userEvent.setup();
+    render(<GameBoard puzzle={dailyPuzzle} />);
+    await submitWords(user, ["painted", "panted", "paint", "patina"]); // leaves anti, paid
+    await user.click(screen.getByRole("button", { name: /εμφάνιση λέξεων/i }));
+    const panel = screen.getByTestId("endgame-panel");
+    expect(panel).toHaveTextContent("2");  // remainingTotal
+    expect(panel).toHaveTextContent("0");  // remainingPangrams
+  });
+
+  it("endgame panel does NOT appear for custom (non-daily) puzzles even at max score", async () => {
+    const user = userEvent.setup();
+    render(<GameBoard puzzle={puzzle} />); // custom id — isDailyPuzzle = false
+    await submitWords(user, ["painted", "panted", "paint", "patina"]);
+    await user.click(screen.getByRole("button", { name: /εμφάνιση επιπέδων/i }));
+    expect(screen.queryByTestId("endgame-panel")).toBeNull();
+  });
+
+  it("rank ladder still appears below maxScore", async () => {
+    const user = userEvent.setup();
+    render(<GameBoard puzzle={dailyPuzzle} />);
+    await submitWords(user, ["paint"]); // 5 pts — well below 29
+    await user.click(screen.getByRole("button", { name: /εμφάνιση επιπέδων/i }));
+    expect(screen.queryByTestId("endgame-panel")).toBeNull();
+    // rank ladder rows are present (at least one rank name visible)
+    expect(screen.getByText("Ψαράκι 🐟")).toBeInTheDocument();
+  });
+});
+
+// ── Τζιμάνι (all words found) ─────────────────────────────────────────────────
+
+describe("Τζιμάνι — all words found", () => {
+  const allWords = ["anti", "paid", "paint", "painted", "panted", "patina"];
+
+  it("shows ΤΟ ΠΕΘΑΝΕΣ message after finding every word", async () => {
+    const user = userEvent.setup();
+    render(<GameBoard puzzle={dailyPuzzle} />);
+    await submitWords(user, allWords);
+    expect(screen.getByTestId("perfect-message")).toBeInTheDocument();
+    expect(screen.getByTestId("perfect-message")).toHaveTextContent("ΤΟ ΠΕΘΑΝΕΣ");
+  });
+
+  it("hides WordInput and action buttons after Τζιμάνι", async () => {
+    const user = userEvent.setup();
+    render(<GameBoard puzzle={dailyPuzzle} />);
+    await submitWords(user, allWords);
+    expect(screen.queryByTestId("word-input")).toBeNull();
+    expect(screen.queryByTestId("btn-delete")).toBeNull();
+    expect(screen.queryByTestId("btn-shuffle")).toBeNull();
+  });
+
+  it("keyboard input is ignored after Τζιμάνι", async () => {
+    const user = userEvent.setup();
+    render(<GameBoard puzzle={dailyPuzzle} />);
+    await submitWords(user, allWords);
+    await user.keyboard("p");
+    expect(screen.queryByTestId("word-input-letter")).toBeNull();
+  });
+
+  it("give-up button is absent after Τζιμάνι", async () => {
+    const user = userEvent.setup();
+    render(<GameBoard puzzle={dailyPuzzle} />);
+    await submitWords(user, allWords);
+    expect(screen.queryByTestId("btn-give-up")).toBeNull();
+  });
+
+  it("endgame panel shows 0 remaining words after Τζιμάνι", async () => {
+    const user = userEvent.setup();
+    render(<GameBoard puzzle={dailyPuzzle} />);
+    await submitWords(user, allWords);
+    await user.click(screen.getByRole("button", { name: /εμφάνιση λέξεων/i }));
+    const panel = screen.getByTestId("endgame-panel");
+    expect(panel).toHaveTextContent("Λέξεις που απομένουν");
+    // remaining total cell should show 0
+    expect(panel.querySelectorAll("div")[0]).toHaveTextContent("0");
+  });
+});
+
+// ── God Mode ──────────────────────────────────────────────────────────────────
+
+describe("God Mode", () => {
+  describe("without ?godmode param", () => {
+    it("🧪 button is absent", () => {
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      expect(screen.queryByTestId("btn-god-mode")).toBeNull();
+    });
+
+    it("god mode panel is absent", () => {
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      expect(screen.queryByTestId("god-mode-panel")).toBeNull();
+    });
+  });
+
+  describe("with ?godmode=zzkdgr3", () => {
+    beforeEach(() => {
+      window.history.pushState({}, "", "?godmode=zzkdgr3");
+    });
+
+    afterEach(() => {
+      window.history.pushState({}, "", "/");
+    });
+
+    it("🧪 button is present", () => {
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      expect(screen.getByTestId("btn-god-mode")).toBeInTheDocument();
+    });
+
+    it("god mode panel is in the DOM (off-screen until opened)", () => {
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      expect(screen.getByTestId("god-mode-panel")).toBeInTheDocument();
+    });
+
+    it("clicking 🧪 opens the panel (backdrop appears)", async () => {
+      const user = userEvent.setup();
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      await user.click(screen.getByTestId("btn-god-mode"));
+      // Backdrop only renders when isOpen=true
+      expect(document.querySelector(".fixed.inset-0.bg-black\\/20")).toBeInTheDocument();
+    });
+
+    it("'Βρες Όλες' injects all words and triggers Τζιμάνι", async () => {
+      const user = userEvent.setup();
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      await user.click(screen.getByTestId("btn-god-mode"));
+      await user.click(screen.getByText(/βρες Όλες \(Τζιμάνι\)/i));
+      expect(screen.getByTestId("perfect-message")).toBeInTheDocument();
+    });
+
+    it("'Βρες Όλες-1' injects all-but-last words and does not trigger Τζιμάνι", async () => {
+      const user = userEvent.setup();
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      await user.click(screen.getByTestId("btn-god-mode"));
+      await user.click(screen.getByText(/βρες Όλες-1/i));
+      expect(screen.queryByTestId("perfect-message")).toBeNull();
+      expect(screen.getByTestId("found-words-count")).toHaveTextContent(
+        String(dailyPuzzle.validWords.length - 1),
+      );
+    });
+
+    it("Reset restores blank state after injection", async () => {
+      const user = userEvent.setup();
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      await user.click(screen.getByTestId("btn-god-mode"));
+      await user.click(screen.getByText(/βρες Όλες-1/i));
+      await user.click(screen.getByText(/reset/i));
+      expect(screen.getByTestId("found-words-count")).toHaveTextContent("0");
+      expect(screen.getByTestId("score-label")).toHaveTextContent("0 pts");
+    });
+
+    it("wrong param value does NOT activate god mode", () => {
+      window.history.pushState({}, "", "?godmode=wrong");
+      render(<GameBoard puzzle={dailyPuzzle} />);
+      expect(screen.queryByTestId("btn-god-mode")).toBeNull();
+    });
+
+    // Regression: god mode must be OFF in the server-rendered markup even with the
+    // param present, so the SSR HTML matches the initial hydration render. Reading
+    // window in a useState initializer put the button in the client's first render
+    // but not the server's → hydration mismatch. renderToStaticMarkup exercises the
+    // real SSR path (getServerSnapshot), so this fails on the buggy version.
+    it("🧪 is absent from server-rendered markup (no hydration mismatch)", () => {
+      const html = renderToStaticMarkup(<GameBoard puzzle={dailyPuzzle} />);
+      expect(html).not.toContain("btn-god-mode");
+    });
   });
 });
 

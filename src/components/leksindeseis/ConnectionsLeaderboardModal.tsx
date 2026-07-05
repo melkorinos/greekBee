@@ -3,15 +3,13 @@
 // ConnectionsLeaderboardModal — leaderboard for daily Leksindeseis Puzzles.
 //
 // Wires the shared LeaderboardModalBase with:
-//   - Purple colour scheme
 //   - Single-date strip (Leksindeseis has no rolling history UI)
 //   - Score formatted as "X/4" (mistakesRemaining; higher = better)
-//   - Shared ProfileSection (topSlot)
+//   - Shared profile slot (useLeaderboardProfileSlot)
 
 import type { LeaderboardProfileProps } from "@/hooks/useLeaderboardProfile";
 import { LeaderboardModalBase, buildLeaderboardUrl } from "@/components/shared/LeaderboardModal";
-import { ProfileSection } from "@/components/shared/ProfileSection";
-import { useLeaderboardProfile } from "@/hooks/useLeaderboardProfile";
+import { useLeaderboardProfileSlot } from "@/components/shared/LeaderboardProfileSlot";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -37,23 +35,10 @@ export function ConnectionsLeaderboardModal({
   deviceId,
   displayName,
   score,
-  profileLinked,
-  onSaveName,
-  onProfileCreate,
-  onTransferGenerate,
-  onTransferClaim,
-  onDisconnect,
-  authLinked,
-  authUserName,
-  onSignIn,
-  onSignOut,
   onClose,
+  ...profile
 }: ConnectionsLeaderboardModalProps) {
-  const { createError, handleSave } = useLeaderboardProfile({
-    profileLinked,
-    onProfileCreate,
-    onSaveName,
-  });
+  const profileSlot = useLeaderboardProfileSlot({ displayName, ...profile });
 
   return (
     <LeaderboardModalBase
@@ -68,27 +53,8 @@ export function ConnectionsLeaderboardModal({
       buildUrl={buildUrl}
       scoreLabel="Σκορ"
       formatScore={(n) => `${n}/4`}
-      pillActive="bg-misplaced text-white"
-      playerMark="text-misplaced"
-      showNameEditor={true}
-      saveButtonAlwaysActive={!profileLinked}
-      topSlot={
-        <ProfileSection
-          profileLinked={profileLinked}
-          displayName={displayName}
-          createError={createError ?? undefined}
-          onTransferGenerate={onTransferGenerate}
-          onTransferClaim={onTransferClaim}
-          onDisconnect={onDisconnect}
-          authLinked={authLinked}
-          authUserName={authUserName}
-          onSignIn={onSignIn}
-          onSignOut={onSignOut}
-          onSaveName={(name) => void handleSave(name)}
-        />
-      }
-      onSaveName={(name) => void handleSave(name)}
       onClose={onClose}
+      {...profileSlot}
     />
   );
 }

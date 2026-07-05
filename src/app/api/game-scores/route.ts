@@ -32,6 +32,7 @@ interface StandardScorePayload {
   device_id:    string;
   display_name: string;
   score:        number;
+  is_perfect?:  boolean;
 }
 
 interface LeksiarxeioScorePayload {
@@ -104,15 +105,18 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Standard games ──────────────────────────────────────────────────────────
-  const { score } = body as StandardScorePayload;
+  const { score, is_perfect } = body as StandardScorePayload;
   if (typeof score !== "number") {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
+  const row: Record<string, unknown> = { game_id, puzzle_date, device_id, display_name: name, score };
+  if (is_perfect === true) row.is_perfect = true;
+
   const err = await upsertAndClean(
     "game_scores",
     "game_id,device_id,puzzle_date",
-    { game_id, puzzle_date, device_id, display_name: name, score },
+    row,
   );
   if (err) return NextResponse.json({ error: err }, { status: 500 });
   return NextResponse.json({ ok: true });
@@ -135,7 +139,7 @@ export async function GET(req: NextRequest) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: rows, error } = await (supabase.from("game_scores") as any)
-    .select("device_id, display_name, score")
+    .select("device_id, display_name, score, is_perfect")
     .eq("game_id", gameId)
     .eq("puzzle_date", puzzleDate)
     .order("score", { ascending: sortAsc })
@@ -145,13 +149,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  interface RawRow { device_id: string; display_name: string; score: number; }
+  interface RawRow { device_id: string; display_name: string; score: number; is_perfect: boolean; }
   const rawRows: RawRow[] = (rows as RawRow[]) ?? [];
 
   const top20 = rawRows.map((r, i) => ({
     rank:         i + 1,
     display_name: r.display_name,
     score:        r.score,
+    is_perfect:   r.is_perfect ?? false,
     isPlayer:     r.device_id === deviceId,
   }));
 
@@ -161,13 +166,14 @@ export async function GET(req: NextRequest) {
     rank:         number;
     display_name: string;
     score:        number;
+    is_perfect:   boolean;
     isPlayer:     true;
   } | null = null;
 
   if (!playerInTop20 && deviceId) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: playerData } = await (supabase.from("game_scores") as any)
-      .select("display_name, score")
+      .select("display_name, score, is_perfect")
       .eq("game_id", gameId)
       .eq("puzzle_date", puzzleDate)
       .eq("device_id", deviceId)
@@ -188,6 +194,7 @@ export async function GET(req: NextRequest) {
         rank:         (count ?? 0) + 1,
         display_name: playerData.display_name as string,
         score:        playerData.score as number,
+        is_perfect:   (playerData.is_perfect as boolean) ?? false,
         isPlayer:     true,
       };
     }

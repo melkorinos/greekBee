@@ -25,6 +25,8 @@ interface UseScoreSubmissionOptions {
   displayName: string;
   /** When false (e.g. custom puzzle) no requests are ever made. Default: true. */
   enabled?:    boolean;
+  /** When true, every post includes is_perfect: true (Τζιμάνι achieved). Once true, stays true. */
+  isPerfect?:  boolean;
 }
 
 export function useScoreSubmission({
@@ -33,9 +35,14 @@ export function useScoreSubmission({
   deviceId,
   displayName,
   enabled = true,
+  isPerfect = false,
 }: UseScoreSubmissionOptions) {
   const displayNameRef = useRef(displayName);
   useEffect(() => { displayNameRef.current = displayName; }, [displayName]);
+
+  // Latch: once isPerfect becomes true it stays true for the lifetime of the hook.
+  const isPerfectRef = useRef(isPerfect);
+  useEffect(() => { if (isPerfect) isPerfectRef.current = true; }, [isPerfect]);
 
   const lastPostedRef = useRef(0);
 
@@ -46,13 +53,15 @@ export function useScoreSubmission({
       if (!enabled || !deviceId) return;
       if (score <= 0 || score <= lastPostedRef.current) return;
       lastPostedRef.current = score;
-      postScore("/api/game-scores", {
+      const body: Record<string, unknown> = {
         game_id:      gameId,
         puzzle_date:  puzzleDate,
         device_id:    deviceId,
         score,
         display_name: sanitizeDisplayName(displayNameRef.current),
-      });
+      };
+      if (isPerfectRef.current) body.is_perfect = true;
+      postScore("/api/game-scores", body);
     },
     [enabled, gameId, puzzleDate, deviceId],
   );
@@ -61,13 +70,15 @@ export function useScoreSubmission({
   const submitWithName = useCallback(
     (score: number, name: string) => {
       if (!enabled || !deviceId || score <= 0) return;
-      postScore("/api/game-scores", {
+      const body: Record<string, unknown> = {
         game_id:      gameId,
         puzzle_date:  puzzleDate,
         device_id:    deviceId,
         score,
         display_name: sanitizeDisplayName(name),
-      });
+      };
+      if (isPerfectRef.current) body.is_perfect = true;
+      postScore("/api/game-scores", body);
     },
     [enabled, gameId, puzzleDate, deviceId],
   );

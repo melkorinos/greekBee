@@ -13,6 +13,7 @@
 
 import { btnPrimaryCompact, inputCompactClass, labelClass } from "@/styles/recipes";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -27,10 +28,15 @@ export interface ProfileSectionProps {
   /** Google auth state — when true, TransferCode block is hidden. */
   authLinked?:          boolean;
   authUserName?:        string | null;
-  onSignIn?:            () => Promise<void>;
+  /** Required (ADR 0012): sign-in is offered wherever this renders and the
+   *  device is not AuthLinked. */
+  onSignIn:             () => Promise<void>;
   onSignOut?:           () => Promise<void>;
   /** Name save handler — when provided, renders the nickname input in idle mode. */
   onSaveName?:          (name: string) => void;
+  /** Funnel link to the full /profile page. On by default (shown in the modals);
+   *  the profile page itself opts out so it doesn't link to itself. */
+  showProfileLink?:     boolean;
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -62,11 +68,13 @@ export function ProfileSection({
   onSignIn,
   onSignOut,
   onSaveName,
+  showProfileLink = true,
 }: ProfileSectionProps) {
   const [mode,         setMode]         = useState<ProfileMode>(profileLinked ? "linked" : "idle");
   const [nameInput,    setNameInput]    = useState(displayName);
   const [codeInput,    setCodeInput]    = useState("");
   const [claimError,   setClaimError]   = useState<string | null>(null);
+  const [signInError,  setSignInError]  = useState<string | null>(null);
   const [loading,      setLoading]      = useState(false);
   const [transferCode, setTransferCode] = useState("");
   const [copied,       setCopied]       = useState(false);
@@ -79,6 +87,16 @@ export function ProfileSection({
   }, [profileLinked]);
 
   useEffect(() => { setNameInput(displayName); }, [displayName]);
+
+  async function handleSignIn() {
+    setSignInError(null);
+    try {
+      await onSignIn();
+      // Success normally redirects the browser away, so this component unmounts.
+    } catch {
+      setSignInError("Η σύνδεση με Google απέτυχε. Δοκίμασε ξανά.");
+    }
+  }
 
   async function handleClaim() {
     if (!codeInput.trim()) return;
@@ -135,19 +153,25 @@ export function ProfileSection({
   return (
     <div className="px-5 py-3">
       <p className={`${labelClass} mb-1.5`}>
-        {!authLinked && mode !== "idle" ? "Συγχρονισμός συσκευών" : "Εμφάνισου στον πίνακα"}
+        {authLinked
+          ? "Λογαριασμός Google"
+          : mode !== "idle" ? "Συγχρονισμός συσκευών" : "Εμφάνισου στον πίνακα"}
       </p>
 
       {/* ── AuthLinked — Google account connected ────────────────────────────── */}
+      {/* Shows the Google account name (authUserName), which is distinct from the
+          editable leaderboard nickname (displayName) — the "Λογαριασμός Google"
+          label above disambiguates the two. */}
       {authLinked && (
         <div className="flex items-center justify-between">
-          <span className="text-xs text-correct font-semibold">
-            ✓ {authUserName ?? displayName ?? "Συνδεδεμένος"}
+          <span className="text-xs text-muted">
+            Συνδεδεμένος ως{" "}
+            <span className="text-correct font-semibold">{authUserName ?? displayName ?? "—"}</span>
           </span>
           {onSignOut && (
             <button
               onClick={() => void onSignOut()}
-              className="text-xs text-stone-400 hover:text-red-500 transition-colors"
+              className="text-xs text-muted hover:text-danger transition-colors"
             >
               Αποσύνδεση Google
             </button>
@@ -158,16 +182,15 @@ export function ProfileSection({
       {/* ── Idle (unlinked) ──────────────────────────────────────────────────── */}
       {!authLinked && mode === "idle" && (
         <div className="space-y-2">
-          {onSignIn && (
-            <button
-              onClick={() => void onSignIn()}
-              className="w-full flex items-center justify-center gap-2 text-xs font-medium border border-border rounded-lg px-3 py-2 hover:bg-surface-raised transition-colors text-foreground"
-            >
-              <GoogleIcon />
-              Σύνδεση με Google
-            </button>
-          )}
-          {onSignIn && onSaveName && (
+          <button
+            onClick={() => void handleSignIn()}
+            className="w-full flex items-center justify-center gap-2 text-xs font-medium border border-border rounded-lg px-3 py-2 hover:bg-surface-raised transition-colors text-foreground"
+          >
+            <GoogleIcon />
+            Σύνδεση με Google
+          </button>
+          {signInError && <p className="text-xs text-danger">{signInError}</p>}
+          {onSaveName && (
             <div className="flex items-center gap-2">
               <hr className="flex-1 border-border" />
               <span className="text-xs text-muted whitespace-nowrap">ή χρησιμοποίησε ψευδώνυμο</span>
@@ -183,7 +206,7 @@ export function ProfileSection({
                 onKeyDown={(e) => e.key === "Enter" && handleNameSave()}
                 placeholder="Ανώνυμος"
                 maxLength={30}
-                className={`flex-1 ${inputCompactClass}`}
+                className={`flex-1 min-w-0 ${inputCompactClass}`}
               />
               <button onClick={handleNameSave} className={btnPrimaryCompact}>
                 Αποθήκευση
@@ -193,19 +216,19 @@ export function ProfileSection({
           <div className="flex items-center gap-3">
             <button
               onClick={() => setMode("claiming")}
-              className="text-xs text-stone-500 underline underline-offset-2 hover:text-foreground transition-colors"
+              className="text-xs text-muted underline underline-offset-2 hover:text-foreground transition-colors"
             >
               Σύνδεση με κωδικό
             </button>
             <span className="text-muted select-none">|</span>
             <button
               onClick={() => setMode("confirming")}
-              className="text-xs text-stone-400 hover:text-red-500 transition-colors"
+              className="text-xs text-muted hover:text-danger transition-colors"
             >
               Αποσύνδεση
             </button>
           </div>
-          {createError && <p className="text-xs text-red-500 mt-1">{createError}</p>}
+          {createError && <p className="text-xs text-danger mt-1">{createError}</p>}
         </div>
       )}
 
@@ -225,11 +248,11 @@ export function ProfileSection({
             autoFocus
             maxLength={6}
           />
-          {claimError && <p className="text-xs text-red-500">{claimError}</p>}
+          {claimError && <p className="text-xs text-danger">{claimError}</p>}
           <div className="flex items-center gap-3">
             <button
               onClick={cancelClaim}
-              className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+              className="text-xs text-muted hover:text-foreground transition-colors"
             >
               Άκυρο
             </button>
@@ -246,26 +269,37 @@ export function ProfileSection({
 
       {/* ── Linked (ProfileLinked, no Google) ────────────────────────────────── */}
       {!authLinked && mode === "linked" && (
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-correct font-semibold">
-            ✓ {displayName || "Ανώνυμος"}
-          </span>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => void handleGenerate()}
-              disabled={loading}
-              title="Δημιούργησε κωδικό για να συνδεθείς από άλλη συσκευή"
-              className="text-xs text-stone-500 underline underline-offset-2 hover:text-foreground transition-colors"
-            >
-              {loading ? "…" : "Μεταφορά σε άλλη συσκευή"}
-            </button>
-            <span className="text-muted select-none">|</span>
-            <button
-              onClick={() => setMode("confirming")}
-              className="text-xs text-stone-400 hover:text-red-500 transition-colors"
-            >
-              Αποσύνδεση
-            </button>
+        <div className="space-y-2">
+          <button
+            onClick={() => void handleSignIn()}
+            title="Σύνδεση με Google για μη-χανόμενη ταυτότητα"
+            className="w-full flex items-center justify-center gap-2 text-xs font-medium border border-border rounded-lg px-3 py-2 hover:bg-surface-raised transition-colors text-foreground"
+          >
+            <GoogleIcon />
+            Σύνδεση με Google
+          </button>
+          {signInError && <p className="text-xs text-danger">{signInError}</p>}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-correct font-semibold">
+              ✓ {displayName || "Ανώνυμος"}
+            </span>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => void handleGenerate()}
+                disabled={loading}
+                title="Δημιούργησε κωδικό για να συνδεθείς από άλλη συσκευή"
+                className="text-xs text-muted underline underline-offset-2 hover:text-foreground transition-colors"
+              >
+                {loading ? "…" : "Μεταφορά σε άλλη συσκευή"}
+              </button>
+              <span className="text-muted select-none">|</span>
+              <button
+                onClick={() => setMode("confirming")}
+                className="text-xs text-muted hover:text-danger transition-colors"
+              >
+                Αποσύνδεση
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -282,7 +316,7 @@ export function ProfileSection({
             </span>
             <button
               onClick={() => void handleCopy()}
-              className="text-xs text-stone-500 border border-border rounded px-2 py-1 hover:bg-surface-raised transition-colors"
+              className="text-xs text-muted border border-border rounded px-2 py-1 hover:bg-surface-raised transition-colors"
             >
               {copied ? "✓ Αντιγράφηκε" : "Αντιγραφή"}
             </button>
@@ -293,7 +327,7 @@ export function ProfileSection({
           <p className="text-xs text-muted">Ισχύει για 24 ώρες · μία χρήση.</p>
           <button
             onClick={() => setMode("linked")}
-            className="text-xs text-stone-400 hover:text-stone-600 transition-colors"
+            className="text-xs text-muted hover:text-foreground transition-colors"
           >
             ← Πίσω
           </button>
@@ -303,22 +337,32 @@ export function ProfileSection({
       {/* ── Disconnect confirmation ───────────────────────────────────────────── */}
       {!authLinked && mode === "confirming" && (
         <div className="flex items-center gap-2">
-          <span className="text-xs text-stone-500">Αποσύνδεση;</span>
+          <span className="text-xs text-muted">Αποσύνδεση;</span>
           <button
             data-testid="btn-disconnect-confirm"
             onClick={handleDisconnect}
-            className="text-xs font-semibold text-red-600 border border-red-300 rounded-full px-3 py-1 hover:bg-red-50 active:bg-red-100 transition-colors"
+            className="text-xs font-semibold text-danger border border-danger/40 rounded-full px-3 py-1 hover:bg-danger/10 active:bg-danger/20 transition-colors"
           >
             Ναι
           </button>
           <button
             data-testid="btn-disconnect-cancel"
             onClick={() => setMode(profileLinked ? "linked" : "idle")}
-            className="text-xs text-stone-500 border border-border rounded-full px-3 py-1 hover:bg-surface-raised transition-colors"
+            className="text-xs text-muted border border-border rounded-full px-3 py-1 hover:bg-surface-raised transition-colors"
           >
             Άκυρο
           </button>
         </div>
+      )}
+
+      {/* ── Funnel to the full profile page ──────────────────────────────────── */}
+      {showProfileLink && (
+        <Link
+          href="/profile"
+          className="mt-3 inline-block text-xs text-muted underline underline-offset-2 hover:text-foreground transition-colors"
+        >
+          Δες το προφίλ σου →
+        </Link>
       )}
     </div>
   );

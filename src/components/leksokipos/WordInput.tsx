@@ -5,8 +5,6 @@
 // When canSubmit is true (word >=4 letters), a green submit button appears
 // inline so players can submit without needing a separate button row.
 
-import { colorCenterLetter, colorInputPlaceholder, colorOuterLetter } from "@/styles/recipes";
-
 interface WordInputProps {
   value:        string;
   centerLetter: string;
@@ -25,13 +23,15 @@ export function WordInput({ value, centerLetter, onSubmit, canSubmit = false }: 
   return (
     <div data-testid="word-input" className={styles.container}>
       {value.length === 0 ? (
-        <span className={colorInputPlaceholder}>-</span>
+        // Empty-input placeholder — muted token.
+        <span className="text-muted">-</span>
       ) : (
         value.split("").map((ch, i) => (
           <span
             key={i}
             data-testid="word-input-letter"
-            className={ch === centerLetter ? colorCenterLetter : colorOuterLetter}
+            // Centre letter is the golden accent; outer letters use the foreground token.
+            className={ch === centerLetter ? "text-accent" : "text-foreground"}
           >
             {ch.toUpperCase()}
           </span>

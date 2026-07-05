@@ -1,0 +1,14 @@
+
+> try@0.1.0 test
+> vitest run --run
+
+
+[1m[46m RUN [49m[22m [36mv4.1.1 [39m[90mC:/repos/try[39m
+
+Not implemented: navigation to another Document
+
+[2m Test Files [22m [1m[32m85 passed[39m[22m[2m | [22m[33m2 skipped[39m[90m (87)[39m
+[2m      Tests [22m [1m[32m1174 passed[39m[22m[2m | [22m[33m6 skipped[39m[90m (1180)[39m
+[2m   Start at [22m 15:45:50
+[2m   Duration [22m 43.59s[2m (transform 30.17s, setup 49.36s, import 151.51s, tests 51.59s, environment 423.70s)[22m
+

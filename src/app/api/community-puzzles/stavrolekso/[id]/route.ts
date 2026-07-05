@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseClient } from "@/lib/supabase";
+import { validateStavroleksoData } from "@/games/stavrolekso/lib/validateSubmission";
 import type { StavroleksoPuzzleData } from "@/games/stavrolekso/types";
 
 export const runtime = "edge";
@@ -70,6 +71,12 @@ export async function PATCH(
   }
   if (existing.edit_pin !== edit_pin) {
     return NextResponse.json({ error: "Incorrect PIN" }, { status: 403 });
+  }
+
+  // An edit must clear the same bar as a submission — same invariants, one module.
+  const dataError = validateStavroleksoData(data);
+  if (dataError) {
+    return NextResponse.json({ error: dataError }, { status: 400 });
   }
 
   const updates: Record<string, unknown> = { data };
