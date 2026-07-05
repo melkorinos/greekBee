@@ -9,7 +9,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfileVerification } from "@/hooks/useProfileVerification";
 import { getSuggestedWords, markSuggested } from "@/hooks/suggestions";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { FeedbackMessage } from "./FeedbackMessage";
 import { FoundWordsList } from "./FoundWordsList";
@@ -29,6 +29,10 @@ import { useGameState } from "@/games/leksokipos/hooks/useGameState";
 import { useGameStateSync } from "@/hooks/useGameStateSync";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { isDailyPuzzle, isPangram } from "@/games/leksokipos/lib";
+
+// God mode never changes at runtime, so useSyncExternalStore needs no real
+// subscription. Module-level so its identity is stable across renders.
+const subscribeNever = () => () => {};
 
 interface GameBoardProps {
   puzzle: LeksokiposPuzzle;
@@ -60,9 +64,14 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   } = useGameState(puzzle);
 
   // God mode — activated by ?godmode=zzkdgr3 in the URL. Never posts to DB.
-  const [isGodMode] = useState(() =>
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("godmode") === "zzkdgr3"
+  // The server snapshot is always false so the SSR HTML and initial hydration
+  // render match (god mode off); useSyncExternalStore then reconciles to the
+  // real client value without a hydration mismatch. Reading window.location in
+  // a useState initializer would diverge from SSR (window absent) and mismatch.
+  const isGodMode = useSyncExternalStore(
+    subscribeNever,
+    () => new URLSearchParams(window.location.search).get("godmode") === "zzkdgr3",
+    () => false,
   );
   const [godModeOpen, setGodModeOpen] = useState(false);
 

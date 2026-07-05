@@ -3,6 +3,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import { GameBoard } from "@/components/leksokipos/GameBoard";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
@@ -512,6 +513,16 @@ describe("God Mode", () => {
       window.history.pushState({}, "", "?godmode=wrong");
       render(<GameBoard puzzle={dailyPuzzle} />);
       expect(screen.queryByTestId("btn-god-mode")).toBeNull();
+    });
+
+    // Regression: god mode must be OFF in the server-rendered markup even with the
+    // param present, so the SSR HTML matches the initial hydration render. Reading
+    // window in a useState initializer put the button in the client's first render
+    // but not the server's → hydration mismatch. renderToStaticMarkup exercises the
+    // real SSR path (getServerSnapshot), so this fails on the buggy version.
+    it("🧪 is absent from server-rendered markup (no hydration mismatch)", () => {
+      const html = renderToStaticMarkup(<GameBoard puzzle={dailyPuzzle} />);
+      expect(html).not.toContain("btn-god-mode");
     });
   });
 });
