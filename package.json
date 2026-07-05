@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "parse-dict": "tsx scripts/parse-dictionary.ts",
     "generate-puzzle": "tsx scripts/generate-puzzle.ts",
+    "generate-puzzle-index": "node scripts/generate-puzzle-index.mjs",
     "batch-generate": "tsx scripts/batch-generate.ts",
     "apply-nominations": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/apply-nominations.mjs",
     "apply-nominations:dry": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/apply-nominations.mjs --dry-run",

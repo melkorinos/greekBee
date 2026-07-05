@@ -5,6 +5,16 @@
 
 ---
 
+## Session 64 — 2026-07-05: Fluid Active CPU investigation + fixes 3/4 shipped, 1/2 handed off ✅
+Gauge at 2h31m/4h. Investigated all server CPU consumers; artifacts in `.claude/aiHelper/fluid-cpu/` (analysis.md = findings/measurements, HANDOFF-fixes-1-2.md = next agent's brief). **~90% of traffic is Leksokipos** (user-provided) — reframed priorities.
+1. **Fix 3 shipped** — `/leksokipos` redirect page no longer parses 23.5 MB per cold start: new `src/data/leksokipos/puzzleIndex.ts` + generated `puzzles-index-el.json` (108 KB; `npm run generate-puzzle-index`, script in `scripts/generate-puzzle-index.mjs`). Drift-guard + parity tests in `src/test/leksokipos/puzzleIndex.test.ts`; deploymentReadiness list extended. Verified in `.next`: route's biggest chunk 22.15 MB → 0.2 MB.
+2. **Fix 4 shipped** — `[center]/[outer]` `revalidate` 3600→604800 (content changes only on deploy; 24× fewer regenerations, each of which re-parsed the 22 MB chunk).
+3. **Measured** (prod build + dead-Supabase env to avoid prod consume): `/leksiarxeio` + `/vres-tin-frasi` serialize **2.4 MB per view**, ~150–190 ms CPU over light dynamic pages. Given 10% traffic share → items 1 (payload) & 2 (ISR + once-per-day consume) are UX/correctness fixes more than CPU fixes; `consumeApprovedPuzzle`-per-view is a real bug (queue drains per view, same-day visitors can diverge).
+4. **Handed off** items 1+2 (`/tdd` mandated, verification steps included). Uncommitted at session end (tree also carries unrelated nominations/layout edits from another session).
+5. **Gates:** 1274 pass / 6 skipped · eslint 0 · build 0. (One-off flake: `gameReducer RESTORE_STATE` — green in isolation + rerun.)
+
+---
+
 ## Session 63 — 2026-07-04: Feedback feature — text → email (grill-with-docs → /tdd) ✅
 Player-facing Feedback surface: free-text message emailed to the maintainer. Grilled the design first, then built via `/tdd`. Uncommitted at session end.
 1. **Design (grill-with-docs)** — chose a **form-to-email relay** over an in-house pipeline (no npm dep, no DB table, no Storage bucket, no domain verify) — matches "least effort, accept-the-risk" stance. New glossary term **Feedback** in CONTEXT.md (distinct from Nomination + the leksokipos `reports` slice).

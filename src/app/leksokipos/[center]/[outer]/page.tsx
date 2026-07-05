@@ -23,19 +23,21 @@ import { LeksokiposLayout } from "@/components/leksokipos/LeksokiposLayout";
 import { greekToGreeklish } from "@/lib/greeklish";
 import { parseCustomUrl } from "@/games/leksokipos/lib/parseCustomUrl";
 
-// Cache each unique letter-combo page for 1 hour.
-// The word list and puzzle data never change between deploys, so this is safe.
+// Cache each unique letter-combo page for 1 week.
+// The word list and puzzle data never change between deploys — and a deploy
+// purges the CDN cache anyway — so a long window is safe.
 //
 // Why this matters for cost:
 //   `computeValidWords` scans 811 k words (~50-200 ms of Fluid CPU) for every
 //   custom combo not in the pre-built list.  Without caching, every page visit
 //   would trigger a fresh Fluid invocation and be billed accordingly.
-//   With revalidate=3600, the CDN serves cached HTML for repeat visitors;
-//   the Fluid function only runs for the *first* visitor in each hour window.
+//   With revalidate=604800, the CDN serves cached HTML for repeat visitors;
+//   the Fluid function only runs for the *first* visitor in each week window
+//   (was 1 hour — 24×+ more regenerations for zero freshness benefit).
 //
 // Note: revalidate on a dynamic route only takes effect for requests that reach
 // the server — the redirect() calls above return instantly and are unaffected.
-export const revalidate = 3600;
+export const revalidate = 604800;
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
