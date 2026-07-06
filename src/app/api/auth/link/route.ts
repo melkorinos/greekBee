@@ -12,6 +12,13 @@
 // (it carries no auth_user_id column) so nothing there needs stamping — the
 // device→account map lives solely in player_profiles.
 //
+// Occupied-device guard (ADR 0012 amendment / issue 01): if the caller's device
+// row is already linked to a *different* account (a shared browser left
+// un-Disconnected), the route never overwrites or absorbs it. A returning caller
+// adopts their own canonical identity (no merge of the resident's history); a
+// first-time caller is minted a fresh device_uuid. Either way the resident's row
+// is left untouched.
+//
 // Privileged writes go through the service-role client (bypasses RLS, which has
 // no DELETE policy on player_profiles and scopes UPDATE to auth.uid()).
 //
@@ -73,25 +80,51 @@ export async function POST(req: NextRequest) {
     .eq("auth_user_id", auth_user_id)
     .maybeSingle() as { data: { device_uuid: string; display_name: string } | null };
 
-  // 4. Sign-in Restore: the account lives on another device — adopt it and merge
-  //    this device's history into it (ADR 0012).
-  if (anchor && anchor.device_uuid !== device_uuid) {
-    return await restore(db, device_uuid, anchor);
-  }
-
-  // 5. Fetch existing profile to check display_name and the currently mapped account.
+  // 4. Who owns the caller's current device row right now? Resolved before the
+  //    restore/link decisions so we never overwrite or absorb a row linked to a
+  //    *different* account — the occupied-device guard (ADR 0012 amendment,
+  //    issue 01): a shared browser someone signed into and walked away from.
   const { data: existing } = await db("player_profiles")
     .select("display_name, auth_user_id")
     .eq("device_uuid", device_uuid)
     .maybeSingle() as { data: { display_name: string; auth_user_id?: string | null } | null };
 
-  // Use the verified Google name only when the player has no name yet.
+  const occupied = !!existing?.auth_user_id && existing.auth_user_id !== auth_user_id;
+
+  // 5. Occupied device: the browser still holds another account's linked identity.
+  //    Never touch that row — the caller gets their own identity, the resident
+  //    owner is left intact.
+  if (occupied) {
+    if (anchor) {
+      // Returning caller — adopt their own canonical identity. Deliberately skip
+      // the Sign-in Restore merge/delete: this device's history belongs to the
+      // resident, not the caller.
+      return NextResponse.json({
+        ok:           true,
+        device_uuid:  anchor.device_uuid,
+        display_name: anchor.display_name,
+        restored:     true,
+      });
+    }
+    // First-time caller — mint a fresh device identity rather than overwriting
+    // the resident's auth_user_id. The client adopts the returned device_uuid.
+    return await linkFreshDevice(db, auth_user_id, googleName);
+  }
+
+  // 6. Sign-in Restore: the account lives on another (un-occupied) device — adopt
+  //    it and merge this device's history into it (ADR 0012).
+  if (anchor && anchor.device_uuid !== device_uuid) {
+    return await restore(db, device_uuid, anchor);
+  }
+
+  // 7. Link this device (first sign-in / same device). Use the verified Google
+  //    name only when the player has no name yet.
   const nameToUse =
     existing?.display_name?.trim()
       ? existing.display_name
       : (googleName?.trim() || "Ανώνυμος");
 
-  // 6. Upsert profile row — set auth_user_id + ensure display_name is populated.
+  // Upsert profile row — set auth_user_id + ensure display_name is populated.
   const { error: profileError } = await db("player_profiles").upsert(
     { device_uuid, auth_user_id, display_name: nameToUse },
     { onConflict: "device_uuid" }
@@ -101,12 +134,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: profileError.message }, { status: 500 });
   }
 
-  // 7. Audit the mapping change (ADR 0012): append an identity_audit row only
-  //    when this link established a pair the profile row didn't already hold —
-  //    first link (null → account) or overwrite of another account's mapping
-  //    (shared-computer case). Every mapping that ever existed stays
-  //    reconstructable for Admin Restore. Non-fatal: the link must not fail
-  //    because the log write did.
+  // 8. Audit the mapping change (ADR 0012): append an identity_audit row only
+  //    when this link established a pair the profile row didn't already hold
+  //    (first link: null → account). The occupied-device overwrite that used to
+  //    reach here is now prevented in step 5, so this fires only for the caller's
+  //    own device. Every mapping that ever existed stays reconstructable for
+  //    Admin Restore. Non-fatal: the link must not fail because the log did.
   if ((existing?.auth_user_id ?? null) !== auth_user_id) {
     const { error: auditError } = await db("identity_audit")
       .insert({ auth_user_id, device_uuid });
@@ -116,6 +149,36 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true, device_uuid, display_name: nameToUse, restored: false });
+}
+
+// ── Fresh-device link (occupied-device guard, ADR 0012 amendment) ──────────────
+//
+// The caller's current browser still holds another account's linked identity and
+// the caller has no anchor of their own. Rather than overwrite the resident's
+// row, mint the caller a brand-new device identity; the client adopts the
+// returned device_uuid (auth/callback → adoptDeviceIdentity), so no anonymous
+// history of the resident's is absorbed. restored:false — nothing came back.
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function linkFreshDevice(db: any, auth_user_id: string, googleName: string | null) {
+  const device_uuid  = crypto.randomUUID();
+  const display_name = googleName?.trim() || "Ανώνυμος";
+
+  const { error: profileError } = await db("player_profiles").upsert(
+    { device_uuid, auth_user_id, display_name },
+    { onConflict: "device_uuid" }
+  );
+  if (profileError) {
+    return NextResponse.json({ error: profileError.message }, { status: 500 });
+  }
+
+  const { error: auditError } = await db("identity_audit")
+    .insert({ auth_user_id, device_uuid });
+  if (auditError) {
+    console.error("identity_audit insert error:", auditError.message);
+  }
+
+  return NextResponse.json({ ok: true, device_uuid, display_name, restored: false });
 }
 
 // ── Sign-in Restore ──────────────────────────────────────────────────────────

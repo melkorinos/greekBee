@@ -340,6 +340,63 @@ describe("POST /api/auth/link — restore mode", () => {
   });
 });
 
+// ── Occupied-device guard (ADR 0012 amendment / issue 01) ───────────────────────
+//
+// The caller's current device row is already linked to a *different* account (a
+// shared browser left un-Disconnected). The route must never overwrite or absorb
+// that resident row: a returning caller adopts their own canonical identity
+// (no merge), a first-time caller is minted a fresh device_uuid.
+
+describe("POST /api/auth/link — occupied-device guard", () => {
+  function writesTo(table: string) {
+    return _writes.filter((w) => w.table === table && w.op !== "select");
+  }
+
+  it("returning caller adopts their own canonical id and leaves the resident untouched", async () => {
+    signedInAs("auth-B");
+    _db.anchorByAuth    = { device_uuid: "canonB", display_name: "PlayerB" };
+    _db.profileByDevice = { d1: { display_name: "PlayerA", auth_user_id: "auth-A" } };
+    // Resident history present — the bug would merge it into the caller.
+    _db.scoresByDevice       = { d1: [{ id: 1, game_id: "leksokipos", puzzle_date: "2026-07-01", score: 40 }] };
+    _db.achievementsByDevice = { d1: [{ id: 7, achievement_id: "leksokipos-tzimani" }] };
+
+    const res = await POST(makePostReq(BASE));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      device_uuid: "canonB", display_name: "PlayerB", restored: true,
+    });
+    // Resident A is fully untouched: no score merge, no achievement merge, no
+    // profile delete or upsert.
+    expect(writesTo("game_scores")).toHaveLength(0);
+    expect(writesTo("player_achievements")).toHaveLength(0);
+    expect(writesTo("player_profiles")).toHaveLength(0);
+  });
+
+  it("first-time caller is minted a fresh device_uuid, never overwriting the resident", async () => {
+    signedInAs("auth-B", "PlayerB");
+    _db.profileByDevice = { d1: { display_name: "PlayerA", auth_user_id: "auth-A" } };
+
+    const res = await POST(makePostReq(BASE));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.restored).toBe(false);
+    expect(json.device_uuid).not.toBe("d1");
+    expect(json.display_name).toBe("PlayerB");
+
+    // The new row carries the caller's account on a fresh device id.
+    const upsert = upsertOf("player_profiles")!.payload as { device_uuid: string; auth_user_id: string };
+    expect(upsert.auth_user_id).toBe("auth-B");
+    expect(upsert.device_uuid).not.toBe("d1");
+    // No write anywhere targets the resident's d1 row.
+    const touchesResident = _writes.some(
+      (w) => w.op !== "select" &&
+        (eqVal(w.eqs, "device_uuid") === "d1" ||
+         (w.payload as { device_uuid?: string })?.device_uuid === "d1"),
+    );
+    expect(touchesResident).toBe(false);
+  });
+});
+
 // ── identity_audit (ADR 0012, corrected 2026-07-03) ─────────────────────────────
 //
 // Change-only, link-time: a row is appended only when the link establishes a
@@ -364,13 +421,19 @@ describe("POST /api/auth/link — identity_audit", () => {
     expect(auditInserts()).toHaveLength(0);
   });
 
-  it("appends the new mapping when the link overwrites another account's row (shared computer)", async () => {
+  it("appends the fresh mapping (not the resident's device) on a shared-computer first sign-in", async () => {
     signedInAs("auth-B");
     _db.profileByDevice = { d1: { display_name: "PlayerA", auth_user_id: "auth-A" } };
     const res = await POST(makePostReq(BASE));
     expect(res.status).toBe(200);
     expect(auditInserts()).toHaveLength(1);
-    expect(auditInserts()[0]!.payload).toEqual({ auth_user_id: "auth-B", device_uuid: "d1" });
+    const { auth_user_id, device_uuid } = auditInserts()[0]!.payload as {
+      auth_user_id: string; device_uuid: string;
+    };
+    expect(auth_user_id).toBe("auth-B");
+    // Occupied-device guard: the audited device is the freshly minted one, never
+    // the resident's d1.
+    expect(device_uuid).not.toBe("d1");
   });
 
   it("appends nothing on restore (the anchor row already holds the pair)", async () => {
