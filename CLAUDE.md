@@ -30,13 +30,12 @@ At the start of every session, read these files in order:
 
 All commands live in `.claude/skills/`. Project-specific first, then mattpocock/skills:
 
-> **Skill install note:** mattpocock skills are managed by `npx skills@latest add mattpocock/skills` (tracked in `skills-lock.json`). Some are thin **wrappers** that delegate to base skills — `/grill-me` → `grilling`, `/grill-with-docs` → `grilling` + `domain-modeling`. Those base skills must be installed too, or the wrapper loads with no content behind it. The updater only fetches what's in `skills-lock.json`, so a missing base skill needs an explicit `npx skills@latest add mattpocock/skills/skills/<path>/<name>` (which also pins it). If a `/command` loads but does nothing, check for a missing base skill first.
+> **Skill install note:** mattpocock skills are managed by `npx skills@latest add mattpocock/skills` (tracked in `skills-lock.json`). Some are thin **wrappers** that delegate to base skills — `/grill-with-docs` → `grilling` + `domain-modeling`. Those base skills must be installed too, or the wrapper loads with no content behind it. The updater only fetches what's in `skills-lock.json`, so a missing base skill needs an explicit `npx skills@latest add mattpocock/skills/skills/<path>/<name>` (which also pins it). If a `/command` loads but does nothing, check for a missing base skill first.
 
 | Command | Purpose |
 |---------|---------|
 | `/aihelper` | Full context reload — reads all `.claude/aiHelper/` files then waits for your task |
 | `/improve-codebase-architecture` | Surface architectural seams and deepening opportunities |
-| `/grill-me` | Relentless Q&A to stress-test a plan or design |
 | `/grill-with-docs` | Grill session that cross-checks against domain docs and updates them inline |
 | `/to-prd` | Synthesise current context into a structured PRD |
 | `/to-issues` | Break a plan into vertical-slice issues on the issue tracker |
@@ -49,6 +48,7 @@ All commands live in `.claude/skills/`. Project-specific first, then mattpocock/
 | `/caveman` | Ultra-compressed mode — full technical accuracy, zero filler |
 | `/setup-matt-pocock-skills` | One-time setup: issue tracker, triage labels, domain doc layout |
 | `/write-a-skill` | Create a new skill with proper structure |
+| `/project-mcp` | Canonical Supabase & Vercel MCP IDs, call recipes, and param-traps — load before any Supabase/Vercel MCP call to skip discovery thrash |
 
 ## Agent skills
 
