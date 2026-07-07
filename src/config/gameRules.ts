@@ -4,6 +4,8 @@
  * Change a value here; all consumers pick it up automatically.
  */
 
+// Achievement trigger/scale/rate knobs live in src/config/achievementTuning.ts,
+// kept separate so balancing is a single-file edit.
 export const LEKSOKIPOS = {
   MIN_WORD_LENGTH: 4,
   PANGRAM_BONUS:   7,

@@ -7,6 +7,7 @@ import { NominationModal } from "@/components/shared/NominationModal";
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
 import { markSuggested } from "@/hooks/suggestions";
 import { LEKSIARXEIO } from "@/config/gameRules";
+import { btnApprove, btnReject } from "@/styles/recipes";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -113,14 +114,14 @@ function LeksiarxeioQueueCard({
         <button
           disabled={busy}
           onClick={() => review("approve")}
-          className="flex-1 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnApprove}`}
         >
           Έγκριση
         </button>
         <button
           disabled={busy}
           onClick={() => review("reject")}
-          className="flex-1 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnReject}`}
         >
           Απόρριψη
         </button>
@@ -160,14 +161,14 @@ function VresTinFrasiQueueCard({
         <button
           disabled={busy}
           onClick={() => review("approve")}
-          className="flex-1 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnApprove}`}
         >
           Έγκριση
         </button>
         <button
           disabled={busy}
           onClick={() => review("reject")}
-          className="flex-1 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnReject}`}
         >
           Απόρριψη
         </button>
@@ -214,14 +215,14 @@ function LeksindeseisQueueCard({
         <button
           disabled={busy}
           onClick={() => review("approve")}
-          className="flex-1 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnApprove}`}
         >
           Έγκριση
         </button>
         <button
           disabled={busy}
           onClick={() => review("reject")}
-          className="flex-1 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnReject}`}
         >
           Απόρριψη
         </button>
@@ -276,14 +277,14 @@ function StavroleksoQueueCard({
         <button
           disabled={busy}
           onClick={() => review("approve")}
-          className="flex-1 py-1.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnApprove}`}
         >
           Έγκριση
         </button>
         <button
           disabled={busy}
           onClick={() => review("reject")}
-          className="flex-1 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnReject}`}
         >
           Απόρριψη
         </button>
@@ -306,6 +307,13 @@ const CARD: Record<CommunityTab, CardRenderer> = {
   vrestifrasi:  (p, as, or) => <VresTinFrasiQueueCard  puzzle={p as VresTinFrasiCommunityPuzzle}  adminSecret={as} onReviewed={or} />,
   stavrolekso:  (p, as, or) => <StavroleksoQueueCard  puzzle={p as StavroleksoCommunityPuzzle}  adminSecret={as} onReviewed={or} />,
 };
+
+// Rank by net score (upvotes − downvotes), highest first. The score itself is
+// never shown — it only orders the list. Ties keep their incoming order (the API
+// pre-sorts by net score then created_at desc), and JS's stable sort preserves it.
+function byNetScoreDesc(a: Nomination, b: Nomination): number {
+  return (b.upvote_count - b.downvote_count) - (a.upvote_count - a.downvote_count);
+}
 
 // ── Main client component ─────────────────────────────────────────────────────
 
@@ -391,8 +399,13 @@ function LeksikastiríoClient() {
     );
   }
 
-  function handleReviewed(id: string) {
-    setNominations((prev) => prev.filter((n) => n.id !== id));
+  function handleReviewed(id: string, status: "accepted" | "rejected") {
+    // Keep the row visible and stamp its status — the card swaps its approve/
+    // reject buttons for a status pill so the admin sees the result. The row
+    // clears on the next refetch (GET returns pending only).
+    setNominations((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, status } : n)),
+    );
   }
 
   function handleCommunityReviewed(id: number, game: CommunityTab) {
@@ -511,11 +524,11 @@ function LeksikastiríoClient() {
                   <th className="pb-2 pr-4 font-semibold">Από</th>
                   <th className="pb-2 pr-4 font-semibold">Σχόλιο</th>
                   <th className="pb-2 pr-4 font-semibold text-center">Ψήφοι</th>
-                  {isAdmin && <th className="pb-2 font-semibold">Ενέργειες</th>}
+                  {isAdmin && <th className="pb-2 pl-2 font-semibold sticky right-0 bg-background">Ενέργειες</th>}
                 </tr>
               </thead>
               <tbody>
-                {nominations.map((nomination) => (
+                {[...nominations].sort(byNetScoreDesc).map((nomination) => (
                   <NominationCard
                     key={nomination.id}
                     nomination={nomination}

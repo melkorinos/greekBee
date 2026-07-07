@@ -17,6 +17,7 @@
   --brand:          var(--color-yellow-400);
   --accent:         var(--color-yellow-500);
   --danger:         var(--color-red-500);
+  --success:        var(--color-green-600);
   /* Emphasis / primary-action fill — inverts vs the page (dark fill on light). */
   --inverted:            var(--color-stone-800);
   --inverted-foreground: #ffffff;
@@ -45,6 +46,7 @@
   --border:         var(--color-stone-700);
   --accent:         var(--color-yellow-400);
   --danger:         var(--color-red-400);
+  --success:        var(--color-green-500);
   --inverted:            var(--color-stone-200);
   --inverted-foreground: var(--color-stone-900);
 }
@@ -73,6 +75,7 @@
   --color-brand:          var(--brand);
   --color-accent:         var(--accent);
   --color-danger:         var(--danger);
+  --color-success:        var(--success);
   --color-inverted:            var(--inverted);
   --color-inverted-foreground: var(--inverted-foreground);
   --color-game-accent:            var(--game-accent);

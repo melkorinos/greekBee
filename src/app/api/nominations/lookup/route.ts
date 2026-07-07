@@ -6,6 +6,9 @@
 //
 // `rejected > 0` → the player is re-proposing something an admin already declined;
 // the UI warns and makes the explanation note mandatory.
+// `accepted > 0` → an admin already approved this word; it's just waiting for the
+// apply-nominations release, so it isn't in the dictionary yet. The UI tells the
+// player it's already approved and blocks a pointless duplicate.
 // `pending  > 0` → an identical proposal is already in the queue; the UI nudges
 // the player to go vote for it instead of duplicating.
 
@@ -38,6 +41,16 @@ export async function GET(req: NextRequest) {
       .eq("direction", direction)
       .eq("status", "rejected");
 
+  // Accepted: approved but not yet released (apply-nominations hasn't run), so the
+  // word is not in the dictionary yet. Head-only count is enough.
+  const acceptedQuery =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (supabase.from("nominations") as any)
+      .select("id", { count: "exact", head: true })
+      .eq("word", normalised)
+      .eq("direction", direction)
+      .eq("status", "accepted");
+
   // Pending: fetch the ids (earliest first) so the client can offer to upvote the
   // existing proposal instead of inserting a duplicate. `pendingId` = the original.
   const pendingQuery =
@@ -49,12 +62,15 @@ export async function GET(req: NextRequest) {
       .eq("status", "pending")
       .order("created_at", { ascending: true });
 
-  const [rejectedRes, pendingRes] = await Promise.all([rejectedQuery, pendingQuery]) as [
+  const [rejectedRes, acceptedRes, pendingRes] = await Promise.all([
+    rejectedQuery, acceptedQuery, pendingQuery,
+  ]) as [
+    { count: number | null; error: unknown },
     { count: number | null; error: unknown },
     { data: Array<{ id: string }> | null; count: number | null; error: unknown },
   ];
 
-  if (rejectedRes.error || pendingRes.error) {
+  if (rejectedRes.error || acceptedRes.error || pendingRes.error) {
     return NextResponse.json({ error: "db_error" }, { status: 500 });
   }
 
@@ -62,6 +78,7 @@ export async function GET(req: NextRequest) {
     word:      normalised,
     direction,
     rejected:  rejectedRes.count ?? 0,
+    accepted:  acceptedRes.count ?? 0,
     pending:   pendingRes.count ?? 0,
     pendingId: pendingRes.data?.[0]?.id ?? null,
   });

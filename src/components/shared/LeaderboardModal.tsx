@@ -252,7 +252,7 @@ export function LeaderboardModalBase({
           )}
 
           {!isLoading && error && (
-            <p className="text-center text-red-400 text-sm py-10">{error}</p>
+            <p className="text-center text-danger text-sm py-10">{error}</p>
           )}
 
           {!isLoading && !error && top20.length === 0 && (

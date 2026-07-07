@@ -21,6 +21,8 @@ import { NextRequest } from "next/server";
 // ── Types the mock understands ──────────────────────────────────────────────────
 
 interface ScoreRow { id: number; game_id: string; puzzle_date: string; score: number }
+interface AchievementRow { id: number; achievement_id: string }
+interface PangramRow { id: number; puzzle_date: string; word: string }
 interface Anchor   { device_uuid: string; display_name: string }
 
 interface DbState {
@@ -30,6 +32,10 @@ interface DbState {
   profileByDevice?: Record<string, { display_name: string; auth_user_id?: string | null }>;
   /** game_scores rows by device_id. */
   scoresByDevice?:  Record<string, ScoreRow[]>;
+  /** player_achievements rows by device_uuid. */
+  achievementsByDevice?: Record<string, AchievementRow[]>;
+  /** player_pangrams rows by device_uuid. */
+  pangramsByDevice?: Record<string, PangramRow[]>;
   failUpsert?:      boolean;
   failAuditInsert?: boolean;
 }
@@ -64,6 +70,14 @@ function resolveRead(table: string, eqs: [string, unknown][]) {
   if (table === "game_scores") {
     const device = eqVal(eqs, "device_id") as string;
     return { data: _db.scoresByDevice?.[device] ?? [], error: null };
+  }
+  if (table === "player_achievements") {
+    const device = eqVal(eqs, "device_uuid") as string;
+    return { data: _db.achievementsByDevice?.[device] ?? [], error: null };
+  }
+  if (table === "player_pangrams") {
+    const device = eqVal(eqs, "device_uuid") as string;
+    return { data: _db.pangramsByDevice?.[device] ?? [], error: null };
   }
   return { data: null, error: null };
 }
@@ -296,6 +310,132 @@ describe("POST /api/auth/link — restore mode", () => {
     const del = _writes.find((w) => w.table === "game_scores" && w.op === "delete");
     expect(del?.ins).toContainEqual(["id", [9]]);
   });
+
+  // ── Achievement merge (ADR 0013): the earned set must survive Restore ──────────
+
+  it("re-points the old device's achievements onto the canonical identity (union)", async () => {
+    signedInAs("auth-abc");
+    _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
+    _db.achievementsByDevice = {
+      d1:    [{ id: 1, achievement_id: "leksokipos-tzimani" },
+              { id: 2, achievement_id: "leksokipos-sidirodromos" }],
+      canon: [{ id: 9, achievement_id: "leksokipos-first-daily" }],
+    };
+    await POST(makePostReq(BASE));
+
+    const repoint = _writes.find((w) => w.table === "player_achievements" && w.op === "update");
+    expect(repoint?.payload).toEqual({ device_uuid: "canon" });
+    // Both disjoint old rows carry over → canonical ends up with the union.
+    expect(repoint?.ins.find(([c]) => c === "id")?.[1]).toEqual(expect.arrayContaining([1, 2]));
+    // Nothing to delete — no overlap.
+    expect(_writes.some((w) => w.table === "player_achievements" && w.op === "delete")).toBe(false);
+  });
+
+  it("drops the old duplicate when the canonical identity already earned it", async () => {
+    signedInAs("auth-abc");
+    _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
+    _db.achievementsByDevice = {
+      d1:    [{ id: 1, achievement_id: "leksokipos-tzimani" }],
+      canon: [{ id: 9, achievement_id: "leksokipos-tzimani" }], // already earned
+    };
+    await POST(makePostReq(BASE));
+
+    const del = _writes.find((w) => w.table === "player_achievements" && w.op === "delete");
+    expect(del?.ins).toContainEqual(["id", [1]]);
+    // The duplicate can't be re-pointed (unique constraint) — nothing re-pointed.
+    expect(_writes.some((w) => w.table === "player_achievements" && w.op === "update")).toBe(false);
+  });
+
+  // ── Pangram merge (ADR 0013 lane C): the append-only find set must union on Restore ──
+
+  it("re-points the old device's pangrams onto the canonical identity (union)", async () => {
+    signedInAs("auth-abc");
+    _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
+    _db.pangramsByDevice = {
+      d1:    [{ id: 1, puzzle_date: "2026-07-06", word: "διακοπτησ" },
+              { id: 2, puzzle_date: "2026-07-07", word: "παρακολουθηση" }],
+      canon: [{ id: 9, puzzle_date: "2026-07-05", word: "θαλασσινοσ" }],
+    };
+    await POST(makePostReq(BASE));
+
+    const repoint = _writes.find((w) => w.table === "player_pangrams" && w.op === "update");
+    expect(repoint?.payload).toEqual({ device_uuid: "canon" });
+    expect(repoint?.ins.find(([c]) => c === "id")?.[1]).toEqual(expect.arrayContaining([1, 2]));
+    expect(_writes.some((w) => w.table === "player_pangrams" && w.op === "delete")).toBe(false);
+  });
+
+  it("drops the old duplicate pangram when the canonical already has the same day+word", async () => {
+    signedInAs("auth-abc");
+    _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
+    _db.pangramsByDevice = {
+      d1:    [{ id: 1, puzzle_date: "2026-07-06", word: "διακοπτησ" }],
+      canon: [{ id: 9, puzzle_date: "2026-07-06", word: "διακοπτησ" }], // exact overlap
+    };
+    await POST(makePostReq(BASE));
+
+    const del = _writes.find((w) => w.table === "player_pangrams" && w.op === "delete");
+    expect(del?.ins).toContainEqual(["id", [1]]);
+    expect(_writes.some((w) => w.table === "player_pangrams" && w.op === "update")).toBe(false);
+  });
+});
+
+// ── Occupied-device guard (ADR 0012 amendment / issue 01) ───────────────────────
+//
+// The caller's current device row is already linked to a *different* account (a
+// shared browser left un-Disconnected). The route must never overwrite or absorb
+// that resident row: a returning caller adopts their own canonical identity
+// (no merge), a first-time caller is minted a fresh device_uuid.
+
+describe("POST /api/auth/link — occupied-device guard", () => {
+  function writesTo(table: string) {
+    return _writes.filter((w) => w.table === table && w.op !== "select");
+  }
+
+  it("returning caller adopts their own canonical id and leaves the resident untouched", async () => {
+    signedInAs("auth-B");
+    _db.anchorByAuth    = { device_uuid: "canonB", display_name: "PlayerB" };
+    _db.profileByDevice = { d1: { display_name: "PlayerA", auth_user_id: "auth-A" } };
+    // Resident history present — the bug would merge it into the caller.
+    _db.scoresByDevice       = { d1: [{ id: 1, game_id: "leksokipos", puzzle_date: "2026-07-01", score: 40 }] };
+    _db.achievementsByDevice = { d1: [{ id: 7, achievement_id: "leksokipos-tzimani" }] };
+    _db.pangramsByDevice     = { d1: [{ id: 8, puzzle_date: "2026-07-01", word: "διακοπτησ" }] };
+
+    const res = await POST(makePostReq(BASE));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      device_uuid: "canonB", display_name: "PlayerB", restored: true,
+    });
+    // Resident A is fully untouched: no score merge, no achievement merge, no
+    // pangram merge, no profile delete or upsert.
+    expect(writesTo("game_scores")).toHaveLength(0);
+    expect(writesTo("player_achievements")).toHaveLength(0);
+    expect(writesTo("player_pangrams")).toHaveLength(0);
+    expect(writesTo("player_profiles")).toHaveLength(0);
+  });
+
+  it("first-time caller is minted a fresh device_uuid, never overwriting the resident", async () => {
+    signedInAs("auth-B", "PlayerB");
+    _db.profileByDevice = { d1: { display_name: "PlayerA", auth_user_id: "auth-A" } };
+
+    const res = await POST(makePostReq(BASE));
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.restored).toBe(false);
+    expect(json.device_uuid).not.toBe("d1");
+    expect(json.display_name).toBe("PlayerB");
+
+    // The new row carries the caller's account on a fresh device id.
+    const upsert = upsertOf("player_profiles")!.payload as { device_uuid: string; auth_user_id: string };
+    expect(upsert.auth_user_id).toBe("auth-B");
+    expect(upsert.device_uuid).not.toBe("d1");
+    // No write anywhere targets the resident's d1 row.
+    const touchesResident = _writes.some(
+      (w) => w.op !== "select" &&
+        (eqVal(w.eqs, "device_uuid") === "d1" ||
+         (w.payload as { device_uuid?: string })?.device_uuid === "d1"),
+    );
+    expect(touchesResident).toBe(false);
+  });
 });
 
 // ── identity_audit (ADR 0012, corrected 2026-07-03) ─────────────────────────────
@@ -322,13 +462,19 @@ describe("POST /api/auth/link — identity_audit", () => {
     expect(auditInserts()).toHaveLength(0);
   });
 
-  it("appends the new mapping when the link overwrites another account's row (shared computer)", async () => {
+  it("appends the fresh mapping (not the resident's device) on a shared-computer first sign-in", async () => {
     signedInAs("auth-B");
     _db.profileByDevice = { d1: { display_name: "PlayerA", auth_user_id: "auth-A" } };
     const res = await POST(makePostReq(BASE));
     expect(res.status).toBe(200);
     expect(auditInserts()).toHaveLength(1);
-    expect(auditInserts()[0]!.payload).toEqual({ auth_user_id: "auth-B", device_uuid: "d1" });
+    const { auth_user_id, device_uuid } = auditInserts()[0]!.payload as {
+      auth_user_id: string; device_uuid: string;
+    };
+    expect(auth_user_id).toBe("auth-B");
+    // Occupied-device guard: the audited device is the freshly minted one, never
+    // the resident's d1.
+    expect(device_uuid).not.toBe("d1");
   });
 
   it("appends nothing on restore (the anchor row already holds the pair)", async () => {

@@ -86,8 +86,7 @@ All commands live in `.claude/skills/`.
 |---------|---------|
 | `/aihelper` | Full context reload — reads all `.claude/aiHelper/` files, then waits for your task |
 | `/improve-codebase-architecture` | Surface architectural seams and deepening opportunities |
-| `/grill-me` | Relentless Q&A to stress-test a plan or design decision |
-| `/grill-with-docs` | Like `/grill-me` but cross-checks against domain docs (CONTEXT.md, ADRs) and updates them inline |
+| `/grill-with-docs` | Relentless Q&A to stress-test a plan or design, cross-checking against domain docs (CONTEXT.md, ADRs) and updating them inline |
 | `/to-prd` | Synthesise current context into a structured PRD |
 | `/to-issues` | Break a plan or PRD into independently-grabbable vertical-slice issues on the issue tracker |
 | `/triage` | Move issues through a state machine (needs-triage → ready-for-agent / ready-for-human / wontfix) |

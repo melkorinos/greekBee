@@ -4,8 +4,9 @@
 // The bar shows progress from the current rank threshold to the next rank threshold
 // so it always feels achievable and resets on each level-up.
 //
-// When score >= maxScore on a daily puzzle, the rank-ladder popup is replaced by
-// the Endgame panel (remaining word counts). Pass `endgameInfo` to activate it.
+// Once the player reaches the top rank (Απολυτότητα) on a daily puzzle, the
+// rank-ladder popup is replaced by the Endgame panel (remaining word counts).
+// Pass `endgameInfo` to activate it.
 
 import { btnHeaderIcon, btnHeaderIconSize } from "@/styles/recipes";
 import { scoreBarFill, scoreBarTrack } from "./styles";

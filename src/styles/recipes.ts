@@ -75,6 +75,21 @@ export const btnModalSubmit =
 export const btnModalPrimary =
   "px-6 py-2 rounded-xl bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 transition-opacity";
 
+// ── Status action buttons ─────────────────────────────────────────────────────
+// Approve/confirm (success) and reject/destructive (danger) fills — the
+// admin review cards + NominationCard used to hand-roll `bg-green-600 …` /
+// `bg-red-500 …` in ~10 places. These recipes own the COLOUR only; add layout
+// (flex-1, w-7 h-7, padding, radius, text size) at the call site, since the
+// buttons appear at different sizes. Guarded by noRawActionButtonColors.test.ts.
+
+/** Approve / confirm action fill — solid success green, white text. */
+export const btnApprove =
+  "bg-success text-white hover:opacity-90 disabled:opacity-50 transition-opacity";
+
+/** Reject / destructive action fill — solid danger red, white text. */
+export const btnReject =
+  "bg-danger text-white hover:opacity-90 disabled:opacity-50 transition-opacity";
+
 // ── Leaderboard table ─────────────────────────────────────────────────────────
 
 /** Every leaderboard data row */

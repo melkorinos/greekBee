@@ -1,5 +1,9 @@
 # Admin Restore — break-glass identity recovery
 
+> Scope: recovering **one player** while the database is alive. If the **whole DB**
+> is lost or corrupted, this doc can't help (there's nothing to query) — see
+> [disaster-recovery.md](disaster-recovery.md).
+
 When a player loses their identity (device wiped, merge mishap, anything unpredictable), recover it with DB access alone — no app code involved. The player gives you their email (or Google identity); you issue them a TransferCode; they claim it in ProfileSection like any transfer. See ADR 0012 and the **Admin Restore** glossary entry in `CONTEXT.md`.
 
 Run these in the Supabase SQL editor (prod project).

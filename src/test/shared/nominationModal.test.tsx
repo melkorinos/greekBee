@@ -14,7 +14,7 @@ import userEvent from "@testing-library/user-event";
 function mockFetch(
   ok: boolean,
   status = ok ? 200 : 500,
-  lookup: { rejected?: number; pending?: number; pendingId?: string | null } = {},
+  lookup: { rejected?: number; accepted?: number; pending?: number; pendingId?: string | null } = {},
 ) {
   return vi.spyOn(globalThis, "fetch").mockImplementation(async (input: RequestInfo | URL) => {
     const url = typeof input === "string" ? input : input.toString();
@@ -24,6 +24,7 @@ function mockFetch(
         status: 200,
         json: async () => ({
           rejected:  lookup.rejected  ?? 0,
+          accepted:  lookup.accepted  ?? 0,
           pending:   lookup.pending   ?? 0,
           pendingId: lookup.pendingId ?? null,
         }),
@@ -286,6 +287,19 @@ describe("NominationModal — re-proposal warning", () => {
     );
     expect(postCall(fetchSpy)).toBeFalsy();
     expect(screen.getByTestId("nomination-modal-submit")).toBeDisabled();
+  });
+
+  it("shows an already-approved banner and blocks submit for an accepted-but-unreleased word", async () => {
+    const fetchSpy = mockFetch(true, 200, { accepted: 1 });
+    setup({ word: "εγκριθηκε", direction: "add" });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("nomination-accepted-info")).toBeInTheDocument(),
+    );
+    expect(screen.queryByTestId("nomination-rejected-warning")).toBeNull();
+    expect(screen.queryByTestId("nomination-pending-info")).toBeNull();
+    expect(screen.getByTestId("nomination-modal-submit")).toBeDisabled();
+    expect(postCall(fetchSpy)).toBeFalsy();
   });
 
   it("shows no warning for a word with no prior nominations", async () => {

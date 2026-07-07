@@ -3,7 +3,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { getServiceRoleClient } from "@/lib/supabase";
 
 export const runtime = "edge";
 
@@ -35,7 +35,11 @@ export async function POST(
     return NextResponse.json({ error: "action must be 'approve' or 'reject'" }, { status: 400 });
   }
 
-  const supabase = getSupabaseClient();
+  // The anon client has INSERT-only RLS on `nominations` (there is no UPDATE
+  // policy, by design — approving must not be open to the public). The admin
+  // secret is already validated above, so use the service-role client, which
+  // bypasses RLS, to persist the status change.
+  const supabase = getServiceRoleClient();
 
   const newStatus = action === "approve" ? "accepted" : "rejected";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

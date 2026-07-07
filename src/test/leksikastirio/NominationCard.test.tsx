@@ -156,18 +156,41 @@ describe("NominationCard — admin controls", () => {
     expect(screen.getByTestId("admin-reject")).toBeInTheDocument();
   });
 
-  it("calls onReviewed after clicking approve", async () => {
+  it("calls onReviewed with 'accepted' after clicking approve", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, json: async () => ({}) } as Response);
     const { user, onReviewed } = setup({ isAdmin: true, adminSecret: "secret" });
     await user.click(screen.getByTestId("admin-approve"));
-    await waitFor(() => expect(onReviewed).toHaveBeenCalledWith("abc-123"));
+    await waitFor(() => expect(onReviewed).toHaveBeenCalledWith("abc-123", "accepted"));
   });
 
-  it("calls onReviewed after clicking reject", async () => {
+  it("calls onReviewed with 'rejected' after clicking reject", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, json: async () => ({}) } as Response);
     const { user, onReviewed } = setup({ isAdmin: true, adminSecret: "secret" });
     await user.click(screen.getByTestId("admin-reject"));
-    await waitFor(() => expect(onReviewed).toHaveBeenCalledWith("abc-123"));
+    await waitFor(() => expect(onReviewed).toHaveBeenCalledWith("abc-123", "rejected"));
+  });
+
+  it("does NOT call onReviewed and shows an error when the server rejects the review", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: false, status: 403, json: async () => ({}) } as Response);
+    const { user, onReviewed } = setup({ isAdmin: true, adminSecret: "wrong" });
+    await user.click(screen.getByTestId("admin-reject"));
+    await waitFor(() => expect(screen.getByTestId("admin-error")).toBeInTheDocument());
+    expect(onReviewed).not.toHaveBeenCalled();
+    // Buttons remain so the admin can retry after fixing the secret.
+    expect(screen.getByTestId("admin-reject")).toBeInTheDocument();
+  });
+
+  it("shows a status pill instead of buttons once the row is actioned", () => {
+    setup({ isAdmin: true, adminSecret: "secret", nomination: { ...nomination, status: "accepted" } });
+    expect(screen.getByTestId("admin-status")).toHaveTextContent("Εγκρίθηκε");
+    expect(screen.queryByTestId("admin-approve")).toBeNull();
+    expect(screen.queryByTestId("admin-reject")).toBeNull();
+  });
+
+  it("shows the rejected pill for a rejected row", () => {
+    setup({ isAdmin: true, adminSecret: "secret", nomination: { ...nomination, status: "rejected" } });
+    expect(screen.getByTestId("admin-status")).toHaveTextContent("Απορρίφθηκε");
+    expect(screen.queryByTestId("admin-approve")).toBeNull();
   });
 
   it("sends action=reject in the POST body for the reject button", async () => {

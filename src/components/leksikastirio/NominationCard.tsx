@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { btnApprove, btnReject } from "@/styles/recipes";
+
 export interface Nomination {
   id:             string;
   word:           string;
@@ -10,6 +12,8 @@ export interface Nomination {
   upvote_count:   number;
   downvote_count: number;
   created_at:     string;
+  // Set once an admin actions the row this session; drives the status pill.
+  status?:        "pending" | "accepted" | "rejected";
 }
 
 interface NominationCardProps {
@@ -19,7 +23,7 @@ interface NominationCardProps {
   isAdmin:      boolean;
   adminSecret:  string;
   onVote:       (id: string, voteType: "up" | "down", action: "added" | "removed" | "switched") => void;
-  onReviewed:   (id: string) => void;
+  onReviewed:   (id: string, status: "accepted" | "rejected") => void;
 }
 
 export function NominationCard({
@@ -31,8 +35,9 @@ export function NominationCard({
   onVote,
   onReviewed,
 }: NominationCardProps) {
-  const [voting,    setVoting]    = useState(false);
-  const [reviewing, setReviewing] = useState(false);
+  const [voting,      setVoting]      = useState(false);
+  const [reviewing,   setReviewing]   = useState(false);
+  const [reviewError, setReviewError] = useState(false);
 
   async function handleVote(voteType: "up" | "down") {
     if (voting) return;
@@ -53,13 +58,22 @@ export function NominationCard({
   async function handleReview(action: "approve" | "reject") {
     if (reviewing) return;
     setReviewing(true);
+    setReviewError(false);
     try {
-      await fetch(`/api/nominations/${nomination.id}/review`, {
+      const res = await fetch(`/api/nominations/${nomination.id}/review`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ action, adminSecret }),
       });
-      onReviewed(nomination.id);
+      // Only reflect success if the server actually persisted the change —
+      // otherwise the row stays pending and the admin needs to know it failed.
+      if (!res.ok) {
+        setReviewError(true);
+        return;
+      }
+      onReviewed(nomination.id, action === "approve" ? "accepted" : "rejected");
+    } catch {
+      setReviewError(true);
     } finally {
       setReviewing(false);
     }
@@ -78,7 +92,7 @@ export function NominationCard({
         {nomination.player_name ?? "—"}
       </td>
 
-      <td className="py-3 pr-4 text-sm text-muted leading-relaxed">
+      <td className="py-3 pr-4 text-sm text-muted leading-relaxed max-w-md break-words">
         {nomination.note ?? ""}
       </td>
 
@@ -116,27 +130,50 @@ export function NominationCard({
       </td>
 
       {isAdmin && (
-        <td className="py-3">
-          <div className="flex gap-1">
-            <button
-              onClick={() => handleReview("approve")}
-              disabled={reviewing}
-              data-testid="admin-approve"
-              aria-label="Έγκριση"
-              className="w-7 h-7 flex items-center justify-center rounded-lg bg-green-600 text-white text-sm font-bold hover:bg-green-700 disabled:opacity-50 transition-colors"
+        <td className="py-3 pl-2 sticky right-0 bg-background">
+          {nomination.status === "accepted" || nomination.status === "rejected" ? (
+            <span
+              data-testid="admin-status"
+              className={[
+                "inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap",
+                nomination.status === "accepted"
+                  ? "bg-correct/15 text-correct"
+                  : "bg-danger/15 text-danger",
+              ].join(" ")}
             >
-              ✓
-            </button>
-            <button
-              onClick={() => handleReview("reject")}
-              disabled={reviewing}
-              data-testid="admin-reject"
-              aria-label="Απόρριψη"
-              className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-500 text-white text-sm font-bold hover:bg-red-600 disabled:opacity-50 transition-colors"
-            >
-              ✕
-            </button>
-          </div>
+              {nomination.status === "accepted" ? "✓ Εγκρίθηκε" : "✕ Απορρίφθηκε"}
+            </span>
+          ) : (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => handleReview("approve")}
+                disabled={reviewing}
+                data-testid="admin-approve"
+                aria-label="Έγκριση"
+                className={`w-7 h-7 flex items-center justify-center rounded-lg text-sm font-bold ${btnApprove}`}
+              >
+                ✓
+              </button>
+              <button
+                onClick={() => handleReview("reject")}
+                disabled={reviewing}
+                data-testid="admin-reject"
+                aria-label="Απόρριψη"
+                className={`w-7 h-7 flex items-center justify-center rounded-lg text-sm font-bold ${btnReject}`}
+              >
+                ✕
+              </button>
+              {reviewError && (
+                <span
+                  data-testid="admin-error"
+                  title="Η ενέργεια απέτυχε — ελέγξτε το admin secret"
+                  className="text-xs text-danger whitespace-nowrap ml-1"
+                >
+                  ⚠ Σφάλμα
+                </span>
+              )}
+            </div>
+          )}
         </td>
       )}
     </tr>

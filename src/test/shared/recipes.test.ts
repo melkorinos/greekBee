@@ -21,6 +21,9 @@ import {
   btnPrimary,
   btnPrimaryCompact,
   btnSecondary,
+  // Status action buttons
+  btnApprove,
+  btnReject,
   // Inputs
   inputClass,
   inputCompactClass,
@@ -56,6 +59,8 @@ const ALL_TOKENS: [string, string][] = [
   [btnModalSubmit, "btnModalSubmit"],
   [btnModalPrimary, "btnModalPrimary"],
   [btnHeaderIcon, "btnHeaderIcon"],
+  [btnApprove, "btnApprove"],
+  [btnReject, "btnReject"],
   [lbRowBase, "lbRowBase"],
   [lbRowPlayer, "lbRowPlayer"],
   [lbTdRank, "lbTdRank"],
@@ -86,6 +91,13 @@ describe("recipes.ts — visual design contracts", () => {
     it("btnPrimary", () => expect(btnPrimary).toContain("bg-inverted"));
     it("btnPrimaryCompact", () => expect(btnPrimaryCompact).toContain("bg-inverted"));
     it("btnModalSubmit", () => expect(btnModalSubmit).toContain("bg-inverted"));
+  });
+
+  describe("status action buttons use success/danger tokens, not literal green/red", () => {
+    it("btnApprove uses bg-success", () => expect(btnApprove).toContain("bg-success"));
+    it("btnReject uses bg-danger", () => expect(btnReject).toContain("bg-danger"));
+    it("btnApprove has no literal green", () => expect(btnApprove).not.toMatch(/green-\d/));
+    it("btnReject has no literal red", () => expect(btnReject).not.toMatch(/red-\d/));
   });
 
   describe("interactive elements animate", () => {

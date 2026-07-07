@@ -104,7 +104,7 @@ export default function ProfilePage() {
       </section>
 
       <section className="rounded-2xl border border-border bg-surface overflow-hidden">
-        <TrophyCase />
+        <TrophyCase deviceId={deviceId} />
       </section>
     </div>
   );

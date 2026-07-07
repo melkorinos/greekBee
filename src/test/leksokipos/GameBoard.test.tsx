@@ -2,7 +2,7 @@
 // Verifies that clicking hexes, typing, submitting and error messages all work.
 
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { GameBoard } from "@/components/leksokipos/GameBoard";
@@ -338,8 +338,9 @@ describe("Puzzle navigation", () => {
 
 // ── Endgame Zone ──────────────────────────────────────────────────────────────
 // Fixture: validWords raw total = 33 → maxScore = ceil(33 × 0.85) = 29.
-// Submitting painted(14)+panted(6)+paint(5)+patina(6) = 31 pts crosses the
-// threshold while leaving "anti" and "paid" remaining (no pangrams remaining).
+// Endgame unlocks at the TOP RANK (Απολυτότητα, 80% of maxScore → score ≥ 24),
+// NOT at a perfect score. painted(14)+panted(6)+paint(5) = 25 pts reaches the
+// top rank while still below max (29), leaving anti/paid/patina remaining.
 
 const dailyPuzzle: LeksokiposPuzzle = { ...puzzle, id: "2026-05-20-el", date: "2026-05-20" };
 
@@ -351,11 +352,20 @@ async function submitWords(user: ReturnType<typeof userEvent.setup>, words: stri
 }
 
 describe("Endgame Zone", () => {
-  it("endgame panel appears (replacing rank ladder) when score >= maxScore on a daily puzzle", async () => {
+  it("endgame panel appears the moment the player reaches the top rank (Απολυτότητα), before a perfect score", async () => {
+    const user = userEvent.setup();
+    render(<GameBoard puzzle={dailyPuzzle} />);
+    await submitWords(user, ["painted", "panted", "paint"]); // 25 pts: top rank, but < maxScore (29)
+    // Sanity: still below max score, so this is the transition zone the bug missed.
+    expect(screen.getByTestId("score-label")).toHaveTextContent("25 pts");
+    await user.click(screen.getByRole("button", { name: /εμφάνιση λέξεων/i }));
+    expect(screen.getByTestId("endgame-panel")).toBeInTheDocument();
+  });
+
+  it("endgame panel also appears at/above max score on a daily puzzle", async () => {
     const user = userEvent.setup();
     render(<GameBoard puzzle={dailyPuzzle} />);
     await submitWords(user, ["painted", "panted", "paint", "patina"]); // 31 pts >= 29
-    // Open the panel
     await user.click(screen.getByRole("button", { name: /εμφάνιση λέξεων/i }));
     expect(screen.getByTestId("endgame-panel")).toBeInTheDocument();
   });
@@ -378,10 +388,11 @@ describe("Endgame Zone", () => {
     expect(screen.queryByTestId("endgame-panel")).toBeNull();
   });
 
-  it("rank ladder still appears below maxScore", async () => {
+  it("rank ladder still appears below the top rank (Απολυτότητα)", async () => {
     const user = userEvent.setup();
     render(<GameBoard puzzle={dailyPuzzle} />);
-    await submitWords(user, ["paint"]); // 5 pts — well below 29
+    await submitWords(user, ["painted", "panted", "paid", "anti"]); // 22 pts: 75.9% < 80% → not top rank
+    expect(screen.getByTestId("score-label")).toHaveTextContent("22 pts");
     await user.click(screen.getByRole("button", { name: /εμφάνιση επιπέδων/i }));
     expect(screen.queryByTestId("endgame-panel")).toBeNull();
     // rank ladder rows are present (at least one rank name visible)
@@ -504,7 +515,7 @@ describe("God Mode", () => {
       render(<GameBoard puzzle={dailyPuzzle} />);
       await user.click(screen.getByTestId("btn-god-mode"));
       await user.click(screen.getByText(/βρες Όλες-1/i));
-      await user.click(screen.getByText(/reset/i));
+      await user.click(within(screen.getByTestId("god-mode-panel")).getByText(/reset/i));
       expect(screen.getByTestId("found-words-count")).toHaveTextContent("0");
       expect(screen.getByTestId("score-label")).toHaveTextContent("0 pts");
     });

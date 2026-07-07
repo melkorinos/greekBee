@@ -100,7 +100,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **AuthLinked** — Boolean: true when this device's Profile has an associated Google account (`auth_user_id` set on its `player_profiles` row). `AuthLinked` always implies `ProfileLinked`. The auth account is the durable identity anchor; a device is one session of it (ADR 0012). (Not: logged in — use AuthLinked)
 
-**Sign-in Restore** — Signing in with Google on a device whose account already has a linked Profile: the device adopts that Profile's DeviceId (same mechanic as TransferCode claim), then any pre-existing local history is merged — best Score per Puzzle wins, the account Profile's DisplayName wins, and the device's old Profile row is deleted. The player lands on the Profile Page with a welcome-back message showing what came back. (Not: account recovery, login sync)
+**Sign-in Restore** — Signing in with Google on a device whose account already has a linked Profile: the device adopts that Profile's DeviceId (same mechanic as TransferCode claim), then any pre-existing local history is merged — best Score per Puzzle wins, the account Profile's DisplayName wins, and the device's old Profile row is deleted. The player lands on the Profile Page with a welcome-back message showing what came back. **Exception — occupied device** (ADR 0012 amendment, issue 01): if the current device's Profile row is already AuthLinked to a *different* account (a shared browser someone forgot to Disconnect), the merge/delete is skipped — the caller adopts their own canonical identity (or is minted a fresh DeviceId if they have none) and the resident owner's row is left untouched. (Not: account recovery, login sync)
 
 **TransferCode** — 6-char alphanumeric code (no I/1/O/0) for cross-device identity migration. 24h TTL, single-use. Retained indefinitely as the no-account fallback; its claim-adoption mechanic is also the foundation of Sign-in Restore.
 
@@ -112,7 +112,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Trophy Case** — The full Achievement display on the Profile Page: every catalog entry rendered, earned Badges lit, locked ones greyed with their unlock hint. (Not: badge list, achievements tab)
 
-**Lifetime Stats** — Per-player aggregates over full `game_scores` history (append-forever makes them safe): total points, puzzles played, Τζιμάνι count, and current/best Streak. Keyed by DeviceId — never `auth_user_id` (Sign-in Restore makes the adopted DeviceId canonical, so one key serves anonymous and AuthLinked players alike); Daily Puzzles only (Custom Puzzles never post scores). (Not: statistics, records — records are all-time bests, a parked pillar)
+**Lifetime Stats** — Per-player aggregates over full `game_scores` history (append-forever makes them safe): total points, puzzles played, Τζιμάνι count, and pangram count (from the separate `player_pangrams` set, not `game_scores`). Streak is defined below but not yet surfaced in the strip. Keyed by DeviceId — never `auth_user_id` (Sign-in Restore makes the adopted DeviceId canonical, so one key serves anonymous and AuthLinked players alike); Daily Puzzles only (Custom Puzzles never post scores). (Not: statistics, records — records are all-time bests, a parked pillar)
 
 **Streak** — Consecutive calendar days on which a player scored at least one Daily Puzzle in any Game (platform-wide, not per-Game). Derived from distinct `puzzle_date`s in `game_scores`; Custom Puzzles excluded. Current and Best Streak show in Lifetime Stats. (Not: per-game streak)
 
@@ -171,6 +171,8 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 | `community_vrestifrasi_puzzles` | Player-submitted Vres Tin Frasi phrases (`data` jsonb `{ "phrase": "…" }`). Deleted on consumption. |
 | `community_stavrolekso_puzzles` | Community-submitted crosswords (`data` jsonb slot-based; PIN-gated creator edits). **Never deleted after approval.** |
 | `identity_audit` | Append-only log of identity-mapping changes, written by `/api/auth/link` when a link establishes a mapping the profile row didn't already hold. Service-role only (RLS on, zero policies); never pruned. Backs Admin Restore (ADR 0012). |
+| `player_achievements` | Immutable earned-Achievement facts: one row = one Achievement (one-shot or tier id) a device earned. `UNIQUE(device_uuid, achievement_id)`, insert-if-absent (never revoked). Open RLS (anon writes, mirrors `game_state`). Append-forever — never swept. Unioned onto the canonical identity on Sign-in Restore (ADR 0013). |
+| `player_pangrams` | Append-only pangram find-set (Κυνηγός Πανγκράμ tier progress): one row = one pangram `word` a device found on one `puzzle_date`. `UNIQUE(device_uuid, puzzle_date, word)`, insert-if-absent. Progress = `COUNT(*)`, never a counter. Open RLS, append-forever — never swept. Unioned on Sign-in Restore via `planPangramMerge` (ADR 0013 B2). |
 
 ---
 
@@ -182,8 +184,8 @@ No per-device rate limiting is implemented on INSERT-capable API routes. RLS pol
 **Nominations retention policy (2026-07-01)**
 `pending` and `rejected` Nominations are never deleted. Rejected rows are retained permanently because `NominationModal` uses them to warn players on re-submission (by word + direction). `accepted` Nominations are deleted 30 days after `reviewed_at` is set by `apply-nominations.mjs` — at that point the word is in the JSON and deployed, and the row is pure audit trail. The `reviewed_at` column serves dual purpose: `null` = accepted but not yet applied to the word list; non-null = applied. See ADR 0011.
 
-**`game_scores` is append-forever (2026-07-02)**
-Rows are never pruned. The 7-day leaderboard window is query-side only. Lifetime Stats, Streaks, and the derived-on-read lifetime-point Achievements all read full `game_scores` history, so deletion would silently corrupt them. (Achievements themselves are not backfilled — they start at zero at launch — but their live derivation from post-launch history still depends on nothing being pruned.) When the 50 000-row alert fires, the answer is "raise the alert / optimize storage" — never "prune history."
+**`game_scores` is append-forever (2026-07-02; enforced in code 2026-07-05)**
+Rows are never pruned. The 7-day leaderboard window is query-side only. Lifetime Stats, Streaks, and the derived-on-read lifetime-point Achievements all read full `game_scores` history, so deletion would silently corrupt them. (Achievements themselves are not backfilled — they start at zero at launch — but their live derivation from post-launch history still depends on nothing being pruned.) When the 50 000-row alert fires, the answer is "raise the alert / optimize storage" — never "prune history." **Until 2026-07-05 this was policy only — the daily `/api/cleanup-scores` cron still deleted `game_scores` older than 10 days (issue 03), so "Lifetime" Stats were really last-10-days stats.** The cron now prunes only the ephemeral tables (`game_state`, `transfer_codes`) governed by `SESSION_RETENTION_DAYS`; `game_scores` is untouched.
 
 **`player_profiles` cleanup — deferred (2026-07-01)**
 No deletion policy is implemented. `last_active` is updated on every profile upsert (POST /api/profile) so it reflects genuine activity when cleanup is eventually designed.

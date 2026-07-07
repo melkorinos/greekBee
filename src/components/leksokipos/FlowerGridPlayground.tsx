@@ -134,10 +134,11 @@ export interface FlowerGridPlaygroundProps {
 
 export function FlowerGridPlayground({ centerLetter, outerLetters, onLetterClick, variant }: FlowerGridPlaygroundProps) {
   // useSyncExternalStore reads the URL on the client; server always returns false.
-  // Avoids the setState-in-effect pattern while correctly detecting ?design on mount.
+  // Avoids the setState-in-effect pattern while correctly detecting ?godmode on mount.
+  // Same param as GameBoard's God Mode, but presence-only — no secret value required.
   const isDesignMode = useSyncExternalStore(
     () => () => {},
-    () => new URLSearchParams(window.location.search).has("design"),
+    () => new URLSearchParams(window.location.search).has("godmode"),
     () => false,
   );
   const [panelOpen, setPanelOpen] = useState(false);
