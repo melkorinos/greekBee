@@ -107,6 +107,12 @@ export function detectEarnedAchievements(ctx: AchievementContext): OneShotAchiev
   return earned;
 }
 
+/** Frozen id of the lifetime-points tiered badge — shared by the catalog + detector. */
+export const SYLLEKTIS_PONTON_ID = "leksokipos-syllektis-ponton";
+
+/** Frozen id of the lifetime-pangram tiered badge — shared by the catalog + detector. */
+export const KYNIGOS_PANGRAM_ID = "leksokipos-kynigos-pangram";
+
 export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
   {
     id:   LEKSOKIPOS_ONESHOT_IDS.firstDaily,
@@ -150,7 +156,7 @@ export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
     ],
   },
   {
-    id:   "leksokipos-syllektis-ponton",
+    id:   SYLLEKTIS_PONTON_ID,
     name: "Συλλέκτης Πόντων",
     hint: "Μάζεψε πόντους συνολικά.",
     kind: "tiered",
@@ -170,3 +176,81 @@ export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
 export const ALL_ACHIEVEMENT_IDS: ReadonlySet<string> = new Set(
   LEKSOKIPOS_ACHIEVEMENTS.flatMap((a) => [a.id, ...(a.tiers?.map((t) => t.id) ?? [])]),
 );
+
+/** The lifetime-points badge's tiers, ascending — the single source for detection + progress. */
+export const SYLLEKTIS_PONTON_TIERS: readonly AchievementTier[] =
+  LEKSOKIPOS_ACHIEVEMENTS.find((a) => a.id === SYLLEKTIS_PONTON_ID)?.tiers ?? [];
+
+/** The lifetime-pangram badge's tiers, ascending — the single source for detection + progress. */
+export const KYNIGOS_PANGRAM_TIERS: readonly AchievementTier[] =
+  LEKSOKIPOS_ACHIEVEMENTS.find((a) => a.id === KYNIGOS_PANGRAM_ID)?.tiers ?? [];
+
+// ─── Tiered-badge detection (async lanes) ─────────────────────────────────────
+//
+// Tiered badges cross on a LIFETIME cumulative value the client doesn't hold at
+// end-of-game (points, pangram-set size), so unlike the one-shots they are fed an
+// async read-back of /api/profile/stats (ADR 0013 lane C: cumulative → crossing).
+// Pure here; the hook owns the fetch. Both detectors return EVERY crossed tier id
+// (ascending) — the server insert-if-absents, so re-returning an earned tier is a
+// harmless no-op. The generic core is shared so a further tiered badge adds no copy.
+
+/** Tier ids whose threshold `value` has reached (>=), ascending. */
+function detectEarnedTiers(tiers: readonly AchievementTier[], value: number): string[] {
+  return tiers.filter((t) => value >= t.threshold).map((t) => t.id);
+}
+
+/**
+ * The next threshold `value` has NOT yet reached — the "N" in the Trophy Case
+ * "X / N" progress line. Null once every tier is crossed (no more goals). Generic
+ * over any tiered badge's `tiers`, so the Trophy Case computes progress for any
+ * badge without a per-badge next-threshold function.
+ */
+export function nextTierThreshold(tiers: readonly AchievementTier[], value: number): number | null {
+  return tiers.find((t) => value < t.threshold)?.threshold ?? null;
+}
+
+/** Tier ids whose threshold `leksokiposPoints` has reached (>=), ascending. */
+export function detectEarnedPointsTiers(leksokiposPoints: number): string[] {
+  return detectEarnedTiers(SYLLEKTIS_PONTON_TIERS, leksokiposPoints);
+}
+
+/** The next points threshold not yet reached — Trophy Case "X / N" denominator; null when maxed. */
+export function nextPointsTierThreshold(leksokiposPoints: number): number | null {
+  return nextTierThreshold(SYLLEKTIS_PONTON_TIERS, leksokiposPoints);
+}
+
+/** Tier ids whose threshold the lifetime pangram count has reached (>=), ascending. */
+export function detectEarnedPangramTiers(pangramCount: number): string[] {
+  return detectEarnedTiers(KYNIGOS_PANGRAM_TIERS, pangramCount);
+}
+
+/** The next pangram threshold not yet reached — Trophy Case "X / N" denominator; null when maxed. */
+export function nextPangramTierThreshold(pangramCount: number): number | null {
+  return nextTierThreshold(KYNIGOS_PANGRAM_TIERS, pangramCount);
+}
+
+/** What the unlock toast shows for an earned id. */
+export interface EarnedDisplay {
+  name:      string;
+  /** Greek tier word (Χάλκινο/Ασημένιο/Χρυσό), present only for tier ids. */
+  tierLabel?: string;
+}
+
+/** A freshly-earned badge handed to the unlock toast (its id + display copy). */
+export interface EarnedToast extends EarnedDisplay {
+  id: string;
+}
+
+/**
+ * Resolve any earned achievement id — one-shot OR per-tier — to its display copy,
+ * so a toast can render a freshly-earned id without re-deriving the catalog. Null
+ * for an unknown id (defensive; keeps a stray id from surfacing an empty toast).
+ */
+export function describeAchievement(id: string): EarnedDisplay | null {
+  for (const a of LEKSOKIPOS_ACHIEVEMENTS) {
+    if (a.id === id) return { name: a.name };
+    const tier = a.tiers?.find((t) => t.id === id);
+    if (tier) return { name: a.name, tierLabel: tier.label };
+  }
+  return null;
+}

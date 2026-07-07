@@ -35,6 +35,12 @@ export function getRankEmoji(name: RankName): string {
 const LOWEST_RANK: RankName = RANKS[0].name;
 
 /**
+ * The highest rank on the ladder. Reaching it is the endgame trigger:
+ * the ScoreBar flips from the rank ladder to the remaining-words panel.
+ */
+export const TOP_RANK: RankName = RANKS[RANKS.length - 1].name;
+
+/**
  * Returns the player's current rank given their score and the puzzle's max score.
  * Walks the ladder from the top down and returns the first rank the player qualifies for.
  */

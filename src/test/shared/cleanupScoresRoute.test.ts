@@ -76,12 +76,21 @@ describe("GET /api/cleanup-scores — auth", () => {
   });
 });
 
-// ── game_scores is never pruned (ADR 0012 append-forever) ───────────────────────
+// ── Append-forever tables are never pruned (ADR 0012 / ADR 0013) ────────────────
 
-describe("GET /api/cleanup-scores — never touches game_scores", () => {
+describe("GET /api/cleanup-scores — never touches append-forever tables", () => {
   it("does not issue a delete against game_scores", async () => {
     await GET(makeReq(`Bearer ${TEST_SECRET}`));
     expect(deletedTables.has("game_scores")).toBe(false);
+  });
+
+  it("does not issue a delete against the lifetime fact tables (achievements, pangrams)", async () => {
+    // player_pangrams (B2) and player_achievements are append-forever lifetime
+    // substrate (ADR 0013) — the same stance as game_scores. Sweeping either would
+    // silently shrink a player's earned/progress history.
+    await GET(makeReq(`Bearer ${TEST_SECRET}`));
+    expect(deletedTables.has("player_pangrams")).toBe(false);
+    expect(deletedTables.has("player_achievements")).toBe(false);
   });
 
   it("does prune the ephemeral game_state and transfer_codes tables", async () => {

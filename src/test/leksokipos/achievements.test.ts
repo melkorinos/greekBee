@@ -10,6 +10,10 @@ import { describe, expect, it } from "vitest";
 import {
   LEKSOKIPOS_ACHIEVEMENTS,
   detectEarnedAchievements,
+  detectEarnedPointsTiers,
+  detectEarnedPangramTiers,
+  nextPangramTierThreshold,
+  describeAchievement,
   type AchievementContext,
 } from "@/games/leksokipos/lib/achievements";
 
@@ -135,6 +139,93 @@ describe("detectEarnedAchievements — Πρώτα Βήματα (played a daily)"
   it("does not earn before any word is found", () => {
     const ctx = makeCtx({ foundWords: [] });
     expect(detectEarnedAchievements(ctx)).not.toContain("leksokipos-first-daily");
+  });
+});
+
+describe("detectEarnedPointsTiers — Συλλέκτης Πόντων (lifetime leksokipos points)", () => {
+  // Thresholds live in achievementTuning (chalkino 1000 / asimenio 10000 / chryso 25000).
+  // The predicate returns every crossed tier id ascending; the server insert-if-absents
+  // so returning already-earned tiers again is a harmless no-op.
+  it("earns nothing below the first threshold", () => {
+    expect(detectEarnedPointsTiers(999)).toEqual([]);
+    expect(detectEarnedPointsTiers(0)).toEqual([]);
+  });
+
+  it("earns χάλκινο at exactly its threshold", () => {
+    expect(detectEarnedPointsTiers(1000)).toEqual(["leksokipos-syllektis-ponton-chalkino"]);
+  });
+
+  it("earns every tier crossed, ascending", () => {
+    expect(detectEarnedPointsTiers(10000)).toEqual([
+      "leksokipos-syllektis-ponton-chalkino",
+      "leksokipos-syllektis-ponton-asimenio",
+    ]);
+    expect(detectEarnedPointsTiers(25000)).toEqual([
+      "leksokipos-syllektis-ponton-chalkino",
+      "leksokipos-syllektis-ponton-asimenio",
+      "leksokipos-syllektis-ponton-chryso",
+    ]);
+  });
+});
+
+describe("detectEarnedPangramTiers — Κυνηγός Πανγκράμ (lifetime pangram set size)", () => {
+  // Thresholds live in achievementTuning (chalkino 10 / asimenio 20 / chryso 50).
+  // The count is a COUNT(*) over player_pangrams, never a stored tally (ADR 0013 lane C).
+  // Returns every crossed tier id ascending; the server insert-if-absents so re-returning
+  // an earned tier is a harmless no-op.
+  it("earns nothing below the first threshold", () => {
+    expect(detectEarnedPangramTiers(9)).toEqual([]);
+    expect(detectEarnedPangramTiers(0)).toEqual([]);
+  });
+
+  it("earns χάλκινο at exactly its threshold", () => {
+    expect(detectEarnedPangramTiers(10)).toEqual(["leksokipos-kynigos-pangram-chalkino"]);
+  });
+
+  it("earns every tier crossed, ascending", () => {
+    expect(detectEarnedPangramTiers(20)).toEqual([
+      "leksokipos-kynigos-pangram-chalkino",
+      "leksokipos-kynigos-pangram-asimenio",
+    ]);
+    expect(detectEarnedPangramTiers(50)).toEqual([
+      "leksokipos-kynigos-pangram-chalkino",
+      "leksokipos-kynigos-pangram-asimenio",
+      "leksokipos-kynigos-pangram-chryso",
+    ]);
+  });
+});
+
+describe("nextPangramTierThreshold — Trophy Case 'X / N' denominator", () => {
+  it("points at χάλκινο before any tier is crossed", () => {
+    expect(nextPangramTierThreshold(0)).toBe(10);
+    expect(nextPangramTierThreshold(9)).toBe(10);
+  });
+
+  it("advances to the next uncrossed threshold", () => {
+    expect(nextPangramTierThreshold(10)).toBe(20);
+    expect(nextPangramTierThreshold(20)).toBe(50);
+  });
+
+  it("is null once every tier is crossed", () => {
+    expect(nextPangramTierThreshold(50)).toBeNull();
+    expect(nextPangramTierThreshold(999)).toBeNull();
+  });
+});
+
+describe("describeAchievement — earned-id → toast display", () => {
+  it("resolves a one-shot id to its badge name, no tier label", () => {
+    expect(describeAchievement("leksokipos-first-daily")).toEqual({ name: "Πρώτα Βήματα" });
+  });
+
+  it("resolves a tier id to the badge name plus the Greek tier label", () => {
+    expect(describeAchievement("leksokipos-syllektis-ponton-asimenio")).toEqual({
+      name: "Συλλέκτης Πόντων",
+      tierLabel: "Ασημένιο",
+    });
+  });
+
+  it("returns null for an unknown id", () => {
+    expect(describeAchievement("leksokipos-nope")).toBeNull();
   });
 });
 

@@ -5,58 +5,23 @@
 
 ---
 
-## Session 65 — 2026-07-05: Fixed `game_scores` prune contradicting ADR 0012 append-forever (issue 03, `/tdd`) ✅
-Latent bug: daily `/api/cleanup-scores` cron deleted `game_scores` older than 10 days, so "Lifetime" Stats were really last-10-days and Epic B's `syllektis-ponton` was blocked. Fix = stop pruning `game_scores`; keep pruning the ephemeral tables. Uncommitted at session end.
-1. **TDD red→green** — flipped `cleanupScoresRoute.test.ts` to assert the route **never** deletes `game_scores` (mock records `.delete()` tables) while still pruning `game_state`/`transfer_codes`; flipped `cleanupScoresLiveDb.test.ts` (game_state pruned, game_scores retained); added a regression lock to `profileStatsRoute.test.ts` (stats query applies **no** `puzzle_date` filter, full history counted).
-2. **`retention.ts`** — `SCORE_RETENTION_DAYS`→`SESSION_RETENTION_DAYS` (governs `game_state`+`transfer_codes` only); dropped dead `LEADERBOARD_WINDOW_DAYS` + its guard.
-3. **`cleanup-scores/route.ts`** — removed the `game_scores` delete + the `SCORE_RETENTION_DAYS<=LEADERBOARD_WINDOW_DAYS` guard; updated header comment (route name kept legacy → no `vercel.json` churn); response drops `scores` field.
-4. **Docs** — ADR 0012 + CONTEXT.md amended (append-forever now *implemented*, was policy-only). Both achievements handoffs' blocker/sequencing notes flipped to ✅ (Epic B `syllektis-ponton` unblocked; Lane B no longer races a prune). Issue 03 file deleted.
-5. **Gates:** 1291 pass / 6 skipped · eslint 0 · build 0. (Live-DB cleanup test skips locally — no prod secrets.)
+## Session 69 — 2026-07-07: Achievements B2 — pangram tier (`/tdd`) ✅
+Built Κυνηγός Πανγκράμ on the B1 UX spine. **Data-class 3** (ADR 0013): an append-only find-SET whose *size* is progress, never a counter — retry-/merge-safe by construction. Uncommitted at session end.
+1. **New table `player_pangrams`** (migration `20260706120000`) — `UNIQUE(device_uuid, puzzle_date, word)`, open RLS, append-forever; mirrors `player_achievements`. **`db push` still PENDING** (shared prod DB — awaiting user go-ahead; all tests mock Supabase so none needed it).
+2. **`POST /api/pangrams`** — insert-if-absent, returns fresh lifetime `{count}` (server zero-detection). No id whitelist possible → junk bounded by shape: pure `sanitizePangramWords` (`normalizeLetters` → `^[α-ω]{7,24}$` → dedupe → 50 cap) + `isISODate` guard.
+3. **Detection** — pure `detectEarnedPangramTiers` + `nextPangramTierThreshold` (extracted a generic tier core; the points fns are now thin wrappers). 3rd lane in `useAchievementSync` delta-posts new pangrams (per-word ref) + reads the crossing off the returned count (no lag); mount self-heal rides the ONE stats fetch (`fetchLeksokiposPoints`→`fetchLifetimeStats {leksokipos_points, pangram_count}`, +`postPangrams`). `GameBoard` passes memoized `foundPangrams`+`puzzleDate`. `commitEarned`/`flushToasts`→`useCallback` (lint-clean).
+4. **`pangram_count`** on `/api/profile/stats` (parallel `COUNT(*)` via `Promise.all`; NOT in `aggregateLifetimeStats` — separate table). **Restore merge** — pure `planPangramMerge` keyed `(puzzle_date, word)`, wired into `restore()` beside the achievement merge; two devices union, occupied-device guard leaves it untouched.
+5. **TrophyCase** generalized — each tiered badge reads its own live value (`points`/`pangrams`), generic `nextTierThreshold`, progress testid `tier-progress-<id>`. **cleanup-scores** regression-locked (never sweeps `player_pangrams`/`player_achievements`). ADR 0013 "B2 resolutions" + CONTEXT.md rows for BOTH fact tables (`player_achievements` was an undocumented B1 gap).
+6. **Gates:** 1403 pass / 6 skipped · eslint 0 · build 0. **Manual verification pending** (prod DB — use a throwaway `device_uuid`, delete its rows after; lanes gated `!isGodMode` so god mode can't exercise them).
 
 ---
 
-## Session 64 — 2026-07-05: Fluid Active CPU investigation + fixes 3/4 shipped, 1/2 handed off ✅
-Gauge at 2h31m/4h. Investigated all server CPU consumers; artifacts in `.claude/aiHelper/fluid-cpu/` (analysis.md = findings/measurements, HANDOFF-fixes-1-2.md = next agent's brief). **~90% of traffic is Leksokipos** (user-provided) — reframed priorities.
-1. **Fix 3 shipped** — `/leksokipos` redirect page no longer parses 23.5 MB per cold start: new `src/data/leksokipos/puzzleIndex.ts` + generated `puzzles-index-el.json` (108 KB; `npm run generate-puzzle-index`, script in `scripts/generate-puzzle-index.mjs`). Drift-guard + parity tests in `src/test/leksokipos/puzzleIndex.test.ts`; deploymentReadiness list extended. Verified in `.next`: route's biggest chunk 22.15 MB → 0.2 MB.
-2. **Fix 4 shipped** — `[center]/[outer]` `revalidate` 3600→604800 (content changes only on deploy; 24× fewer regenerations, each of which re-parsed the 22 MB chunk).
-3. **Measured** (prod build + dead-Supabase env to avoid prod consume): `/leksiarxeio` + `/vres-tin-frasi` serialize **2.4 MB per view**, ~150–190 ms CPU over light dynamic pages. Given 10% traffic share → items 1 (payload) & 2 (ISR + once-per-day consume) are UX/correctness fixes more than CPU fixes; `consumeApprovedPuzzle`-per-view is a real bug (queue drains per view, same-day visitors can diverge).
-4. **Handed off** items 1+2 (`/tdd` mandated, verification steps included). Uncommitted at session end (tree also carries unrelated nominations/layout edits from another session).
-5. **Gates:** 1274 pass / 6 skipped · eslint 0 · build 0. (One-off flake: `gameReducer RESTORE_STATE` — green in isolation + rerun.)
-
----
-
-## Session 63 — 2026-07-04: Feedback feature — text → email (grill-with-docs → /tdd) ✅
-Player-facing Feedback surface: free-text message emailed to the maintainer. Grilled the design first, then built via `/tdd`. Uncommitted at session end.
-1. **Design (grill-with-docs)** — chose a **form-to-email relay** over an in-house pipeline (no npm dep, no DB table, no Storage bucket, no domain verify) — matches "least effort, accept-the-risk" stance. New glossary term **Feedback** in CONTEXT.md (distinct from Nomination + the leksokipos `reports` slice).
-2. **Relay pivot** — started on Web3Forms; its form-creation wizard 403s (API access is Pro) and email **attachments are Pro** on both Web3Forms and FormSubmit's AJAX endpoint doesn't take files → **screenshot deferred, text-only MVP** on **FormSubmit AJAX** (`formsubmit.co/ajax/<id>`, no account — first submit triggers a confirm email).
-3. **`FeedbackModal`** (`components/shared/`) — reuses shared `Modal`; message required (≤1000); auto-attaches `page_url`/`user_agent`/`device_id`; POSTs FormData; success "Ευχαριστούμε!" + 2.5s auto-close; inline error retry; 60s localStorage throttle. Recipient via `NEXT_PUBLIC_FORMSUBMIT_ID` (email or hashed alias). 8 tests mirror `nominationModal.test.tsx`.
-4. **Shell** — new "Βοήθεια" drawer section → "💬 Σχόλια / Πρόβλημα" opens the modal.
-5. **Consolidation (user note)** — extracted the duplicated success-close button into `btnModalPrimary` recipe; applied to both FeedbackModal **and** NominationModal. Documented the env var in `.env.local.example`.
-6. **Manual step remaining (user):** set `NEXT_PUBLIC_FORMSUBMIT_ID` (email/alias) in `.env.local` + Vercel env; confirm FormSubmit's activation email on first send.
-7. **Follow-up parked:** screenshot attachment (needs a paid relay or Supabase Storage + in-house email).
-8. **Gates:** 1251 pass / 6 skipped · eslint 0 · build 0.
-
----
-
-## Session 62 — 2026-07-03: Consolidation-file consistency — `GameId`→`SliceId`, palette-token sweep + guard ✅
-Review of the "single source of truth" files (`src/config/*`, `src/styles/recipes.ts`, game `types.ts`) for drift, then remediation. Concurrent with session 61 (profile epic) on the same tree; this is the "config/token consolidation" its note referenced. Uncommitted at session end.
-1. **Config sources enforced** — `LEKSOKIPOS.MIN_WORD_LENGTH` was defined-but-unused (`4` hardcoded in `validation.ts` + `computeValidWords.ts`) → now imported. `LEKSIARXEIO.LENGTHS` replaces literal `[4,5,6,7,8]` in `validateSubmission`, `LeksiarxeioBoard`, `CommunityLeksiarxeioSubmitModal`, and the leksikastirio page. `LeksiarxeioLength` `3|4..8`→`4..8` (dead `3`; removing it surfaced + killed phantom `3:[]` rows in `data/leksiarxeio` WORD_LISTS/ANSWER_POOLS).
-2. **`GameId`→`SliceId` rename** (`types/index.ts` + 3 hooks + README/memory) — it's the persistence-slice union (incl. `suggestions`/`reports`), NOT the game registry; misleading "all games" comment corrected to point at `RegistryGameId`.
-3. **Palette sweep (ADR 0008)** — tokenised genuine neutral-chrome literals: GameBoard end-panel, NewPuzzleButton (+tooltip), ShareButton tooltip, leksokipos LeaderboardModal links, WordCard focus-ring, leksikastirio page, StavroleksoPlayer, LetterPickerModal (also killed a literal `active:bg-stone-100`). **Documented exceptions left as-is:** StavroleksoGrid, Shell drawer (`zinc`), FeedbackBanner (theme-prop), FlowerGridPlayground (dev tool), fixed-yellow chip.
-4. **Enforcement + docs** — new `noRawPaletteClasses.test.ts` fails the build on any literal `stone/zinc/gray/slate/neutral` class in shipped `.tsx` (allowlist mirrors the ADR 0008 exceptions). Updated: CLAUDE.md standing rules (tokens + config-import), soul.md post-feature protocol (new step 5 consolidation check), ADR 0008 (exceptions + enforcement note), memory.md (config layer, `SliceId`, exceptions).
-5. **Gates:** 1236 pass / 6 skipped · eslint 0 · build 0.
-
----
-
-## Session 61 — 2026-07-03: Epic B — Profile Page + Trophy Case COMPLETE (slices 1–4, `/tdd`) ✅
-Implemented the profile-page handoff slice by slice via `/tdd`; committed to `dev` (7 commits `e6b0daa`→`973ab31`). **Epic B done; only the manual pass + the detection epic remain.**
-1. **Slice 1 (issue 02)** — `/profile` route (Shell-wrapped): display-only `IdentityHeader` (3 identity states, initial-letter avatar) + one-shot `WelcomeBackBanner` (consumes `signin-restore-welcome`) + `ProfileSection` reused verbatim. Callback now `restored:true → router.replace("/profile")` (still clears `auth-redirect`).
-2. **Slice 2 (issue 03)** — three entry points: Shell header 👤 `Link`, home `ProfileChip` island (`useSyncExternalStore` — no hydration mismatch, no `set-state-in-effect`), `ProfileSection` "Δες το προφίλ σου →" funnel (opt-out `showProfileLink`, default true; page passes false).
-3. **Slice 3 (issue 04)** — `GET /api/profile/stats` (edge, read-only, fetch-and-reduce, `Cache-Control: private, max-age=60`) + pure `src/lib/lifetimeStats.ts` `aggregateLifetimeStats` + `LifetimeStatsStrip` (skeleton / dash-on-error). **Τζιμάνι = leksokipos-only** (points & puzzles cross-game). Schema confirmed (`is_perfect` exists via migration `20260629000001`; `UNIQUE(game_id,device_id,puzzle_date)` → clean `COUNT(*)`).
-4. **Slice 4 (issue 05)** — pure `src/games/leksokipos/lib/achievements.ts` catalog (5 one-shot + 2 tiered, per-tier frozen ids, **type-only** `AchievementPredicate` — no detection) + page-local `TrophyCase` grid (all locked/greyed, tier rows).
-5. **Palette-token sweep (ADR 0008)** — tokenized the identity/profile UI (`ProfileSection` + callback; fixes pre-existing non-flipping darks: `text-stone-*→muted`, `hover:text-stone-600→foreground`, `text-red-*→danger`, confirm reds → `danger/10-40`). Left intentionally literal: Shell dark drawer `zinc-*`, `GoogleIcon` brand fills.
-6. **Docs** — `manualTestingDevToMain.md` §2 (~15-min happy-path manual pass appended); `achievementsLeksokipos.md` absorbed the catalog canonical-location pointer (→ `achievements.ts`) + the per-badge detection table, and its "no profile page" reality-check marked resolved; **profile handoff deleted** (superseded). Issues 02–05 filed (delete after the manual pass). A concurrent agent's config/token consolidation shares the tree (its ~22 files uncommitted — not ours).
-7. **Gates:** 1233 pass / 6 skipped · eslint 0 · build 0. **Manual verification pending** (no dev DB — `npm run dev` hits prod; use a fake name).
+## Session 68 — 2026-07-06: B2 pangram-tier handoff — critical code-verification review ✅
+Verified every claim in `achievements-B2-pangram-tier.md` against live code (B1 spine, `describeAchievement` tier coverage, `ALL_ACHIEVEMENT_IDS` whitelist, `restore()` merge block, cleanup delete-set, migration to mirror) — all accurate. Refined the handoff in place, no product code touched:
+1. **R6 contradiction fixed** — "post once per session" would reintroduce the lag R3 claims not to have; rewritten as per-word delta-posting reactive to `foundWords` (+ `useMemo` trap noted).
+2. **Risk #8 scoped honestly** — self-heal only covers same-puzzle remounts; a POST lost past day-rollover is a permanent (bounded, accepted) set undercount.
+3. **R2 input guards added** — no whitelist possible for arbitrary words on an append-forever open-RLS table: `isISODate`, `normalizeLetters` before insert (UNIQUE text key), pangram-shape regex, array cap.
+4. **One stats fetch** — self-heal must ride the points lane's existing `/api/profile/stats` read (`fetchLeksokiposPoints` → `fetchLifetimeStats`); build order tightened (generic tier-fn core suggested, `aggregateLifetimeStats` NOT the home for `pangram_count`, prod-DB manual-verification caveat). Still 🟢 ready for `/tdd`.
 
 ---
 
@@ -64,6 +29,12 @@ Implemented the profile-page handoff slice by slice via `/tdd`; committed to `de
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 66 | 2026-07-06 | **Achievements B1** (`/tdd`): points tier (Συλλέκτης Πόντων) + unlock toast + TrophyCase progress on the *safe* badge (no migration/merge). `leksokipos_points` on `aggregateLifetimeStats`; `useAchievementSync` points+toast lanes (earned-at-mount suppression); `AchievementToast`; ADR 0013 "B1 resolutions". 1354 pass. |
+| 65 | 2026-07-05 | Fixed `game_scores` prune contradicting ADR 0012 append-forever (issue 03): cron never deletes `game_scores`; `SCORE_RETENTION_DAYS`→`SESSION_RETENTION_DAYS`; stats query window-filter regression-locked. Issue 03 deleted. 1291 pass. |
+| 64 | 2026-07-05 | Fluid CPU: `/leksokipos` puzzle-index (route chunk 22MB→0.2MB) + `[center]/[outer]` ISR 3600→604800; measured Leksiarxeio/Frasi 2.4MB/view; `consumeApprovedPuzzle`-per-view bug + payload items 1+2 handed off. 1274 pass. |
+| 63 | 2026-07-04 | **Feedback feature** (grill→/tdd): form-to-email relay (no dep/table/bucket), text-only MVP on **FormSubmit AJAX** (`formsubmit.co/ajax/<id>`); `FeedbackModal` (shared `Modal`, ≤1000, auto-attach page/UA/device, 60s throttle) via Shell "Βοήθεια"; `btnModalPrimary` recipe extracted; env `NEXT_PUBLIC_FORMSUBMIT_ID`. New CONTEXT glossary term **Feedback**. Screenshot parked. 1251 pass. |
+| 62 | 2026-07-03 | **Consolidation-file consistency**: enforced config sources (`LEKSOKIPOS.MIN_WORD_LENGTH`, `LEKSIARXEIO.LENGTHS`; `LeksiarxeioLength` 3→dead removed); `GameId`→`SliceId` rename (persistence-slice union, not registry); ADR 0008 palette sweep + new `noRawPaletteClasses.test.ts` guard (allowlist = documented exceptions). 1236 pass. |
+| 61 | 2026-07-03 | **Epic B — Profile Page + Trophy Case COMPLETE** (`/tdd`, 7 commits `e6b0daa`→`973ab31`): `/profile` route (`IdentityHeader`+`WelcomeBackBanner`+`ProfileSection`); 3 entry points (Shell 👤, home `ProfileChip` island, funnel link); `GET /api/profile/stats` + pure `aggregateLifetimeStats` + `LifetimeStatsStrip`; page-local `TrophyCase` (catalog in `achievements.ts`, all locked). Τζιμάνι = leksokipos-only. 1233 pass. |
 | 60 | 2026-07-03 | **Epic A COMPLETE** (migration pushed+verified, handoff deleted). Grill moved `identity_audit` to link-time (change-only rows, service-role, no FK to auth.users); hard `reloadApp()` on Disconnect (stale in-memory board state). Migration `20260703092500`. 1208 pass. |
 | 59 | 2026-07-03 | Epic A slices 3+4: Disconnect unification (`disconnectIdentity()` full-reset — deviceId+name+flags+all game slices); visibility rule (`onSignIn` required, Google sign-in in ProfileLinked mode, wired into all 4 boards). Identity/achievements grill: device_uuid key, no-backfill, per-tier rows. 1198 pass. |
 | 58 | 2026-07-03 | Profile Page grill → handoff ready-for-agent, zero code. Decisions table, catalog draft (§4), restore→/profile redirect. CONTEXT glossary: Profile Page/Trophy Case/Badge/Lifetime Stats. |

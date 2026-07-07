@@ -171,6 +171,8 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 | `community_vrestifrasi_puzzles` | Player-submitted Vres Tin Frasi phrases (`data` jsonb `{ "phrase": "…" }`). Deleted on consumption. |
 | `community_stavrolekso_puzzles` | Community-submitted crosswords (`data` jsonb slot-based; PIN-gated creator edits). **Never deleted after approval.** |
 | `identity_audit` | Append-only log of identity-mapping changes, written by `/api/auth/link` when a link establishes a mapping the profile row didn't already hold. Service-role only (RLS on, zero policies); never pruned. Backs Admin Restore (ADR 0012). |
+| `player_achievements` | Immutable earned-Achievement facts: one row = one Achievement (one-shot or tier id) a device earned. `UNIQUE(device_uuid, achievement_id)`, insert-if-absent (never revoked). Open RLS (anon writes, mirrors `game_state`). Append-forever — never swept. Unioned onto the canonical identity on Sign-in Restore (ADR 0013). |
+| `player_pangrams` | Append-only pangram find-set (Κυνηγός Πανγκράμ tier progress): one row = one pangram `word` a device found on one `puzzle_date`. `UNIQUE(device_uuid, puzzle_date, word)`, insert-if-absent. Progress = `COUNT(*)`, never a counter. Open RLS, append-forever — never swept. Unioned on Sign-in Restore via `planPangramMerge` (ADR 0013 B2). |
 
 ---
 

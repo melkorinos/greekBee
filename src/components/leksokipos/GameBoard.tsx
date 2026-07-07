@@ -11,6 +11,7 @@ import { useProfileVerification } from "@/hooks/useProfileVerification";
 import { getSuggestedWords, markSuggested } from "@/hooks/suggestions";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
+import { AchievementToast } from "./AchievementToast";
 import { FeedbackMessage } from "./FeedbackMessage";
 import { FoundWordsList } from "./FoundWordsList";
 import { FlowerGridPlayground as FlowerGrid } from "./FlowerGridPlayground";
@@ -25,11 +26,12 @@ import { NominationModal } from "@/components/shared/NominationModal";
 import { WordInput } from "./WordInput";
 import { btnSecondary } from "@/styles/recipes";
 import { useAchievementSync } from "@/games/leksokipos/hooks/useAchievementSync";
+import type { EarnedToast } from "@/games/leksokipos/lib/achievements";
 import { useDayChange } from "@/games/leksokipos/hooks/useDayChange";
 import { useGameState } from "@/games/leksokipos/hooks/useGameState";
 import { useGameStateSync } from "@/hooks/useGameStateSync";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
-import { isDailyPuzzle, isPangram } from "@/games/leksokipos/lib";
+import { isDailyPuzzle, isPangram, TOP_RANK } from "@/games/leksokipos/lib";
 
 // God mode never changes at runtime, so useSyncExternalStore needs no real
 // subscription. Module-level so its identity is stable across renders.
@@ -80,8 +82,12 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   useDayChange(puzzle);
 
   // ── Endgame / Τζιμάνι ────────────────────────────────────────────────────
+  // Endgame unlocks the moment the player reaches the top rank (Απολυτότητα):
+  // the ScoreBar ladder flips to the remaining-words panel. This is the rank
+  // threshold (80% of maxScore), NOT a perfect score — reaching the top level
+  // is the reward, and the panel then reveals what's left to hunt for.
   const isDaily   = isDailyPuzzle(activePuzzle);
-  const isEndgame = isDaily && score >= puzzleMaxScore;
+  const isEndgame = isDaily && currentRank === TOP_RANK;
 
   const foundWordsSet = useMemo(
     () => new Set(foundWords.map((w) => w.toLowerCase())),
@@ -94,6 +100,13 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   );
 
   const isPerfect = remainingWords.length === 0;
+
+  // Pangrams found this round — feeds the achievement pangram-tier lane. Memoized on
+  // [foundWords, activePuzzle] so a stable array ref doesn't re-fire the lane each render.
+  const foundPangrams = useMemo(
+    () => foundWords.filter((w) => isPangram(w, activePuzzle)),
+    [foundWords, activePuzzle],
+  );
 
   const endgameInfo = useMemo((): EndgameInfo | undefined => {
     if (!isEndgame) return undefined;
@@ -136,14 +149,19 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   // Auto-post whenever the score increases.
   useEffect(() => { postScore(score); }, [score, postScore]);
 
-  // Detect + post earned achievements as the game state crosses their thresholds.
+  // Detect + post earned achievements as the game state crosses their thresholds,
+  // and surface each genuinely-new badge as an in-game unlock toast.
+  const [achievementToasts, setAchievementToasts] = useState<EarnedToast[]>([]);
   useAchievementSync({
     isDaily,
     isGodMode,
     deviceId,
     foundWords,
+    foundPangrams,
+    puzzleDate:     activePuzzle.date,
     validWordCount: activePuzzle.validWords.length,
     rank:           currentRank,
+    onAchievementEarned: (badge) => setAchievementToasts((prev) => [...prev, badge]),
   });
 
   const { authLinked, authUserName, signInWithGoogle, signOut } = useAuth();
@@ -212,6 +230,21 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
 
   return (
     <div data-testid="game-board" className={containerClass}>
+      {/* Unlock toasts — fixed stack, one per genuinely-new badge, self-dismissing */}
+      {achievementToasts.length > 0 && (
+        <div className="fixed inset-x-0 top-4 z-50 flex flex-col items-center gap-2 px-4">
+          {achievementToasts.map((badge) => (
+            <AchievementToast
+              key={badge.id}
+              badge={badge}
+              onDismiss={() =>
+                setAchievementToasts((prev) => prev.filter((b) => b.id !== badge.id))
+              }
+            />
+          ))}
+        </div>
+      )}
+
       {/* Score + rank */}
       <ScoreBar
         score={score}

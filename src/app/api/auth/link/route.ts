@@ -28,6 +28,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceRoleClient, getSupabaseClient } from "@/lib/supabase";
 import { planScoreMerge, type MergeRow } from "@/lib/scoreMerge";
 import { planAchievementMerge, type AchievementMergeRow } from "@/lib/achievementMerge";
+import { planPangramMerge, type PangramMergeRow } from "@/lib/pangramMerge";
 
 export const runtime = "edge";
 
@@ -234,6 +235,26 @@ async function restore(db: any, oldDevice: string, anchor: Anchor) {
   }
   if (achPlan.deleteOld.length) {
     await db("player_achievements").delete().in("id", achPlan.deleteOld);
+  }
+
+  // Merge the pangram find-set too (ADR 0013 lane C, B2): union onto the canonical
+  // identity. Same shape as the achievement merge, but the dedup key is the
+  // composite (puzzle_date, word) — the same word on a different day is a distinct
+  // find. Carry over what canonical lacks; drop duplicates the
+  // UNIQUE(device_uuid, puzzle_date, word) constraint would otherwise reject.
+  const { data: oldPan }   = await db("player_pangrams")
+    .select("id, puzzle_date, word").eq("device_uuid", oldDevice) as { data: PangramMergeRow[] | null };
+  const { data: canonPan } = await db("player_pangrams")
+    .select("id, puzzle_date, word").eq("device_uuid", canonical) as { data: PangramMergeRow[] | null };
+
+  const panPlan = planPangramMerge(oldPan ?? [], canonPan ?? []);
+  if (panPlan.repoint.length) {
+    await db("player_pangrams")
+      .update({ device_uuid: canonical })
+      .in("id", panPlan.repoint);
+  }
+  if (panPlan.deleteOld.length) {
+    await db("player_pangrams").delete().in("id", panPlan.deleteOld);
   }
 
   // Drop this device's now-merged profile row (unique device_uuid index).

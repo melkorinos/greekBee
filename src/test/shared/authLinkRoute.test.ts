@@ -22,6 +22,7 @@ import { NextRequest } from "next/server";
 
 interface ScoreRow { id: number; game_id: string; puzzle_date: string; score: number }
 interface AchievementRow { id: number; achievement_id: string }
+interface PangramRow { id: number; puzzle_date: string; word: string }
 interface Anchor   { device_uuid: string; display_name: string }
 
 interface DbState {
@@ -33,6 +34,8 @@ interface DbState {
   scoresByDevice?:  Record<string, ScoreRow[]>;
   /** player_achievements rows by device_uuid. */
   achievementsByDevice?: Record<string, AchievementRow[]>;
+  /** player_pangrams rows by device_uuid. */
+  pangramsByDevice?: Record<string, PangramRow[]>;
   failUpsert?:      boolean;
   failAuditInsert?: boolean;
 }
@@ -71,6 +74,10 @@ function resolveRead(table: string, eqs: [string, unknown][]) {
   if (table === "player_achievements") {
     const device = eqVal(eqs, "device_uuid") as string;
     return { data: _db.achievementsByDevice?.[device] ?? [], error: null };
+  }
+  if (table === "player_pangrams") {
+    const device = eqVal(eqs, "device_uuid") as string;
+    return { data: _db.pangramsByDevice?.[device] ?? [], error: null };
   }
   return { data: null, error: null };
 }
@@ -338,6 +345,38 @@ describe("POST /api/auth/link — restore mode", () => {
     // The duplicate can't be re-pointed (unique constraint) — nothing re-pointed.
     expect(_writes.some((w) => w.table === "player_achievements" && w.op === "update")).toBe(false);
   });
+
+  // ── Pangram merge (ADR 0013 lane C): the append-only find set must union on Restore ──
+
+  it("re-points the old device's pangrams onto the canonical identity (union)", async () => {
+    signedInAs("auth-abc");
+    _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
+    _db.pangramsByDevice = {
+      d1:    [{ id: 1, puzzle_date: "2026-07-06", word: "διακοπτησ" },
+              { id: 2, puzzle_date: "2026-07-07", word: "παρακολουθηση" }],
+      canon: [{ id: 9, puzzle_date: "2026-07-05", word: "θαλασσινοσ" }],
+    };
+    await POST(makePostReq(BASE));
+
+    const repoint = _writes.find((w) => w.table === "player_pangrams" && w.op === "update");
+    expect(repoint?.payload).toEqual({ device_uuid: "canon" });
+    expect(repoint?.ins.find(([c]) => c === "id")?.[1]).toEqual(expect.arrayContaining([1, 2]));
+    expect(_writes.some((w) => w.table === "player_pangrams" && w.op === "delete")).toBe(false);
+  });
+
+  it("drops the old duplicate pangram when the canonical already has the same day+word", async () => {
+    signedInAs("auth-abc");
+    _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
+    _db.pangramsByDevice = {
+      d1:    [{ id: 1, puzzle_date: "2026-07-06", word: "διακοπτησ" }],
+      canon: [{ id: 9, puzzle_date: "2026-07-06", word: "διακοπτησ" }], // exact overlap
+    };
+    await POST(makePostReq(BASE));
+
+    const del = _writes.find((w) => w.table === "player_pangrams" && w.op === "delete");
+    expect(del?.ins).toContainEqual(["id", [1]]);
+    expect(_writes.some((w) => w.table === "player_pangrams" && w.op === "update")).toBe(false);
+  });
 });
 
 // ── Occupied-device guard (ADR 0012 amendment / issue 01) ───────────────────────
@@ -359,6 +398,7 @@ describe("POST /api/auth/link — occupied-device guard", () => {
     // Resident history present — the bug would merge it into the caller.
     _db.scoresByDevice       = { d1: [{ id: 1, game_id: "leksokipos", puzzle_date: "2026-07-01", score: 40 }] };
     _db.achievementsByDevice = { d1: [{ id: 7, achievement_id: "leksokipos-tzimani" }] };
+    _db.pangramsByDevice     = { d1: [{ id: 8, puzzle_date: "2026-07-01", word: "διακοπτησ" }] };
 
     const res = await POST(makePostReq(BASE));
     expect(res.status).toBe(200);
@@ -366,9 +406,10 @@ describe("POST /api/auth/link — occupied-device guard", () => {
       device_uuid: "canonB", display_name: "PlayerB", restored: true,
     });
     // Resident A is fully untouched: no score merge, no achievement merge, no
-    // profile delete or upsert.
+    // pangram merge, no profile delete or upsert.
     expect(writesTo("game_scores")).toHaveLength(0);
     expect(writesTo("player_achievements")).toHaveLength(0);
+    expect(writesTo("player_pangrams")).toHaveLength(0);
     expect(writesTo("player_profiles")).toHaveLength(0);
   });
 
