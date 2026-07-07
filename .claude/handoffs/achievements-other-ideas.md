@@ -5,7 +5,7 @@
 
 **Built on Epic A + ADR 0013.** The store (`player_achievements` immutable fact rows) and the three detection **lanes** (A client-live / B deferred-server / C append-only-set) already exist and absorb everything below without a rewrite. The shipped **pangram tier B2** (`player_pangrams`, `POST /api/pangrams`, `planPangramMerge`, the 3rd `useAchievementSync` lane) is the **reference implementation** for the Lane C shape — mirror it.
 
-This handoff bundles the three ideas that are NOT the stats page (that one has its own `achievements-stats-page.md`).
+This handoff bundles the three ideas that are NOT the stats page. The stats-page idea was resolved on 2026-07-07 (answered **(b) expand Profile in place**; pangram cell shipped) and its still-live follow-ups moved to `stats-new-capture-ideas.md`.
 
 ---
 

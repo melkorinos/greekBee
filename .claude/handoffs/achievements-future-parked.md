@@ -6,7 +6,7 @@
 **Built on Epic A + ADR 0013.** The store (`player_achievements` immutable fact rows) and the three detection **lanes** already exist and are designed to absorb future work without a rewrite.
 
 **The parked future ideas moved to their own handoffs on 2026-07-07:**
-- **`achievements-stats-page.md`** — dedicated stats page (display surface; answer the "does it beat the Profile Page" tension first).
+- **stats page** — RESOLVED 2026-07-07: answered **(b) expand Profile in place**, pangram cell shipped. Still-live follow-ups (words-by-length, submission streaks, leaderboard placements — all need new capture) → **`stats-new-capture-ideas.md`**.
 - **`achievements-other-ideas.md`** — placement badges (Lane B), additional cumulative stats (Lane C), richer inline leaderboard badges (display).
 
 All three stay ⚪ parked / not-committed until promoted; each lists its open design questions + `/grill-with-docs` → `/tdd` path.
@@ -28,4 +28,4 @@ The pangram tier (Κυνηγός Πανγκράμ) is **code-complete, green, co
 
 ## Parked future ideas — MOVED
 
-The four parked ideas that used to live here were promoted to their own handoffs on 2026-07-07 (see the header links): the **stats page** → `achievements-stats-page.md`; **placement badges + cumulative stats + inline leaderboard badges** → `achievements-other-ideas.md`. Nothing is committed scope; each new handoff carries its open design questions and the `/grill-with-docs` → `/tdd` path.
+The four parked ideas that used to live here were promoted to their own handoffs on 2026-07-07 (see the header links): the **stats page** (since resolved (b), pangram cell shipped; follow-ups now in `stats-new-capture-ideas.md`); **placement badges + cumulative stats + inline leaderboard badges** → `achievements-other-ideas.md`. Nothing is committed scope; each new handoff carries its open design questions and the `/grill-with-docs` → `/tdd` path.

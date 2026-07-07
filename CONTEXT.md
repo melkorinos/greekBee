@@ -112,7 +112,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Trophy Case** — The full Achievement display on the Profile Page: every catalog entry rendered, earned Badges lit, locked ones greyed with their unlock hint. (Not: badge list, achievements tab)
 
-**Lifetime Stats** — Per-player aggregates over full `game_scores` history (append-forever makes them safe): total points, puzzles played, Τζιμάνι count, and current/best Streak. Keyed by DeviceId — never `auth_user_id` (Sign-in Restore makes the adopted DeviceId canonical, so one key serves anonymous and AuthLinked players alike); Daily Puzzles only (Custom Puzzles never post scores). (Not: statistics, records — records are all-time bests, a parked pillar)
+**Lifetime Stats** — Per-player aggregates over full `game_scores` history (append-forever makes them safe): total points, puzzles played, Τζιμάνι count, and pangram count (from the separate `player_pangrams` set, not `game_scores`). Streak is defined below but not yet surfaced in the strip. Keyed by DeviceId — never `auth_user_id` (Sign-in Restore makes the adopted DeviceId canonical, so one key serves anonymous and AuthLinked players alike); Daily Puzzles only (Custom Puzzles never post scores). (Not: statistics, records — records are all-time bests, a parked pillar)
 
 **Streak** — Consecutive calendar days on which a player scored at least one Daily Puzzle in any Game (platform-wide, not per-Game). Derived from distinct `puzzle_date`s in `game_scores`; Custom Puzzles excluded. Current and Best Streak show in Lifetime Stats. (Not: per-game streak)
 
