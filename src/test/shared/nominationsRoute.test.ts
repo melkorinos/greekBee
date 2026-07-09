@@ -131,6 +131,45 @@ describe("GET /api/nominations — happy path", () => {
     const res = await listNominations(makeReq("remove"));
     expect(res.status).toBe(500);
   });
+
+  it("stamps my_vote from this device's votes when deviceId is supplied", async () => {
+    enqueue({
+      data: [
+        { id: "n1", word: "καλος", player_name: null, note: null, created_at: "2026-01-02" },
+        { id: "n2", word: "ωραιος", player_name: null, note: null, created_at: "2026-01-01" },
+      ],
+      error: null,
+    }); // nominations
+    enqueue({
+      data: [
+        { nomination_id: "n1", vote_type: "up" },
+        { nomination_id: "n2", vote_type: "down" },
+      ],
+      error: null,
+    }); // aggregate votes
+    enqueue({
+      data: [{ nomination_id: "n1", vote_type: "up" }],
+      error: null,
+    }); // this device's votes
+    const res  = await listNominations(
+      new NextRequest("http://localhost/api/nominations?direction=add&deviceId=d1"),
+    );
+    const body = (await res.json()) as Array<{ id: string; my_vote: "up" | "down" | null }>;
+    const byId = Object.fromEntries(body.map((n) => [n.id, n.my_vote]));
+    expect(byId.n1).toBe("up");   // this device voted up
+    expect(byId.n2).toBeNull();   // a vote exists but not from this device
+  });
+
+  it("my_vote is null for every row when no deviceId is supplied", async () => {
+    enqueue({
+      data: [{ id: "n1", word: "καλος", player_name: null, note: null, created_at: "2026-01-01" }],
+      error: null,
+    }); // nominations
+    enqueue({ data: [{ nomination_id: "n1", vote_type: "up" }], error: null }); // votes
+    const res  = await listNominations(makeReq("add"));
+    const body = (await res.json()) as Array<{ my_vote: "up" | "down" | null }>;
+    expect(body[0].my_vote).toBeNull();
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

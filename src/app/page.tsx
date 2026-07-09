@@ -104,8 +104,23 @@ const GAMES = (Object.keys(GAME_REGISTRY) as Array<keyof typeof GAME_REGISTRY>).
   (id) => ({ id, ...GAME_REGISTRY[id], ...GAME_RULES[id] }),
 );
 
-const gameList      = GAMES.filter((g) => g.id !== "leksikastirio");
+// Under-construction games (wip flag) move to their own section; everything else
+// stays in the main list. Community (leksikastirio) has its own section below.
+const gameList      = GAMES.filter((g) => g.id !== "leksikastirio" && !g.wip);
+const wipList       = GAMES.filter((g) => g.id !== "leksikastirio" &&  g.wip);
 const communityList = GAMES.filter((g) => g.id === "leksikastirio");
+
+// Per-game action buttons shown on the right edge of a card. Shared between the
+// main list and the under-construction list so a game keeps its buttons wherever
+// it lives.
+function submitButtonFor(id: (typeof GAMES)[number]["id"]): React.ReactNode {
+  if (id === "leksiarxeio" || id === "leksindeseis" || id === "vrestifrasi") {
+    return <><SubmitPuzzleButton game={id} /><HomeTrophyButton gameId={id} /></>;
+  }
+  if (id === "stavrolekso") return <StavroleksoMakerButton />;
+  if (id === "leksokipos")  return <HomeTrophyButton gameId={id} />;
+  return undefined;
+}
 
 function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submitButton?: React.ReactNode }) {
   return (
@@ -147,15 +162,7 @@ export default function HomePage() {
           <GameCard
             key={game.id}
             game={game}
-            submitButton={
-              (game.id === "leksiarxeio" || game.id === "leksindeseis" || game.id === "vrestifrasi")
-                ? <><SubmitPuzzleButton game={game.id} /><HomeTrophyButton gameId={game.id} /></>
-                : game.id === "stavrolekso"
-                  ? <StavroleksoMakerButton />
-                  : game.id === "leksokipos"
-                    ? <HomeTrophyButton gameId={game.id} />
-                    : undefined
-            }
+            submitButton={submitButtonFor(game.id)}
           />
         ))}
       </ul>
@@ -169,6 +176,26 @@ export default function HomePage() {
       <ul className="w-full max-w-sm space-y-4">
         {communityList.map((game) => <GameCard key={game.id} game={game} />)}
       </ul>
+
+      {wipList.length > 0 && (
+        <>
+          <div className="w-full max-w-sm mt-8 mb-4 flex items-center gap-3">
+            <hr className="flex-1 border-border" />
+            <span className="text-xs font-semibold text-muted uppercase tracking-widest">🚧 Υπό κατασκευή</span>
+            <hr className="flex-1 border-border" />
+          </div>
+
+          <ul className="w-full max-w-sm space-y-4">
+            {wipList.map((game) => (
+              <GameCard
+                key={game.id}
+                game={game}
+                submitButton={submitButtonFor(game.id)}
+              />
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }

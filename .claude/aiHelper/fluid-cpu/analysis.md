@@ -60,6 +60,23 @@ If leksokipos cold starts still dominate after 3+4, the next lever is lazy-
 loading `words-el.json` (dynamic import inside `buildCustomPuzzle`) so daily-
 puzzle renders parse only `puzzles-el.json` (4 MB), not 23.5 MB.
 
+## Post-deploy read-out (2026-07-08)
+
+Fixes 3+4 reached production 2026-07-05 ~07:10 UTC (merge `4db1eb9`). Gauge:
+**2h31m (Jul 5) → 3h1m (Jul 8)** = ~30 min in ~3 days ≈ **10 min/day** post-fix.
+Operator reads the daily chart as ~20% lower. Confound: the Jul 7 prod deploy
+added achievements endpoints (`/api/achievements`, `/api/pangrams`) — new CPU
+consumers inside the post-fix window. No runtime errors in 7 days (fixes are
+regression-free). Vercel MCP exposes no per-function CPU metrics — the
+Observability → Functions CPU sort is dashboard-only, as is the billing-cycle
+reset date.
+
+**Headroom warning:** 59 min left of the 4h Hobby cap. At ~10 min/day that's
+exhausted ~Jul 14 unless the billing cycle resets first — check the reset date
+in the dashboard. If more CPU cut is needed, next lever per this doc: lazy-load
+`words-el.json` (dynamic import in `buildCustomPuzzle`); items 1+2 help a
+little too.
+
 ## Measurement method note
 `npm run build` + `npm run start` with `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:9`
 (build-time-inlined, so a rebuild was required) — guarantees no prod-DB writes

@@ -49,6 +49,11 @@ interface ShellProps {
 const GAME_IDS      = ["leksokipos", "leksiarxeio", "leksindeseis", "vrestifrasi", "stavrolekso"] as const;
 const COMMUNITY_IDS = ["leksikastirio"] as const;
 
+// Under-construction (wip) games move to their own drawer section, keeping the
+// main list to finished games. Derived from the registry so a flag flip is enough.
+const MAIN_GAME_IDS = GAME_IDS.filter((id) => !GAME_REGISTRY[id].wip);
+const WIP_GAME_IDS  = GAME_IDS.filter((id) =>  GAME_REGISTRY[id].wip);
+
 export function Shell({ children }: ShellProps) {
   const [drawerOpen,   setDrawerOpen]   = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -126,7 +131,7 @@ export function Shell({ children }: ShellProps) {
               Παιχνίδια
             </p>
             <ul className="space-y-1">
-              {GAME_IDS.map((id) => {
+              {MAIN_GAME_IDS.map((id) => {
                 const game = GAME_REGISTRY[id];
                 return (
                   <li key={id}>
@@ -163,6 +168,32 @@ export function Shell({ children }: ShellProps) {
                 );
               })}
             </ul>
+
+            {WIP_GAME_IDS.length > 0 && (
+              <>
+                <hr className="my-4 border-zinc-700" />
+
+                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-4 px-2">
+                  🚧 Υπό κατασκευή
+                </p>
+                <ul className="space-y-1">
+                  {WIP_GAME_IDS.map((id) => {
+                    const game = GAME_REGISTRY[id];
+                    return (
+                      <li key={id}>
+                        <Link
+                          href={game.href}
+                          onClick={() => setDrawerOpen(false)}
+                          className={navLinkClass}
+                        >
+                          {game.label}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
 
             <hr className="my-4 border-zinc-700" />
 

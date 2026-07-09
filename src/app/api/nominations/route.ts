@@ -11,6 +11,9 @@ export const runtime = "edge";
 
 export async function GET(req: NextRequest) {
   const direction = req.nextUrl.searchParams.get("direction");
+  // Optional: when supplied, each row is stamped with this device's own vote
+  // (my_vote) so the client can highlight what the player already voted for.
+  const deviceId  = req.nextUrl.searchParams.get("deviceId");
   if (direction !== "add" && direction !== "remove") {
     return NextResponse.json({ error: "direction must be 'add' or 'remove'" }, { status: 400 });
   }
@@ -53,6 +56,20 @@ export async function GET(req: NextRequest) {
     else                        voteCounts[v.nomination_id].up++;
   }
 
+  // When a deviceId is supplied, fetch just this device's votes so we can tell the
+  // client which way it already voted on each row (persists across reloads/tabs).
+  const myVotes: Record<string, "up" | "down"> = {};
+  if (deviceId) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: mine } = await (supabase.from("nomination_votes") as any)
+      .select("nomination_id, vote_type")
+      .eq("device_id", deviceId)
+      .in("nomination_id", ids) as { data: Array<{ nomination_id: string; vote_type: string }> | null };
+    for (const v of mine ?? []) {
+      myVotes[v.nomination_id] = v.vote_type === "down" ? "down" : "up";
+    }
+  }
+
   const result = nominations
     .map((n) => ({
       id:             n.id,
@@ -61,6 +78,7 @@ export async function GET(req: NextRequest) {
       note:           n.note,
       upvote_count:   voteCounts[n.id]?.up   ?? 0,
       downvote_count: voteCounts[n.id]?.down ?? 0,
+      my_vote:        deviceId ? (myVotes[n.id] ?? null) : null,
       created_at:     n.created_at,
     }))
     .sort((a, b) => (b.upvote_count - b.downvote_count) - (a.upvote_count - a.downvote_count));

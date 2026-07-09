@@ -338,13 +338,21 @@ function LeksikastiríoClient() {
   const fetchNominations = useCallback(async (tab: NominationTab) => {
     setLoading(true);
     try {
-      const res  = await fetch(`/api/nominations?direction=${tab}`);
+      const res  = await fetch(`/api/nominations?direction=${tab}&deviceId=${encodeURIComponent(deviceId)}`);
       const data = await res.json();
-      setNominations(Array.isArray(data) ? data : []);
+      const list = (Array.isArray(data) ? data : []) as Nomination[];
+      setNominations(list);
+      // Hydrate the voted map from the server so votes cast in a previous session
+      // stay highlighted — otherwise the map starts empty on every page load.
+      const hydrated = new Map<string, "up" | "down">();
+      for (const n of list) {
+        if (n.my_vote === "up" || n.my_vote === "down") hydrated.set(n.id, n.my_vote);
+      }
+      setVotedMap(hydrated);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [deviceId]);
 
   const fetchCommunityPuzzles = useCallback(async (game: CommunityTab) => {
     setLoading(true);
