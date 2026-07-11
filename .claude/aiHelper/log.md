@@ -5,23 +5,21 @@
 
 ---
 
-## Session 69 — 2026-07-07: Achievements B2 — pangram tier (`/tdd`) ✅
-Built Κυνηγός Πανγκράμ on the B1 UX spine. **Data-class 3** (ADR 0013): an append-only find-SET whose *size* is progress, never a counter — retry-/merge-safe by construction. Uncommitted at session end.
-1. **New table `player_pangrams`** (migration `20260706120000`) — `UNIQUE(device_uuid, puzzle_date, word)`, open RLS, append-forever; mirrors `player_achievements`. **`db push` still PENDING** (shared prod DB — awaiting user go-ahead; all tests mock Supabase so none needed it).
-2. **`POST /api/pangrams`** — insert-if-absent, returns fresh lifetime `{count}` (server zero-detection). No id whitelist possible → junk bounded by shape: pure `sanitizePangramWords` (`normalizeLetters` → `^[α-ω]{7,24}$` → dedupe → 50 cap) + `isISODate` guard.
-3. **Detection** — pure `detectEarnedPangramTiers` + `nextPangramTierThreshold` (extracted a generic tier core; the points fns are now thin wrappers). 3rd lane in `useAchievementSync` delta-posts new pangrams (per-word ref) + reads the crossing off the returned count (no lag); mount self-heal rides the ONE stats fetch (`fetchLeksokiposPoints`→`fetchLifetimeStats {leksokipos_points, pangram_count}`, +`postPangrams`). `GameBoard` passes memoized `foundPangrams`+`puzzleDate`. `commitEarned`/`flushToasts`→`useCallback` (lint-clean).
-4. **`pangram_count`** on `/api/profile/stats` (parallel `COUNT(*)` via `Promise.all`; NOT in `aggregateLifetimeStats` — separate table). **Restore merge** — pure `planPangramMerge` keyed `(puzzle_date, word)`, wired into `restore()` beside the achievement merge; two devices union, occupied-device guard leaves it untouched.
-5. **TrophyCase** generalized — each tiered badge reads its own live value (`points`/`pangrams`), generic `nextTierThreshold`, progress testid `tier-progress-<id>`. **cleanup-scores** regression-locked (never sweeps `player_pangrams`/`player_achievements`). ADR 0013 "B2 resolutions" + CONTEXT.md rows for BOTH fact tables (`player_achievements` was an undocumented B1 gap).
-6. **Gates:** 1403 pass / 6 skipped · eslint 0 · build 0. **Manual verification pending** (prod DB — use a throwaway `device_uuid`, delete its rows after; lanes gated `!isGodMode` so god mode can't exercise them).
+## Session 71 — 2026-07-10: Prerender daily combos (`/tdd`) ✅
+Implemented `HANDOFF-prerender-daily-combos.md` (Fluid CPU option #2 — remove daily-puzzle traffic from Fluid entirely).
+1. **Slice ①**: pure `getPrebuiltPuzzleParams(language)` in `puzzleIndex.ts` (slim index → greeklish `{center, outer}` per puzzle). 4 tests in `puzzleIndex.test.ts`: 1008 pairs, lowercase greeklish shape, `parseCustomUrl` round-trip to file-order letters, **canonical under the page's own redirect comparison** (a non-canonical param would prerender a self-301ing page).
+2. **Slice ②**: `generateStaticParams()` in `[center]/[outer]/page.tsx` delegating to it; `dynamicParams` default (true) + `revalidate=604800` kept for custom combos. New source-guard in `deploymentReadiness.test.ts` (export exists + sourced from slim index).
+3. **Slice ③ verified**: route `ƒ`→`●` (SSG), **1008 HTML+RSC files** under `.next/server/app/leksokipos/`, today's (`a/stpolu`) on disk. **Build 17.7 s→16.7 s (no cost)**. Local prod smoke: redirect 307→today 200/8 ms; custom cold 1.12 s/warm 3 ms; encoded-Greek 307→canonical. Re-measure verdict in `fluid-cpu/analysis.md`: latency harness N/A — real "after" = Vercel Functions dashboard 2–3 days post-merge.
+4. No perf-test addition: `getPrebuiltPuzzleParams` is build-time-only (not a request hotpath). Gates: **1413 pass / 6 skip · eslint 0 · build 0**. **Browser play-through on today's daily = remaining manual step before dev→main merge** (handoff mandate).
+5. Per user: deleted `HANDOFF-prerender-daily-combos.md` (done) AND `fluid-cpu/HANDOFF-fixes-1-2.md` — **items 1 (word-list SSR payload) + 2 (consume-per-view correctness bug) remain unimplemented**; verdicts live in `fluid-cpu/analysis.md`, full handoff recoverable from git history.
 
 ---
 
-## Session 68 — 2026-07-06: B2 pangram-tier handoff — critical code-verification review ✅
-Verified every claim in `achievements-B2-pangram-tier.md` against live code (B1 spine, `describeAchievement` tier coverage, `ALL_ACHIEVEMENT_IDS` whitelist, `restore()` merge block, cleanup delete-set, migration to mirror) — all accurate. Refined the handoff in place, no product code touched:
-1. **R6 contradiction fixed** — "post once per session" would reintroduce the lag R3 claims not to have; rewritten as per-word delta-posting reactive to `foundWords` (+ `useMemo` trap noted).
-2. **Risk #8 scoped honestly** — self-heal only covers same-puzzle remounts; a POST lost past day-rollover is a permanent (bounded, accepted) set undercount.
-3. **R2 input guards added** — no whitelist possible for arbitrary words on an append-forever open-RLS table: `isISODate`, `normalizeLetters` before insert (UNIQUE text key), pangram-shape regex, array cap.
-4. **One stats fetch** — self-heal must ride the points lane's existing `/api/profile/stats` read (`fetchLeksokiposPoints` → `fetchLifetimeStats`); build order tightened (generic tier-fn core suggested, `aggregateLifetimeStats` NOT the home for `pangram_count`, prod-DB manual-verification caveat). Still 🟢 ready for `/tdd`.
+## Session 70 — 2026-07-08: Fluid CPU read-out + lazy-load words-el (`/tdd`) ✅
+1. **Post-deploy read-out** (fixes 3+4, appended to `fluid-cpu/analysis.md`): gauge 2h31m→3h1m in 3 days ≈ **10 min/day** (~20% lower); zero runtime errors 7d. Dashboard Functions-by-CPU: `[center]/[outer]` **44 inv / 1m ≈ 1.4 s each** = dominant burner (the 23.5 MB parse); `/leksokipos` redirect now 57 ms/inv (fix 3 verified). **Headroom: 59 min of 4h cap** → ~Jul 14 at current rate; user weighing Pro upgrade — option table delivered (lazy-load > prerender > ISR-claim > SSR-payload > api-cache).
+2. **Lazy-load shipped**: `buildCustomPuzzle` now **async**, `words-el.json` via `await import()` inside the cache-miss branch only; static import removed from `src/data/leksokipos/index.ts`; page awaits. Daily renders parse only puzzles-el (4 MB). New **Fluid CPU guard** in `deploymentReadiness.test.ts` (source-level: no static words-el import + dynamic import() present). Test callers migrated async; 60 s warm-up `beforeAll` in customPuzzle + noAccents (first import() pays the 19.5 MB parse — timed out at defaults).
+3. **Verified**: words-el is its own 19.9 MB chunk, referenced only via turbopack async loader (page bundles words-el-free). Local prod smoke: daily redirect 200/95 ms (no word list), custom cold 0.94 s, warm 11 ms. Gates: 1407 pass / 6 skip · eslint 0 · build 0.
+4. Next lever handed off: **prerender daily combos** → `.claude/handoffs/HANDOFF-prerender-daily-combos.md` (TDD + pre-push smoke mandate).
 
 ---
 
@@ -29,6 +27,8 @@ Verified every claim in `achievements-B2-pangram-tier.md` against live code (B1 
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 69 | 2026-07-07 | **Achievements B2 — pangram tier** (`/tdd`): `player_pangrams` append-only find-SET (ADR 0013 data-class 3; migration `20260706120000`, **`db push` was PENDING**); `POST /api/pangrams` insert-if-absent + shape guards (`sanitizePangramWords`); `detectEarnedPangramTiers` (generic tier core); 3rd `useAchievementSync` lane + self-heal on the ONE stats fetch; `pangram_count` on `/api/profile/stats`; `planPangramMerge` in restore; TrophyCase generalized; cleanup-scores regression-locked. Manual prod verification was pending. 1403 pass. |
+| 68 | 2026-07-06 | B2 pangram-tier handoff code-verification review: all claims accurate; fixed R6 contradiction (per-word delta-posting, not per-session), scoped risk #8 honestly (self-heal ≠ cross-day), added R2 input guards (`isISODate`+normalize+shape regex+cap), self-heal rides the ONE `/api/profile/stats` fetch. No product code. |
 | 66 | 2026-07-06 | **Achievements B1** (`/tdd`): points tier (Συλλέκτης Πόντων) + unlock toast + TrophyCase progress on the *safe* badge (no migration/merge). `leksokipos_points` on `aggregateLifetimeStats`; `useAchievementSync` points+toast lanes (earned-at-mount suppression); `AchievementToast`; ADR 0013 "B1 resolutions". 1354 pass. |
 | 65 | 2026-07-05 | Fixed `game_scores` prune contradicting ADR 0012 append-forever (issue 03): cron never deletes `game_scores`; `SCORE_RETENTION_DAYS`→`SESSION_RETENTION_DAYS`; stats query window-filter regression-locked. Issue 03 deleted. 1291 pass. |
 | 64 | 2026-07-05 | Fluid CPU: `/leksokipos` puzzle-index (route chunk 22MB→0.2MB) + `[center]/[outer]` ISR 3600→604800; measured Leksiarxeio/Frasi 2.4MB/view; `consumeApprovedPuzzle`-per-view bug + payload items 1+2 handed off. 1274 pass. |

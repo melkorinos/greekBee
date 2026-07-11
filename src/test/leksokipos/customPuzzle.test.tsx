@@ -2,15 +2,23 @@
 // buildCustomPuzzle is the data-layer function that turns an arbitrary 7-letter
 // combo into a fully playable Puzzle object at request time.
 
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, vi, beforeAll, beforeEach, afterEach } from "vitest";
 import { buildCustomPuzzle } from "@/data/leksokipos/index";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 
 // ── buildCustomPuzzle ──────────────────────────────────────────────────────────
 
 describe("buildCustomPuzzle", () => {
-  it("returns a Puzzle with the expected shape", () => {
-    const puzzle = buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
+  // The first call pays the dynamic import() of the 19.5 MB words-el.json
+  // (that's the point of the lazy load — see the Fluid CPU guard in
+  // deploymentReadiness.test.ts). Warm it once here so the individual tests
+  // below keep the default 5 s timeout.
+  beforeAll(async () => {
+    await buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
+  }, 60_000);
+
+  it("returns a Puzzle with the expected shape", async () => {
+    const puzzle = await buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
     expect(puzzle).toMatchObject<Partial<LeksokiposPuzzle>>({
       language: "el",
       centerLetter: "α",
@@ -21,52 +29,52 @@ describe("buildCustomPuzzle", () => {
     expect(typeof puzzle.date).toBe("string");
   });
 
-  it("normalises an accented center letter", () => {
-    const puzzle = buildCustomPuzzle("ά", ["λ", "τ", "ι", "δ", "ε", "σ"]);
+  it("normalises an accented center letter", async () => {
+    const puzzle = await buildCustomPuzzle("ά", ["λ", "τ", "ι", "δ", "ε", "σ"]);
     expect(puzzle.centerLetter).toBe("α");
   });
 
-  it("normalises accented outer letters", () => {
-    const puzzle = buildCustomPuzzle("α", ["λ", "τ", "ί", "δ", "έ", "σ"]);
+  it("normalises accented outer letters", async () => {
+    const puzzle = await buildCustomPuzzle("α", ["λ", "τ", "ί", "δ", "έ", "σ"]);
     expect(puzzle.outerLetters).toEqual(["λ", "τ", "ι", "δ", "ε", "σ"]);
   });
 
-  it("produces a stable ID regardless of outer-letter order", () => {
-    const a = buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
-    const b = buildCustomPuzzle("α", ["σ", "ε", "δ", "ι", "τ", "λ"]);
+  it("produces a stable ID regardless of outer-letter order", async () => {
+    const a = await buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
+    const b = await buildCustomPuzzle("α", ["σ", "ε", "δ", "ι", "τ", "λ"]);
     expect(a.id).toBe(b.id);
   });
 
-  it("produces different IDs for different letter combinations", () => {
-    const a = buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
-    const b = buildCustomPuzzle("β", ["λ", "τ", "ι", "δ", "ε", "σ"]);
+  it("produces different IDs for different letter combinations", async () => {
+    const a = await buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
+    const b = await buildCustomPuzzle("β", ["λ", "τ", "ι", "δ", "ε", "σ"]);
     expect(a.id).not.toBe(b.id);
   });
 
-  it("ID starts with 'custom-'", () => {
-    const puzzle = buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
+  it("ID starts with 'custom-'", async () => {
+    const puzzle = await buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
     expect(puzzle.id.startsWith("custom-")).toBe(true);
   });
 
-  it("returns only validWords that contain the center letter", () => {
-    const puzzle = buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
+  it("returns only validWords that contain the center letter", async () => {
+    const puzzle = await buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
     for (const word of puzzle.validWords) {
       expect(word).toContain("α");
     }
   });
 
-  it("returns only validWords with at least 4 letters", () => {
-    const puzzle = buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
+  it("returns only validWords with at least 4 letters", async () => {
+    const puzzle = await buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
     for (const word of puzzle.validWords) {
       expect(word.length).toBeGreaterThanOrEqual(4);
     }
   });
 
-  it("returns only validWords whose letters are all in the allowed set", () => {
+  it("returns only validWords whose letters are all in the allowed set", async () => {
     const center = "α";
     const outer = ["λ", "τ", "ι", "δ", "ε", "σ"];
     const allowed = new Set([center, ...outer]);
-    const puzzle = buildCustomPuzzle(center, outer);
+    const puzzle = await buildCustomPuzzle(center, outer);
     for (const word of puzzle.validWords) {
       for (const ch of word) {
         expect(allowed.has(ch)).toBe(true);
@@ -74,21 +82,21 @@ describe("buildCustomPuzzle", () => {
     }
   });
 
-  it("returns a non-empty validWords array for a reasonable letter combo", () => {
+  it("returns a non-empty validWords array for a reasonable letter combo", async () => {
     // α + common Greek consonants — should yield at least a handful of words
-    const puzzle = buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
+    const puzzle = await buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
     expect(puzzle.validWords.length).toBeGreaterThan(0);
   });
 
-  it("returns empty validWords for an impossible letter combo", () => {
+  it("returns empty validWords for an impossible letter combo", async () => {
     // All rare letters that appear together in essentially no Greek words
-    const puzzle = buildCustomPuzzle("ψ", ["ξ", "ζ", "θ", "χ", "φ", "β"]);
+    const puzzle = await buildCustomPuzzle("ψ", ["ξ", "ζ", "θ", "χ", "φ", "β"]);
     expect(puzzle.validWords.length).toBe(0);
   });
 
-  it("sets date to today's ISO date", () => {
+  it("sets date to today's ISO date", async () => {
     const today = new Date().toISOString().split("T")[0];
-    const puzzle = buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
+    const puzzle = await buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
     expect(puzzle.date).toBe(today);
   });
 });

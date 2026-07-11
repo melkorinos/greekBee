@@ -14,6 +14,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  getPrebuiltPuzzleParams,
   getPuzzleStubForDate,
   getRandomPuzzleStub,
   getTodaysPuzzleStub,
@@ -21,6 +22,8 @@ import {
 import { getPuzzleForDate, getTodaysPuzzle } from "@/data/leksokipos/index";
 import fullPuzzles from "@/data/leksokipos/puzzles-el.json";
 import puzzleIndex from "@/data/leksokipos/puzzles-index-el.json";
+import { greekToGreeklish } from "@/lib/greeklish";
+import { parseCustomUrl } from "@/games/leksokipos/lib/parseCustomUrl";
 
 interface FullPuzzle {
   id: string;
@@ -76,6 +79,46 @@ describe("puzzleIndex — parity with the full loader", () => {
       const stub = getRandomPuzzleStub("el", excluded);
       expect(stub.id).not.toBe(excluded);
       expect(FULL.some((p) => p.id === stub.id)).toBe(true);
+    }
+  });
+});
+
+// ── Prerender params (generateStaticParams source) ────────────────────────────
+// The [center]/[outer] page prerenders every prebuilt combo at build time so
+// the CDN serves daily-puzzle traffic with zero Fluid CPU. A param pair that
+// parseCustomUrl rejects would fail the build; a non-canonical pair would
+// prerender a page that instantly 301s to itself — both guarded here.
+
+describe("getPrebuiltPuzzleParams — one canonical param pair per prebuilt puzzle", () => {
+  const params = getPrebuiltPuzzleParams("el");
+
+  it("returns one param pair per index entry", () => {
+    expect(params).toHaveLength(FULL.length);
+  });
+
+  it("every param is lowercase greeklish: 1 center letter + 6 outer letters", () => {
+    for (const p of params) {
+      expect(p.center).toMatch(/^[a-z]$/);
+      expect(p.outer).toMatch(/^[a-z]{6}$/);
+    }
+  });
+
+  it("every param round-trips through parseCustomUrl to the puzzle's letters in file order", () => {
+    params.forEach((p, i) => {
+      const parsed = parseCustomUrl(p.center, p.outer);
+      expect(parsed, `param ${p.center}/${p.outer} (index ${i}) failed to parse`).not.toBeNull();
+      expect(parsed!.center).toBe(FULL[i].centerLetter);
+      expect(parsed!.outer).toEqual(FULL[i].outerLetters);
+    });
+  });
+
+  it("every param is already canonical — the page's redirect check must not fire", () => {
+    // Mirrors the comparison in src/app/leksokipos/[center]/[outer]/page.tsx:
+    // a mismatch there means the prerendered page 301s to itself.
+    for (const p of params) {
+      const parsed = parseCustomUrl(p.center, p.outer)!;
+      expect(decodeURIComponent(p.center)).toBe(greekToGreeklish(parsed.center));
+      expect(decodeURIComponent(p.outer)).toBe(greekToGreeklish(parsed.outer.join("")));
     }
   });
 });

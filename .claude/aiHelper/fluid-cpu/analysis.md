@@ -77,6 +77,34 @@ in the dashboard. If more CPU cut is needed, next lever per this doc: lazy-load
 `words-el.json` (dynamic import in `buildCustomPuzzle`); items 1+2 help a
 little too.
 
+**Dashboard Functions-by-CPU confirmed it (2026-07-08):** `[center]/[outer]`
+44 inv / 1m total ≈ 1.4 s per invocation = dominant burner; redirect page now
+57 ms/inv (fix 3 verified working). → **Lazy-load implemented same day**
+(session 70): `buildCustomPuzzle` async + `await import("../words-el.json")`
+on the cache-miss path only; guard test in `deploymentReadiness.test.ts`.
+Next lever after this: prerender daily combos —
+see `.claude/handoffs/HANDOFF-prerender-daily-combos.md`.
+
+## Prerender daily combos — implemented (2026-07-10, session 71)
+
+`generateStaticParams` on `[center]/[outer]` now prerenders **all 1008 prebuilt
+combos** at build time (params from the slim index via `getPrebuiltPuzzleParams`,
+guarded canonical in `puzzleIndex.test.ts` + source-guard in
+`deploymentReadiness.test.ts`). Build output: route flipped `ƒ` → `●` (SSG).
+**Build time unchanged: 17.7 s before → 16.7 s after** (noise — each prerender
+is a lookup in the once-parsed puzzles-el.json). Local prod smoke: `/leksokipos`
+307 → today's combo 200 in **8 ms** (prerendered, on disk); custom combo 200
+cold 1.12 s / warm 3 ms; encoded-Greek URL still 307s to greeklish canonical.
+
+**Re-measure verdict:** the `local-measurements.txt` harness was NOT re-run —
+it measured `/leksiarxeio`+`/vres-tin-frasi` RSC payloads (items 1–2), which
+this change doesn't touch, and local request latency can't show this win anyway
+(warm ISR and prerendered pages are both ~ms locally; the saving is prod *cold
+Fluid invocations*). The meaningful before/after is (a) build-time delta
+(above, ~zero) and (b) **post-deploy Vercel Observability → Functions**:
+`[center]/[outer]` should drop from ~44 inv/1m CPU to near-zero (only custom
+combos remain). Check 2–3 days after the merge to main.
+
 ## Measurement method note
 `npm run build` + `npm run start` with `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:9`
 (build-time-inlined, so a rebuild was required) — guarantees no prod-DB writes
