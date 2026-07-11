@@ -11,7 +11,7 @@
 // If any of these tests fail, it means an accent slipped through somewhere
 // and will be visible to players.
 
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import { buildCustomPuzzle } from "@/data/leksokipos";
 import { computeValidWords } from "@/games/leksokipos/lib/computeValidWords";
 import { parseCustomUrl } from "@/games/leksokipos/lib/parseCustomUrl";
@@ -90,7 +90,13 @@ describe("puzzles-el.json — no accents in puzzle letter fields", () => {
 // ── buildCustomPuzzle output ──────────────────────────────────────────────────
 
 describe("buildCustomPuzzle — no accents in output", () => {
-  const puzzle = buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
+  let puzzle: LeksokiposPuzzle;
+
+  // Generous timeout: the first buildCustomPuzzle call in this file pays the
+  // dynamic import() of the 19.5 MB words-el.json (slow under full-suite load).
+  beforeAll(async () => {
+    puzzle = await buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
+  }, 60_000);
 
   it("centerLetter is accent-free", () => {
     expect(hasAccent(puzzle.centerLetter)).toBe(false);
@@ -110,8 +116,8 @@ describe("buildCustomPuzzle — no accents in output", () => {
     expect(hasAccent(puzzle.id)).toBe(false);
   });
 
-  it("normalises accented input — resulting fields are still accent-free", () => {
-    const p2 = buildCustomPuzzle("ά", ["λ", "τ", "ί", "δ", "έ", "σ"]);
+  it("normalises accented input — resulting fields are still accent-free", async () => {
+    const p2 = await buildCustomPuzzle("ά", ["λ", "τ", "ί", "δ", "έ", "σ"]);
     expect(hasAccent(p2.centerLetter)).toBe(false);
     for (const l of p2.outerLetters) expect(hasAccent(l)).toBe(false);
     expectNoAccents(p2.validWords, "buildCustomPuzzle (accented input).validWords");

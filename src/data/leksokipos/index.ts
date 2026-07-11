@@ -7,7 +7,6 @@ import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { computeValidWords } from "@/games/leksokipos/lib/computeValidWords";
 import greekPuzzles from "./puzzles-el.json";
 import { normalizeLetters } from "@/lib/normalize";
-import wordListEl from "../words-el.json";
 
 // Cast the imported JSON to the typed Puzzle array.
 // TypeScript will warn us if the JSON shape ever drifts from the Puzzle interface.
@@ -128,27 +127,31 @@ export function getRecentPuzzleDates(n: number, language: Language = "el"): stri
  * (~50–200 ms on a cold Vercel Fluid instance).  That scan is billed as Fluid
  * Active CPU, which is the app's most constrained usage tier.
  *
- * Two layers of caching protect against this:
- *   1. Module-level `validWordsCache` Map (below): warm Fluid instances serving
+ * Three layers of protection:
+ *   1. words-el.json (19.5 MB) is loaded via dynamic import() below, only on
+ *      the cache-miss path.  A static import here would make every consumer of
+ *      this module (daily pages, prebuilt lookups) parse 19.5 MB of JSON on
+ *      every cold start — measured at ~1.4 s billed CPU per invocation on the
+ *      [center]/[outer] route.  Daily renders now parse only puzzles-el.json.
+ *      The deploymentReadiness.test.ts "Fluid CPU guard" enforces this.
+ *   2. Module-level `validWordsCache` Map (below): warm Fluid instances serving
  *      the same letter combo pay zero CPU on repeat requests.
- *   2. `export const revalidate = 3600` on the [center]/[outer] page: the full
- *      Server Component HTML is cached at the Vercel CDN edge for 1 hour, so
- *      the Fluid function is only invoked once per unique combo per hour.
+ *   3. `export const revalidate = 604800` on the [center]/[outer] page: the
+ *      full Server Component HTML is cached at the Vercel CDN edge for a week,
+ *      so the Fluid function only runs for the first visitor per combo per week.
  */
 
 // Module-level cache: keyed by `custom-{center}-{sortedOuter}` (canonical ID).
 // Declared at module scope so it survives across requests within the same Fluid
 // process lifetime.  Vercel Fluid is NOT serverless-per-request — warm instances
 // handle many requests before being recycled, making this pattern effective.
-// Do NOT use React.cache() or unstable_cache() here: this function is called
-// synchronously from a Server Component and those APIs return Promises.
 const validWordsCache = new Map<string, string[]>();
 
-export function buildCustomPuzzle(
+export async function buildCustomPuzzle(
   centerLetter: string,
   outerLetters: string[],
   language: Language = "el"
-): LeksokiposPuzzle {
+): Promise<LeksokiposPuzzle> {
   const center = normalizeLetters(centerLetter);
   const outer = outerLetters.map(normalizeLetters);
 
@@ -158,16 +161,18 @@ export function buildCustomPuzzle(
 
   const today = new Date().toISOString().split("T")[0];
 
-  const wordList: string[] =
-    language === "el" ? (wordListEl as string[]) : [];
-
   // Cache key = canonical puzzle ID (letters only, order-independent).
   // The same key is used for localStorage persistence so the cache can never
   // serve stale words for a given URL.
   let validWords = validWordsCache.get(id);
   if (!validWords) {
-    // Cold path: scan the full word list.  ~50–200 ms on production hardware.
-    // Subsequent calls for the same combo skip this entirely.
+    // Cold path: load + scan the full word list.  The dynamic import keeps the
+    // 19.5 MB JSON out of this module's cold-start cost; Node's module cache
+    // makes repeat import() calls free within the same process.
+    const wordList: string[] =
+      language === "el"
+        ? ((await import("../words-el.json")).default as string[])
+        : [];
     validWords = computeValidWords(center, outer, wordList);
     validWordsCache.set(id, validWords);
   }

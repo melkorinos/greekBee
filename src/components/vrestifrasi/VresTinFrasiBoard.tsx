@@ -119,13 +119,19 @@ export function VresTinFrasiBoard({
             maxGuesses={maxGuesses}
           />
 
-          <Keyboard
-            letterStates={letterStates}
-            onLetter={addLetter}
-            onDelete={deleteLetter}
-            onEnter={submitGuess}
-            disabled={status !== "playing"}
-          />
+          {/* Pin the keyboard to the bottom of the viewport so a tall phrase grid
+              can't push it below the fold — the player always sees the keys and
+              keeps the grid (what they're typing) in view. Scoped to this game;
+              works because no ancestor clips overflow (document-level scroll). */}
+          <div className="sticky bottom-0 z-20 w-full bg-background pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+            <Keyboard
+              letterStates={letterStates}
+              onLetter={addLetter}
+              onDelete={deleteLetter}
+              onEnter={submitGuess}
+              disabled={status !== "playing"}
+            />
+          </div>
         </div>
       </div>
 

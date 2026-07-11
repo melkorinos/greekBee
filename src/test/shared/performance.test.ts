@@ -75,31 +75,32 @@ describe("performance: buildCustomPuzzle module-level cache", () => {
   const CENTER = "ζ";
   const OUTER  = ["α", "β", "γ", "δ", "ε", "η"]; // rare combo — not in curated list
 
-  it("first call (cold) completes within budget", () => {
+  it("first call (cold) completes within budget", async () => {
     const t0 = performance.now();
-    buildCustomPuzzle(CENTER, OUTER);
+    await buildCustomPuzzle(CENTER, OUTER);
     const elapsed = performance.now() - t0;
 
     expect(elapsed).toBeLessThan(COMPUTE_VALID_WORDS_BUDGET_MS);
   });
 
-  it(`second call (warm cache) completes within ${CACHE_HIT_BUDGET_MS} ms`, () => {
-    // The module-level validWordsCache should return the Map entry immediately.
+  it(`second call (warm cache) completes within ${CACHE_HIT_BUDGET_MS} ms`, async () => {
+    // The module-level validWordsCache should return the Map entry immediately —
+    // the warm path must not re-await the words-el.json dynamic import.
     // If this fails it means the cache was bypassed or the Map was cleared between calls.
-    buildCustomPuzzle(CENTER, OUTER); // ensure cache is warm
+    await buildCustomPuzzle(CENTER, OUTER); // ensure cache is warm
 
     const t0 = performance.now();
-    buildCustomPuzzle(CENTER, OUTER);
+    await buildCustomPuzzle(CENTER, OUTER);
     const elapsed = performance.now() - t0;
 
     expect(elapsed).toBeLessThan(CACHE_HIT_BUDGET_MS);
   });
 
-  it("cache is keyed by letter set, not argument order — same letters return same result", () => {
+  it("cache is keyed by letter set, not argument order — same letters return same result", async () => {
     // Outer letter order in the URL may differ from the canonical sorted form;
     // the cache key uses sorted outer letters so both orderings are a cache hit.
-    const a = buildCustomPuzzle(CENTER, OUTER);
-    const b = buildCustomPuzzle(CENTER, [...OUTER].reverse());
+    const a = await buildCustomPuzzle(CENTER, OUTER);
+    const b = await buildCustomPuzzle(CENTER, [...OUTER].reverse());
 
     expect(a.id).toBe(b.id);
     expect(a.validWords).toEqual(b.validWords);

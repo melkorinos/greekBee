@@ -14,6 +14,7 @@
 // Anything that needs validWords must keep importing "./index" instead.
 
 import type { Language } from "@/types";
+import { greekToGreeklish } from "@/lib/greeklish";
 import puzzleIndexEl from "./puzzles-index-el.json";
 
 /** A pre-built puzzle minus its validWords — enough to build its canonical URL. */
@@ -47,6 +48,22 @@ export function getPuzzleStubForDate(date: string, language: Language = "el"): L
 export function getTodaysPuzzleStub(language: Language = "el"): LeksokiposPuzzleStub {
   const today = new Date().toISOString().split("T")[0];
   return getPuzzleStubForDate(today, language);
+}
+
+/**
+ * Canonical greeklish URL params for every prebuilt puzzle — the source for
+ * the [center]/[outer] page's generateStaticParams, so all known daily combos
+ * are prerendered at build time and served from the CDN with zero Fluid CPU.
+ *
+ * Must stay in lock-step with the page's canonical form (greeklish, lowercase,
+ * outer letters in file order): a non-canonical param would prerender a page
+ * whose own redirect check immediately 301s it. Guarded in puzzleIndex.test.ts.
+ */
+export function getPrebuiltPuzzleParams(language: Language = "el"): { center: string; outer: string }[] {
+  return STUBS[language].map((stub) => ({
+    center: greekToGreeklish(stub.centerLetter),
+    outer: greekToGreeklish(stub.outerLetters.join("")),
+  }));
 }
 
 /** Slim mirror of getRandomPuzzle (see ./index.ts): optional exclusion by ID. */

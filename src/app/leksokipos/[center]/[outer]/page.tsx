@@ -20,6 +20,7 @@ import { notFound, redirect } from "next/navigation";
 
 import type { Language } from "@/types";
 import { LeksokiposLayout } from "@/components/leksokipos/LeksokiposLayout";
+import { getPrebuiltPuzzleParams } from "@/data/leksokipos/puzzleIndex";
 import { greekToGreeklish } from "@/lib/greeklish";
 import { parseCustomUrl } from "@/games/leksokipos/lib/parseCustomUrl";
 
@@ -38,6 +39,15 @@ import { parseCustomUrl } from "@/games/leksokipos/lib/parseCustomUrl";
 // Note: revalidate on a dynamic route only takes effect for requests that reach
 // the server — the redirect() calls above return instantly and are unaffected.
 export const revalidate = 604800;
+
+// Prerender every prebuilt puzzle combo at build time (Fluid CPU: the CDN then
+// serves all daily-puzzle traffic — the dominant Fluid burner — for free).
+// dynamicParams stays at its default (true) so user-invented custom combos
+// still render on demand under the revalidate window above. New puzzles only
+// arrive via deploy, and a deploy rebuilds everything — the set can't go stale.
+export function generateStaticParams() {
+  return getPrebuiltPuzzleParams("el");
+}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -70,7 +80,7 @@ export default async function CustomLeksokiposPage({
   // can enable the leaderboard 🏆 button for daily puzzles.
   const puzzle =
     getPrebuiltPuzzleByLetters(parsed.center, parsed.outer, language) ??
-    buildCustomPuzzle(parsed.center, parsed.outer, language);
+    (await buildCustomPuzzle(parsed.center, parsed.outer, language));
 
   // Last 7 daily puzzle dates (newest-first) — passed to GameBoard so the
   // leaderboard can render the rolling day-strip without a client-side import.
