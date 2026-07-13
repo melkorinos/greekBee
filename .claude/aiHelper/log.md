@@ -12,6 +12,7 @@ Implemented `HANDOFF-prerender-daily-combos.md` (Fluid CPU option #2 — remove 
 3. **Slice ③ verified**: route `ƒ`→`●` (SSG), **1008 HTML+RSC files** under `.next/server/app/leksokipos/`, today's (`a/stpolu`) on disk. **Build 17.7 s→16.7 s (no cost)**. Local prod smoke: redirect 307→today 200/8 ms; custom cold 1.12 s/warm 3 ms; encoded-Greek 307→canonical. Re-measure verdict in `fluid-cpu/analysis.md`: latency harness N/A — real "after" = Vercel Functions dashboard 2–3 days post-merge.
 4. No perf-test addition: `getPrebuiltPuzzleParams` is build-time-only (not a request hotpath). Gates: **1413 pass / 6 skip · eslint 0 · build 0**. **Browser play-through on today's daily = remaining manual step before dev→main merge** (handoff mandate).
 5. Per user: deleted `HANDOFF-prerender-daily-combos.md` (done) AND `fluid-cpu/HANDOFF-fixes-1-2.md` — **items 1 (word-list SSR payload) + 2 (consume-per-view correctness bug) remain unimplemented**; verdicts live in `fluid-cpu/analysis.md`, full handoff recoverable from git history.
+6. New `fluid-cpu/HANDOFF-post-deploy-readout.md`: measure ~1 week post-merge (Functions-by-CPU, gauge min/day vs 10, confounds incl. billing reset) → append read-out to analysis.md, then delete it. **Fill in merge commit/date at merge time.**
 
 ---
 
