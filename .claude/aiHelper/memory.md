@@ -1,7 +1,7 @@
 # Agent Memory — Greek Word Games Platform
 
-## ⚡ Current State (2026-06-27)
-Five live games + custom puzzle URLs + the Leksikastirio word-court. Run `npm run test -- --run` for current count.
+## ⚡ Current State (2026-07-13)
+Five live games + Λεξοδρομία (wip) + custom puzzle URLs + the Leksikastirio word-court. Run `npm run test -- --run` for current count.
 
 | Game | Route | Status |
 |------|-------|--------|
@@ -11,6 +11,7 @@ Five live games + custom puzzle URLs + the Leksikastirio word-court. Run `npm ru
 | Vres Tin Frasi | `/vres-tin-frasi` | Live — daily Greek phrase |
 | Stavrolekso | `/stavrolekso` | Live — community crossword browser + maker |
 | Leksikastirio | `/leksikastirio` | Live — community word-court (voting + admin review) |
+| Λεξοδρομία | `/leksodromia` | `wip: true` — daily anagram sprint, decay-to-floor scoring (polish pass pending) |
 
 ---
 
@@ -18,10 +19,10 @@ Five live games + custom puzzle URLs + the Leksikastirio word-court. Run `npm ru
 
 | Topic | Decision |
 |-------|----------|
-| **Routing** | `/leksokipos`, `/leksiarxeio`, `/leksindeseis`, `/vres-tin-frasi`, `/stavrolekso` (+ `/[id]`, `/maker`), `/leksikastirio`, `/` picker. Custom: `/leksokipos/[center]/[outer]` |
+| **Routing** | `/leksokipos`, `/leksiarxeio`, `/leksindeseis`, `/vres-tin-frasi`, `/leksodromia`, `/stavrolekso` (+ `/[id]`, `/maker`), `/leksikastirio`, `/` picker. Custom: `/leksokipos/[center]/[outer]` |
 | **Persistence** | Single `wordgames:state` key. `useGameStore` is the ONLY localStorage writer. Exception: `leksokipos-variant` standalone key (display pref, not game state). |
-| **Types** | Root `src/types/index.ts` = `Language`, `SliceId`, `PersistenceEnvelope` only. Game types in `src/games/*/types.ts`. (`SliceId` is the **persistence-slice** union, incl. `suggestions`/`reports`; it is NOT the game registry — `stavrolekso`/`leksikastirio` have no store slice so they're absent by design. For "every registered game" use `RegistryGameId` from `@/config/games`.) |
-| **Config / single sources of truth** | `src/config/` holds the platform's tuning knobs — never hardcode a value that lives here, import it. `games.ts` = `GAME_REGISTRY` + `RegistryGameId` (nav/picker/titles derive from it). `gameRules.ts` = every numeric knob per game (`LEKSOKIPOS.MIN_WORD_LENGTH/PANGRAM_BONUS/MAX_SCORE_CAP/SCORE_SCALE`, `LEKSIARXEIO.MAX_GUESSES/LENGTHS`, `VRESTIFRASI.MAX_GUESSES`, `LEKSINDESEIS.MAX_MISTAKES`, `STAVROLEKSO.VALID_GRID_SIZES`). `platform.ts` = brand name + derived SEO description. `retention.ts` = DB retention windows (cron). `LeksiarxeioLength` type must track `LEKSIARXEIO.LENGTHS`. |
+| **Types** | Root `src/types/index.ts` = `Language`, `SliceId`, `PersistenceEnvelope` only. Game types in `src/games/*/types.ts`. (`SliceId` is the **persistence-slice** union, incl. `suggestions`/`reports` and `leksodromia`; it is NOT the game registry — `stavrolekso`/`leksikastirio` have no store slice so they're absent by design. For "every registered game" use `RegistryGameId` from `@/config/games`.) |
+| **Config / single sources of truth** | `src/config/` holds the platform's tuning knobs — never hardcode a value that lives here, import it. `games.ts` = `GAME_REGISTRY` + `RegistryGameId` (nav/picker/titles derive from it). `gameRules.ts` = every numeric knob per game (`LEKSOKIPOS.MIN_WORD_LENGTH/PANGRAM_BONUS/MAX_SCORE_CAP/SCORE_SCALE`, `LEKSIARXEIO.MAX_GUESSES/LENGTHS`, `VRESTIFRASI.MAX_GUESSES`, `LEKSINDESEIS.MAX_MISTAKES`, `STAVROLEKSO.VALID_GRID_SIZES`, `LEKSODROMIA.*` decay-scoring knobs). `platform.ts` = brand name + derived SEO description. `retention.ts` = DB retention windows (cron). `LeksiarxeioLength` type must track `LEKSIARXEIO.LENGTHS`. |
 | **Theming** | All pages = white/light mode by default. Manual dark/light toggle in Shell header (☀️/🌙). `.dark` class on `<html>` drives all dark styles — `prefers-color-scheme` NOT used. `dark:` Tailwind prefix is enabled via `@custom-variant dark` in `globals.css` (see ADR 0002). Preference stored in `localStorage` key `"theme-preference"`. **Semantic design tokens** are the single source for the palette: defined in `globals.css`, light on `:root` + dark under `.dark` (ADR 0008) — components reference tokens (`bg-surface`, `text-muted`), never `dark:` pairs. Feedback colours (green/yellow tile states, difficulty colours) are tokens too. **Per-game brand accent** (ADR 0009): `--game-accent` / `--game-accent-foreground`, set per game via `[data-game="…"]` in `globals.css`, on the game's root wrapper. Class recipes: platform-shared in `src/styles/recipes.ts`; Leksokipos-only in `src/components/leksokipos/styles.ts`. Shared modal shell = `src/components/shared/Modal.tsx` (`center`|`sheet`). **Deliberate raw-palette exceptions (do NOT "tokenise" — they'd regress):** `StavroleksoGrid` (functional crossword cells, black/white, already dark-handled — like tile colours), `Shell` slide-out drawer (intentionally always-dark `zinc-*`, no always-dark token), `FeedbackBanner` (explicit `theme` prop so games force their own look; no success/error surface-tint tokens exist), `FlowerGridPlayground` (dev-only tool), and the fixed-yellow chip `text-stone-900` in leksokipos `styles.ts`. |
 | **Game logic** | Pure functions in `src/games/*/lib/` — zero React imports. |
 | **Shared components** | Graduate to `src/components/shared/` only when 2 games genuinely need it. |
@@ -42,10 +43,10 @@ Five live games + custom puzzle URLs + the Leksikastirio word-court. Run `npm ru
 
 ```
 src/
-  app/          Routes + server components (leksokipos, leksiarxeio, leksindeseis, vres-tin-frasi, stavrolekso, leksikastirio, api/)
-  components/   shared/ · leksokipos/ · leksiarxeio/ · leksindeseis/ · vrestifrasi/ · leksikastirio/
-  games/        Pure logic: leksokipos/lib+hooks · leksiarxeio/lib+hooks · leksindeseis/hooks · vrestifrasi/lib+hooks · stavrolekso/lib (note: also holds StavroleksoGrid.tsx, a React component)
-  data/         leksokipos/puzzles-el.json · leksiarxeio/words-{2..8}.json · leksindeseis/puzzles-connections.json · vrestifrasi/phrases-el.json · words-el.json (~795k)
+  app/          Routes + server components (leksokipos, leksiarxeio, leksindeseis, vres-tin-frasi, leksodromia, stavrolekso, leksikastirio, api/)
+  components/   shared/ · leksokipos/ · leksiarxeio/ · leksindeseis/ · vrestifrasi/ · leksodromia/ · leksikastirio/
+  games/        Pure logic: leksokipos/lib+hooks · leksiarxeio/lib+hooks · leksindeseis/hooks · vrestifrasi/lib+hooks · leksodromia/lib+hooks · stavrolekso/lib (note: also holds StavroleksoGrid.tsx, a React component)
+  data/         leksokipos/puzzles-el.json · leksiarxeio/words-{2..8}.json + answers-{4..8}.json (answers reused read-only by leksodromia/) · leksindeseis/puzzles-connections.json · vrestifrasi/phrases-el.json · words-el.json (~795k)
   hooks/        useGameStore · useGameIdentity · useScoreSubmission · useRoundPersistence · useGameStateSync · useLeaderboard · useProfileVerification · useProfile · useLeaderboardProfile · useTheme · useAuth · useDayChange
   lib/          greeklish.ts · postScore.ts · supabase.ts · communityPuzzleLifecycle.ts
   types/        index.ts
@@ -115,3 +116,10 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `recipes.test.ts` (shared) | Platform recipes — non-empty, button/leaderboard token contracts, no `dark:` pairs |
 | `styles.test.ts` (leksokipos) | Leksokipos-local recipes — feedback/found-word/score-bar/give-up token contracts, no `dark:` pairs (ADR 0009) |
 | `validateSubmission.test.ts` (×4: leksiarxeio, leksindeseis, vrestifrasi, stavrolekso) | Community Puzzle validation adapters as pure functions — per-game submission invariants; stavrolekso also `EDIT_PIN_PATTERN` + `validateStavroleksoData` (shared with PATCH edit route + maker) |
+| `scoring.test.ts` (leksodromia) | `computeWordPoints` — decay-to-floor, hint costs, MIN clamp, perfect round = MAX_SCORE |
+| `selectDailyWords.test.ts` | Deterministic 2×(4–8) selection; **never Leksiarxeio's same-day fallback answer** (cross-game leak guard) |
+| `scrambleWord.test.ts` | Deterministic seeded scramble — multiset-preserving, never identity |
+| `leksodromiaReducer.test.ts` | PICK_TILE/ADD_LETTER/REMOVE_LETTER/SUBMIT_WORD/USE_HINT (cap+prefix lock)/SKIP_WORD/RESTORE_STATE + selectors |
+| `useLeksodromiaRound.test.ts` | `useElapsedClock` (visibility pause, reset/seed) + round spine (persist snapshot, refresh restores clock, post-restore reset) |
+| `board.test.tsx` (leksodromia) | Board — rack→answer row, wrong-submit feedback, hint reveal, two-phase skip, recap, single live score post (no re-post on restored finish); PageClient header + rules |
+| `dataLoader.test.ts` (leksodromia) | `getTodaysLeksodromiaPuzzle` — 10 ascending words + parallel non-identity scrambles, deterministic, curated-pool membership |

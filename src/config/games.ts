@@ -44,6 +44,14 @@ export const GAME_REGISTRY = {
     href:        "/stavrolekso",
     wip:         false,
   },
+  leksodromia: {
+    label:       "🏁 Λεξοδρομία",
+    emoji:       "🏁",
+    title:       "Λεξοδρομία",
+    description: "Ξεμπέρδεψε 10 λέξεις — όσο πιο γρήγορα, τόσο περισσότεροι πόντοι.",
+    href:        "/leksodromia",
+    wip:         true,
+  },
   leksikastirio: {
     label:       "⚖️ Leksikastirio",
     emoji:       "⚖️",

@@ -69,6 +69,13 @@ const STATICALLY_IMPORTED_DATA_FILES = [
   "src/data/leksiarxeio/words-6.json",
   "src/data/leksiarxeio/words-7.json",
   "src/data/leksiarxeio/words-8.json",
+  // Leksiarxeio curated answer pools — also statically imported by the
+  // Leksodromia data loader (read-only reuse, direct JSON imports)
+  "src/data/leksiarxeio/answers-4.json",
+  "src/data/leksiarxeio/answers-5.json",
+  "src/data/leksiarxeio/answers-6.json",
+  "src/data/leksiarxeio/answers-7.json",
+  "src/data/leksiarxeio/answers-8.json",
   // Leksindeseis
   "src/data/leksindeseis/puzzles-connections.json",
   // Leksokipos — pre-built puzzles

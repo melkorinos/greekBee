@@ -1,0 +1,257 @@
+// leksodromiaReducer.test.ts — all state transitions of the anagram sprint.
+// The reducer is pure and never reads Date.now(): elapsed time arrives as the
+// SUBMIT_WORD/SKIP_WORD payload from the clock hook. Input is tile-based:
+// `picked` holds indices into the scrambled word, hints lock a prefix of
+// correct tiles (lockedTileIdxs) and clear free picks.
+
+import { describe, expect, it } from "vitest";
+
+import {
+  getAvailableTileIndices,
+  getCurrentInput,
+  getTotalScore,
+  leksodromiaReducer,
+  makeInitialLeksodromiaState,
+} from "@/games/leksodromia/lib/leksodromiaReducer";
+import type { LeksodromiaState } from "@/games/leksodromia/types";
+import { computeWordPoints } from "@/games/leksodromia/lib/scoring";
+
+// 10-word fixture round (2 × lengths 4–8, ascending) with hand-made scrambles.
+// Words use σ only (never ς) — matching the answer pools' normalized form.
+const WORDS = [
+  "αυγο", "βημα",
+  "αγορα", "βαρκα",
+  "γραμμα", "δασκοσ",
+  "αγγελοσ", "βαθμιδα",
+  "αγκαλιεσ", "βαρκαρησ",
+];
+const SCRAMBLES = [
+  "γοαυ", "μαβη",
+  "ρααγο", "καβαρ",
+  "αμγμρα", "σοκαδσ",
+  "γλοσαγε", "μιδαβαθ",
+  "λακιεσγα", "ρσηκβααρ",
+];
+
+function fresh(): LeksodromiaState {
+  return makeInitialLeksodromiaState("2026-07-13", WORDS, SCRAMBLES);
+}
+
+/** Solve the current word by picking its tiles via keyboard letters, then submit. */
+function solveCurrent(state: LeksodromiaState, elapsedMs = 0): LeksodromiaState {
+  const answer = WORDS[state.wordIndex];
+  let s = state;
+  for (const letter of answer.slice(getCurrentInput(s).length)) {
+    s = leksodromiaReducer(s, { type: "ADD_LETTER", letter });
+  }
+  return leksodromiaReducer(s, { type: "SUBMIT_WORD", elapsedMs });
+}
+
+describe("makeInitialLeksodromiaState", () => {
+  it("starts at word 0, playing, with empty input and no results", () => {
+    const s = fresh();
+    expect(s.wordIndex).toBe(0);
+    expect(s.status).toBe("playing");
+    expect(getCurrentInput(s)).toBe("");
+    expect(s.results).toEqual([]);
+    expect(getTotalScore(s)).toBe(0);
+  });
+});
+
+describe("PICK_TILE / ADD_LETTER / REMOVE_LETTER", () => {
+  it("picking a tile appends its letter to the current input", () => {
+    let s = fresh(); // scramble "γοαυ"
+    s = leksodromiaReducer(s, { type: "PICK_TILE", tileIndex: 2 }); // α
+    s = leksodromiaReducer(s, { type: "PICK_TILE", tileIndex: 3 }); // υ
+    expect(getCurrentInput(s)).toBe("αυ");
+    expect(getAvailableTileIndices(s)).toEqual([0, 1]);
+  });
+
+  it("an already-picked tile cannot be picked twice", () => {
+    let s = fresh();
+    s = leksodromiaReducer(s, { type: "PICK_TILE", tileIndex: 2 });
+    s = leksodromiaReducer(s, { type: "PICK_TILE", tileIndex: 2 });
+    expect(getCurrentInput(s)).toBe("α");
+  });
+
+  it("ADD_LETTER (keyboard) picks the first available tile with that letter — duplicates resolve to distinct tiles", () => {
+    let s = fresh();
+    // Jump to word 5 "γραμμα" (scramble "αμγμρα" — two α, two μ)
+    s = leksodromiaReducer(s, { type: "RESTORE_STATE", wordIndex: 4, results: [], currentHintsUsed: 0 });
+    s = leksodromiaReducer(s, { type: "ADD_LETTER", letter: "α" });
+    s = leksodromiaReducer(s, { type: "ADD_LETTER", letter: "α" });
+    s = leksodromiaReducer(s, { type: "ADD_LETTER", letter: "α" });
+    expect(getCurrentInput(s)).toBe("αα"); // third α: no tile left → no-op
+  });
+
+  it("ADD_LETTER with a letter not on the rack is a no-op", () => {
+    let s = fresh();
+    s = leksodromiaReducer(s, { type: "ADD_LETTER", letter: "ω" });
+    expect(getCurrentInput(s)).toBe("");
+  });
+
+  it("input cannot grow beyond the word length", () => {
+    let s = fresh();
+    for (const letter of "αυγο") s = leksodromiaReducer(s, { type: "ADD_LETTER", letter });
+    s = leksodromiaReducer(s, { type: "PICK_TILE", tileIndex: 0 });
+    expect(getCurrentInput(s)).toBe("αυγο");
+  });
+
+  it("REMOVE_LETTER pops the last picked tile; empty input is a no-op", () => {
+    let s = fresh();
+    s = leksodromiaReducer(s, { type: "PICK_TILE", tileIndex: 2 });
+    s = leksodromiaReducer(s, { type: "REMOVE_LETTER" });
+    expect(getCurrentInput(s)).toBe("");
+    expect(leksodromiaReducer(s, { type: "REMOVE_LETTER" })).toBe(s);
+  });
+});
+
+describe("SUBMIT_WORD", () => {
+  it("correct submit records a solved result with decay-scored points and advances", () => {
+    const s = solveCurrent(fresh(), 10_000);
+    expect(s.wordIndex).toBe(1);
+    expect(getCurrentInput(s)).toBe("");
+    expect(s.results).toEqual([
+      {
+        word: "αυγο",
+        status: "solved",
+        elapsedMs: 10_000,
+        hintsUsed: 0,
+        points: computeWordPoints(10_000, 4, 0),
+      },
+    ]);
+  });
+
+  it("wrong submit sets the shake flag, keeps the input, records nothing", () => {
+    let s = fresh();
+    for (const letter of "γοαυ") s = leksodromiaReducer(s, { type: "ADD_LETTER", letter });
+    s = leksodromiaReducer(s, { type: "SUBMIT_WORD", elapsedMs: 5_000 });
+    expect(s.wrongSubmit).toBe(true);
+    expect(getCurrentInput(s)).toBe("γοαυ");
+    expect(s.results).toEqual([]);
+    expect(s.wordIndex).toBe(0);
+  });
+
+  it("the shake flag clears on the next input action", () => {
+    let s = fresh();
+    for (const letter of "γοαυ") s = leksodromiaReducer(s, { type: "ADD_LETTER", letter });
+    s = leksodromiaReducer(s, { type: "SUBMIT_WORD", elapsedMs: 5_000 });
+    s = leksodromiaReducer(s, { type: "REMOVE_LETTER" });
+    expect(s.wrongSubmit).toBe(false);
+  });
+
+  it("incomplete input does not submit", () => {
+    let s = fresh();
+    s = leksodromiaReducer(s, { type: "ADD_LETTER", letter: "α" });
+    const after = leksodromiaReducer(s, { type: "SUBMIT_WORD", elapsedMs: 1_000 });
+    expect(after.results).toEqual([]);
+    expect(after.wordIndex).toBe(0);
+  });
+});
+
+describe("USE_HINT", () => {
+  it("reveals the next answer letter as a locked tile and clears free picks", () => {
+    let s = fresh(); // answer "αυγο", scramble "γοαυ"
+    s = leksodromiaReducer(s, { type: "PICK_TILE", tileIndex: 0 }); // γ
+    s = leksodromiaReducer(s, { type: "USE_HINT" });
+    expect(s.hintsUsed).toBe(1);
+    expect(getCurrentInput(s)).toBe("α"); // locked prefix only
+    expect(s.lockedTileIdxs).toEqual([2]); // the α tile
+  });
+
+  it("is capped at MAX_HINTS_PER_WORD", () => {
+    let s = fresh();
+    s = leksodromiaReducer(s, { type: "USE_HINT" });
+    s = leksodromiaReducer(s, { type: "USE_HINT" });
+    const third = leksodromiaReducer(s, { type: "USE_HINT" });
+    expect(third.hintsUsed).toBe(2);
+    expect(third.lockedTileIdxs).toHaveLength(2);
+    expect(getCurrentInput(third)).toBe("αυ");
+  });
+
+  it("REMOVE_LETTER never removes the locked prefix", () => {
+    let s = fresh();
+    s = leksodromiaReducer(s, { type: "USE_HINT" });
+    s = leksodromiaReducer(s, { type: "REMOVE_LETTER" });
+    expect(getCurrentInput(s)).toBe("α");
+  });
+
+  it("hints charge into the solved word's points", () => {
+    let s = fresh();
+    s = leksodromiaReducer(s, { type: "USE_HINT" });
+    s = solveCurrent(s, 0);
+    expect(s.results[0].hintsUsed).toBe(1);
+    expect(s.results[0].points).toBe(computeWordPoints(0, 4, 1));
+  });
+
+  it("hint counter resets for the next word", () => {
+    let s = fresh();
+    s = leksodromiaReducer(s, { type: "USE_HINT" });
+    s = solveCurrent(s);
+    expect(s.hintsUsed).toBe(0);
+    expect(s.lockedTileIdxs).toEqual([]);
+  });
+});
+
+describe("SKIP_WORD", () => {
+  it("records the word as skipped for 0 points and advances", () => {
+    let s = fresh();
+    s = leksodromiaReducer(s, { type: "SKIP_WORD", elapsedMs: 30_000 });
+    expect(s.wordIndex).toBe(1);
+    expect(s.results[0]).toEqual({
+      word: "αυγο",
+      status: "skipped",
+      elapsedMs: 30_000,
+      hintsUsed: 0,
+      points: 0,
+    });
+  });
+});
+
+describe("round end", () => {
+  it("resolving the 10th word finishes the round; terminal state ignores further actions", () => {
+    let s = fresh();
+    for (let i = 0; i < WORDS.length; i++) {
+      s = leksodromiaReducer(s, { type: "SKIP_WORD", elapsedMs: 1_000 });
+    }
+    expect(s.status).toBe("finished");
+    expect(s.results).toHaveLength(10);
+    expect(leksodromiaReducer(s, { type: "ADD_LETTER", letter: "α" })).toBe(s);
+    expect(leksodromiaReducer(s, { type: "SKIP_WORD", elapsedMs: 0 })).toBe(s);
+    expect(leksodromiaReducer(s, { type: "USE_HINT" })).toBe(s);
+  });
+
+  it("getTotalScore sums solved points across mixed solves and skips", () => {
+    let s = fresh();
+    s = solveCurrent(s, 0);                                        // 60
+    s = leksodromiaReducer(s, { type: "SKIP_WORD", elapsedMs: 0 }); // 0
+    s = solveCurrent(s, 45_000);                                   // floor: 20
+    expect(getTotalScore(s)).toBe(
+      computeWordPoints(0, 4, 0) + computeWordPoints(45_000, 5, 0),
+    );
+  });
+});
+
+describe("RESTORE_STATE", () => {
+  it("restores word index, results, and re-locks the hinted prefix", () => {
+    const results = [
+      { word: "αυγο", status: "solved" as const, elapsedMs: 5_000, hintsUsed: 0, points: 55 },
+    ];
+    let s = fresh();
+    s = leksodromiaReducer(s, { type: "RESTORE_STATE", wordIndex: 1, results, currentHintsUsed: 1 });
+    expect(s.wordIndex).toBe(1);
+    expect(s.results).toEqual(results);
+    expect(s.hintsUsed).toBe(1);
+    expect(getCurrentInput(s)).toBe("β"); // answer "βημα" — first letter re-revealed
+    expect(s.status).toBe("playing");
+  });
+
+  it("restoring a completed round lands in finished state", () => {
+    const results = WORDS.map((word) => ({
+      word, status: "skipped" as const, elapsedMs: 0, hintsUsed: 0, points: 0,
+    }));
+    let s = fresh();
+    s = leksodromiaReducer(s, { type: "RESTORE_STATE", wordIndex: 10, results, currentHintsUsed: 0 });
+    expect(s.status).toBe("finished");
+  });
+});
