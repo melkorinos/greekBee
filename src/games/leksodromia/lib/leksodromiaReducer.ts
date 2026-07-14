@@ -20,6 +20,7 @@ export type LeksodromiaAction =
   | { type: "PICK_TILE";     tileIndex: number }
   | { type: "ADD_LETTER";    letter: string }
   | { type: "REMOVE_LETTER" }
+  | { type: "CLEAR_INPUT" }
   | { type: "SUBMIT_WORD";   elapsedMs: number }
   | { type: "USE_HINT" }
   | { type: "SKIP_WORD";     elapsedMs: number }
@@ -111,11 +112,19 @@ export function leksodromiaReducer(state: LeksodromiaState, action: LeksodromiaA
       return { ...state, picked: state.picked.slice(0, -1), wrongSubmit: false };
     }
 
+    case "CLEAR_INPUT": {
+      // Drop every free pick; the hint-locked prefix stays put.
+      if (state.picked.length === 0 && !state.wrongSubmit) return state;
+      return { ...state, picked: [], wrongSubmit: false };
+    }
+
     case "SUBMIT_WORD": {
       const answer = currentWord(state);
       const input = getCurrentInput(state);
       if (input.length < answer.length) return state;
-      if (input !== answer) return { ...state, wrongSubmit: true };
+      // Wrong word: flag the shake and wipe the free picks so the player can
+      // rebuild instantly (the auto-submit UX). The hint prefix survives.
+      if (input !== answer) return { ...state, wrongSubmit: true, picked: [] };
       return advance(state, {
         word:      answer,
         status:    "solved",

@@ -52,6 +52,14 @@ export const GAME_REGISTRY = {
     href:        "/leksodromia",
     wip:         true,
   },
+  leksoplegma: {
+    label:       "🕸️ Λεξόπλεγμα",
+    emoji:       "🕸️",
+    title:       "Λεξόπλεγμα",
+    description: "Βρες τις κρυμμένες λέξεις πάνω στις γραμμές του πλέγματος.",
+    href:        "/leksoplegma",
+    wip:         true,
+  },
   leksikastirio: {
     label:       "⚖️ Leksikastirio",
     emoji:       "⚖️",

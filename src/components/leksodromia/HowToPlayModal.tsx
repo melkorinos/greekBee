@@ -14,7 +14,6 @@ interface Props {
 const MIN_BASE = LEKSODROMIA.BASE_POINTS[4];
 const MAX_BASE = LEKSODROMIA.BASE_POINTS[8];
 const FLOOR_PERCENT = Math.round(LEKSODROMIA.FLOOR_RATIO * 100);
-const HINT_PERCENT  = Math.round(LEKSODROMIA.HINT_COST_RATIO * 100);
 const TOTAL_WORDS   = LEKSODROMIA.LENGTHS.length * LEKSODROMIA.WORDS_PER_LENGTH;
 
 export function HowToPlayModal({ isOpen, onClose }: Props) {
@@ -43,11 +42,11 @@ export function HowToPlayModal({ isOpen, onClose }: Props) {
         </div>
 
         <div className="space-y-1">
-          <p className="font-semibold">💡 Υποδείξεις</p>
+          <p className="font-semibold">✅ Συμπλήρωσε όλα τα γράμματα</p>
           <p className="text-xs text-muted leading-relaxed">
-            Κάθε υπόδειξη αποκαλύπτει το επόμενο γράμμα και κοστίζει {HINT_PERCENT}% των
-            αρχικών πόντων της λέξης. Μέχρι {LEKSODROMIA.MAX_HINTS_PER_WORD} ανά λέξη.
-            Μια λυμένη λέξη δίνει πάντα τουλάχιστον {LEKSODROMIA.MIN_SOLVED_POINTS} πόντους.
+            Μόλις γεμίσουν όλα τα κουτάκια, η λέξη υποβάλλεται αυτόματα. Λάθος λέξη;
+            Τα γράμματα καθαρίζονται για να ξαναπροσπαθήσεις αμέσως. Μια λυμένη λέξη
+            δίνει πάντα τουλάχιστον {LEKSODROMIA.MIN_SOLVED_POINTS} πόντους.
           </p>
         </div>
 

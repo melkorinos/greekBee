@@ -106,6 +106,29 @@ describe("PICK_TILE / ADD_LETTER / REMOVE_LETTER", () => {
   });
 });
 
+describe("CLEAR_INPUT", () => {
+  it("drops every free pick in one action", () => {
+    let s = fresh();
+    for (const letter of "αυγ") s = leksodromiaReducer(s, { type: "ADD_LETTER", letter });
+    s = leksodromiaReducer(s, { type: "CLEAR_INPUT" });
+    expect(getCurrentInput(s)).toBe("");
+    expect(s.picked).toEqual([]);
+  });
+
+  it("keeps the hint-locked prefix, clearing only the free picks", () => {
+    let s = fresh(); // answer "αυγο", scramble "γοαυ"
+    s = leksodromiaReducer(s, { type: "USE_HINT" });          // lock "α"
+    s = leksodromiaReducer(s, { type: "ADD_LETTER", letter: "υ" });
+    s = leksodromiaReducer(s, { type: "CLEAR_INPUT" });
+    expect(getCurrentInput(s)).toBe("α");
+  });
+
+  it("clears the shake flag and is a no-op on empty untouched input", () => {
+    const s = fresh();
+    expect(leksodromiaReducer(s, { type: "CLEAR_INPUT" })).toBe(s);
+  });
+});
+
 describe("SUBMIT_WORD", () => {
   it("correct submit records a solved result with decay-scored points and advances", () => {
     const s = solveCurrent(fresh(), 10_000);
@@ -122,21 +145,31 @@ describe("SUBMIT_WORD", () => {
     ]);
   });
 
-  it("wrong submit sets the shake flag, keeps the input, records nothing", () => {
+  it("wrong submit sets the shake flag, clears the free picks, records nothing", () => {
     let s = fresh();
     for (const letter of "γοαυ") s = leksodromiaReducer(s, { type: "ADD_LETTER", letter });
     s = leksodromiaReducer(s, { type: "SUBMIT_WORD", elapsedMs: 5_000 });
     expect(s.wrongSubmit).toBe(true);
-    expect(getCurrentInput(s)).toBe("γοαυ");
+    expect(getCurrentInput(s)).toBe(""); // auto-cleared for an instant retry
+    expect(s.picked).toEqual([]);
     expect(s.results).toEqual([]);
     expect(s.wordIndex).toBe(0);
+  });
+
+  it("a wrong submit keeps the hint-locked prefix, clearing only the free picks", () => {
+    let s = fresh(); // answer "αυγο", scramble "γοαυ"
+    s = leksodromiaReducer(s, { type: "USE_HINT" });               // lock "α"
+    for (const letter of "υογ") s = leksodromiaReducer(s, { type: "ADD_LETTER", letter });
+    s = leksodromiaReducer(s, { type: "SUBMIT_WORD", elapsedMs: 5_000 });
+    expect(s.wrongSubmit).toBe(true);
+    expect(getCurrentInput(s)).toBe("α"); // locked prefix survives
   });
 
   it("the shake flag clears on the next input action", () => {
     let s = fresh();
     for (const letter of "γοαυ") s = leksodromiaReducer(s, { type: "ADD_LETTER", letter });
     s = leksodromiaReducer(s, { type: "SUBMIT_WORD", elapsedMs: 5_000 });
-    s = leksodromiaReducer(s, { type: "REMOVE_LETTER" });
+    s = leksodromiaReducer(s, { type: "ADD_LETTER", letter: "α" });
     expect(s.wrongSubmit).toBe(false);
   });
 

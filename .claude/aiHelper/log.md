@@ -5,6 +5,19 @@
 
 ---
 
+## Session 75 — 2026-07-14: Λεξόπλεγμα — new game built (`/tdd`) ✅
+Implemented `HANDOFF-leksoplegma-game.md` end-to-end (handoff deleted); zanagrams-style word-web, **no timer — points only**. 7 red→green slices:
+1. **Pure lib** (`src/games/leksoplegma/lib/`): `graph.ts` (undirected `edgeKey`/`edgesOf`, collapse rule as derived state `liveTiles/liveEdges(paths, foundRequired)`, `isTraceValid` — grid-agnostic, adjacency is a generator concern); `scoring.ts` (`computeScore` = Σ len×10 + 25/bonus − 25/hint, floor 0; `isPerfectRound` = 0 hints). `LEKSOPLEGMA` block added to `gameRules.ts`.
+2. **Reducer** — single `TRACE_WORD` seam for both control schemes (drag + tap): validates trace vs live edges, routes required/bonus/miss-dup(shake); `USE_HINT` auto-targets first unfound un-hinted word (per-word cap 1, reveals start tile + length via `getActiveHints`); `RESTORE_STATE` filters to puzzle words. Collapsed-bonus = deliberate "grab before finishing" tension (regression-locked).
+3. **Generator core in game lib** (`lib/generator.ts`, offline-only, dict/pools injected — deviation from handoff's `.mjs`: TS core imports config, thin `tsx` CLI `scripts/generate-leksoplegma.ts`, `npm run generate-leksoplegma`): randomized DFS placement w/ free-tile wildcards, full coverage + no-crossing-diagonals + long-anchor constraints, board re-rolls, prefix-pruned bonus enumeration vs words-el (**BONUS_MIN_LENGTH 3**, initiative), `validatePuzzle` gate. Committed batch: **200 puzzles, 193 KB**, avg base ≈454, bonus 14–115/puzzle. Deterministic per seed.
+4. **Loader** (`src/data/leksoplegma/`): `dateToIndex` rotation + guard `containsSameDayLeksiarxeioAnswer` (advance index while any REQUIRED word == a same-day Leksiarxeio fallback answer, any length; bonus words excluded — they don't get revealed). 365-date leak test. answers-{4..8} imported directly (not via @/data/leksiarxeio — Fluid CPU).
+5. **Hook** `useLeksoplegmaRound` — reducer + `useRoundPersistence` `{puzzleId, foundRequired, foundBonus, hintsUsed, status}`; no clock anywhere.
+6. **Components** (`src/components/leksoplegma/`): Grid (SVG live-edge lines under 4×4 tiles, token strokes `stroke-[color:var(--color-border)]`/game-accent — no allowlist change needed; drag via elementFromPoint + tap-to-build feeding one trace), Board (trace state + word chip, hint chips, bonus counter, found list, recap, **score posts once on LIVE finish, is_perfect = 0 hints**), HowToPlay/Recap/LeaderboardModal (desc sort), PageClient.
+7. **Wiring** — route `force-dynamic` + `data-game`; registry `wip: true` (🕸️); picker rules; `--game-accent` teal-600; `SliceId`+envelope+`useScoreSubmission` unions; deploymentReadiness += leksoplegma/puzzles-el.json. JSON cast note: heterogeneous `paths` keys need `as unknown as LeksoplegmaPuzzle[]`.
+8. Gates: **1560 pass / 6 skip · eslint 0 · build 0** (was 1487). Dev-server smoke: /leksoplegma 200, 16 tiles SSR. Remaining before `wip: false`: polish pass + **manual browser play-through (drag-trace feel is untested by design — first pointer-drag game)**.
+
+---
+
 ## Session 74 — 2026-07-13: Λεξοδρομία — new game built (`/tdd`) ✅
 Implemented `HANDOFF-namepending-game.md` end-to-end (handoff deleted). **Name chosen by user: Λεξοδρομία, permanent id `leksodromia`** (dirs/route/slice/`LEKSODROMIA` config block). 7 red→green slices:
 1. **Pure lib** (`src/games/leksodromia/lib/`): `computeWordPoints` (decay-to-floor, hint −30% BASE, MIN_SOLVED_POINTS clamp, perfect round === MAX_SCORE 1000); `selectDailyWords(date, pools)` (pools injected — the loader binds them; seeded mulberry32/FNV-1a in `seededRandom.ts`; **never picks Leksiarxeio's same-day fallback answer** — fixture-pool + 365-real-date tests); `scrambleWord` (seeded Fisher-Yates, multiset-true, never identity, rotate-by-1 fallback).
@@ -17,18 +30,11 @@ Implemented `HANDOFF-namepending-game.md` end-to-end (handoff deleted). **Name c
 
 ---
 
-## Session 73 — 2026-07-13: Leksoplegma design grill → handoff (zero code) ✅
-Grilled a zanagrams.com-inspired word-web game; handoff ready for `/tdd`: `.claude/handoffs/HANDOFF-leksoplegma-game.md`. Reverse-engineered the original from its own source (site 403s bots; curl+browser-UA got `i18n.js` + real puzzle JSONs — 16-tile graph, authored `paths` per required word, bonus words, collapse rule). **Name FINAL: leksoplegma** (grilled — dirs/routes never rename).
-1. **Grill decisions (user):** offline generator script → committed `puzzles-el.json` batch + `dateToIndex` rotation; **no timer — Leksokipos-style points** (length×10 required, flat 25 bonus, hint −25, is_perfect = 0 hints); single daily ~9 words.
-2. **Initiative decisions logged in handoff:** collapse = drop tiles/edges unneeded by remaining required words; bonus words precomputed offline vs words-el (never shipped); end = last required word; drag+tap both feed pure `TRACE_WORD`; generator constraints (full tile coverage, no crossing diagonals); Leksiarxeio same-day answer guard at loader; no definitions MVP; `wip: true`.
-3. Note: Leksodromia (session 72's game) is mid-build in the working tree — Leksoplegma is a **second, separate** new game.
-
----
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 73 | 2026-07-13 | **Leksoplegma design grill → handoff** (built in session 75): reverse-engineered zanagrams.com from source (16-tile graph, authored paths, bonus words, collapse rule); decisions: offline generator batch + rotation, no timer/points-only, ~9 required words, name FINAL leksoplegma. |
 | 72 | 2026-07-13 | **Anagram-sprint design grill → handoff** (became Λεξοδρομία, built in session 74): decay-to-floor scoring, 2× lengths 4–8 from Leksiarxeio answer pools, exact-match MVP, refresh-proof clock, leaderboard at launch (`game_scores.game_id` unconstrained — no migration). Name-first blocker recorded. |
 | 71 | 2026-07-10 | **Prerender daily combos** (Fluid #2): `getPrebuiltPuzzleParams` (slim index, canonical-param contract) + `generateStaticParams` on `[center]/[outer]` → route `ƒ`→`●`, 1008 pages SSG, custom combos keep ISR 604800. Deleted done+superseded fluid handoffs (**payload item 1 + consume-per-view bug 2 still unimplemented**; verdicts in `fluid-cpu/analysis.md`). New `fluid-cpu/HANDOFF-post-deploy-readout.md` (~1 wk post-merge; fill merge commit at merge). **Manual browser play-through required before dev→main merge.** 1413 pass. |
 | 70 | 2026-07-08 | Fluid CPU read-out (gauge ≈10 min/day, `[center]/[outer]` 1.4 s/inv dominant) + **lazy-load words-el**: `buildCustomPuzzle` async `await import()` on cache-miss only, static import removed, Fluid CPU source-guard in `deploymentReadiness.test.ts`; words-el its own 19.9 MB async chunk. Prerender lever handed off. 1407 pass. |

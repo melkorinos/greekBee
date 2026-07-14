@@ -103,29 +103,30 @@ describe("LeksodromiaBoard", () => {
     }
   });
 
-  it("tile clicks fill the answer row and a correct submit advances", async () => {
+  it("filling the last slot auto-submits a correct word and advances", async () => {
     const user = userEvent.setup();
     renderBoard();
-    await pickWord(user, WORDS[0]); // "αυγο"
-    await user.click(screen.getByRole("button", { name: /υποβολή/i }));
+    await pickWord(user, WORDS[0]); // "αυγο" — auto-submits on the 4th tile
     expect(screen.getByText(/λέξη 2\/10/i)).toBeDefined();
   });
 
-  it("a wrong submit shows an error and does not advance", async () => {
+  it("a wrong word auto-submits, shows an error, clears the input, and stays put", async () => {
     const user = userEvent.setup();
     renderBoard();
-    await pickWord(user, "γοαυ"); // valid tiles, wrong order
-    await user.click(screen.getByRole("button", { name: /υποβολή/i }));
+    await pickWord(user, "γοαυ"); // valid tiles, wrong order — auto-submits
     expect(screen.getByText(/λέξη 1\/10/i)).toBeDefined();
     expect(screen.getByText(/λάθος/i)).toBeDefined();
+    expect(screen.getByTestId("answer-row").textContent).toBe(""); // cleared
   });
 
-  it("the hint button reveals the first answer letter into the answer row", async () => {
+  it("the clear button empties the answer row without submitting", async () => {
     const user = userEvent.setup();
     renderBoard();
-    await user.click(screen.getByRole("button", { name: /υπόδειξη/i }));
-    const row = screen.getByTestId("answer-row");
-    expect(row.textContent).toContain("α"); // first letter of "αυγο"
+    await pickWord(user, "γοα"); // 3 of 4 tiles — no auto-submit yet
+    expect(screen.getByTestId("answer-row").textContent).not.toBe("");
+    await user.click(screen.getByRole("button", { name: /καθαρισμός/i }));
+    expect(screen.getByTestId("answer-row").textContent).toBe("");
+    expect(screen.getByText(/λέξη 1\/10/i)).toBeDefined();
   });
 
   it("skip is two-phase: the first click only arms the confirmation", async () => {
@@ -150,8 +151,7 @@ describe("LeksodromiaBoard", () => {
   it("posts the final score exactly once when the round ends live", async () => {
     const user = userEvent.setup();
     renderBoard();
-    await pickWord(user, WORDS[0]);
-    await user.click(screen.getByRole("button", { name: /υποβολή/i }));
+    await pickWord(user, WORDS[0]); // auto-submits on the last tile
     for (let i = 1; i < WORDS.length; i++) await skipCurrentWord(user);
 
     expect(postScore).toHaveBeenCalledTimes(1);

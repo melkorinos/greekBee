@@ -17,7 +17,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
-import { LEKSODROMIA } from "@/config/gameRules";
 import type { LeksodromiaLength } from "@/games/leksodromia/types";
 import {
   getCurrentInput,
@@ -92,21 +91,39 @@ export function LeksodromiaBoard({
 
   // ── Input handlers ──────────────────────────────────────────────────────────
 
+  // Auto-submit fires the moment a pick fills the last slot. Both dispatches are
+  // queued in one handler, so the reducer applies the pick first and SUBMIT_WORD
+  // then sees the completed row (a wrong word clears itself). A mis-predicted
+  // call is harmless — SUBMIT_WORD no-ops on an incomplete row.
+  const willCompleteRow = useCallback(() => {
+    const answer = state.words[state.wordIndex] ?? "";
+    return answer.length > 0 && getCurrentInput(state).length + 1 === answer.length;
+  }, [state]);
+
   const pickTile = useCallback((tileIndex: number) => {
     userActedRef.current = true;
     setSkipArmed(false);
+    const autoSubmit = willCompleteRow();
     dispatch({ type: "PICK_TILE", tileIndex });
-  }, [dispatch]);
+    if (autoSubmit) submitWord();
+  }, [dispatch, willCompleteRow, submitWord]);
 
   const addLetter = useCallback((letter: string) => {
     userActedRef.current = true;
     setSkipArmed(false);
+    const autoSubmit = willCompleteRow();
     dispatch({ type: "ADD_LETTER", letter: normalizeLetters(letter) });
-  }, [dispatch]);
+    if (autoSubmit) submitWord();
+  }, [dispatch, willCompleteRow, submitWord]);
 
   const removeLetter = useCallback(() => {
     setSkipArmed(false);
     dispatch({ type: "REMOVE_LETTER" });
+  }, [dispatch]);
+
+  const clearInput = useCallback(() => {
+    setSkipArmed(false);
+    dispatch({ type: "CLEAR_INPUT" });
   }, [dispatch]);
 
   const submit = useCallback(() => {
@@ -114,12 +131,6 @@ export function LeksodromiaBoard({
     setSkipArmed(false);
     submitWord();
   }, [submitWord]);
-
-  const useHint = useCallback(() => {
-    userActedRef.current = true;
-    setSkipArmed(false);
-    dispatch({ type: "USE_HINT" });
-  }, [dispatch]);
 
   const confirmSkip = useCallback(() => {
     userActedRef.current = true;
@@ -153,7 +164,6 @@ export function LeksodromiaBoard({
   const input       = getCurrentInput(state);
   const length      = (answer.length || 4) as LeksodromiaLength;
   const livePoints  = computeWordPoints(elapsedMs, length, state.hintsUsed);
-  const hintCost    = Math.round(LEKSODROMIA.HINT_COST_RATIO * LEKSODROMIA.BASE_POINTS[length]);
   const usedTiles   = new Set([...state.lockedTileIdxs, ...state.picked]);
 
   if (state.status === "finished") {
@@ -206,7 +216,7 @@ export function LeksodromiaBoard({
         />
       </div>
 
-      {/* Answer row */}
+      {/* Answer row — dashed empty slots read as targets; filled slots go solid */}
       <div data-testid="answer-row" className="flex gap-1.5">
         {[...answer].map((_, i) => {
           const letter = input[i] ?? "";
@@ -215,7 +225,7 @@ export function LeksodromiaBoard({
             ? "bg-game-accent/20 border-game-accent"
             : letter
               ? "bg-surface-raised border-border"
-              : "bg-transparent border-border";
+              : "bg-transparent border-border border-dashed";
           return (
             <div
               key={i}
@@ -227,8 +237,8 @@ export function LeksodromiaBoard({
         })}
       </div>
 
-      {/* Scrambled rack */}
-      <div className="flex gap-1.5 flex-wrap justify-center">
+      {/* Scrambled rack — circular pressable tiles, set well apart from the row */}
+      <div className="flex gap-2 flex-wrap justify-center mt-4">
         {[...scramble].map((letter, i) => {
           const used = usedTiles.has(i);
           return (
@@ -237,7 +247,7 @@ export function LeksodromiaBoard({
               onClick={() => pickTile(i)}
               disabled={used}
               aria-label={`Γράμμα ${letter}`}
-              className={`flex items-center justify-center w-10 h-10 rounded-lg border border-border bg-surface-raised text-lg font-bold uppercase text-foreground hover:bg-border active:scale-95 transition-all ${used ? "opacity-0 pointer-events-none" : ""}`}
+              className={`flex items-center justify-center w-11 h-11 rounded-full border border-border bg-surface-raised text-lg font-bold uppercase text-foreground hover:bg-border active:scale-95 transition-all ${used ? "opacity-0 pointer-events-none" : ""}`}
             >
               {letter}
             </button>
@@ -255,12 +265,11 @@ export function LeksodromiaBoard({
           ⌫
         </button>
         <button
-          onClick={useHint}
-          disabled={state.hintsUsed >= LEKSODROMIA.MAX_HINTS_PER_WORD}
-          aria-label="Υπόδειξη"
-          className="px-4 py-2 rounded-full border border-border text-foreground text-sm font-medium hover:bg-surface-raised active:bg-border transition-colors disabled:opacity-40"
+          onClick={clearInput}
+          aria-label="Καθαρισμός"
+          className="px-4 py-2 rounded-full border border-border text-foreground text-sm font-medium hover:bg-surface-raised active:bg-border transition-colors"
         >
-          💡 Υπόδειξη −{hintCost}
+          🧹 Καθαρισμός
         </button>
         {skipArmed ? (
           <button
@@ -279,14 +288,6 @@ export function LeksodromiaBoard({
             ⏭️ Παράλειψη
           </button>
         )}
-        <button
-          onClick={submit}
-          disabled={input.length < answer.length}
-          aria-label="Υποβολή"
-          className="px-8 py-2 rounded-full bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-40 transition-opacity"
-        >
-          Υποβολή
-        </button>
       </div>
 
       <LeksodromiaLeaderboardModal

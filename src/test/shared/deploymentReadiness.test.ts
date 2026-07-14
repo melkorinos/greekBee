@@ -70,7 +70,8 @@ const STATICALLY_IMPORTED_DATA_FILES = [
   "src/data/leksiarxeio/words-7.json",
   "src/data/leksiarxeio/words-8.json",
   // Leksiarxeio curated answer pools — also statically imported by the
-  // Leksodromia data loader (read-only reuse, direct JSON imports)
+  // Leksodromia data loader (read-only reuse, direct JSON imports) and by the
+  // Leksoplegma data loader (same-day answer-leak guard)
   "src/data/leksiarxeio/answers-4.json",
   "src/data/leksiarxeio/answers-5.json",
   "src/data/leksiarxeio/answers-6.json",
@@ -78,6 +79,8 @@ const STATICALLY_IMPORTED_DATA_FILES = [
   "src/data/leksiarxeio/answers-8.json",
   // Leksindeseis
   "src/data/leksindeseis/puzzles-connections.json",
+  // Leksoplegma — committed generator batch (bonus words precomputed offline)
+  "src/data/leksoplegma/puzzles-el.json",
   // Leksokipos — pre-built puzzles
   "src/data/leksokipos/puzzles-el.json",
   // Full word list — statically imported by /api/validate-words; buildCustomPuzzle

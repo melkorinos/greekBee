@@ -156,13 +156,24 @@ describe("USE_HINT", () => {
 
 describe("score", () => {
   it("derives the round score from found words and hints via computeScore", () => {
+    // Bonus must be grabbed BEFORE αβγ is found — finding it collapses edge 1-2.
     const s = dispatch(
       makeState(),
       { type: "USE_HINT" },
-      { type: "TRACE_WORD", trace: [0, 1, 2] },
       { type: "TRACE_WORD", trace: [1, 2] },
+      { type: "TRACE_WORD", trace: [0, 1, 2] },
     );
     expect(getRoundScore(s)).toBe(computeScore(["αβγ"], ["βγ"], ["αβγ"]));
+  });
+
+  it("a collapsed-away bonus word can no longer be traced — deliberate strategic tension", () => {
+    const s = dispatch(
+      makeState(),
+      { type: "TRACE_WORD", trace: [0, 1, 2] }, // finding αβγ kills edge 1-2
+      { type: "TRACE_WORD", trace: [1, 2] },
+    );
+    expect(s.foundBonus).toEqual([]);
+    expect(s.wrongTrace).toBe(true);
   });
 });
 
