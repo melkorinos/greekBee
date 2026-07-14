@@ -13,6 +13,7 @@ import { PLATFORM_NAME } from "@/config/platform";
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
 import { HomeTrophyButton } from "@/components/shared/HomeTrophyButton";
 import { SubmitPuzzleButton } from "@/components/shared/SubmitPuzzleButton";
+import { btnHeaderIcon, btnHeaderIconSize } from "@/styles/recipes";
 import Link from "next/link";
 
 function StavroleksoMakerButton() {
@@ -21,7 +22,7 @@ function StavroleksoMakerButton() {
       href="/stavrolekso/maker"
       aria-label="Δημιούργησε σταυρόλεξο"
       title="Δημιούργησε σταυρόλεξο"
-      className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-raised transition-colors text-base leading-none"
+      className={`${btnHeaderIconSize} ${btnHeaderIcon} text-base`}
     >
       ✏️
     </Link>
@@ -89,18 +90,18 @@ const GAME_RULES = {
     ],
   },
   leksodromia: {
-    rulesTitle: "Πώς να παίξεις — Λεξοδρομία",
+    rulesTitle: "Πώς να παίξεις — Leksodromia",
     bulletIcon: "🏁",
     rules: [
       "Ξεμπέρδεψε **10 ανακατεμένες λέξεις** — 2 από κάθε μήκος, 4 έως 8 γράμματα.",
       "Δεν υπάρχει χρονόμετρο αποτυχίας: όσο πιο **γρήγορα** λύσεις, τόσο περισσότερους πόντους παίρνεις.",
       "Κάθε **υπόδειξη** αποκαλύπτει ένα γράμμα αλλά κοστίζει πόντους.",
-      "Αν κολλήσεις, πάτα **Επόμενο** — η λέξη μετράει 0 πόντους και προχωράς.",
+      "Αν κολλήσεις, πάτα **Επόμενο** — η λέξη επιστρέφει στο **τέλος του γύρου** για δεύτερη ευκαιρία (το ρολόι της συνεχίζει).",
       "Ίδιο παζλ για όλους κάθε μέρα — μπες στον πίνακα σκορ!",
     ],
   },
   leksoplegma: {
-    rulesTitle: "Πώς να παίξεις — Λεξόπλεγμα",
+    rulesTitle: "Πώς να παίξεις — Leksoplegma",
     bulletIcon: "🕸️",
     rules: [
       "Βρες τις **9 κρυμμένες λέξεις** σύροντας πάνω στα γράμματα — μόνο κατά μήκος των γραμμών.",
@@ -141,7 +142,9 @@ function submitButtonFor(id: (typeof GAMES)[number]["id"]): React.ReactNode {
     return <><SubmitPuzzleButton game={id} /><HomeTrophyButton gameId={id} /></>;
   }
   if (id === "stavrolekso") return <StavroleksoMakerButton />;
-  if (id === "leksokipos")  return <HomeTrophyButton gameId={id} />;
+  if (id === "leksokipos" || id === "leksodromia" || id === "leksoplegma") {
+    return <HomeTrophyButton gameId={id} />;
+  }
   return undefined;
 }
 

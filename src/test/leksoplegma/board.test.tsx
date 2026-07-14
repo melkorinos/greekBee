@@ -167,7 +167,17 @@ describe("LeksoplegmaBoard", () => {
     expect(screen.queryByText(/δεν υπάρχει/i)).toBeNull();
   });
 
-  it("finishing shows the recap with every required word and posts the score once", async () => {
+  it("posts a partial score as soon as a word is found — no finish required", async () => {
+    const user = userEvent.setup();
+    renderBoard();
+    await tapWord(user, "αβγ");
+    expect(postScore).toHaveBeenCalledTimes(1);
+    const [, body] = vi.mocked(postScore).mock.calls[0];
+    expect(body).toMatchObject({ game_id: "leksoplegma", puzzle_date: TODAY, score: 30 });
+    expect(body).not.toHaveProperty("is_perfect"); // perfect only latches at finish
+  });
+
+  it("finishing shows the recap and posts continuously, ending on the final score", async () => {
     const user = userEvent.setup();
     renderBoard();
     await tapWord(user, "αβγ");
@@ -178,8 +188,8 @@ describe("LeksoplegmaBoard", () => {
     for (const word of Object.keys(PUZZLE.paths)) {
       expect(recap.textContent).toContain(word);
     }
-    expect(postScore).toHaveBeenCalledTimes(1);
-    const [, body] = vi.mocked(postScore).mock.calls[0];
+    expect(postScore).toHaveBeenCalledTimes(3); // one per found word, strictly increasing
+    const [, body] = vi.mocked(postScore).mock.calls.at(-1)!;
     expect(body).toMatchObject({
       game_id:     "leksoplegma",
       puzzle_date: TODAY,
@@ -198,7 +208,7 @@ describe("LeksoplegmaBoard", () => {
     await tapWord(user, "εζ");
 
     expect(screen.getByTestId("recap-bonus").textContent).toContain("βγδ");
-    const [, body] = vi.mocked(postScore).mock.calls[0];
+    const [, body] = vi.mocked(postScore).mock.calls.at(-1)!;
     expect(body).toMatchObject({ score: 105 }); // 80 required + 25 extra
   });
 
@@ -243,7 +253,7 @@ describe("LeksoplegmaBoard", () => {
 describe("LeksoplegmaPageClient", () => {
   it("renders the title, leaderboard trigger, and rules trigger", () => {
     render(<LeksoplegmaPageClient puzzle={PUZZLE} today={TODAY} />);
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Λεξόπλεγμα");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Leksoplegma");
     expect(screen.getByRole("button", { name: /πίνακας σκορ/i })).toBeDefined();
     expect(screen.getByRole("button", { name: /πώς να παίξεις/i })).toBeDefined();
   });

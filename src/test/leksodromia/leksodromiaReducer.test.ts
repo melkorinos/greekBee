@@ -8,8 +8,12 @@ import { describe, expect, it } from "vitest";
 
 import {
   getAvailableTileIndices,
+  getCurrentAnswer,
   getCurrentInput,
+  getRetryBaseElapsedMs,
   getTotalScore,
+  getTotalSteps,
+  isSecondChance,
   leksodromiaReducer,
   makeInitialLeksodromiaState,
 } from "@/games/leksodromia/lib/leksodromiaReducer";
@@ -39,7 +43,7 @@ function fresh(): LeksodromiaState {
 
 /** Solve the current word by picking its tiles via keyboard letters, then submit. */
 function solveCurrent(state: LeksodromiaState, elapsedMs = 0): LeksodromiaState {
-  const answer = WORDS[state.wordIndex];
+  const answer = getCurrentAnswer(state); // retry-aware (second-chance steps redirect)
   let s = state;
   for (const letter of answer.slice(getCurrentInput(s).length)) {
     s = leksodromiaReducer(s, { type: "ADD_LETTER", letter });
@@ -77,7 +81,7 @@ describe("PICK_TILE / ADD_LETTER / REMOVE_LETTER", () => {
   it("ADD_LETTER (keyboard) picks the first available tile with that letter — duplicates resolve to distinct tiles", () => {
     let s = fresh();
     // Jump to word 5 "γραμμα" (scramble "αμγμρα" — two α, two μ)
-    s = leksodromiaReducer(s, { type: "RESTORE_STATE", wordIndex: 4, results: [], currentHintsUsed: 0 });
+    s = leksodromiaReducer(s, { type: "RESTORE_STATE", wordIndex: 4, results: [], currentHintsUsed: 0, retries: {} });
     s = leksodromiaReducer(s, { type: "ADD_LETTER", letter: "α" });
     s = leksodromiaReducer(s, { type: "ADD_LETTER", letter: "α" });
     s = leksodromiaReducer(s, { type: "ADD_LETTER", letter: "α" });
@@ -226,15 +230,64 @@ describe("USE_HINT", () => {
   });
 });
 
-describe("SKIP_WORD", () => {
-  it("records the word as skipped for 0 points and advances", () => {
+describe("SKIP_WORD — second chance", () => {
+  it("the first skip requeues the word at the end instead of recording a result", () => {
     let s = fresh();
     s = leksodromiaReducer(s, { type: "SKIP_WORD", elapsedMs: 30_000 });
     expect(s.wordIndex).toBe(1);
-    expect(s.results[0]).toEqual({
+    expect(s.results).toEqual([]); // nothing final yet
+    expect(getTotalSteps(s)).toBe(11); // the run grew by one step
+    expect(s.retries[10]).toEqual({ origIndex: 0, baseElapsedMs: 30_000, baseHints: 0 });
+  });
+
+  it("the requeued word comes around as a second chance with its clock base", () => {
+    let s = fresh();
+    s = leksodromiaReducer(s, { type: "SKIP_WORD", elapsedMs: 30_000 }); // skip αυγο
+    for (let i = 1; i < WORDS.length; i++) s = solveCurrent(s);          // solve the rest
+    expect(s.status).toBe("playing"); // the second chance is still pending
+    expect(s.wordIndex).toBe(10);
+    expect(isSecondChance(s)).toBe(true);
+    expect(getCurrentAnswer(s)).toBe("αυγο");
+    expect(getRetryBaseElapsedMs(s)).toBe(30_000);
+  });
+
+  it("solving on the second chance scores with the resumed (cumulative) clock", () => {
+    let s = fresh();
+    s = leksodromiaReducer(s, { type: "SKIP_WORD", elapsedMs: 30_000 });
+    for (let i = 1; i < WORDS.length; i++) s = solveCurrent(s);
+    s = solveCurrent(s, 40_000); // cumulative: 30 s before the skip + 10 s now
+    expect(s.status).toBe("finished");
+    const retryResult = s.results.at(-1)!;
+    expect(retryResult).toEqual({
+      word: "αυγο",
+      status: "solved",
+      elapsedMs: 40_000,
+      hintsUsed: 0,
+      points: computeWordPoints(40_000, 4, 0),
+    });
+  });
+
+  it("hints taken before the skip carry into the second chance", () => {
+    let s = fresh();
+    s = leksodromiaReducer(s, { type: "USE_HINT" }); // lock "α" on αυγο
+    s = leksodromiaReducer(s, { type: "SKIP_WORD", elapsedMs: 5_000 });
+    for (let i = 1; i < WORDS.length; i++) s = solveCurrent(s);
+    expect(isSecondChance(s)).toBe(true);
+    expect(s.hintsUsed).toBe(1); // resumed, not reset
+    expect(getCurrentInput(s)).toBe("α"); // prefix re-locked
+  });
+
+  it("skipping the second chance is final: 0 points into the results", () => {
+    let s = fresh();
+    s = leksodromiaReducer(s, { type: "SKIP_WORD", elapsedMs: 30_000 });
+    for (let i = 1; i < WORDS.length; i++) s = solveCurrent(s);
+    s = leksodromiaReducer(s, { type: "SKIP_WORD", elapsedMs: 35_000 });
+    expect(s.status).toBe("finished");
+    expect(getTotalSteps(s)).toBe(11); // no re-requeue
+    expect(s.results.at(-1)).toEqual({
       word: "αυγο",
       status: "skipped",
-      elapsedMs: 30_000,
+      elapsedMs: 35_000,
       hintsUsed: 0,
       points: 0,
     });
@@ -242,10 +295,17 @@ describe("SKIP_WORD", () => {
 });
 
 describe("round end", () => {
-  it("resolving the 10th word finishes the round; terminal state ignores further actions", () => {
+  it("skipping everything twice finishes the round; terminal state ignores further actions", () => {
     let s = fresh();
+    // First pass: every skip requeues — the round must NOT finish.
     for (let i = 0; i < WORDS.length; i++) {
       s = leksodromiaReducer(s, { type: "SKIP_WORD", elapsedMs: 1_000 });
+    }
+    expect(s.status).toBe("playing");
+    expect(s.results).toHaveLength(0);
+    // Second pass: every skip is final.
+    for (let i = 0; i < WORDS.length; i++) {
+      s = leksodromiaReducer(s, { type: "SKIP_WORD", elapsedMs: 2_000 });
     }
     expect(s.status).toBe("finished");
     expect(s.results).toHaveLength(10);
@@ -271,7 +331,7 @@ describe("RESTORE_STATE", () => {
       { word: "αυγο", status: "solved" as const, elapsedMs: 5_000, hintsUsed: 0, points: 55 },
     ];
     let s = fresh();
-    s = leksodromiaReducer(s, { type: "RESTORE_STATE", wordIndex: 1, results, currentHintsUsed: 1 });
+    s = leksodromiaReducer(s, { type: "RESTORE_STATE", wordIndex: 1, results, currentHintsUsed: 1, retries: {} });
     expect(s.wordIndex).toBe(1);
     expect(s.results).toEqual(results);
     expect(s.hintsUsed).toBe(1);
@@ -284,7 +344,22 @@ describe("RESTORE_STATE", () => {
       word, status: "skipped" as const, elapsedMs: 0, hintsUsed: 0, points: 0,
     }));
     let s = fresh();
-    s = leksodromiaReducer(s, { type: "RESTORE_STATE", wordIndex: 10, results, currentHintsUsed: 0 });
+    s = leksodromiaReducer(s, { type: "RESTORE_STATE", wordIndex: 10, results, currentHintsUsed: 0, retries: {} });
     expect(s.status).toBe("finished");
+  });
+
+  it("restores a pending second chance — retry redirect, playing status", () => {
+    let s = fresh();
+    s = leksodromiaReducer(s, {
+      type: "RESTORE_STATE",
+      wordIndex: 10,
+      results: [],
+      currentHintsUsed: 0,
+      retries: { 10: { origIndex: 0, baseElapsedMs: 30_000, baseHints: 0 } },
+    });
+    expect(s.status).toBe("playing");
+    expect(isSecondChance(s)).toBe(true);
+    expect(getCurrentAnswer(s)).toBe("αυγο");
+    expect(getRetryBaseElapsedMs(s)).toBe(30_000);
   });
 });

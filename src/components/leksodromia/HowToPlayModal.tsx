@@ -51,9 +51,11 @@ export function HowToPlayModal({ isOpen, onClose }: Props) {
         </div>
 
         <div className="space-y-1">
-          <p className="font-semibold">⏭️ Επόμενο</p>
+          <p className="font-semibold">⏭️ Επόμενο — με δεύτερη ευκαιρία</p>
           <p className="text-xs text-muted leading-relaxed">
-            Αν κολλήσεις, μπορείς να προχωρήσεις στην επόμενη λέξη — μετράει 0 πόντους.
+            Αν κολλήσεις, προχώρα — η λέξη επιστρέφει στο τέλος του γύρου για μια
+            δεύτερη ευκαιρία. Το ρολόι της συνεχίζει από εκεί που το άφησες. Αν την
+            παραλείψεις και δεύτερη φορά, μετράει 0 πόντους οριστικά.
           </p>
         </div>
 

@@ -16,6 +16,21 @@ export interface LeksodromiaWordResult {
   points:    number;
 }
 
+/**
+ * Second-chance metadata for a requeued (skipped-once) word, keyed by its
+ * step index past the base words. The decay clock and hint count RESUME from
+ * these bases on the revisit — otherwise skipping would reset the decay
+ * (peek → skip → solve offline → return for near-full points).
+ */
+export interface LeksodromiaRetry {
+  /** Index of the original word in `words`/`scrambles`. */
+  origIndex:     number;
+  /** Accumulated active solve time when the word was skipped. */
+  baseElapsedMs: number;
+  /** Hints already taken on the word when it was skipped. */
+  baseHints:     number;
+}
+
 /** Full reducer state for a Leksodromia round. */
 export interface LeksodromiaState {
   /** The puzzle date (YYYY-MM-DD) — deterministic daily puzzle id. */
@@ -24,7 +39,10 @@ export interface LeksodromiaState {
   words:          string[];
   /** Deterministic scrambled form of each word (parallel to `words`). */
   scrambles:      string[];
+  /** Current step: 0..words.length-1 = first pass; beyond = second-chance steps. */
   wordIndex:      number;
+  /** Second-chance steps (see LeksodromiaRetry), keyed by step index. */
+  retries:        Record<number, LeksodromiaRetry>;
   status:         "playing" | "finished";
   /** Indices into the current scramble picked by the player, in order. */
   picked:         number[];

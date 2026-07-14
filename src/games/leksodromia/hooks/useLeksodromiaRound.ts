@@ -8,8 +8,9 @@
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
-import type { LeksodromiaState, LeksodromiaWordResult } from "../types";
+import type { LeksodromiaRetry, LeksodromiaState, LeksodromiaWordResult } from "../types";
 import {
+  getRetryBaseElapsedMs,
   leksodromiaReducer,
   makeInitialLeksodromiaState,
 } from "../lib/leksodromiaReducer";
@@ -30,6 +31,8 @@ interface RoundSnapshot {
   currentElapsedMs: number;
   currentHintsUsed: number;
   results:          LeksodromiaWordResult[];
+  /** Second-chance steps (requeued skips). Absent in pre-second-chance saves. */
+  retries?:         Record<number, LeksodromiaRetry>;
 }
 
 interface LeksodromiaRound {
@@ -61,7 +64,8 @@ export function useLeksodromiaRound(puzzle: LeksodromiaPuzzle): LeksodromiaRound
 
   // ── Clock reset on word advance ─────────────────────────────────────────────
   // RESTORE_STATE may also change wordIndex; that transition must keep the
-  // persisted elapsed instead of zeroing it, hence the skip flag.
+  // persisted elapsed instead of zeroing it, hence the skip flag. A second-
+  // chance step resumes from the retry's accumulated base, never from zero.
   const prevWordIndexRef  = useRef(state.wordIndex);
   const skipNextResetRef  = useRef(false);
   useEffect(() => {
@@ -71,8 +75,8 @@ export function useLeksodromiaRound(puzzle: LeksodromiaPuzzle): LeksodromiaRound
       skipNextResetRef.current = false;
       return;
     }
-    reset(0);
-  }, [state.wordIndex, reset]);
+    reset(getRetryBaseElapsedMs(state));
+  }, [state, reset]);
 
   // ── Persistence ─────────────────────────────────────────────────────────────
 
@@ -86,6 +90,7 @@ export function useLeksodromiaRound(puzzle: LeksodromiaPuzzle): LeksodromiaRound
       wordIndex:        saved.wordIndex,
       results:          saved.results,
       currentHintsUsed: saved.currentHintsUsed,
+      retries:          saved.retries ?? {},
     });
   }, [reset]);
 
@@ -97,7 +102,8 @@ export function useLeksodromiaRound(puzzle: LeksodromiaPuzzle): LeksodromiaRound
     currentElapsedMs: elapsedSec * 1000,
     currentHintsUsed: state.hintsUsed,
     results:          state.results,
-  }), [state.puzzleId, state.wordIndex, state.hintsUsed, state.results, elapsedSec]);
+    retries:          state.retries,
+  }), [state.puzzleId, state.wordIndex, state.hintsUsed, state.results, state.retries, elapsedSec]);
 
   useRoundPersistence<RoundSnapshot>(
     "leksodromia",

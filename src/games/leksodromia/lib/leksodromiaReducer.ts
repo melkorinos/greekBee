@@ -7,10 +7,15 @@
 // duplicate letters stay unambiguous. Hints lock a growing prefix of correct
 // tiles (lockedTileIdxs) and clear the free picks — the player rebuilds the
 // rest after the revealed prefix.
+//
+// Second chance: the FIRST skip of a word requeues it as a new step at the end
+// of the run (retries), carrying the accumulated clock and hint count so the
+// decay resumes exactly where it left off (no peek-skip-return exploit). A
+// skip on a second-chance step is final: 0 points, recorded in results.
 
 import { LEKSODROMIA } from "@/config/gameRules";
 
-import type { LeksodromiaState, LeksodromiaWordResult } from "../types";
+import type { LeksodromiaRetry, LeksodromiaState, LeksodromiaWordResult } from "../types";
 
 import { computeWordPoints } from "./scoring";
 
@@ -24,18 +29,43 @@ export type LeksodromiaAction =
   | { type: "SUBMIT_WORD";   elapsedMs: number }
   | { type: "USE_HINT" }
   | { type: "SKIP_WORD";     elapsedMs: number }
-  | { type: "RESTORE_STATE"; wordIndex: number; results: LeksodromiaWordResult[]; currentHintsUsed: number };
+  | { type: "RESTORE_STATE"; wordIndex: number; results: LeksodromiaWordResult[]; currentHintsUsed: number; retries: Record<number, LeksodromiaRetry> };
 
 // ─── Selectors ────────────────────────────────────────────────────────────────
 
+/** Total steps in the run: the base words plus one step per requeued skip. */
+export function getTotalSteps(state: LeksodromiaState): number {
+  return state.words.length + Object.keys(state.retries).length;
+}
+
+/** True when the current step is a second chance at a skipped word. */
+export function isSecondChance(state: LeksodromiaState): boolean {
+  return state.retries[state.wordIndex] !== undefined;
+}
+
+/** Index into words/scrambles for the current step (retry steps redirect). */
+function origIndex(state: LeksodromiaState): number {
+  return state.retries[state.wordIndex]?.origIndex ?? state.wordIndex;
+}
+
 /** The current answer word, or "" when the round is finished. */
-function currentWord(state: LeksodromiaState): string {
-  return state.words[state.wordIndex] ?? "";
+export function getCurrentAnswer(state: LeksodromiaState): string {
+  return state.words[origIndex(state)] ?? "";
+}
+
+/** The current scrambled rack, or "" when the round is finished. */
+export function getCurrentScramble(state: LeksodromiaState): string {
+  return state.scrambles[origIndex(state)] ?? "";
+}
+
+/** The decay-clock base for the current step (0 except on second chances). */
+export function getRetryBaseElapsedMs(state: LeksodromiaState): number {
+  return state.retries[state.wordIndex]?.baseElapsedMs ?? 0;
 }
 
 /** Letters currently in the answer row: hint-locked prefix + free picks. */
 export function getCurrentInput(state: LeksodromiaState): string {
-  const scramble = state.scrambles[state.wordIndex] ?? "";
+  const scramble = getCurrentScramble(state);
   return [...state.lockedTileIdxs, ...state.picked]
     .map((i) => scramble[i])
     .join("");
@@ -44,7 +74,7 @@ export function getCurrentInput(state: LeksodromiaState): string {
 /** Rack tiles not yet consumed by a hint or a pick, in scramble order. */
 export function getAvailableTileIndices(state: LeksodromiaState): number[] {
   const used = new Set([...state.lockedTileIdxs, ...state.picked]);
-  const scramble = state.scrambles[state.wordIndex] ?? "";
+  const scramble = getCurrentScramble(state);
   return [...scramble].map((_, i) => i).filter((i) => !used.has(i));
 }
 
@@ -67,18 +97,35 @@ function lockPrefixTiles(scramble: string, answer: string, hintsUsed: number): n
   return locked;
 }
 
-/** Record a result for the current word and advance (or finish the round). */
-function advance(state: LeksodromiaState, result: LeksodromiaWordResult): LeksodromiaState {
-  const results = [...state.results, result];
+/**
+ * Advance to the next step (recording `result` if given, requeue records
+ * none). Entering a second-chance step restores its hint prefix; the clock
+ * hook separately resumes from the retry's baseElapsedMs.
+ */
+function advance(
+  state: LeksodromiaState,
+  result: LeksodromiaWordResult | null,
+  retries: Record<number, LeksodromiaRetry> = state.retries,
+): LeksodromiaState {
+  const results = result ? [...state.results, result] : state.results;
   const wordIndex = state.wordIndex + 1;
+  const totalSteps = state.words.length + Object.keys(retries).length;
+  const retry = retries[wordIndex];
+  const hintsUsed = retry?.baseHints ?? 0;
+  const nextOrig = retry?.origIndex ?? wordIndex;
   return {
     ...state,
     results,
+    retries,
     wordIndex,
-    status: wordIndex >= state.words.length ? "finished" : "playing",
+    status: wordIndex >= totalSteps ? "finished" : "playing",
     picked: [],
-    lockedTileIdxs: [],
-    hintsUsed: 0,
+    lockedTileIdxs: lockPrefixTiles(
+      state.scrambles[nextOrig] ?? "",
+      state.words[nextOrig] ?? "",
+      hintsUsed,
+    ),
+    hintsUsed,
     wrongSubmit: false,
   };
 }
@@ -91,7 +138,7 @@ export function leksodromiaReducer(state: LeksodromiaState, action: LeksodromiaA
   switch (action.type) {
 
     case "PICK_TILE": {
-      const answer = currentWord(state);
+      const answer = getCurrentAnswer(state);
       if (getCurrentInput(state).length >= answer.length) return state;
       const { tileIndex } = action;
       if (state.picked.includes(tileIndex) || state.lockedTileIdxs.includes(tileIndex)) return state;
@@ -100,7 +147,7 @@ export function leksodromiaReducer(state: LeksodromiaState, action: LeksodromiaA
     }
 
     case "ADD_LETTER": {
-      const scramble = state.scrambles[state.wordIndex] ?? "";
+      const scramble = getCurrentScramble(state);
       const tileIndex = getAvailableTileIndices(state)
         .find((i) => scramble[i] === action.letter);
       if (tileIndex === undefined) return state;
@@ -119,7 +166,7 @@ export function leksodromiaReducer(state: LeksodromiaState, action: LeksodromiaA
     }
 
     case "SUBMIT_WORD": {
-      const answer = currentWord(state);
+      const answer = getCurrentAnswer(state);
       const input = getCurrentInput(state);
       if (input.length < answer.length) return state;
       // Wrong word: flag the shake and wipe the free picks so the player can
@@ -140,31 +187,49 @@ export function leksodromiaReducer(state: LeksodromiaState, action: LeksodromiaA
       return {
         ...state,
         hintsUsed,
-        lockedTileIdxs: lockPrefixTiles(state.scrambles[state.wordIndex] ?? "", currentWord(state), hintsUsed),
+        lockedTileIdxs: lockPrefixTiles(getCurrentScramble(state), getCurrentAnswer(state), hintsUsed),
         picked: [], // free picks may conflict with the revealed prefix — reset
         wrongSubmit: false,
       };
     }
 
     case "SKIP_WORD": {
-      return advance(state, {
-        word:      currentWord(state),
-        status:    "skipped",
-        elapsedMs: action.elapsedMs,
-        hintsUsed: state.hintsUsed,
-        points:    0,
+      // Second-chance skip is final: 0 points, into the results for good.
+      if (isSecondChance(state)) {
+        return advance(state, {
+          word:      getCurrentAnswer(state),
+          status:    "skipped",
+          elapsedMs: action.elapsedMs,
+          hintsUsed: state.hintsUsed,
+          points:    0,
+        });
+      }
+      // First skip requeues the word at the end of the run — no result yet.
+      // Clock and hints carry over so the revisit resumes, never restarts.
+      const newStep = getTotalSteps(state);
+      return advance(state, null, {
+        ...state.retries,
+        [newStep]: {
+          origIndex:     state.wordIndex,
+          baseElapsedMs: action.elapsedMs,
+          baseHints:     state.hintsUsed,
+        },
       });
     }
 
     case "RESTORE_STATE": {
-      const wordIndex = Math.min(action.wordIndex, state.words.length);
-      const finished = wordIndex >= state.words.length;
-      const answer = state.words[wordIndex] ?? "";
-      const scramble = state.scrambles[wordIndex] ?? "";
+      const retries = action.retries;
+      const totalSteps = state.words.length + Object.keys(retries).length;
+      const wordIndex = Math.min(action.wordIndex, totalSteps);
+      const finished = wordIndex >= totalSteps;
+      const orig = retries[wordIndex]?.origIndex ?? wordIndex;
+      const answer = state.words[orig] ?? "";
+      const scramble = state.scrambles[orig] ?? "";
       const hintsUsed = finished ? 0 : action.currentHintsUsed;
       return {
         ...state,
         wordIndex,
+        retries,
         results: action.results,
         status: finished ? "finished" : "playing",
         hintsUsed,
@@ -191,6 +256,7 @@ export function makeInitialLeksodromiaState(
     words,
     scrambles,
     wordIndex: 0,
+    retries: {},
     status: "playing",
     picked: [],
     lockedTileIdxs: [],

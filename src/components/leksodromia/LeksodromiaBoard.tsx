@@ -2,7 +2,11 @@
 
 // LeksodromiaBoard — the anagram-sprint play surface.
 // Scrambled tile rack → answer row; live decaying points counter; hint /
-// two-phase skip / submit actions; end-of-round recap + single score post.
+// two-phase skip / submit actions; end-of-round recap.
+// First skip requeues the word for a second chance at the end of the run
+// (clock resumes); a second-chance skip is final (0 pts).
+// Score posts CONTINUOUSLY on every live increase (abandoned rounds still
+// reach the leaderboard; useScoreSubmission dedups). Restored state never posts.
 // All game state lives in useLeksodromiaRound (reducer + clock + persistence).
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -19,8 +23,12 @@ import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import type { LeksodromiaLength } from "@/games/leksodromia/types";
 import {
+  getCurrentAnswer,
   getCurrentInput,
+  getCurrentScramble,
   getTotalScore,
+  getTotalSteps,
+  isSecondChance,
 } from "@/games/leksodromia/lib/leksodromiaReducer";
 import { computeWordPoints } from "@/games/leksodromia/lib/scoring";
 import { useLeksodromiaRound } from "@/games/leksodromia/hooks/useLeksodromiaRound";
@@ -76,15 +84,15 @@ export function LeksodromiaBoard({
   // them, so no wordIndex effect is needed.
   const [skipArmed, setSkipArmed] = useState(false);
 
-  // ── Score post — only when the round finishes LIVE, never on a restored
-  // finished round (the guard: the player must have acted this session).
+  // ── Score post — continuous on live increases; leaderboard opens on finish.
+  // The guard: the player must have acted this session (restores never post).
   const userActedRef = useRef(false);
   const finishedHandledRef = useRef(false);
   useEffect(() => {
+    if (!userActedRef.current) return;
+    postFinalScore(getTotalScore(state)); // dedup: only strictly-increasing scores go out
     if (state.status !== "finished" || finishedHandledRef.current) return;
     finishedHandledRef.current = true;
-    if (!userActedRef.current) return;
-    postFinalScore(getTotalScore(state));
     const t = setTimeout(onOpenLeaderboard, 1500);
     return () => clearTimeout(t);
   }, [state, postFinalScore, onOpenLeaderboard]);
@@ -96,7 +104,7 @@ export function LeksodromiaBoard({
   // then sees the completed row (a wrong word clears itself). A mis-predicted
   // call is harmless — SUBMIT_WORD no-ops on an incomplete row.
   const willCompleteRow = useCallback(() => {
-    const answer = state.words[state.wordIndex] ?? "";
+    const answer = getCurrentAnswer(state);
     return answer.length > 0 && getCurrentInput(state).length + 1 === answer.length;
   }, [state]);
 
@@ -157,11 +165,12 @@ export function LeksodromiaBoard({
 
   // ── Derived view state ──────────────────────────────────────────────────────
 
-  const totalWords  = state.words.length;
-  const totalScore  = getTotalScore(state);
-  const answer      = state.words[state.wordIndex] ?? "";
-  const scramble    = state.scrambles[state.wordIndex] ?? "";
-  const input       = getCurrentInput(state);
+  const totalSteps   = getTotalSteps(state);
+  const totalScore   = getTotalScore(state);
+  const answer       = getCurrentAnswer(state);
+  const scramble     = getCurrentScramble(state);
+  const secondChance = isSecondChance(state);
+  const input        = getCurrentInput(state);
   const length      = (answer.length || 4) as LeksodromiaLength;
   const livePoints  = computeWordPoints(elapsedMs, length, state.hintsUsed);
   const usedTiles   = new Set([...state.lockedTileIdxs, ...state.picked]);
@@ -203,8 +212,13 @@ export function LeksodromiaBoard({
     <div className="flex flex-col items-center gap-4 py-4 w-full max-w-sm">
       {/* Progress + scores */}
       <div className="flex items-center justify-between w-full text-sm text-muted">
-        <span className="font-semibold text-foreground">
-          Λέξη {state.wordIndex + 1}/{totalWords}
+        <span className="font-semibold text-foreground flex items-center gap-1.5">
+          Λέξη {state.wordIndex + 1}/{totalSteps}
+          {secondChance && (
+            <span data-testid="second-chance-badge" className="text-xs font-normal text-muted">
+              🔁 2η ευκαιρία
+            </span>
+          )}
         </span>
         <span className="tabular-nums" aria-label="Πόντοι λέξης">
           ⏱️ <span className="font-mono font-bold text-foreground">{livePoints}</span>
@@ -285,10 +299,12 @@ export function LeksodromiaBoard({
         {skipArmed ? (
           <button
             onClick={confirmSkip}
-            aria-label="Σίγουρα; Επόμενη λέξη για 0 πόντους"
+            aria-label={secondChance
+              ? "Σίγουρα; Οριστική παράλειψη για 0 πόντους"
+              : "Σίγουρα; Η λέξη επιστρέφει στο τέλος του γύρου"}
             className="px-4 py-2 rounded-full bg-danger text-white text-sm font-semibold hover:opacity-90 transition-opacity"
           >
-            Σίγουρα; (0 πόντοι)
+            {secondChance ? "Σίγουρα; (0 πόντοι)" : "Σίγουρα; (ξανά στο τέλος)"}
           </button>
         ) : (
           <button

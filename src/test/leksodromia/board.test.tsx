@@ -1,6 +1,7 @@
 // board.test.tsx — LeksodromiaBoard + LeksodromiaPageClient behavior.
 // Tile rack → answer row interaction, wrong-submit feedback, hint reveal,
-// two-phase skip, end-of-round recap, and the single score post at round end.
+// two-phase skip with second chances (first skip requeues, second is final),
+// end-of-round recap, and continuous score posting (per live increase).
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -139,35 +140,71 @@ describe("LeksodromiaBoard", () => {
     expect(screen.getByText(/λέξη 1\/10/i)).toBeDefined();
   });
 
-  it("skip is two-phase: the first click only arms the confirmation", async () => {
+  it("skip is two-phase and requeues: the word returns at the end of the run", async () => {
     const user = userEvent.setup();
     renderBoard();
     await user.click(screen.getByRole("button", { name: /επόμεν/i }));
     expect(screen.getByText(/λέξη 1\/10/i)).toBeDefined(); // not yet skipped
     await user.click(screen.getByRole("button", { name: /σίγουρα/i }));
-    expect(screen.getByText(/λέξη 2\/10/i)).toBeDefined();
+    expect(screen.getByText(/λέξη 2\/11/i)).toBeDefined(); // the run grew by one step
+  });
+
+  it("a skipped word comes back as a second chance and can then be skipped for good", async () => {
+    // Seed a round where αυγο was skipped first and the other 9 are solved —
+    // the player lands directly on the second chance (click-solving all 9
+    // through userEvent is too slow for the test timeout).
+    localStorage.setItem("wordgames:state", JSON.stringify({
+      leksodromia: {
+        [PUZZLE.date]: {
+          puzzleId: PUZZLE.date,
+          wordIndex: 10,
+          currentElapsedMs: 30_000,
+          currentHintsUsed: 0,
+          results: WORDS.slice(1).map((word) => ({
+            word, status: "solved", elapsedMs: 1_000, hintsUsed: 0, points: 50,
+          })),
+          retries: { 10: { origIndex: 0, baseElapsedMs: 30_000, baseHints: 0 } },
+        },
+      },
+    }));
+    const user = userEvent.setup();
+    renderBoard();
+    // Second chance: αυγο's rack is back, badge shown.
+    expect(screen.getByTestId("second-chance-badge")).toBeDefined();
+    expect(screen.getByText(/λέξη 11\/11/i)).toBeDefined();
+    await skipCurrentWord(user);                                    // final skip
+    expect(screen.getByTestId("round-recap")).toBeDefined();
   });
 
   it("finishing the round shows a recap of all 10 words", async () => {
     const user = userEvent.setup();
     renderBoard();
-    for (let i = 0; i < WORDS.length; i++) await skipCurrentWord(user);
+    // First pass requeues all 10; the second pass of skips is final.
+    for (let i = 0; i < WORDS.length * 2; i++) await skipCurrentWord(user);
     const recap = screen.getByTestId("round-recap");
     for (const word of WORDS) {
       expect(recap.textContent).toContain(word);
     }
   });
 
-  it("posts the final score exactly once when the round ends live", async () => {
+  it("posts the score as soon as it increases — no finish required", async () => {
     const user = userEvent.setup();
     renderBoard();
     await pickWord(user, WORDS[0]); // auto-submits on the last tile
-    for (let i = 1; i < WORDS.length; i++) await skipCurrentWord(user);
-
     expect(postScore).toHaveBeenCalledTimes(1);
     const [, body] = vi.mocked(postScore).mock.calls[0];
     expect(body).toMatchObject({ game_id: "leksodromia", puzzle_date: PUZZLE.date });
     expect((body as { score: number }).score).toBeGreaterThan(0);
+  });
+
+  it("skips never re-post (score unchanged); the round still ends after the second pass", async () => {
+    const user = userEvent.setup();
+    renderBoard();
+    await pickWord(user, WORDS[0]);
+    for (let i = 1; i < WORDS.length; i++) await skipCurrentWord(user); // requeue 9
+    for (let i = 1; i < WORDS.length; i++) await skipCurrentWord(user); // final 9
+    expect(screen.getByTestId("round-recap")).toBeDefined();
+    expect(postScore).toHaveBeenCalledTimes(1); // only the solve moved the score
   });
 
   it("does not re-post when a finished round is restored from persistence", () => {
@@ -195,7 +232,7 @@ describe("LeksodromiaBoard", () => {
 describe("LeksodromiaPageClient", () => {
   it("renders the title, leaderboard trigger, and rules trigger", () => {
     render(<LeksodromiaPageClient puzzle={PUZZLE} today={PUZZLE.date} />);
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Λεξοδρομία");
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Leksodromia");
     expect(screen.getByRole("button", { name: /πίνακας σκορ/i })).toBeDefined();
     expect(screen.getByRole("button", { name: /πώς να παίξεις/i })).toBeDefined();
   });

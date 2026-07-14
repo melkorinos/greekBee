@@ -2,7 +2,8 @@
 
 // HomeTrophyButton — 🏆 icon on landing-page game cards.
 // Opens the per-game LeaderboardModal with full auth + profile support.
-// One instance per applicable game card (leksokipos, leksiarxeio, leksindeseis, vrestifrasi).
+// One instance per applicable game card (leksokipos, leksiarxeio, leksindeseis,
+// vrestifrasi, leksodromia, leksoplegma).
 
 import { useState } from "react";
 import { useGameIdentity } from "@/hooks/useGameIdentity";
@@ -10,12 +11,21 @@ import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { setDisplayName as storeSetDisplayName } from "@/hooks/useGameStore";
 import { getLast7Dates }                from "@/components/shared/LeaderboardModal";
+import { btnHeaderIcon, btnHeaderIconSize } from "@/styles/recipes";
 import { LeaderboardModal }             from "@/components/leksokipos/LeaderboardModal";
 import { LeksiarxeioLeaderboardModal }  from "@/components/leksiarxeio/LeksiarxeioLeaderboardModal";
 import { ConnectionsLeaderboardModal }  from "@/components/leksindeseis/ConnectionsLeaderboardModal";
 import { VresTinFrasiLeaderboardModal } from "@/components/vrestifrasi/VresTinFrasiLeaderboardModal";
+import { LeksodromiaLeaderboardModal }  from "@/components/leksodromia/LeksodromiaLeaderboardModal";
+import { LeksoplegmaLeaderboardModal }  from "@/components/leksoplegma/LeksoplegmaLeaderboardModal";
 
-type LeaderboardGameId = "leksokipos" | "leksiarxeio" | "leksindeseis" | "vrestifrasi";
+type LeaderboardGameId =
+  | "leksokipos"
+  | "leksiarxeio"
+  | "leksindeseis"
+  | "vrestifrasi"
+  | "leksodromia"
+  | "leksoplegma";
 
 interface HomeTrophyButtonProps {
   gameId: LeaderboardGameId;
@@ -70,7 +80,7 @@ export function HomeTrophyButton({ gameId }: HomeTrophyButtonProps) {
         onClick={() => setIsOpen(true)}
         aria-label="Πίνακας Σκορ"
         title="Πίνακας Σκορ"
-        className="p-1.5 rounded-lg text-muted hover:text-accent hover:bg-surface-raised transition-colors text-trophy leading-none"
+        className={`${btnHeaderIconSize} ${btnHeaderIcon} text-trophy`}
       >
         🏆
       </button>
@@ -100,6 +110,20 @@ export function HomeTrophyButton({ gameId }: HomeTrophyButtonProps) {
 
       {gameId === "vrestifrasi" && (
         <VresTinFrasiLeaderboardModal
+          {...sharedProps}
+          today={today}
+        />
+      )}
+
+      {gameId === "leksodromia" && (
+        <LeksodromiaLeaderboardModal
+          {...sharedProps}
+          today={today}
+        />
+      )}
+
+      {gameId === "leksoplegma" && (
+        <LeksoplegmaLeaderboardModal
           {...sharedProps}
           today={today}
         />

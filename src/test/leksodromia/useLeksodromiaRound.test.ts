@@ -7,7 +7,7 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readSlice, writeSlice } from "@/hooks/useGameStore";
-import { getCurrentInput } from "@/games/leksodromia/lib/leksodromiaReducer";
+import { getCurrentAnswer, getCurrentInput, isSecondChance } from "@/games/leksodromia/lib/leksodromiaReducer";
 import { useElapsedClock } from "@/games/leksodromia/hooks/useElapsedClock";
 import { useLeksodromiaRound } from "@/games/leksodromia/hooks/useLeksodromiaRound";
 
@@ -94,7 +94,7 @@ function solveCurrentWord(
   result: { current: ReturnType<typeof useLeksodromiaRound> },
 ) {
   const { state } = result.current;
-  const answer = WORDS[state.wordIndex];
+  const answer = getCurrentAnswer(state); // retry-aware
   act(() => {
     for (const letter of answer.slice(getCurrentInput(state).length)) {
       result.current.dispatch({ type: "ADD_LETTER", letter });
@@ -168,13 +168,43 @@ describe("useLeksodromiaRound", () => {
     expect(result.current.getElapsedMs()).toBe(0);
   });
 
-  it("skipWord records the current elapsed and advances with 0 points", () => {
+  it("skipWord requeues the word with the elapsed as its retry base and zeroes the clock", () => {
     const { result } = renderHook(() => useLeksodromiaRound(PUZZLE));
     act(() => { vi.advanceTimersByTime(7_000); });
     act(() => { result.current.skipWord(); });
-    expect(result.current.state.results[0]).toMatchObject({
-      status: "skipped", points: 0, elapsedMs: 7_000,
+    expect(result.current.state.results).toEqual([]); // nothing final yet
+    expect(result.current.state.retries[10]).toMatchObject({
+      origIndex: 0, baseElapsedMs: 7_000, baseHints: 0,
     });
-    expect(result.current.getElapsedMs()).toBe(0);
+    expect(result.current.getElapsedMs()).toBe(0); // next word starts fresh
+  });
+
+  it("arriving at a second chance resumes the clock from the retry base", () => {
+    const { result } = renderHook(() => useLeksodromiaRound(PUZZLE));
+    act(() => { vi.advanceTimersByTime(7_000); });
+    act(() => { result.current.skipWord(); }); // requeue αυγο @ 7 s
+    for (let i = 1; i < WORDS.length; i++) solveCurrentWord(result);
+    expect(isSecondChance(result.current.state)).toBe(true);
+    expect(getCurrentAnswer(result.current.state)).toBe("αυγο");
+    act(() => { vi.advanceTimersByTime(2_000); });
+    expect(result.current.getElapsedMs()).toBe(9_000); // 7 s base + 2 s now
+  });
+
+  it("a refresh mid-second-chance restores the retry redirect and the cumulative clock", () => {
+    writeSlice("leksodromia", {
+      [PUZZLE.date]: {
+        puzzleId: PUZZLE.date,
+        wordIndex: 10,
+        currentElapsedMs: 12_000,
+        currentHintsUsed: 0,
+        results: [],
+        retries: { 10: { origIndex: 0, baseElapsedMs: 7_000, baseHints: 0 } },
+      },
+    });
+    const { result } = renderHook(() => useLeksodromiaRound(PUZZLE));
+    expect(isSecondChance(result.current.state)).toBe(true);
+    expect(getCurrentAnswer(result.current.state)).toBe("αυγο");
+    act(() => { vi.advanceTimersByTime(1_000); });
+    expect(result.current.getElapsedMs()).toBe(13_000);
   });
 });

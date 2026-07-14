@@ -7,8 +7,9 @@
 // dimmed edges traceable). Auto-submit fires on REQUIRED words only — many
 // extras are prefixes of required words (λογο → λογουσ), so extras submit on
 // drag-release or via the ✓ button when tap-building.
-// Score posts once, when the last required word is found LIVE — never on a
-// restored finished round.
+// Score posts CONTINUOUSLY on every live increase (most players won't finish
+// all 9 — partial rounds still reach the leaderboard; useScoreSubmission's
+// strictly-increasing guard dedups). Restored state never posts.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -97,15 +98,15 @@ export function LeksoplegmaBoard({
     return [...current, tile];
   }, [webTileSet, webEdgeSet]);
 
-  // ── Score post — live finish only ───────────────────────────────────────────
+  // ── Score post — continuous on live increases; leaderboard opens on finish ──
 
   const userActedRef = useRef(false);
   const finishedHandledRef = useRef(false);
   useEffect(() => {
+    if (!userActedRef.current) return; // restored state never posts
+    postFinalScore(getRoundScore(state)); // dedup: only strictly-increasing scores go out
     if (state.status !== "finished" || finishedHandledRef.current) return;
     finishedHandledRef.current = true;
-    if (!userActedRef.current) return;
-    postFinalScore(getRoundScore(state));
     const t = setTimeout(onOpenLeaderboard, 1500);
     return () => clearTimeout(t);
   }, [state, postFinalScore, onOpenLeaderboard]);

@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import { Modal } from "./Modal";
-import { btnHeaderIcon, btnHeaderIconSize } from "@/styles/recipes";
+import { HeaderIconButton } from "./HeaderIconButton";
 
 interface HowToPlayModalProps {
   title:        string;
@@ -35,18 +35,14 @@ export function HowToPlayModal({
   return (
     <>
       {/* Trigger */}
-      <div className="relative group">
-        <button
-          onClick={() => setOpen(true)}
-          aria-label="How to play"
-          className={`${btnHeaderIconSize} ${btnHeaderIcon} text-sm font-bold`}
-        >
-          ?
-        </button>
-        <div className="pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-inverted px-2.5 py-1 text-xs text-inverted-foreground opacity-0 group-hover:opacity-100 transition-opacity z-10">
-          Κανόνες
-        </div>
-      </div>
+      <HeaderIconButton
+        onClick={() => setOpen(true)}
+        ariaLabel="How to play"
+        tooltip="Κανόνες"
+        className="text-sm font-bold"
+      >
+        ?
+      </HeaderIconButton>
 
       {/* Backdrop + modal */}
       <Modal
