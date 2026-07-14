@@ -1,8 +1,10 @@
 // board.test.tsx — LeksoplegmaBoard + LeksoplegmaPageClient behavior.
 // Tap-to-build tracing through the reducer seam (pointer-drag physics are not
 // unit-tested — both control schemes submit the same TRACE_WORD action).
-// A completed word auto-submits (no submit button); covers collapse rendering,
-// bonus counter, recap, and the single score post.
+// Required words auto-submit; extra words submit via the ✓ button (never
+// auto-submit — many are prefixes of required words). Covers soft-collapse
+// rendering (dim, still tappable), extra-word chips, recap, and the single
+// score post.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
@@ -41,14 +43,16 @@ vi.mock("@/hooks/useAuth", () => ({
 
 // ── Fixture ───────────────────────────────────────────────────────────────────
 // 16 distinct letters so every tile is uniquely addressable by name.
-// Required: αβγ (0-1-2), γδε (2-3-4), εζ (4-5). bonusWords is offline-only data.
-// (Runtime never re-checks grid geometry — edges come from the authored paths.)
+// Required: αβγ (0-1-2), γδε (2-3-4), εζ (4-5). Extra word βγδ rides on edges
+// 1-2 and 2-3 — dimmed once αβγ/γδε are found, but still winnable (soft
+// collapse). (Runtime never re-checks grid geometry — edges come from the
+// authored paths.)
 
 const PUZZLE = {
   id:         "fixture-1",
   letters:    "αβγδεζηθικλμνξοπ",
   paths:      { αβγ: [0, 1, 2], γδε: [2, 3, 4], εζ: [4, 5] },
-  bonusWords: [],
+  bonusWords: ["βγδ"],
 };
 const TODAY = "2026-07-14";
 
@@ -109,14 +113,41 @@ describe("LeksoplegmaBoard", () => {
     expect(screen.getByTestId("found-words").textContent).toContain("αβγ");
   });
 
-  it("collapses tiles no remaining required word needs", async () => {
+  it("soft collapse: cleared tiles dim but stay on the board and tappable", async () => {
     const user = userEvent.setup();
     renderBoard();
     await tapWord(user, "αβγ");
-    // β (tile 1) served only αβγ — it must leave the board
-    expect(screen.queryByRole("button", { name: "Γράμμα β" })).toBeNull();
-    // γ still anchors γδε
-    expect(tile("γ")).toBeDefined();
+    // β (tile 1) served only αβγ — it dims but must NOT leave the board
+    const beta = tile("β");
+    expect(beta.className).toContain("opacity-40");
+    // γ still anchors γδε — bright
+    expect(tile("γ").className).not.toContain("opacity-40");
+    // and the dimmed tile still participates in a trace
+    await user.click(beta);
+    expect(screen.getByTestId("building-word").textContent).toBe("β");
+  });
+
+  it("accepts a tap-built extra word via the ✓ button for flat points", async () => {
+    const user = userEvent.setup();
+    renderBoard();
+    await tapWord(user, "βγδ"); // extra — never auto-submits
+    expect(screen.getByTestId("building-word").textContent).toBe("βγδ");
+    await user.click(screen.getByRole("button", { name: "Καταχώρηση" }));
+    expect(screen.getByTestId("bonus-count").textContent).toContain("1");
+    expect(screen.getByTestId("bonus-words").textContent).toContain("βγδ");
+    expect(screen.getByTestId("bonus-words").textContent).toContain("25");
+    expect(screen.getByText(/λέξεις 0\/3/i)).toBeDefined(); // required count untouched
+  });
+
+  it("soft collapse: an extra word is still accepted after its edges dimmed", async () => {
+    const user = userEvent.setup();
+    renderBoard();
+    await tapWord(user, "αβγ"); // dims edge 1-2
+    await tapWord(user, "γδε"); // dims edge 2-3
+    await tapWord(user, "βγδ");
+    await user.click(screen.getByRole("button", { name: "Καταχώρηση" }));
+    expect(screen.getByTestId("bonus-count").textContent).toContain("1");
+    expect(screen.getByTestId("bonus-words").textContent).toContain("βγδ");
   });
 
   it("ignores a tap on a tile with no drawn edge from the trace end", async () => {
@@ -152,9 +183,41 @@ describe("LeksoplegmaBoard", () => {
     expect(body).toMatchObject({
       game_id:     "leksoplegma",
       puzzle_date: TODAY,
-      score:       80, // 30 + 30 + 20, no hints, no bonus
+      score:       80, // 30 + 30 + 20, no hints, no extras
       is_perfect:  true,
     });
+  });
+
+  it("extra words found along the way count in the posted score and the recap", async () => {
+    const user = userEvent.setup();
+    renderBoard();
+    await tapWord(user, "βγδ");
+    await user.click(screen.getByRole("button", { name: "Καταχώρηση" }));
+    await tapWord(user, "αβγ");
+    await tapWord(user, "γδε");
+    await tapWord(user, "εζ");
+
+    expect(screen.getByTestId("recap-bonus").textContent).toContain("βγδ");
+    const [, body] = vi.mocked(postScore).mock.calls[0];
+    expect(body).toMatchObject({ score: 105 }); // 80 required + 25 extra
+  });
+
+  it("restores found extra words from persistence", () => {
+    localStorage.setItem("wordgames:state", JSON.stringify({
+      leksoplegma: {
+        [TODAY]: {
+          puzzleId:      TODAY,
+          foundRequired: [],
+          foundBonus:    ["βγδ"],
+          hintsUsed:     [],
+          status:        "playing",
+        },
+      },
+    }));
+    renderBoard();
+    expect(screen.getByTestId("bonus-count").textContent).toContain("1");
+    expect(screen.getByTestId("bonus-words").textContent).toContain("βγδ");
+    expect(postScore).not.toHaveBeenCalled();
   });
 
   it("does not re-post when a finished round is restored from persistence", () => {

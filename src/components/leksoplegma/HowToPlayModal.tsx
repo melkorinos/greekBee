@@ -30,11 +30,13 @@ export function HowToPlayModal({ isOpen, onClose }: Props) {
 
       <div className="space-y-4 text-sm text-foreground">
         <div className="space-y-1">
-          <p className="font-semibold">🕸️ Το πλέγμα μαζεύει</p>
+          <p className="font-semibold">🕸️ Το πλέγμα θαμπώνει</p>
           <p className="text-xs text-muted leading-relaxed">
-            Όταν βρίσκεις μια λέξη, τα γράμματα και οι γραμμές που δεν χρειάζονται
-            πια εξαφανίζονται. Οι λέξεις βρίσκονται με όποια σειρά θες — το παζλ
-            λύνεται πάντα. Δεν υπάρχει ρολόι: με την ησυχία σου.
+            Όταν βρίσκεις μια κρυμμένη λέξη, τα γράμματα και οι γραμμές που δεν
+            χρειάζονται πια θαμπώνουν — οι φωτεινές γραμμές δείχνουν πού κρύβονται
+            οι υπόλοιπες. Τα θαμπά μέρη παίζουν κανονικά μέχρι το τέλος. Οι λέξεις
+            βρίσκονται με όποια σειρά θες — το παζλ λύνεται πάντα. Δεν υπάρχει
+            ρολόι: με την ησυχία σου.
           </p>
         </div>
 
@@ -43,6 +45,16 @@ export function HowToPlayModal({ isOpen, onClose }: Props) {
           <p className="text-xs text-muted leading-relaxed">
             Κάθε κρυμμένη λέξη δίνει {LEKSOPLEGMA.POINTS_PER_LETTER} πόντους ανά γράμμα.
             Λάθος ή διπλή λέξη δεν κοστίζει τίποτα.
+          </p>
+        </div>
+
+        <div className="space-y-1">
+          <p className="font-semibold">💎 Έξτρα λέξεις</p>
+          <p className="text-xs text-muted leading-relaxed">
+            Κάθε άλλη υπαρκτή λέξη που σχηματίζεις πάνω στις γραμμές δίνει
+            +{LEKSOPLEGMA.BONUS_WORD_POINTS} πόντους — σε όλη τη διάρκεια του γύρου.
+            Οι έξτρα λέξεις δεν καταχωρούνται αυτόματα: πάτα ✓ (ή άφησε το δάχτυλο
+            αν σέρνεις) για να τις υποβάλεις.
           </p>
         </div>
 

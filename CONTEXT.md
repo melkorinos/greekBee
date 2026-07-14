@@ -156,19 +156,19 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Skip** *(Λεξοδρομία)* — Passing on the current word for 0 points via the two-phase «Επόμενο» button. A skipped word still appears in the recap. (Not: pass, give up)
 
-**Hint** *(Λεξοδρομία)* — Reveals the next correct letter as a locked prefix of the answer row. Costs 30% of the word's base points; max 2 per word. (Not: Λεξόπλεγμα's Hint — different mechanic and cost)
+**Hint** *(Λεξοδρομία)* — Reveals the next correct letter as a locked prefix of the answer row. Costs 30% of the word's base points; max 2 per word. **Engine-only at launch**: the reducer and scoring support it but no button exposes it in the UI. (Not: Λεξόπλεγμα's Hint — different mechanic and cost)
 
-**Λεξόπλεγμα** — Daily word-web (16-tile 4×4 grid): every Required Word lies along an authored path of edges; the player finds words by tracing them. No timer — points only. Daily Puzzle = date rotation over a committed generator batch, advanced past any puzzle whose Required Words contain Leksiarxeio's same-day Answer. (Not: word search, boggle)
+**Λεξόπλεγμα** — Daily word-web (16-tile 4×4 grid): every Required Word lies along an authored path of edges; the player finds words by tracing them. Any Extra Word traced on the web also scores. No timer — points only. Daily Puzzle = date rotation over a committed generator batch, advanced past any puzzle whose Required Words contain Leksiarxeio's same-day Answer. (Not: word search, boggle)
 
-**Trace** *(Λεξόπλεγμα)* — An ordered tile sequence built by dragging or tapping along live edges. A Trace matches a word in either direction (forward or reversed). (Not: path — a Path is the authored answer route)
+**Trace** *(Λεξόπλεγμα)* — An ordered tile sequence built by dragging or tapping along the web's edges (dim or bright alike). A Trace matches a word in either direction (forward or reversed). (Not: path — a Path is the authored answer route)
 
 **Required Word** *(Λεξόπλεγμα)* — One of the ~9 authored words of a puzzle, each with its authored Path. Finding all Required Words ends the round. Scores length × 10 pts. (Not: answer, target)
 
-**Collapse** *(Λεξόπλεγμα)* — When a Required Word is found, tiles and edges no longer needed by the remaining unfound Required Words disappear from the board. Derived state, not a timer. (Not: clear, removal)
+**Collapse** *(Λεξόπλεγμα)* — Soft: when a Required Word is found, tiles and edges no longer needed by the remaining unfound Required Words **dim** but stay traceable until the round ends — bright parts still hide a Required Word, dim parts are cleared. Nothing ever leaves the board, so Extra Words are never lost mid-round. Derived state, not a timer. (Not: removal, disappearance — that was the pre-launch hard collapse, reworked 2026-07-14)
 
-**Hint** *(Λεξόπλεγμα)* — Reveals a Required Word's start tile and length. Costs 25 pts (score floor 0); max 1 per word. A round finished with zero hints posts as perfect (`is_perfect`). (Not: Λεξοδρομία's Hint)
+**Hint** *(Λεξόπλεγμα)* — Reveals a Required Word's start tile and length. Costs 25 pts (score floor 0); max 1 per word. A round finished with zero hints posts as perfect (`is_perfect`). **Engine-only at launch**: the reducer and scoring support it but no button exposes it in the UI — so every live finish currently posts `is_perfect: true`. (Not: Λεξοδρομία's Hint)
 
-**Bonus Word** *(Λεξόπλεγμα — retired)* — Extra words traceable along the required-edge graph. Was a runtime mechanic; removed 2026-07-14. Survives only as an offline generator artifact in the puzzle JSON. (Not: a playable element)
+**Extra Word** *(Λεξόπλεγμα)* — Any valid dictionary word (≥3 letters) traceable along the web that is not a Required Word — exhaustively precomputed per puzzle by the generator. Scores flat points, all round long (soft Collapse); never gates completion and never triggers Collapse. Never auto-submits — many Extra Words are prefixes of Required Words — so it is submitted explicitly (✓ button or drag release). UI: «Έξτρα λέξεις»; code: `bonusWords`. Briefly removed and reinstated on 2026-07-14 — the rejection of real Greek words felt wrong to players. (Not: bonus mechanic, hidden word)
 
 **Offline Lock** — A deliberate client-side state on a Leksokipos Daily Puzzle that blocks browser refresh and in-app navigation, and routes score submissions through the Offline Score Outbox instead of posting directly. Activated via a toggle inside the Leksokipos UI; released manually. Only available on Daily Puzzles. (Not: offline mode, airplane mode, offline play)
 

@@ -1,6 +1,7 @@
-// Leksoplegma reducer — TRACE_WORD (required either direction / miss / dup),
-// USE_HINT (per-word cap, auto-targets the first unfound un-hinted required
-// word), terminal state (last required word ends the puzzle), RESTORE_STATE.
+// Leksoplegma reducer — TRACE_WORD (required + extra words either direction /
+// miss / dup, soft collapse keeps dimmed edges traceable), USE_HINT (per-word
+// cap, auto-targets the first unfound un-hinted required word), terminal
+// state (last required word ends the puzzle), RESTORE_STATE.
 
 import { describe, it, expect } from "vitest";
 
@@ -16,13 +17,14 @@ import type { LeksoplegmaState } from "@/games/leksoplegma/types";
 
 // Fixture board (grid-size agnostic — the reducer works on puzzle data alone):
 // tiles 0..4 = α β γ δ ε; required αβγ (0-1-2), γδε (2-3-4), εα (4-0).
-// bonusWords is offline-only data and never a runtime game element.
+// Extra word βγδ rides on edges 1-2 (from αβγ) and 2-3 (from γδε) — the
+// canonical soft-collapse case: both its edges dim once those words are found.
 function makeState(): LeksoplegmaState {
   return makeInitialLeksoplegmaState("2026-07-14", {
     id:         "test-1",
     letters:    "αβγδε",
     paths:      { αβγ: [0, 1, 2], γδε: [2, 3, 4], εα: [4, 0] },
-    bonusWords: [],
+    bonusWords: ["βγδ"],
   });
 }
 
@@ -45,7 +47,7 @@ describe("TRACE_WORD — required words", () => {
     expect(s.wrongTrace).toBe(false);
   });
 
-  it("rejects re-tracing a found word — its edges have collapsed", () => {
+  it("rejects re-tracing a found word as a duplicate", () => {
     const s = dispatch(
       makeState(),
       { type: "TRACE_WORD", trace: [0, 1, 2] },
@@ -73,6 +75,58 @@ describe("TRACE_WORD — required words", () => {
       { type: "TRACE_WORD", trace: [4, 0] },
     );
     expect(dispatch(finished, { type: "TRACE_WORD", trace: [1, 2] })).toBe(finished);
+  });
+});
+
+describe("TRACE_WORD — extra words", () => {
+  it("accepts an extra word for points without advancing the required count", () => {
+    const s = dispatch(makeState(), { type: "TRACE_WORD", trace: [1, 2, 3] }); // "βγδ"
+    expect(s.foundBonus).toEqual(["βγδ"]);
+    expect(s.foundRequired).toEqual([]);
+    expect(s.wrongTrace).toBe(false);
+    expect(s.status).toBe("playing");
+  });
+
+  it("accepts an extra word traced in reverse", () => {
+    const s = dispatch(makeState(), { type: "TRACE_WORD", trace: [3, 2, 1] }); // "δγβ"
+    expect(s.foundBonus).toEqual(["βγδ"]);
+  });
+
+  it("rejects a duplicate extra word", () => {
+    const s = dispatch(
+      makeState(),
+      { type: "TRACE_WORD", trace: [1, 2, 3] },
+      { type: "TRACE_WORD", trace: [1, 2, 3] },
+    );
+    expect(s.foundBonus).toEqual(["βγδ"]);
+    expect(s.wrongTrace).toBe(true);
+  });
+
+  it("soft collapse: an extra word stays winnable after its edges have dimmed", () => {
+    // Finding αβγ and γδε dims BOTH edges βγδ rides on — it must still count.
+    const s = dispatch(
+      makeState(),
+      { type: "TRACE_WORD", trace: [0, 1, 2] }, // αβγ
+      { type: "TRACE_WORD", trace: [2, 3, 4] }, // γδε
+      { type: "TRACE_WORD", trace: [1, 2, 3] }, // βγδ over dimmed edges
+    );
+    expect(s.foundBonus).toEqual(["βγδ"]);
+    expect(s.wrongTrace).toBe(false);
+  });
+
+  it("extra words never finish the round", () => {
+    const s = dispatch(
+      makeState(),
+      { type: "TRACE_WORD", trace: [1, 2, 3] }, // the only extra word
+      { type: "TRACE_WORD", trace: [0, 1, 2] },
+      { type: "TRACE_WORD", trace: [2, 3, 4] },
+    );
+    expect(s.status).toBe("playing"); // εα still unfound
+  });
+
+  it("adds flat bonus points to the round score", () => {
+    const s = dispatch(makeState(), { type: "TRACE_WORD", trace: [1, 2, 3] });
+    expect(getRoundScore(s)).toBe(computeScore([], ["βγδ"], []));
   });
 });
 
@@ -148,27 +202,29 @@ describe("score", () => {
       { type: "USE_HINT" },
       { type: "TRACE_WORD", trace: [0, 1, 2] },
     );
-    expect(getRoundScore(s)).toBe(computeScore(["αβγ"], ["αβγ"]));
+    expect(getRoundScore(s)).toBe(computeScore(["αβγ"], [], ["αβγ"]));
   });
 
-  it("an edge that collapsed after its word was found can no longer be traced", () => {
+  it("a dimmed edge stays traceable but a non-word trace over it is still a miss", () => {
     const s = dispatch(
       makeState(),
-      { type: "TRACE_WORD", trace: [0, 1, 2] }, // finding αβγ kills edge 1-2
-      { type: "TRACE_WORD", trace: [1, 2] },
+      { type: "TRACE_WORD", trace: [0, 1, 2] }, // finding αβγ dims edge 1-2
+      { type: "TRACE_WORD", trace: [1, 2] },    // "βγ" — legal trace, no word
     );
     expect(s.wrongTrace).toBe(true);
   });
 });
 
 describe("RESTORE_STATE", () => {
-  it("restores found/hints and recomputes a playing status", () => {
+  it("restores found/bonus/hints and recomputes a playing status", () => {
     const s = dispatch(makeState(), {
       type: "RESTORE_STATE",
       foundRequired: ["αβγ"],
+      foundBonus: ["βγδ"],
       hintsUsed: ["γδε"],
     });
     expect(s.foundRequired).toEqual(["αβγ"]);
+    expect(s.foundBonus).toEqual(["βγδ"]);
     expect(s.hintsUsed).toEqual(["γδε"]);
     expect(s.status).toBe("playing");
   });
@@ -177,6 +233,7 @@ describe("RESTORE_STATE", () => {
     const s = dispatch(makeState(), {
       type: "RESTORE_STATE",
       foundRequired: ["αβγ", "γδε", "εα"],
+      foundBonus: [],
       hintsUsed: [],
     });
     expect(s.status).toBe("finished");
@@ -186,9 +243,11 @@ describe("RESTORE_STATE", () => {
     const s = dispatch(makeState(), {
       type: "RESTORE_STATE",
       foundRequired: ["αβγ", "ξενο"],
+      foundBonus: ["ξενο"],
       hintsUsed: ["ξενο"],
     });
     expect(s.foundRequired).toEqual(["αβγ"]);
+    expect(s.foundBonus).toEqual([]);
     expect(s.hintsUsed).toEqual([]);
   });
 });

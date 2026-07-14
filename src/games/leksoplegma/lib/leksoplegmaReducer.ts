@@ -2,11 +2,14 @@
 // Both control schemes (pointer-drag tracing and tap-to-build) submit through
 // the same TRACE_WORD action carrying a tile-index sequence; the reducer
 // validates edge-adjacency itself via the graph lib, so it stays UI-agnostic.
-// Collapse is derived state: live tiles/edges follow from paths + foundRequired.
+// Collapse is SOFT: cleared tiles/edges only dim visually (liveTiles/liveEdges
+// drive the styling) — traces validate against the FULL authored web, so every
+// extra word stays winnable until the round ends. Extra words (bonusWords)
+// score flat points and never gate completion.
 
 import type { LeksoplegmaPuzzle, LeksoplegmaState } from "../types";
 
-import { isTraceValid, liveEdges } from "./graph";
+import { edgesOf, isTraceValid } from "./graph";
 import { computeScore } from "./scoring";
 
 // ─── Action types ─────────────────────────────────────────────────────────────
@@ -14,13 +17,13 @@ import { computeScore } from "./scoring";
 export type LeksoplegmaAction =
   | { type: "TRACE_WORD"; trace: number[] }
   | { type: "USE_HINT" }
-  | { type: "RESTORE_STATE"; foundRequired: string[]; hintsUsed: string[] };
+  | { type: "RESTORE_STATE"; foundRequired: string[]; foundBonus: string[]; hintsUsed: string[] };
 
 // ─── Selectors ────────────────────────────────────────────────────────────────
 
 /** Round score so far — posted to the leaderboard once, at completion. */
 export function getRoundScore(state: LeksoplegmaState): number {
-  return computeScore(state.foundRequired, state.hintsUsed);
+  return computeScore(state.foundRequired, state.foundBonus, state.hintsUsed);
 }
 
 /** Start tile + length of each hinted, still-unfound required word. */
@@ -41,9 +44,10 @@ export function leksoplegmaReducer(
   switch (action.type) {
 
     case "TRACE_WORD": {
-      const { paths } = state.puzzle;
-      const live = liveEdges(paths, state.foundRequired);
-      if (!isTraceValid(action.trace, live)) return { ...state, wrongTrace: true };
+      const { paths, bonusWords } = state.puzzle;
+      // Soft collapse: dimmed edges stay traceable, so validate against the
+      // full authored web — never the live subset.
+      if (!isTraceValid(action.trace, edgesOf(paths))) return { ...state, wrongTrace: true };
 
       // A trace walks undirected edges, so it may spell a word either way round.
       // Accept whichever direction hits a still-unfound required word.
@@ -64,6 +68,14 @@ export function leksoplegmaReducer(
         };
       }
 
+      // Extra word: any other valid word on the web — flat points, either direction.
+      const bonus = [forward, backward].find(
+        (w) => bonusWords.includes(w) && !state.foundBonus.includes(w),
+      );
+      if (bonus !== undefined) {
+        return { ...state, foundBonus: [...state.foundBonus, bonus], wrongTrace: false };
+      }
+
       return { ...state, wrongTrace: true }; // miss or duplicate — no penalty
     }
 
@@ -76,11 +88,12 @@ export function leksoplegmaReducer(
     }
 
     case "RESTORE_STATE": {
-      const { paths } = state.puzzle;
+      const { paths, bonusWords } = state.puzzle;
       const foundRequired = action.foundRequired.filter((w) => w in paths);
       return {
         ...state,
         foundRequired,
+        foundBonus: action.foundBonus.filter((w) => bonusWords.includes(w)),
         hintsUsed: action.hintsUsed.filter((w) => w in paths),
         status: foundRequired.length === Object.keys(paths).length ? "finished" : "playing",
         wrongTrace: false,
@@ -102,6 +115,7 @@ export function makeInitialLeksoplegmaState(
     puzzleId,
     puzzle,
     foundRequired: [],
+    foundBonus: [],
     hintsUsed: [],
     wrongTrace: false,
     status: "playing",

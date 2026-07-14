@@ -3,10 +3,14 @@
 // LeksoplegmaBoard — the word-web play surface.
 // Owns the in-progress trace (tap-built or dragged); the reducer owns
 // everything else. Both control schemes submit the same TRACE_WORD action.
+// Extra words (bonusWords) score flat points all round (soft collapse keeps
+// dimmed edges traceable). Auto-submit fires on REQUIRED words only — many
+// extras are prefixes of required words (λογο → λογουσ), so extras submit on
+// drag-release or via the ✓ button when tap-building.
 // Score posts once, when the last required word is found LIVE — never on a
 // restored finished round.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   migrateLeksiarxeioIdentity,
@@ -20,7 +24,7 @@ import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { LEKSOPLEGMA } from "@/config/gameRules";
 import type { LeksoplegmaPuzzle } from "@/games/leksoplegma/types";
-import { edgeKey, liveEdges, liveTiles } from "@/games/leksoplegma/lib/graph";
+import { edgeKey, edgesOf, liveEdges, liveTiles } from "@/games/leksoplegma/lib/graph";
 import { getRoundScore } from "@/games/leksoplegma/lib/leksoplegmaReducer";
 import { isPerfectRound } from "@/games/leksoplegma/lib/scoring";
 import { useLeksoplegmaRound } from "@/games/leksoplegma/hooks/useLeksoplegmaRound";
@@ -78,19 +82,20 @@ export function LeksoplegmaBoard({
     setTrace(next);
   }, []);
 
-  const live      = liveTiles(puzzle.paths, state.foundRequired);
+  // Soft collapse: the full authored web stays traceable for the whole round
+  // (constant per puzzle); the live subset only drives bright-vs-dim styling.
+  const webEdgeSet = useMemo(() => edgesOf(puzzle.paths), [puzzle.paths]);
+  const webTileSet = useMemo(() => liveTiles(puzzle.paths, []), [puzzle.paths]);
+  const live        = liveTiles(puzzle.paths, state.foundRequired);
   const liveEdgeSet = liveEdges(puzzle.paths, state.foundRequired);
-  const liveRef   = useRef({ live, liveEdgeSet });
-  useEffect(() => { liveRef.current = { live, liveEdgeSet }; });
 
-  /** Append `tile` if the live graph allows it; null when the move is illegal. */
+  /** Append `tile` if the web allows it; null when the move is illegal. */
   const extended = useCallback((current: number[], tile: number): number[] | null => {
-    const { live: liveNow, liveEdgeSet: edgesNow } = liveRef.current;
-    if (!liveNow.has(tile) || current.includes(tile)) return null;
+    if (!webTileSet.has(tile) || current.includes(tile)) return null;
     if (current.length === 0) return [tile];
-    if (!edgesNow.has(edgeKey(current[current.length - 1], tile))) return null;
+    if (!webEdgeSet.has(edgeKey(current[current.length - 1], tile))) return null;
     return [...current, tile];
-  }, []);
+  }, [webTileSet, webEdgeSet]);
 
   // ── Score post — live finish only ───────────────────────────────────────────
 
@@ -116,8 +121,11 @@ export function LeksoplegmaBoard({
   }, [dispatch, updateTrace]);
 
   /**
-   * True when `word` — traced either direction — is a still-unfound required
+   * True when `word` — traced either direction — is a still-unfound REQUIRED
    * word, so a tap-built trace can auto-submit the moment it spells one.
+   * Deliberately never matches extras: many are prefixes of required words
+   * (λογο → λογουσ), and auto-submitting them would make the longer word
+   * impossible to tap-build. Extras submit via drag-release or the ✓ button.
    */
   const completesWord = useCallback((word: string) => {
     const reversed = [...word].reverse().join("");
@@ -161,6 +169,7 @@ export function LeksoplegmaBoard({
       <div className="flex flex-col items-center gap-4 py-4 w-full">
         <LeksoplegmaRecap
           foundRequired={state.foundRequired}
+          foundBonus={state.foundBonus}
           hintsUsed={state.hintsUsed}
           totalScore={totalScore}
         />
@@ -195,6 +204,9 @@ export function LeksoplegmaBoard({
         <span className="font-semibold text-foreground">
           Λέξεις {state.foundRequired.length}/{requiredTotal}
         </span>
+        <span data-testid="bonus-count" className="tabular-nums">
+          Έξτρα <span className="font-mono font-bold text-foreground">{state.foundBonus.length}</span>
+        </span>
         <span data-testid="total-score" className="tabular-nums">
           Σύνολο <span className="font-mono font-bold text-foreground">{totalScore}</span>
         </span>
@@ -207,8 +219,9 @@ export function LeksoplegmaBoard({
         />
       </div>
 
-      {/* Building word + clear. No submit button — a completed word auto-submits
-          (tap: on the letter that finishes it; drag: on release). */}
+      {/* Building word + submit + clear. Required words auto-submit (tap: on the
+          letter that finishes one; drag: on release); the ✓ lets tap-builders
+          submit extras, which never auto-submit (prefix problem). */}
       <div className="flex items-center gap-2 h-10">
         <span
           data-testid="building-word"
@@ -216,6 +229,14 @@ export function LeksoplegmaBoard({
         >
           {buildingWord}
         </span>
+        <button
+          onClick={submitTrace}
+          disabled={trace.length < 2}
+          aria-label="Καταχώρηση"
+          className="px-3 py-2 rounded-full border border-border text-foreground text-sm font-medium hover:bg-surface-raised disabled:opacity-40 transition-colors"
+        >
+          ✓
+        </button>
         <button
           onClick={() => updateTrace([])}
           disabled={trace.length === 0}
@@ -228,6 +249,8 @@ export function LeksoplegmaBoard({
 
       <LeksoplegmaGrid
         letters={puzzle.letters}
+        webTiles={webTileSet}
+        webEdgeKeys={webEdgeSet}
         liveTiles={live}
         liveEdgeKeys={liveEdgeSet}
         trace={trace}
@@ -248,6 +271,23 @@ export function LeksoplegmaBoard({
                 className="px-2 py-1 rounded-full border border-border bg-surface-raised text-xs font-semibold uppercase tracking-wide text-foreground"
               >
                 {word} <span className="font-mono text-muted">+{word.length * LEKSOPLEGMA.POINTS_PER_LETTER}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Extra words found — flat points, never needed to finish */}
+      {state.foundBonus.length > 0 && (
+        <div className="w-full flex flex-col gap-1.5 text-sm">
+          <p className="text-center text-muted">Έξτρα λέξεις</p>
+          <ul data-testid="bonus-words" className="flex flex-wrap gap-1.5 justify-center">
+            {state.foundBonus.map((word) => (
+              <li
+                key={word}
+                className="px-2 py-1 rounded-full border border-border bg-surface text-xs font-semibold uppercase tracking-wide text-muted"
+              >
+                {word} <span className="font-mono">+{LEKSOPLEGMA.BONUS_WORD_POINTS}</span>
               </li>
             ))}
           </ul>

@@ -1,8 +1,10 @@
 "use client";
 
 // LeksoplegmaGrid — the 4×4 letter-web play surface.
-// SVG edge lines underneath, tile buttons on top. Dead tiles (collapsed) leave
-// the board entirely; their grid cells stay so the layout never shifts.
+// SVG edge lines underneath, tile buttons on top. Collapse is SOFT: cleared
+// tiles/edges (in the web but no longer live) dim instead of disappearing and
+// stay fully traceable, so extra words are never lost mid-round. Bright =
+// still hides a required word; dim = cleared.
 //
 // Two control schemes, one seam: taps call onTapTile; pointer-drags call
 // onDragExtend per tile crossed and onDragRelease on lift. The Board owns the
@@ -25,6 +27,10 @@ function tileCenter(tile: number): { x: number; y: number } {
 
 interface LeksoplegmaGridProps {
   letters:        string;
+  /** Full authored web — every tile/edge stays rendered and traceable. */
+  webTiles:       ReadonlySet<number>;
+  webEdgeKeys:    ReadonlySet<string>;
+  /** Still needed by an unfound required word — rendered bright; the rest dim. */
   liveTiles:      ReadonlySet<number>;
   liveEdgeKeys:   ReadonlySet<string>;
   trace:          readonly number[];
@@ -36,6 +42,8 @@ interface LeksoplegmaGridProps {
 
 export function LeksoplegmaGrid({
   letters,
+  webTiles,
+  webEdgeKeys,
   liveTiles,
   liveEdgeKeys,
   trace,
@@ -74,7 +82,7 @@ export function LeksoplegmaGrid({
   function handlePointerMove(e: React.PointerEvent) {
     if (!draggingRef.current) return;
     const tile = tileFromPoint(e.clientX, e.clientY);
-    if (tile === null || !liveTiles.has(tile)) return;
+    if (tile === null || !webTiles.has(tile)) return;
     if (!dragMovedRef.current && tile === downTileRef.current) return;
     if (!dragMovedRef.current && downTileRef.current !== null) {
       // The gesture became a drag: the press tile joins the trace first.
@@ -84,9 +92,9 @@ export function LeksoplegmaGrid({
     onDragExtend(tile);
   }
 
-  const edgeLines = [...liveEdgeKeys].map((key) => {
+  const edgeLines = [...webEdgeKeys].map((key) => {
     const [a, b] = key.split("-").map(Number);
-    return { key, from: tileCenter(a), to: tileCenter(b) };
+    return { key, live: liveEdgeKeys.has(key), from: tileCenter(a), to: tileCenter(b) };
   });
 
   const traceLines = trace.slice(1).map((tile, i) => ({
@@ -107,13 +115,13 @@ export function LeksoplegmaGrid({
         className="absolute inset-0 w-full h-full pointer-events-none"
         aria-hidden
       >
-        {edgeLines.map(({ key, from, to }) => (
+        {edgeLines.map(({ key, live, from, to }) => (
           <line
             key={key}
             x1={from.x} y1={from.y} x2={to.x} y2={to.y}
             strokeWidth={5}
             strokeLinecap="round"
-            className="stroke-[color:var(--color-border)]"
+            className={live ? "stroke-[color:var(--color-border)]" : "stroke-[color:var(--color-border)] opacity-30"}
           />
         ))}
         {traceLines.map(({ key, from, to }) => (
@@ -129,9 +137,10 @@ export function LeksoplegmaGrid({
 
       <div className="absolute inset-0 grid grid-cols-4 grid-rows-4">
         {[...letters].map((letter, tile) => {
-          if (!liveTiles.has(tile)) return <div key={tile} />;
+          if (!webTiles.has(tile)) return <div key={tile} />;
           const isTraced = traced.has(tile);
           const isHinted = hintStartTiles.has(tile);
+          const isDim    = !liveTiles.has(tile) && !isTraced;
           return (
             <div key={tile} className="flex items-center justify-center">
               <button
@@ -148,7 +157,7 @@ export function LeksoplegmaGrid({
                   isTraced
                     ? "bg-game-accent border-game-accent text-game-accent-foreground"
                     : "bg-surface-raised border-border text-foreground hover:bg-border"
-                } ${isHinted && !isTraced ? "ring-2 ring-game-accent ring-offset-2 ring-offset-background" : ""}`}
+                } ${isDim ? "opacity-40" : ""} ${isHinted && !isTraced ? "ring-2 ring-game-accent ring-offset-2 ring-offset-background" : ""}`}
               >
                 {letter}
               </button>

@@ -1,6 +1,6 @@
 // Leksoplegma scoring — points math per the grilled spec:
-// total = Σ(required length × POINTS_PER_LETTER) − hints × HINT_COST_POINTS,
-//         floored at SCORE_FLOOR.
+// total = Σ(required length × POINTS_PER_LETTER) + extras × BONUS_WORD_POINTS
+//         − hints × HINT_COST_POINTS, floored at SCORE_FLOOR.
 // is_perfect = zero hints (evaluated at completion, when all required are found).
 
 import { describe, it, expect } from "vitest";
@@ -23,19 +23,27 @@ describe("LEKSOPLEGMA config", () => {
 describe("computeScore", () => {
   it("scores each required word at length × 10", () => {
     // 4 + 6 letters = 100 points — worked example from the handoff formula
-    expect(computeScore(["λεξη", "γραμμα"], [])).toBe(100);
+    expect(computeScore(["λεξη", "γραμμα"], [], [])).toBe(100);
+  });
+
+  it("adds a flat 25 per extra word found", () => {
+    expect(computeScore(["λεξη"], ["γομα", "μαγοσ"], [])).toBe(40 + 2 * 25);
+  });
+
+  it("extra words alone score without any required word", () => {
+    expect(computeScore([], ["γομα"], [])).toBe(25);
   });
 
   it("subtracts 25 per hint used", () => {
-    expect(computeScore(["λεξη", "γραμμα"], ["λεξη"])).toBe(100 - 25);
+    expect(computeScore(["λεξη", "γραμμα"], [], ["λεξη"])).toBe(100 - 25);
   });
 
   it("never goes below the floor of 0", () => {
-    expect(computeScore([], ["α", "β", "γ"])).toBe(0);
+    expect(computeScore([], [], ["α", "β", "γ"])).toBe(0);
   });
 
   it("is 0 when nothing was found", () => {
-    expect(computeScore([], [])).toBe(0);
+    expect(computeScore([], [], [])).toBe(0);
   });
 });
 

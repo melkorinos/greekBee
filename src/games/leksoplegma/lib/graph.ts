@@ -1,12 +1,15 @@
 // Leksoplegma — pure letter-graph logic (no side effects, no React).
 // The board is a graph: tiles (indices into the puzzle's letter string) joined
 // by the undirected edges drawn along each required word's authored path.
-// The collapse rule lives here: after a required word is found, only tiles and
-// edges still needed by a REMAINING unfound required word stay alive. Bonus
-// words never keep anything alive — they ride on the required-edge graph.
+// The collapse rule lives here — and collapse is SOFT: after a required word
+// is found, tiles/edges still needed by a REMAINING unfound required word are
+// "live" (bright); the rest dim but stay traceable, so extra words are never
+// lost mid-round. liveTiles/liveEdges drive styling only; trace validation
+// uses the full web (edgesOf(paths)). Bonus words never keep anything live —
+// they ride on the required-edge graph.
 //
 // Grid-agnostic by design: 4×4 / 8-dir adjacency is a generator constraint;
-// at runtime a trace is valid iff it walks currently-live edges.
+// at runtime a trace is valid iff it walks authored edges.
 
 /** Canonical undirected edge key — same key for (a,b) and (b,a). */
 export function edgeKey(a: number, b: number): string {
@@ -33,7 +36,7 @@ function remainingPaths(
   return Object.fromEntries(Object.entries(paths).filter(([word]) => !found.has(word)));
 }
 
-/** Tiles still needed by at least one unfound required word. */
+/** Tiles still needed by at least one unfound required word (bright vs dim). */
 export function liveTiles(
   paths: Record<string, readonly number[]>,
   foundRequired: readonly string[],
@@ -45,7 +48,7 @@ export function liveTiles(
   return tiles;
 }
 
-/** Edges still needed by at least one unfound required word. */
+/** Edges still needed by at least one unfound required word (bright vs dim). */
 export function liveEdges(
   paths: Record<string, readonly number[]>,
   foundRequired: readonly string[],
@@ -54,14 +57,15 @@ export function liveEdges(
 }
 
 /**
- * True iff `trace` walks live edges: ≥ 2 tiles, no tile reused, and every
- * consecutive pair is a currently-live edge (either direction).
+ * True iff `trace` walks the given edge set: ≥ 2 tiles, no tile reused, and
+ * every consecutive pair is an edge in the set (either direction). Callers
+ * pass the FULL web (edgesOf(paths)) — soft collapse keeps dimmed edges legal.
  */
-export function isTraceValid(trace: readonly number[], live: ReadonlySet<string>): boolean {
+export function isTraceValid(trace: readonly number[], edges: ReadonlySet<string>): boolean {
   if (trace.length < 2) return false;
   if (new Set(trace).size !== trace.length) return false;
   for (let i = 1; i < trace.length; i++) {
-    if (!live.has(edgeKey(trace[i - 1], trace[i]))) return false;
+    if (!edges.has(edgeKey(trace[i - 1], trace[i]))) return false;
   }
   return true;
 }

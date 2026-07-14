@@ -5,6 +5,17 @@
 
 ---
 
+## Session 78 — 2026-07-14: Λεξόπλεγμα extra words reinstated + soft collapse (prod-prep grill)
+`/grill-with-docs` on leaderboards/prod-readiness → found **leaderboards already done** (verify-only) and no pre-generation needed (Λεξοδρομία derives daily words; Λεξόπλεγμα has the 200-puzzle batch, wraps mod 200). Mid-grill `/diagnosing-bugs`: user's "counter stuck at 0/9, score moves" on λογοσ/μαγοσ/γομα → **not a code bug** — all three are `bonusWords` on `leksoplegma-160` (stale localhost build still had the HEAD bonus mechanic; repro test vs real data proved all 9 required words accepted both directions). User then chose to **reinstate extras (Option 1)**:
+1. **Extras count again**: any `bonusWords` member traced either direction → `foundBonus`, flat +25 (`computeScore(required, bonus, hints)` restored); never gates completion; 9/9 required still ends the round.
+2. **Soft collapse** (replaces hard): traces validate vs the FULL authored web (`edgesOf(paths)`); `liveTiles/liveEdges` now drive bright-vs-dim styling only — Grid renders web tiles/edges always (dim = `opacity-40`/`opacity-30`, still interactive). No more grab-before-collapse race (why bonus was cut in s77).
+3. **Auto-submit stays REQUIRED-only** (extras like λογο are prefixes of λογουσ — auto-submitting would block the longer word); new ✓ button (`Καταχώρηση`) submits tap-built extras; drag-release unchanged. Board: «Έξτρα n» counter + chips; Recap: extras section; HowToPlay + home blurb updated («θαμπώνουν», ✓ for extras).
+4. Hook persists/restores `foundBonus` (guards old bonus-less snapshots). Tests: extras suite incl. **soft-collapse regression** (extra accepted after both its edges dimmed), reverse extra, dup, score post 105, restore.
+5. CONTEXT.md: both new games fully glossed (Trace/Collapse-soft/**Extra Word**/Decay Scoring/Scramble/Skip/Hints **engine-only at launch** — no UI button dispatches USE_HINT in either game, so every Λεξόπλεγμα finish posts `is_perfect: true`); Game/Puzzle/Puzzle ID/game_scores rows updated.
+6. Prod-readiness state: play-through done by user (pre-rework), gates green pre-rework (1561); **rework needs fresh local verify by user + gates** before commit → dev→main. Leksindeseis `wip: true` is longstanding (since registry creation), not a regression — user decision pending.
+
+---
+
 ## Session 77 — 2026-07-14: Λεξόπλεγμα + Λεξοδρομία polish (user QA pass)
 Direct user requests on the two wip games. Gates: test/eslint/build all green.
 1. **Λεξόπλεγμα counter bug** — "Λέξεις 0/9 doesn't increment when a word is found." Root cause: traces walk **undirected** edges, so drawing a word end→start spelled it reversed and never matched → stayed a "wrong" trace. Fix: TRACE_WORD (reducer) + `completesWord` (board) now accept the word **either direction** (`forward` or reversed). Regression tests added (reducer `[2,1,0]`→αβγ; board tap-builds "γβα").
