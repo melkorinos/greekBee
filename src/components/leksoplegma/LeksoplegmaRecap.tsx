@@ -1,21 +1,19 @@
 "use client";
 
-// End-of-round recap — all required words with their points, the bonus haul,
-// hint costs, and the final score.
+// End-of-round recap — all required words with their points, any hint costs,
+// and the final score.
 
 import { LEKSOPLEGMA } from "@/config/gameRules";
 
 interface LeksoplegmaRecapProps {
   /** Required words in discovery order (the round is over — all are found). */
   foundRequired: string[];
-  foundBonus:    string[];
   hintsUsed:     string[];
   totalScore:    number;
 }
 
 export function LeksoplegmaRecap({
   foundRequired,
-  foundBonus,
   hintsUsed,
   totalScore,
 }: LeksoplegmaRecapProps) {
@@ -40,25 +38,15 @@ export function LeksoplegmaRecap({
           </li>
         ))}
       </ul>
-      <div className="flex flex-col gap-0.5 text-sm text-muted text-center">
-        <p>
-          Έξτρα λέξεις: <span className="font-semibold text-foreground">{foundBonus.length}</span>
-          {" · "}
-          <span className="font-mono">+{foundBonus.length * LEKSOPLEGMA.BONUS_WORD_POINTS}</span>
-        </p>
-        {hintsUsed.length > 0 && (
+      {hintsUsed.length > 0 && (
+        <div className="flex flex-col gap-0.5 text-sm text-muted text-center">
           <p>
             Υποδείξεις: {hintsUsed.length}
             {" · "}
             <span className="font-mono">−{hintsUsed.length * LEKSOPLEGMA.HINT_COST_POINTS}</span>
           </p>
-        )}
-        {foundBonus.length > 0 && (
-          <p className="text-xs uppercase tracking-wide break-words">
-            {foundBonus.join(" · ")}
-          </p>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

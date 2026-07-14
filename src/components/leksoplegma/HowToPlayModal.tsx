@@ -46,15 +46,6 @@ export function HowToPlayModal({ isOpen, onClose }: Props) {
           </p>
         </div>
 
-        <div className="space-y-1">
-          <p className="font-semibold">✨ Έξτρα λέξεις</p>
-          <p className="text-xs text-muted leading-relaxed">
-            Στο πλέγμα κρύβονται κι άλλες, προαιρετικές λέξεις — κάθε μία δίνει{" "}
-            {LEKSOPLEGMA.BONUS_WORD_POINTS} πόντους. Πρόλαβέ τες πριν εξαφανιστούν οι
-            γραμμές τους: εκεί κερδίζεται ο πίνακας σκορ.
-          </p>
-        </div>
-
       </div>
 
       <button

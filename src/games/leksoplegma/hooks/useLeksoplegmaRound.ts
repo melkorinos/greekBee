@@ -2,8 +2,8 @@
 
 // useLeksoplegmaRound — the round spine: reducer + persistence. No clock
 // anywhere (points-only scoring). Persists { puzzleId, foundRequired,
-// foundBonus, hintsUsed, status } under the puzzle date so a refresh restores
-// the collapsed board exactly (collapse is derived from foundRequired).
+// hintsUsed, status } under the puzzle date so a refresh restores the
+// collapsed board exactly (collapse is derived from foundRequired).
 
 import { useCallback, useMemo, useReducer } from "react";
 
@@ -19,7 +19,6 @@ import {
 interface RoundSnapshot {
   puzzleId:      string;
   foundRequired: string[];
-  foundBonus:    string[];
   hintsUsed:     string[];
   status:        "playing" | "finished";
 }
@@ -40,7 +39,6 @@ export function useLeksoplegmaRound(puzzle: LeksoplegmaPuzzle, today: string): L
     dispatch({
       type:          "RESTORE_STATE",
       foundRequired: saved.foundRequired,
-      foundBonus:    saved.foundBonus,
       hintsUsed:     saved.hintsUsed,
     });
   }, []);
@@ -48,10 +46,9 @@ export function useLeksoplegmaRound(puzzle: LeksoplegmaPuzzle, today: string): L
   const snapshot = useMemo<RoundSnapshot>(() => ({
     puzzleId:      state.puzzleId,
     foundRequired: state.foundRequired,
-    foundBonus:    state.foundBonus,
     hintsUsed:     state.hintsUsed,
     status:        state.status,
-  }), [state.puzzleId, state.foundRequired, state.foundBonus, state.hintsUsed, state.status]);
+  }), [state.puzzleId, state.foundRequired, state.hintsUsed, state.status]);
 
   useRoundPersistence<RoundSnapshot>(
     "leksoplegma",
@@ -61,7 +58,6 @@ export function useLeksoplegmaRound(puzzle: LeksoplegmaPuzzle, today: string): L
     // Never clobber a saved round with the pristine pre-hydration state.
     (snap) =>
       snap.foundRequired.length > 0 ||
-      snap.foundBonus.length > 0 ||
       snap.hintsUsed.length > 0,
   );
 

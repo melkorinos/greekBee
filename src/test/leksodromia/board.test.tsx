@@ -82,7 +82,7 @@ async function pickWord(user: ReturnType<typeof userEvent.setup>, word: string) 
 }
 
 async function skipCurrentWord(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: /παράλειψη/i }));
+  await user.click(screen.getByRole("button", { name: /επόμεν/i }));
   await user.click(screen.getByRole("button", { name: /σίγουρα/i }));
 }
 
@@ -129,10 +129,20 @@ describe("LeksodromiaBoard", () => {
     expect(screen.getByText(/λέξη 1\/10/i)).toBeDefined();
   });
 
+  it("tapping the answer row removes only the most recent letter", async () => {
+    const user = userEvent.setup();
+    renderBoard();
+    await pickWord(user, "γοα"); // 3 of 4 tiles — no auto-submit yet
+    expect(screen.getByTestId("answer-row").textContent).toBe("γοα");
+    await user.click(screen.getByTestId("answer-row")); // removes the last letter
+    expect(screen.getByTestId("answer-row").textContent).toBe("γο");
+    expect(screen.getByText(/λέξη 1\/10/i)).toBeDefined();
+  });
+
   it("skip is two-phase: the first click only arms the confirmation", async () => {
     const user = userEvent.setup();
     renderBoard();
-    await user.click(screen.getByRole("button", { name: /παράλειψη/i }));
+    await user.click(screen.getByRole("button", { name: /επόμεν/i }));
     expect(screen.getByText(/λέξη 1\/10/i)).toBeDefined(); // not yet skipped
     await user.click(screen.getByRole("button", { name: /σίγουρα/i }));
     expect(screen.getByText(/λέξη 2\/10/i)).toBeDefined();

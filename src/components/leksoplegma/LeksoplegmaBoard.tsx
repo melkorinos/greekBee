@@ -115,13 +115,16 @@ export function LeksoplegmaBoard({
     dispatch({ type: "TRACE_WORD", trace: current });
   }, [dispatch, updateTrace]);
 
-  /** True when `word` is a still-unfound required or bonus word — an auto-submit. */
+  /**
+   * True when `word` — traced either direction — is a still-unfound required
+   * word, so a tap-built trace can auto-submit the moment it spells one.
+   */
   const completesWord = useCallback((word: string) => {
-    return (
-      (word in puzzle.paths && !state.foundRequired.includes(word)) ||
-      (puzzle.bonusWords.includes(word) && !state.foundBonus.includes(word))
+    const reversed = [...word].reverse().join("");
+    return [word, reversed].some(
+      (w) => w in puzzle.paths && !state.foundRequired.includes(w),
     );
-  }, [puzzle, state.foundRequired, state.foundBonus]);
+  }, [puzzle.paths, state.foundRequired]);
 
   const onTapTile = useCallback((tile: number) => {
     const current = traceRef.current;
@@ -158,7 +161,6 @@ export function LeksoplegmaBoard({
       <div className="flex flex-col items-center gap-4 py-4 w-full">
         <LeksoplegmaRecap
           foundRequired={state.foundRequired}
-          foundBonus={state.foundBonus}
           hintsUsed={state.hintsUsed}
           totalScore={totalScore}
         />
@@ -235,14 +237,10 @@ export function LeksoplegmaBoard({
         onDragRelease={submitTrace}
       />
 
-      {/* Found + bonus */}
-      <div className="w-full flex flex-col gap-1 text-sm">
-        <p data-testid="bonus-counter" className="text-center text-muted">
-          ✨ Έξτρα λέξεις: <span className="font-semibold text-foreground">{state.foundBonus.length}</span>
-          {" · "}
-          <span className="font-mono">+{state.foundBonus.length * LEKSOPLEGMA.BONUS_WORD_POINTS}</span>
-        </p>
-        {state.foundRequired.length > 0 && (
+      {/* Words found so far */}
+      {state.foundRequired.length > 0 && (
+        <div className="w-full flex flex-col gap-1.5 text-sm">
+          <p className="text-center text-muted">Βρήκες</p>
           <ul data-testid="found-words" className="flex flex-wrap gap-1.5 justify-center">
             {state.foundRequired.map((word) => (
               <li
@@ -253,8 +251,8 @@ export function LeksoplegmaBoard({
               </li>
             ))}
           </ul>
-        )}
-      </div>
+        </div>
+      )}
 
       <LeksoplegmaLeaderboardModal
         isOpen={isLeaderboardOpen}

@@ -8,7 +8,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Platform** — The entire application: shell, navigation, persistence, and all games. Named **Leksarxeia** (the brand shown in the Shell header and picker). (Not: app, site)
 
-**Game** — A distinct word-game mode. Currently: Leksokipos, Leksiarxeio, Leksindeseis, Vres Tin Frasi, Stavrolekso.
+**Game** — A distinct word-game mode. Currently: Leksokipos, Leksiarxeio, Leksindeseis, Vres Tin Frasi, Stavrolekso, Λεξοδρομία, Λεξόπλεγμα.
 
 **Session** — One continuous play of a Puzzle on a given device. Persists across refreshes until the Puzzle changes. Each game persists different fields (Leksokipos: score + found words; Leksiarxeio: guesses per length; Leksindeseis: solved groups + mistakes; Vres Tin Frasi: guesses + status; Stavrolekso: typed cells + solved slots per puzzle ID). Leksokipos daily Sessions are also synced to the server (see `game_state` table) for cross-device restore via TransferCode.
 
@@ -20,7 +20,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Leaderboard** — Ranked Scores for a specific Daily Puzzle, 7-day rolling window. Only Daily Puzzles have one. (Not: rankings)
 
-**Puzzle** — A single playable instance of a Game on a given date. Types: `LeksokiposPuzzle`, `LeksiarxeioPuzzle`, `LeksindeseisPuzzle`, `VresTinFrasiPuzzle`. (Not: board, level)
+**Puzzle** — A single playable instance of a Game on a given date. Types: `LeksokiposPuzzle`, `LeksiarxeioPuzzle`, `LeksindeseisPuzzle`, `VresTinFrasiPuzzle`, `LeksoplegmaPuzzle`. Λεξοδρομία has no stored puzzle type — its daily round is derived deterministically from the Leksiarxeio Word Pools. (Not: board, level)
 
 **Daily Puzzle** — A Puzzle shared by all players on a given day (date-scoped ID).
 
@@ -32,7 +32,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Custom Puzzle** *(Leksokipos only)* — Player-constructed from a 7-letter combination. ID: `custom-{center}-{sortedOuter}`. Never on the Leaderboard.
 
-**Puzzle ID** — `YYYY-MM-DD-{language}` for Leksokipos Daily; `YYYY-MM-DD-wordle-{length}` for Leksiarxeio (frozen — renaming wipes localStorage sessions); `custom-{center}-{sortedOuter}` for Custom; `YYYY-MM-DD-vresi` for Vres Tin Frasi. Leksindeseis has no `id` field — `date` is the effective ID.
+**Puzzle ID** — `YYYY-MM-DD-{language}` for Leksokipos Daily; `YYYY-MM-DD-wordle-{length}` for Leksiarxeio (frozen — renaming wipes localStorage sessions); `custom-{center}-{sortedOuter}` for Custom; `YYYY-MM-DD-vresi` for Vres Tin Frasi; plain `YYYY-MM-DD` for Λεξοδρομία and Λεξόπλεγμα (the date **is** the daily puzzle id — Λεξόπλεγμα's generator ids are internal to the batch and never persisted). Leksindeseis has no `id` field — `date` is the effective ID.
 
 **Normalised Word** *(Leksokipos)* — Lowercased, accent-stripped, final ς → σ via `normalizeLetters()`. All stored words are normalised; raw input is normalised on arrival. (Not: cleaned, sanitised)
 
@@ -148,6 +148,28 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Κάθετα** — Down direction in a Stavrolekso Puzzle. (Not: vertical, down)
 
+**Λεξοδρομία** — Daily anagram sprint: 10 words (2 per Length 4–8, ascending), each shown as a Scramble to unscramble as fast as possible. Points decay with time (Decay Scoring); no stored puzzle — words are selected deterministically by date from the Leksiarxeio Word Pools, never colliding with Leksiarxeio's same-day Answer. (Not: anagram game, speed round)
+
+**Scramble** *(Λεξοδρομία)* — The deterministic shuffled form of an answer word, shown as a tile rack. Multiset-preserving and never identical to the answer. (Not: shuffle, rack — the rack is its visual layout)
+
+**Decay Scoring** *(Λεξοδρομία)* — Per-word points start at a base for its Length and decay linearly to a floor (25% of base) over 45 s of active solve time (the clock pauses while the tab is hidden). Each Hint costs 30% of base (max 2 per word); a solved word always scores at least 5 pts, so solving always beats a Skip. Perfect round = 1000. (Not: timer scoring, countdown)
+
+**Skip** *(Λεξοδρομία)* — Passing on the current word for 0 points via the two-phase «Επόμενο» button. A skipped word still appears in the recap. (Not: pass, give up)
+
+**Hint** *(Λεξοδρομία)* — Reveals the next correct letter as a locked prefix of the answer row. Costs 30% of the word's base points; max 2 per word. (Not: Λεξόπλεγμα's Hint — different mechanic and cost)
+
+**Λεξόπλεγμα** — Daily word-web (16-tile 4×4 grid): every Required Word lies along an authored path of edges; the player finds words by tracing them. No timer — points only. Daily Puzzle = date rotation over a committed generator batch, advanced past any puzzle whose Required Words contain Leksiarxeio's same-day Answer. (Not: word search, boggle)
+
+**Trace** *(Λεξόπλεγμα)* — An ordered tile sequence built by dragging or tapping along live edges. A Trace matches a word in either direction (forward or reversed). (Not: path — a Path is the authored answer route)
+
+**Required Word** *(Λεξόπλεγμα)* — One of the ~9 authored words of a puzzle, each with its authored Path. Finding all Required Words ends the round. Scores length × 10 pts. (Not: answer, target)
+
+**Collapse** *(Λεξόπλεγμα)* — When a Required Word is found, tiles and edges no longer needed by the remaining unfound Required Words disappear from the board. Derived state, not a timer. (Not: clear, removal)
+
+**Hint** *(Λεξόπλεγμα)* — Reveals a Required Word's start tile and length. Costs 25 pts (score floor 0); max 1 per word. A round finished with zero hints posts as perfect (`is_perfect`). (Not: Λεξοδρομία's Hint)
+
+**Bonus Word** *(Λεξόπλεγμα — retired)* — Extra words traceable along the required-edge graph. Was a runtime mechanic; removed 2026-07-14. Survives only as an offline generator artifact in the puzzle JSON. (Not: a playable element)
+
 **Offline Lock** — A deliberate client-side state on a Leksokipos Daily Puzzle that blocks browser refresh and in-app navigation, and routes score submissions through the Offline Score Outbox instead of posting directly. Activated via a toggle inside the Leksokipos UI; released manually. Only available on Daily Puzzles. (Not: offline mode, airplane mode, offline play)
 
 **Offline Score Outbox** — A single-entry localStorage record holding the latest pending Leksokipos Score from a locked Session: `{ gameId, puzzleDate, deviceId, score, displayName }`. Written on every word found while Offline Lock is active; overwritten (not appended) on each subsequent word. Flushed to `game_scores` on lock release, or automatically on the next page mount if an entry exists. Kept on flush failure and retried on the next release. (Not: queue, cache, retry buffer)
@@ -162,7 +184,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 |---|---|
 | `player_profiles` | Device identity: `device_uuid` → `display_name`. Optional `auth_user_id` links a Google account and is the durable identity anchor — authoritative device→account map, unique partial index on `auth_user_id` (ADR 0012; column introduced by ADR 0007). |
 | `transfer_codes` | Single-use 6-char codes for cross-device identity transfer, 24h TTL. |
-| `game_scores` | Unified leaderboard for all games, keyed by `game_id` (`leksokipos`/`leksiarxeio`/`leksindeseis`/`vrestifrasi`) + `device_id`. Leksiarxeio writes one row per `word_length`. Device-keyed only — no `auth_user_id` column; Sign-in Restore makes the adopted DeviceId canonical, so device_id serves anonymous and AuthLinked players alike (the device→account map lives in `player_profiles`). |
+| `game_scores` | Unified leaderboard for all games, keyed by `game_id` (`leksokipos`/`leksiarxeio`/`leksindeseis`/`vrestifrasi`/`leksodromia`/`leksoplegma`) + `device_id`. Leksiarxeio writes one row per `word_length`. Device-keyed only — no `auth_user_id` column; Sign-in Restore makes the adopted DeviceId canonical, so device_id serves anonymous and AuthLinked players alike (the device→account map lives in `player_profiles`). |
 | `game_state` | Serialised Session for cross-device sync (Leksokipos daily puzzles only). Blob: `{ foundWords: string[] }`. Pushed after every valid word; pulled on mount when local progress is empty. Both require ProfileLinked. |
 | `nominations` | Community word proposals (add / remove a word). |
 | `nomination_votes` | Up/down votes on nominations, one per device. |

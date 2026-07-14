@@ -5,6 +5,26 @@
 
 ---
 
+## Session 77 — 2026-07-14: Λεξόπλεγμα + Λεξοδρομία polish (user QA pass)
+Direct user requests on the two wip games. Gates: test/eslint/build all green.
+1. **Λεξόπλεγμα counter bug** — "Λέξεις 0/9 doesn't increment when a word is found." Root cause: traces walk **undirected** edges, so drawing a word end→start spelled it reversed and never matched → stayed a "wrong" trace. Fix: TRACE_WORD (reducer) + `completesWord` (board) now accept the word **either direction** (`forward` or reversed). Regression tests added (reducer `[2,1,0]`→αβγ; board tap-builds "γβα").
+2. **Removed the bonus-word (Έξτρα λέξεις) "time element"** per user — the grab-before-collapse race. Cut `foundBonus` from state/reducer/scoring(`computeScore(required, hints)`)/hook snapshot/board counter/recap/help + home-page blurb. `bonusWords` stays on the puzzle type + JSON as **offline-only** generator data (untouched). Collapse rule kept (required-word cleanup, not a timer).
+3. **Found-words list** now labelled "Βρήκες" and shown as chips (was already there but masked by bug 1).
+4. **Λεξοδρομία**: removed ⌫ button — **tapping the answer row** now removes the most recent letter (div+onClick, Modal-overlay a11y pattern). Scrambled rack → **two rows**, top row keeps the extra tile on odd counts (`ceil`/`floor`, e.g. 3+2). Skip button **Παράλειψη → Επόμενο** (label + aria + help + home blurb; two-phase confirm kept).
+5. Tests updated (leksoplegma reducer/scoring/board; leksodromia board incl. new tap-to-remove test).
+6. **Both graduated wip:true → false** after user confirmed play-through — `GAME_REGISTRY` flags flipped (picker + Shell auto-move them out of "🚧 Υπό κατασκευή"; only Leksindeseis stays wip). Platform now **7 live games**. memory.md status table updated.
+
+---
+
+## Session 76 — 2026-07-14: Fluid CPU prerender read-out — VERDICT: FIXED ✅ (investigation closed)
+Executed `fluid-cpu/HANDOFF-post-deploy-readout.md` (deleted); full verdict in `fluid-cpu/analysis.md`. No product code.
+1. **Deploy pinned:** merge `d64e651` → prod `dpl_2VsGBZEufrejhKYR4QqrAXVyijz3` 2026-07-11 10:11 UTC. Build logs: `● [center]/[outer]` **1008 paths** (1018 static in 8.9 s), build 58 s.
+2. **All 3 success criteria met (day 3):** `[center]/[outer]` **44 inv/60 s → 1 inv/2.39 s** (the 1 likely our own probe); total function CPU ≈ 99 s/window ≈ **0.6 min/day vs 10 min/day baseline**; daily combo = CDN HIT + `X-Nextjs-Prerender: 1`, custom combo MISS→ISR once; zero errors, zero Node-lambda traffic in live sample. Top CPU now the edge APIs (game-scores/game-state/achievements, ~190 ms/inv).
+3. **Confound:** Vercel **Pro upgrade 2026-07-14** — gauge now in $ (`$0.02` ≈ 9 CPU-min), $20/mo included, $200 cap; compared daily rates not totals. Items 1+2 stay UX/correctness-only (7 s + 6 s/window is noise).
+4. **Tooling:** Vercel MCP absent this session → fell back to Vercel CLI (device login `melkorinos`); `/project-mcp` skill updated: Pro plan row + "MCP absent? use CLI" section (`vercel ls/inspect/logs` recipes; `inspect --logs` writes to **stderr**; `logs` live-streams only; per-function CPU stays dashboard-only).
+
+---
+
 ## Session 75 — 2026-07-14: Λεξόπλεγμα — new game built (`/tdd`) ✅
 Implemented `HANDOFF-leksoplegma-game.md` end-to-end (handoff deleted); zanagrams-style word-web, **no timer — points only**. 7 red→green slices:
 1. **Pure lib** (`src/games/leksoplegma/lib/`): `graph.ts` (undirected `edgeKey`/`edgesOf`, collapse rule as derived state `liveTiles/liveEdges(paths, foundRequired)`, `isTraceValid` — grid-agnostic, adjacency is a generator concern); `scoring.ts` (`computeScore` = Σ len×10 + 25/bonus − 25/hint, floor 0; `isPerfectRound` = 0 hints). `LEKSOPLEGMA` block added to `gameRules.ts`.
@@ -18,22 +38,11 @@ Implemented `HANDOFF-leksoplegma-game.md` end-to-end (handoff deleted); zanagram
 
 ---
 
-## Session 74 — 2026-07-13: Λεξοδρομία — new game built (`/tdd`) ✅
-Implemented `HANDOFF-namepending-game.md` end-to-end (handoff deleted). **Name chosen by user: Λεξοδρομία, permanent id `leksodromia`** (dirs/route/slice/`LEKSODROMIA` config block). 7 red→green slices:
-1. **Pure lib** (`src/games/leksodromia/lib/`): `computeWordPoints` (decay-to-floor, hint −30% BASE, MIN_SOLVED_POINTS clamp, perfect round === MAX_SCORE 1000); `selectDailyWords(date, pools)` (pools injected — the loader binds them; seeded mulberry32/FNV-1a in `seededRandom.ts`; **never picks Leksiarxeio's same-day fallback answer** — fixture-pool + 365-real-date tests); `scrambleWord` (seeded Fisher-Yates, multiset-true, never identity, rotate-by-1 fallback).
-2. **Reducer** — tile-index input model (`picked`), hints lock an answer-prefix of tiles (`lockedTileIdxs`) and clear free picks, `RESTORE_STATE` re-locks prefix from `currentHintsUsed`; selectors `getCurrentInput/getAvailableTileIndices/getTotalScore`. Reducer never reads Date.now() — elapsed arrives as SUBMIT/SKIP payload.
-3. **Hooks** — `useElapsedClock` (accumulates only while running+visible, `getElapsedMs()` exact, `reset(base)`); `useLeksodromiaRound` (reducer+clock+`useRoundPersistence`; snapshot `{puzzleId, wordIndex, currentElapsedMs (1 s-coarsened writes), currentHintsUsed, results}`; **refresh restores the decay clock**; skip-flag distinguishes restore from word-advance clock reset; shouldSave blocks pristine writes).
-4. **Components** (`src/components/leksodromia/`): Board (rack→answer row, live decaying counter, hint w/ cost, two-phase skip, FeedbackBanner wrong-submit, recap, **score posts once on LIVE finish only** — `userActedRef` guards restored-finished rounds), PageClient (HowToPlay pauses clock via `paused` prop), HowToPlayModal (copy derives from `LEKSODROMIA`), RoundRecap, LeaderboardModal (thin `LeaderboardModalBase` wrapper, desc sort).
-5. **Wiring** — `src/data/leksodromia/` static-imports `answers-{4..8}.json` DIRECTLY (~300 KB; **not** via `@/data/leksiarxeio`, whose graph pulls the MB-scale `words-*.json` — Fluid CPU); `force-dynamic` route; registry entry `wip: true`; `--game-accent` red-600; `SliceId`+envelope+`useScoreSubmission` unions extended; picker `GAME_RULES` entry; `deploymentReadiness` list += answers-{4..8}.
-6. No perf-test addition: selection/scramble are O(10) index math — no >10k scans on the request path.
-7. Gates: **1487 pass / 6 skip · eslint 0 · build 0** (was 1413). Remaining before `wip: false`: polish pass + manual browser play-through. *(Ran concurrently with session 73's Leksoplegma grill — log/handoff dirs were shared; reconciled here.)*
-
----
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 74 | 2026-07-13 | **Λεξοδρομία built** (`/tdd`, 7 slices): decay-to-floor scoring + seeded daily selection (never Leksiarxeio's same-day answer) + seeded scramble; tile-index reducer w/ hint prefix-locking; refresh-proof decay clock (`useElapsedClock`, 1 s-coarsened persist); Board/PageClient/recap/leaderboard; direct `answers-{4..8}` imports (Fluid-safe); registry `wip: true`, accent red-600. 1487 pass. |
 | 73 | 2026-07-13 | **Leksoplegma design grill → handoff** (built in session 75): reverse-engineered zanagrams.com from source (16-tile graph, authored paths, bonus words, collapse rule); decisions: offline generator batch + rotation, no timer/points-only, ~9 required words, name FINAL leksoplegma. |
 | 72 | 2026-07-13 | **Anagram-sprint design grill → handoff** (became Λεξοδρομία, built in session 74): decay-to-floor scoring, 2× lengths 4–8 from Leksiarxeio answer pools, exact-match MVP, refresh-proof clock, leaderboard at launch (`game_scores.game_id` unconstrained — no migration). Name-first blocker recorded. |
 | 71 | 2026-07-10 | **Prerender daily combos** (Fluid #2): `getPrebuiltPuzzleParams` (slim index, canonical-param contract) + `generateStaticParams` on `[center]/[outer]` → route `ƒ`→`●`, 1008 pages SSG, custom combos keep ISR 604800. Deleted done+superseded fluid handoffs (**payload item 1 + consume-per-view bug 2 still unimplemented**; verdicts in `fluid-cpu/analysis.md`). New `fluid-cpu/HANDOFF-post-deploy-readout.md` (~1 wk post-merge; fill merge commit at merge). **Manual browser play-through required before dev→main merge.** 1413 pass. |

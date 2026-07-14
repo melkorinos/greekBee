@@ -166,6 +166,11 @@ export function LeksodromiaBoard({
   const livePoints  = computeWordPoints(elapsedMs, length, state.hintsUsed);
   const usedTiles   = new Set([...state.lockedTileIdxs, ...state.picked]);
 
+  // Rack laid out in two rows; the top row keeps the extra tile on an odd count.
+  const rackTiles = [...scramble].map((letter, i) => ({ letter, i }));
+  const topCount  = Math.ceil(rackTiles.length / 2);
+  const rackRows  = [rackTiles.slice(0, topCount), rackTiles.slice(topCount)];
+
   if (state.status === "finished") {
     return (
       <div className="flex flex-col items-center gap-4 py-4 w-full">
@@ -216,8 +221,16 @@ export function LeksodromiaBoard({
         />
       </div>
 
-      {/* Answer row — dashed empty slots read as targets; filled slots go solid */}
-      <div data-testid="answer-row" className="flex gap-1.5">
+      {/* Answer row — dashed empty slots read as targets; filled slots go solid.
+          Tapping the row removes the most recent letter (replaces a ⌫ button). */}
+      <div
+        data-testid="answer-row"
+        onClick={removeLetter}
+        role="button"
+        aria-label="Διαγραφή τελευταίου γράμματος"
+        title="Πάτησε για διαγραφή"
+        className="flex gap-1.5 cursor-pointer"
+      >
         {[...answer].map((_, i) => {
           const letter = input[i] ?? "";
           const isLocked = i < state.lockedTileIdxs.length;
@@ -237,33 +250,31 @@ export function LeksodromiaBoard({
         })}
       </div>
 
-      {/* Scrambled rack — circular pressable tiles, set well apart from the row */}
-      <div className="flex gap-2 flex-wrap justify-center mt-4">
-        {[...scramble].map((letter, i) => {
-          const used = usedTiles.has(i);
-          return (
-            <button
-              key={i}
-              onClick={() => pickTile(i)}
-              disabled={used}
-              aria-label={`Γράμμα ${letter}`}
-              className={`flex items-center justify-center w-11 h-11 rounded-full border border-border bg-surface-raised text-lg font-bold uppercase text-foreground hover:bg-border active:scale-95 transition-all ${used ? "opacity-0 pointer-events-none" : ""}`}
-            >
-              {letter}
-            </button>
-          );
-        })}
+      {/* Scrambled rack — circular pressable tiles, two rows (top row holds the
+          extra tile on an odd count, e.g. 3 over 2), set apart from the row. */}
+      <div className="flex flex-col gap-2 items-center mt-4">
+        {rackRows.map((row, r) => (
+          <div key={r} className="flex gap-2 justify-center">
+            {row.map(({ letter, i }) => {
+              const used = usedTiles.has(i);
+              return (
+                <button
+                  key={i}
+                  onClick={() => pickTile(i)}
+                  disabled={used}
+                  aria-label={`Γράμμα ${letter}`}
+                  className={`flex items-center justify-center w-11 h-11 rounded-full border border-border bg-surface-raised text-lg font-bold uppercase text-foreground hover:bg-border active:scale-95 transition-all ${used ? "opacity-0 pointer-events-none" : ""}`}
+                >
+                  {letter}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       {/* Actions */}
       <div className="flex items-center gap-2 flex-wrap justify-center">
-        <button
-          onClick={removeLetter}
-          aria-label="Διαγραφή γράμματος"
-          className="px-4 py-2 rounded-full border border-border text-foreground text-sm font-medium hover:bg-surface-raised active:bg-border transition-colors"
-        >
-          ⌫
-        </button>
         <button
           onClick={clearInput}
           aria-label="Καθαρισμός"
@@ -274,7 +285,7 @@ export function LeksodromiaBoard({
         {skipArmed ? (
           <button
             onClick={confirmSkip}
-            aria-label="Σίγουρα; Παράλειψη για 0 πόντους"
+            aria-label="Σίγουρα; Επόμενη λέξη για 0 πόντους"
             className="px-4 py-2 rounded-full bg-danger text-white text-sm font-semibold hover:opacity-90 transition-opacity"
           >
             Σίγουρα; (0 πόντοι)
@@ -282,10 +293,10 @@ export function LeksodromiaBoard({
         ) : (
           <button
             onClick={() => setSkipArmed(true)}
-            aria-label="Παράλειψη λέξης"
+            aria-label="Επόμενη λέξη"
             className="px-4 py-2 rounded-full border border-border text-muted text-sm font-medium hover:bg-surface-raised active:bg-border transition-colors"
           >
-            ⏭️ Παράλειψη
+            ⏭️ Επόμενο
           </button>
         )}
       </div>

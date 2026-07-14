@@ -8,7 +8,11 @@ export interface LeksoplegmaPuzzle {
   letters:    string;
   /** Authored trace per required word — consecutive pairs are the drawn edges. */
   paths:      Record<string, number[]>;
-  /** Words traceable along the required-edge graph, precomputed offline. */
+  /**
+   * Offline-only artifact: extra words traceable along the required-edge graph,
+   * precomputed by the generator. No longer a runtime game element (the bonus
+   * mechanic was removed) — kept so committed puzzle JSON stays valid.
+   */
   bonusWords: string[];
 }
 
@@ -18,7 +22,6 @@ export interface LeksoplegmaState {
   puzzleId:      string;
   puzzle:        LeksoplegmaPuzzle;
   foundRequired: string[];
-  foundBonus:    string[];
   /** Required words a hint was taken on — one hint per word, max. */
   hintsUsed:     string[];
   /** Shake flag — set by a rejected trace, cleared by the next accepted one. */

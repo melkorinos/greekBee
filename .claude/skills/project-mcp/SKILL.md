@@ -17,6 +17,7 @@ All IDs verified live against the MCP servers.
 | **Region / stack** | `eu-central-1` · Postgres 17 | `fra1` · Next.js · Node 24.x |
 | **URL** | `https://rnfsuvhgufhbekodkmlp.supabase.co` | `https://greek-bee.vercel.app` |
 | **Source** | — | GitHub `melkorinos/greekBee` (public) · prod ← `main`, previews ← `dev` |
+| **Plan** | free tier | **Pro** (since ~2026-07-14, $200/mo on-demand cap) |
 
 - **Every Supabase MCP tool** requires `project_id: "rnfsuvhgufhbekodkmlp"`.
 - **Every Vercel MCP tool** requires `teamId: "team_AUMxvbaDutPq8SMboMcf4sED"` **and** `projectId` (slug `greek-bee` works for most).
@@ -28,6 +29,18 @@ All IDs verified live against the MCP servers.
 3. **Vercel `get_deployment_build_logs` needs the concrete `dpl_…` id, NOT the alias.** Passing `greek-bee.vercel.app` → `404 Deployment not found`. Get the id first from `get_project.latestDeployment.id` or `list_deployments`, then pass that. (Note: `get_deployment` *does* accept the alias — inconsistent, but true.)
 
 So **skip all discovery calls** — `list_projects` / `list_organizations` / `list_teams` — you already have every ID.
+
+## Vercel MCP absent? Use the CLI (verified 2026-07-14)
+
+Some sessions have **no Vercel MCP tools at all** (ToolSearch finds none — only Supabase/Gmail/Drive are connected). Don't hunt; fall back to the Vercel CLI, which covers most of the same ground:
+
+- `npx vercel whoami` — if not logged in, it starts a device-code flow (user visits vercel.com/oauth/device); account `melkorinos`. Credentials then persist on this machine.
+- Always pass `--scope melkorinos-projects`.
+- `npx vercel ls greek-bee [--prod]` — deployments list (works fine, unlike MCP `list_projects`).
+- `npx vercel inspect <url-or-dpl_id>` — deployment metadata (accepts alias or id; gives `dpl_…`, created time, aliases).
+- `npx vercel inspect <dpl_id> --logs` — full build logs incl. the Next.js route table. **Writes to stderr** — run via Bash with `2>&1` redirect into a file; PowerShell `2>$null` eats it (0 lines).
+- `npx vercel logs greek-bee.vercel.app --json` — **live-streams runtime logs from now** (no lookback); wrap in `timeout N …` via Bash to sample a window. Rows have `source` (`static`/`edge-function`/`lambda`), `requestPath`, `cache`, `responseStatusCode`.
+- **Not available via CLI or MCP:** per-function CPU, Fluid gauge, billing-cycle reset date — Observability → Functions in the dashboard remains the only source; ask the operator.
 
 ## Verified project facts (so you don't re-derive)
 

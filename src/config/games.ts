@@ -50,7 +50,7 @@ export const GAME_REGISTRY = {
     title:       "Λεξοδρομία",
     description: "Ξεμπέρδεψε 10 λέξεις — όσο πιο γρήγορα, τόσο περισσότεροι πόντοι.",
     href:        "/leksodromia",
-    wip:         true,
+    wip:         false,
   },
   leksoplegma: {
     label:       "🕸️ Λεξόπλεγμα",
@@ -58,7 +58,7 @@ export const GAME_REGISTRY = {
     title:       "Λεξόπλεγμα",
     description: "Βρες τις κρυμμένες λέξεις πάνω στις γραμμές του πλέγματος.",
     href:        "/leksoplegma",
-    wip:         true,
+    wip:         false,
   },
   leksikastirio: {
     label:       "⚖️ Leksikastirio",

@@ -1,7 +1,7 @@
 # Agent Memory — Greek Word Games Platform
 
 ## ⚡ Current State (2026-07-14)
-Five live games + Λεξοδρομία (wip) + Λεξόπλεγμα (wip) + custom puzzle URLs + the Leksikastirio word-court. Run `npm run test -- --run` for current count.
+Seven live games (incl. Λεξοδρομία + Λεξόπλεγμα, graduated from wip session 77) + custom puzzle URLs + the Leksikastirio word-court. Run `npm run test -- --run` for current count.
 
 | Game | Route | Status |
 |------|-------|--------|
@@ -11,8 +11,8 @@ Five live games + Λεξοδρομία (wip) + Λεξόπλεγμα (wip) + cust
 | Vres Tin Frasi | `/vres-tin-frasi` | Live — daily Greek phrase |
 | Stavrolekso | `/stavrolekso` | Live — community crossword browser + maker |
 | Leksikastirio | `/leksikastirio` | Live — community word-court (voting + admin review) |
-| Λεξοδρομία | `/leksodromia` | `wip: true` — daily anagram sprint, decay-to-floor scoring (polish pass pending) |
-| Λεξόπλεγμα | `/leksoplegma` | `wip: true` — daily word-web (zanagrams-style), points scoring, no timer (polish pass pending) |
+| Λεξοδρομία | `/leksodromia` | Live — daily anagram sprint, decay-to-floor scoring |
+| Λεξόπλεγμα | `/leksoplegma` | Live — daily word-web (zanagrams-style), points scoring, no timer/bonus |
 
 ---
 

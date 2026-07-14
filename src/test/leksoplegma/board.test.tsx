@@ -41,14 +41,14 @@ vi.mock("@/hooks/useAuth", () => ({
 
 // ── Fixture ───────────────────────────────────────────────────────────────────
 // 16 distinct letters so every tile is uniquely addressable by name.
-// Required: αβγ (0-1-2), γδε (2-3-4), εζ (4-5). Bonus βγ rides edge 1-2.
+// Required: αβγ (0-1-2), γδε (2-3-4), εζ (4-5). bonusWords is offline-only data.
 // (Runtime never re-checks grid geometry — edges come from the authored paths.)
 
 const PUZZLE = {
   id:         "fixture-1",
   letters:    "αβγδεζηθικλμνξοπ",
   paths:      { αβγ: [0, 1, 2], γδε: [2, 3, 4], εζ: [4, 5] },
-  bonusWords: ["βγ"],
+  bonusWords: [],
 };
 const TODAY = "2026-07-14";
 
@@ -101,6 +101,14 @@ describe("LeksoplegmaBoard", () => {
     expect(screen.getByTestId("found-words").textContent).toContain("30");
   });
 
+  it("accepts a word tap-built in reverse and increments the counter", async () => {
+    const user = userEvent.setup();
+    renderBoard();
+    await tapWord(user, "γβα"); // αβγ traced backwards — same undirected path
+    expect(screen.getByText(/λέξεις 1\/3/i)).toBeDefined();
+    expect(screen.getByTestId("found-words").textContent).toContain("αβγ");
+  });
+
   it("collapses tiles no remaining required word needs", async () => {
     const user = userEvent.setup();
     renderBoard();
@@ -126,16 +134,6 @@ describe("LeksoplegmaBoard", () => {
     expect(screen.getByTestId("building-word").textContent).toBe("δε");
     expect(screen.getByText(/λέξεις 0\/3/i)).toBeDefined();
     expect(screen.queryByText(/δεν υπάρχει/i)).toBeNull();
-  });
-
-  it("auto-submits a bonus word once, then a re-tap of it does nothing", async () => {
-    const user = userEvent.setup();
-    renderBoard();
-    await tapWord(user, "βγ"); // fresh bonus → auto-submits
-    expect(screen.getByTestId("bonus-counter").textContent).toContain("1");
-    expect(screen.getByTestId("bonus-counter").textContent).toContain("+25");
-    await tapWord(user, "βγ"); // already found — no auto-submit, count unchanged
-    expect(screen.getByTestId("bonus-counter").textContent).toContain("1");
   });
 
   it("finishing shows the recap with every required word and posts the score once", async () => {

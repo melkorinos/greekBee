@@ -14,13 +14,13 @@ import { computeScore } from "./scoring";
 export type LeksoplegmaAction =
   | { type: "TRACE_WORD"; trace: number[] }
   | { type: "USE_HINT" }
-  | { type: "RESTORE_STATE"; foundRequired: string[]; foundBonus: string[]; hintsUsed: string[] };
+  | { type: "RESTORE_STATE"; foundRequired: string[]; hintsUsed: string[] };
 
 // ─── Selectors ────────────────────────────────────────────────────────────────
 
 /** Round score so far — posted to the leaderboard once, at completion. */
 export function getRoundScore(state: LeksoplegmaState): number {
-  return computeScore(state.foundRequired, state.foundBonus, state.hintsUsed);
+  return computeScore(state.foundRequired, state.hintsUsed);
 }
 
 /** Start tile + length of each hinted, still-unfound required word. */
@@ -45,9 +45,15 @@ export function leksoplegmaReducer(
       const live = liveEdges(paths, state.foundRequired);
       if (!isTraceValid(action.trace, live)) return { ...state, wrongTrace: true };
 
-      const word = action.trace.map((i) => state.puzzle.letters[i]).join("");
+      // A trace walks undirected edges, so it may spell a word either way round.
+      // Accept whichever direction hits a still-unfound required word.
+      const forward = action.trace.map((i) => state.puzzle.letters[i]).join("");
+      const backward = [...forward].reverse().join("");
+      const word = [forward, backward].find(
+        (w) => w in paths && !state.foundRequired.includes(w),
+      );
 
-      if (word in paths && !state.foundRequired.includes(word)) {
+      if (word !== undefined) {
         const foundRequired = [...state.foundRequired, word];
         const finished = foundRequired.length === Object.keys(paths).length;
         return {
@@ -56,10 +62,6 @@ export function leksoplegmaReducer(
           status: finished ? "finished" : "playing",
           wrongTrace: false,
         };
-      }
-
-      if (state.puzzle.bonusWords.includes(word) && !state.foundBonus.includes(word)) {
-        return { ...state, foundBonus: [...state.foundBonus, word], wrongTrace: false };
       }
 
       return { ...state, wrongTrace: true }; // miss or duplicate — no penalty
@@ -74,12 +76,11 @@ export function leksoplegmaReducer(
     }
 
     case "RESTORE_STATE": {
-      const { paths, bonusWords } = state.puzzle;
+      const { paths } = state.puzzle;
       const foundRequired = action.foundRequired.filter((w) => w in paths);
       return {
         ...state,
         foundRequired,
-        foundBonus: action.foundBonus.filter((w) => bonusWords.includes(w)),
         hintsUsed: action.hintsUsed.filter((w) => w in paths),
         status: foundRequired.length === Object.keys(paths).length ? "finished" : "playing",
         wrongTrace: false,
@@ -101,7 +102,6 @@ export function makeInitialLeksoplegmaState(
     puzzleId,
     puzzle,
     foundRequired: [],
-    foundBonus: [],
     hintsUsed: [],
     wrongTrace: false,
     status: "playing",

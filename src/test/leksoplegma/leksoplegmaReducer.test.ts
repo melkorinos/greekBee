@@ -1,6 +1,6 @@
-// Leksoplegma reducer — TRACE_WORD (required/bonus/miss/dup), USE_HINT
-// (per-word cap, auto-targets the first unfound un-hinted required word),
-// terminal state (last required word ends the puzzle), RESTORE_STATE.
+// Leksoplegma reducer — TRACE_WORD (required either direction / miss / dup),
+// USE_HINT (per-word cap, auto-targets the first unfound un-hinted required
+// word), terminal state (last required word ends the puzzle), RESTORE_STATE.
 
 import { describe, it, expect } from "vitest";
 
@@ -15,14 +15,14 @@ import { computeScore } from "@/games/leksoplegma/lib/scoring";
 import type { LeksoplegmaState } from "@/games/leksoplegma/types";
 
 // Fixture board (grid-size agnostic — the reducer works on puzzle data alone):
-// tiles 0..4 = α β γ δ ε; required αβγ (0-1-2), γδε (2-3-4), εα (4-0);
-// bonus "βγ" is traceable along the live edge 1-2.
+// tiles 0..4 = α β γ δ ε; required αβγ (0-1-2), γδε (2-3-4), εα (4-0).
+// bonusWords is offline-only data and never a runtime game element.
 function makeState(): LeksoplegmaState {
   return makeInitialLeksoplegmaState("2026-07-14", {
     id:         "test-1",
     letters:    "αβγδε",
     paths:      { αβγ: [0, 1, 2], γδε: [2, 3, 4], εα: [4, 0] },
-    bonusWords: ["βγ"],
+    bonusWords: [],
   });
 }
 
@@ -36,6 +36,13 @@ describe("TRACE_WORD — required words", () => {
     expect(s.foundRequired).toEqual(["αβγ"]);
     expect(s.wrongTrace).toBe(false);
     expect(s.status).toBe("playing");
+  });
+
+  it("accepts a word traced in reverse (edges are undirected)", () => {
+    // γβα spells "αβγ" backwards — the player may draw the path either way.
+    const s = dispatch(makeState(), { type: "TRACE_WORD", trace: [2, 1, 0] });
+    expect(s.foundRequired).toEqual(["αβγ"]);
+    expect(s.wrongTrace).toBe(false);
   });
 
   it("rejects re-tracing a found word — its edges have collapsed", () => {
@@ -69,31 +76,11 @@ describe("TRACE_WORD — required words", () => {
   });
 });
 
-describe("TRACE_WORD — bonus words", () => {
-  it("records a bonus word once, without ending the round", () => {
-    const s = dispatch(makeState(), { type: "TRACE_WORD", trace: [1, 2] });
-    expect(s.foundBonus).toEqual(["βγ"]);
-    expect(s.status).toBe("playing");
-    expect(s.wrongTrace).toBe(false);
-  });
-
-  it("flags a duplicate bonus submit without recording it twice", () => {
-    const s = dispatch(
-      makeState(),
-      { type: "TRACE_WORD", trace: [1, 2] },
-      { type: "TRACE_WORD", trace: [1, 2] },
-    );
-    expect(s.foundBonus).toEqual(["βγ"]);
-    expect(s.wrongTrace).toBe(true);
-  });
-});
-
 describe("TRACE_WORD — misses", () => {
   it("flags a valid trace that spells no word", () => {
     const s = dispatch(makeState(), { type: "TRACE_WORD", trace: [2, 3] }); // "γδ"
     expect(s.wrongTrace).toBe(true);
     expect(s.foundRequired).toEqual([]);
-    expect(s.foundBonus).toEqual([]);
   });
 
   it("flags a trace over a non-existent edge even if it spells a word", () => {
@@ -156,37 +143,32 @@ describe("USE_HINT", () => {
 
 describe("score", () => {
   it("derives the round score from found words and hints via computeScore", () => {
-    // Bonus must be grabbed BEFORE αβγ is found — finding it collapses edge 1-2.
     const s = dispatch(
       makeState(),
       { type: "USE_HINT" },
-      { type: "TRACE_WORD", trace: [1, 2] },
       { type: "TRACE_WORD", trace: [0, 1, 2] },
     );
-    expect(getRoundScore(s)).toBe(computeScore(["αβγ"], ["βγ"], ["αβγ"]));
+    expect(getRoundScore(s)).toBe(computeScore(["αβγ"], ["αβγ"]));
   });
 
-  it("a collapsed-away bonus word can no longer be traced — deliberate strategic tension", () => {
+  it("an edge that collapsed after its word was found can no longer be traced", () => {
     const s = dispatch(
       makeState(),
       { type: "TRACE_WORD", trace: [0, 1, 2] }, // finding αβγ kills edge 1-2
       { type: "TRACE_WORD", trace: [1, 2] },
     );
-    expect(s.foundBonus).toEqual([]);
     expect(s.wrongTrace).toBe(true);
   });
 });
 
 describe("RESTORE_STATE", () => {
-  it("restores found/bonus/hints and recomputes a playing status", () => {
+  it("restores found/hints and recomputes a playing status", () => {
     const s = dispatch(makeState(), {
       type: "RESTORE_STATE",
       foundRequired: ["αβγ"],
-      foundBonus: ["βγ"],
       hintsUsed: ["γδε"],
     });
     expect(s.foundRequired).toEqual(["αβγ"]);
-    expect(s.foundBonus).toEqual(["βγ"]);
     expect(s.hintsUsed).toEqual(["γδε"]);
     expect(s.status).toBe("playing");
   });
@@ -195,7 +177,6 @@ describe("RESTORE_STATE", () => {
     const s = dispatch(makeState(), {
       type: "RESTORE_STATE",
       foundRequired: ["αβγ", "γδε", "εα"],
-      foundBonus: [],
       hintsUsed: [],
     });
     expect(s.status).toBe("finished");
@@ -205,11 +186,9 @@ describe("RESTORE_STATE", () => {
     const s = dispatch(makeState(), {
       type: "RESTORE_STATE",
       foundRequired: ["αβγ", "ξενο"],
-      foundBonus: ["οχι"],
       hintsUsed: ["ξενο"],
     });
     expect(s.foundRequired).toEqual(["αβγ"]);
-    expect(s.foundBonus).toEqual([]);
     expect(s.hintsUsed).toEqual([]);
   });
 });

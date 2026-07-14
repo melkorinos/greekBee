@@ -105,6 +105,40 @@ Fluid invocations*). The meaningful before/after is (a) build-time delta
 `[center]/[outer]` should drop from ~44 inv/1m CPU to near-zero (only custom
 combos remain). Check 2–3 days after the merge to main.
 
+## Post-deploy read-out — prerender verdict (2026-07-14) ✅ ALL THREE CRITERIA MET
+
+Merge `d64e651` (contains `f9fb359`) → prod deploy `dpl_2VsGBZEufrejhKYR4QqrAXVyijz3`
+2026-07-11 10:11 UTC, aliased to greek-bee.vercel.app. Read-out taken **day 3**
+(not 7 — evidence was already conclusive).
+
+- **Build (step 0):** route table shows `● /leksokipos/[center]/[outer]` with
+  1008 paths (1018 static pages total, generated in 8.9 s); whole Vercel build
+  58 s — prerendering cost nothing.
+- **Criterion 1 — route CPU dead:** dashboard Functions-by-CPU (~3-day window):
+  `[center]/[outer]` = **1 inv / 2.39 s total** (was 44 inv / 60 s, dominant).
+  That single invocation is plausibly this session's own custom-combo probe
+  (`/leksokipos/s/aeiklm`, cache MISS → one ISR fill).
+- **Criterion 2 — burn rate:** total function CPU across ALL routes ≈ **99 s
+  (~1.7 min) for the window ≈ 0.6 min/day** vs ~10 min/day baseline. Top
+  consumers now: `/api/game-scores` (534 inv/24 s), `/api/game-state`
+  (424/20 s), `/api/achievements` (190/17 s) — all edge API routes with
+  ~190 ms CPU/inv; page SSR is no longer a meaningful consumer.
+- **Criterion 3 — works in prod:** daily combo serves `X-Vercel-Cache: HIT` +
+  `X-Nextjs-Prerender: 1` (Age 6 h+ = CDN, zero Fluid); custom combo MISSes
+  once then ISR-caches. Live-log sample: only edge API + static traffic,
+  zero errors, zero Node-lambda invocations.
+- **Confounds:** Vercel **Pro upgrade 2026-07-14** (mid-window) — usage view
+  now shows dollars (`Fluid Active CPU $0.02` ≈ ~9 CPU-min at ~$0.128/h;
+  accumulation window unclear, possibly reset at upgrade). Hobby 4 h cap no
+  longer applies; $20/mo included usage + $200 spend cap. Compared daily
+  *rates*, not gauge totals, accordingly.
+- **Items 1+2 verdict unchanged:** `/vres-tin-frasi` 7 s + `/leksiarxeio` 6 s
+  CPU per window is negligible — do them for page weight (2.4 MB/view) and
+  the consume-per-view correctness bug, **not** as CPU work.
+- **Tooling note:** Vercel MCP was absent this session; everything above came
+  via Vercel CLI + curl headers + operator dashboard read. CLI recipes now in
+  `/project-mcp`. **This closes the Fluid CPU investigation.**
+
 ## Measurement method note
 `npm run build` + `npm run start` with `NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:9`
 (build-time-inlined, so a rebuild was required) — guarantees no prod-DB writes
