@@ -30,6 +30,16 @@ export const STAVROLEKSO = {
   VALID_GRID_SIZES: [9, 13, 15] as const,
 } as const;
 
+export const LEKSOPLEGMA = {
+  REQUIRED_WORDS:     9,    // generator target per puzzle
+  GRID_SIZE:          16,   // 4×4
+  POINTS_PER_LETTER:  10,   // required word = length × 10
+  BONUS_WORD_POINTS:  25,   // flat — bonus pools vary per puzzle; flat keeps variance sane
+  HINT_COST_POINTS:   25,
+  MAX_HINTS_PER_WORD: 1,    // hint = reveal a word's start tile + length
+  SCORE_FLOOR:        0,    // hints can never take the total below 0
+} as const;
+
 export const LEKSODROMIA = {
   WORDS_PER_LENGTH:   2,
   LENGTHS:            [4, 5, 6, 7, 8] as const,   // mirrors LEKSIARXEIO.LENGTHS

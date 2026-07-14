@@ -87,17 +87,17 @@ All commands live in `.claude/skills/`.
 | `/aihelper` | Full context reload — reads all `.claude/aiHelper/` files, then waits for your task |
 | `/improve-codebase-architecture` | Surface architectural seams and deepening opportunities |
 | `/grill-with-docs` | Relentless Q&A to stress-test a plan or design, cross-checking against domain docs (CONTEXT.md, ADRs) and updating them inline |
-| `/to-prd` | Synthesise current context into a structured PRD |
-| `/to-issues` | Break a plan or PRD into independently-grabbable vertical-slice issues on the issue tracker |
+| `/to-spec` | Synthesise current context into a structured spec (formerly `/to-prd`) |
+| `/to-tickets` | Break a plan or spec into independently-grabbable vertical-slice tickets on the issue tracker (formerly `/to-issues`) |
 | `/triage` | Move issues through a state machine (needs-triage → ready-for-agent / ready-for-human / wontfix) |
-| `/diagnose` | Disciplined debugging loop — reproduce → minimise → hypothesise → instrument → fix → regression-test |
+| `/diagnosing-bugs` | Disciplined debugging loop — reproduce → minimise → hypothesise → instrument → fix → regression-test (formerly `/diagnose`) |
 | `/tdd` | Test-driven development with red-green-refactor vertical slices |
 | `/prototype` | Build a throwaway prototype (terminal logic harness or multi-variant UI) to answer a design question |
-| `/zoom-out` | Map all relevant modules and callers when unfamiliar with an area of code |
 | `/handoff` | Compact the current conversation into a handoff document for the next agent session |
-| `/caveman` | Ultra-compressed token-saving mode — full technical accuracy, zero filler |
 | `/setup-matt-pocock-skills` | One-time setup: configure issue tracker, triage labels, and domain doc layout |
-| `/write-a-skill` | Create a new skill with proper structure and bundled reference files |
+| `/writing-great-skills` | Reference for writing/editing skills well (formerly `/write-a-skill`) |
+
+`/caveman` and `/zoom-out` were dropped upstream with no replacement (removed 2026-07-14). Many more mattpocock skills are now installed beyond this table — see `.claude/skills/` for the full list.
 
 ---
 
