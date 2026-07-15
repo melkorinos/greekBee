@@ -26,6 +26,7 @@ import { NominationModal } from "@/components/shared/NominationModal";
 import { WordInput } from "./WordInput";
 import { btnSecondary } from "@/styles/recipes";
 import { useAchievementSync } from "@/games/leksokipos/hooks/useAchievementSync";
+import { FEATURE_FLAGS } from "@/config/featureFlags";
 import type { EarnedToast } from "@/games/leksokipos/lib/achievements";
 import { useDayChange } from "@/games/leksokipos/hooks/useDayChange";
 import { useGameState } from "@/games/leksokipos/hooks/useGameState";
@@ -153,6 +154,7 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   // and surface each genuinely-new badge as an in-game unlock toast.
   const [achievementToasts, setAchievementToasts] = useState<EarnedToast[]>([]);
   useAchievementSync({
+    enabled: FEATURE_FLAGS.achievements,
     isDaily,
     isGodMode,
     deviceId,
@@ -230,8 +232,10 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
 
   return (
     <div data-testid="game-board" className={containerClass}>
-      {/* Unlock toasts — fixed stack, one per genuinely-new badge, self-dismissing */}
-      {achievementToasts.length > 0 && (
+      {/* Unlock toasts — fixed stack, one per genuinely-new badge, self-dismissing.
+          Gated behind the achievements flag; with it off the sync hook is inert and
+          this list never fills, but gate the render too so intent is explicit. */}
+      {FEATURE_FLAGS.achievements && achievementToasts.length > 0 && (
         <div className="fixed inset-x-0 top-4 z-50 flex flex-col items-center gap-2 px-4">
           {achievementToasts.map((badge) => (
             <AchievementToast

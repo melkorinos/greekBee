@@ -37,6 +37,13 @@ import {
 } from "@/games/leksokipos/sync";
 
 interface UseAchievementSyncOptions {
+  /**
+   * Master switch — false makes the whole hook inert: no detection, no toasts, and
+   * (crucially) no POSTs to /api/achievements or /api/pangrams. Defaults to true so
+   * existing callers/tests are unchanged; GameBoard passes FEATURE_FLAGS.achievements
+   * so the feature stays fully dark in prod until launch.
+   */
+  enabled?:       boolean;
   isDaily:        boolean;
   isGodMode:      boolean;
   /** Canonical device uuid (getOrCreateDeviceId). Empty string = skip. */
@@ -53,6 +60,7 @@ interface UseAchievementSyncOptions {
 }
 
 export function useAchievementSync({
+  enabled = true,
   isDaily,
   isGodMode,
   deviceId,
@@ -110,7 +118,7 @@ export function useAchievementSync({
 
   // Load the earned-at-mount set once, then flush anything already pending.
   useEffect(() => {
-    if (!isDaily || isGodMode || !deviceId) return;
+    if (!enabled || !isDaily || isGodMode || !deviceId) return;
     let cancelled = false;
     fetchEarnedAchievementIds(deviceId).then((ids) => {
       if (cancelled) return;
@@ -118,14 +126,14 @@ export function useAchievementSync({
       flushToasts();
     });
     return () => { cancelled = true; };
-  }, [isDaily, isGodMode, deviceId, flushToasts]);
+  }, [enabled, isDaily, isGodMode, deviceId, flushToasts]);
 
   // One-shot lane — detect on every foundWords/rank change, post fresh, queue for toast.
   useEffect(() => {
-    if (!isDaily || isGodMode || !deviceId) return;
+    if (!enabled || !isDaily || isGodMode || !deviceId) return;
     commitEarned(deviceId, detectEarnedAchievements({ isDaily, foundWords, validWordCount, rank }));
   // foundWords (array ref) changes on each valid submit; rank on each threshold cross.
-  }, [foundWords, rank, isDaily, isGodMode, deviceId, validWordCount, commitEarned]);
+  }, [enabled, foundWords, rank, isDaily, isGodMode, deviceId, validWordCount, commitEarned]);
 
   // Lifetime-stats lane (mount) — the crossings for both tiered badges depend on
   // LIFETIME values the client doesn't hold at end-of-game. One /api/profile/stats
@@ -134,7 +142,7 @@ export function useAchievementSync({
   // (posts any owed tier the pangram count already justifies, covering a crash/offline
   // gap between a pangram write and its tier POST). Both idempotent (ADR 0013).
   useEffect(() => {
-    if (!isDaily || isGodMode || !deviceId) return;
+    if (!enabled || !isDaily || isGodMode || !deviceId) return;
     let cancelled = false;
     fetchLifetimeStats(deviceId).then((stats) => {
       if (cancelled || !stats) return;
@@ -142,7 +150,7 @@ export function useAchievementSync({
       if (stats.pangram_count !== null) commitEarned(deviceId, detectEarnedPangramTiers(stats.pangram_count));
     });
     return () => { cancelled = true; };
-  }, [isDaily, isGodMode, deviceId, commitEarned]);
+  }, [enabled, isDaily, isGodMode, deviceId, commitEarned]);
 
   // Pangram-tier lane (Κυνηγός Πανγκράμ) — delta-post the pangrams found this session
   // that we haven't posted yet, and read the crossing off the returned lifetime count
@@ -150,7 +158,7 @@ export function useAchievementSync({
   // failed POST is re-derived from foundWords on a later mount of the still-current
   // puzzle (R6). foundPangrams must be memoized by the caller (referential stability).
   useEffect(() => {
-    if (!isDaily || isGodMode || !deviceId) return;
+    if (!enabled || !isDaily || isGodMode || !deviceId) return;
     const unposted = foundPangrams.filter((w) => !postedPangramWordsRef.current.has(w));
     if (unposted.length === 0) return;
     for (const w of unposted) postedPangramWordsRef.current.add(w);
@@ -161,5 +169,5 @@ export function useAchievementSync({
       commitEarned(deviceId, detectEarnedPangramTiers(count));
     });
     return () => { cancelled = true; };
-  }, [foundPangrams, puzzleDate, isDaily, isGodMode, deviceId, commitEarned]);
+  }, [enabled, foundPangrams, puzzleDate, isDaily, isGodMode, deviceId, commitEarned]);
 }

@@ -29,6 +29,7 @@ const { useAchievementSync } = await import("@/games/leksokipos/hooks/useAchieve
 import type { RankName } from "@/games/leksokipos/lib/ranking";
 
 interface Props {
+  enabled?:             boolean;
   isDaily:              boolean;
   isGodMode:            boolean;
   deviceId:             string;
@@ -295,5 +296,21 @@ describe("useAchievementSync — gating", () => {
     expect(postAchievements).not.toHaveBeenCalled();
     expect(fetchLifetimeStats).not.toHaveBeenCalled();
     expect(postPangrams).not.toHaveBeenCalled();
+  });
+
+  it("is fully inert when disabled — no detection, no reads, no writes", () => {
+    const onAchievementEarned = vi.fn();
+    renderHook(() => useAchievementSync({
+      ...BASE,
+      enabled: false,
+      foundWords: ["γατα", "παρακολουθηση"], // would earn first-daily + sidirodromos if enabled
+      foundPangrams: ["παρακολουθηση"],
+      onAchievementEarned,
+    }));
+    expect(postAchievements).not.toHaveBeenCalled();
+    expect(fetchLifetimeStats).not.toHaveBeenCalled();
+    expect(postPangrams).not.toHaveBeenCalled();
+    expect(fetchEarnedAchievementIds).not.toHaveBeenCalled();
+    expect(onAchievementEarned).not.toHaveBeenCalled();
   });
 });

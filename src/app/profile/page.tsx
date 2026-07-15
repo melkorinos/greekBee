@@ -17,6 +17,7 @@ import { NameEditor } from "@/components/profile/NameEditor";
 import { WelcomeBackBanner } from "@/components/profile/WelcomeBackBanner";
 import { LifetimeStatsStrip } from "@/components/profile/LifetimeStatsStrip";
 import { TrophyCase } from "@/components/profile/TrophyCase";
+import { FEATURE_FLAGS } from "@/config/featureFlags";
 import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
 import { useSyncExternalStore } from "react";
 
@@ -100,9 +101,12 @@ export default function ProfilePage() {
         <LifetimeStatsStrip deviceId={deviceId} />
       </section>
 
-      <section className="rounded-2xl border border-border bg-surface overflow-hidden">
-        <TrophyCase deviceId={deviceId} />
-      </section>
+      {/* Trophy Case hidden until achievements ship — feature not launch-ready. */}
+      {FEATURE_FLAGS.achievements && (
+        <section className="rounded-2xl border border-border bg-surface overflow-hidden">
+          <TrophyCase deviceId={deviceId} />
+        </section>
+      )}
     </div>
   );
 }
