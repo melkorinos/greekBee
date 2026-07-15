@@ -57,6 +57,15 @@ Some sessions have **no Vercel MCP tools at all** (ToolSearch finds none — onl
 
 **Supabase inspect/debug (read-only, allowlisted):** `list_tables`, `list_migrations`, `execute_sql` (SELECT), `get_advisors { type }`, `get_logs { service }` — services: `api | postgres | auth | storage | realtime | edge-function | branch-action`. All with `project_id`.
 
+## Applying migrations via MCP — the two gotchas (verified 2026-07-15)
+
+The sanctioned path stays `npx supabase db push` (keeps migration-history in sync). But when you *do* apply via MCP (user-authorised), two things bit and will bite again:
+
+1. **`apply_migration` can 502 while `execute_sql` works.** On 2026-07-15 `apply_migration` returned Cloudflare `502 origin_bad_gateway` (retryable) on every attempt, yet read-only *and* write `execute_sql` calls to the same project succeeded seconds apart — the mutating-migration origin path was specifically unhealthy, not the whole server. **Fallback:** run the DDL through `execute_sql` with `CREATE INDEX IF NOT EXISTS` / idempotent guards. Same DB state; no bogus migration-history row (see #2). On any 502, **first re-run a read-only check** (`SELECT … FROM pg_indexes …`) to see whether the failed write actually landed before retrying — a blind retry of bare `CREATE INDEX` errors "already exists".
+2. **MCP-applied DDL never records the file's version in migration history.** Neither `apply_migration` (invents its own version) nor `execute_sql` (records nothing) writes the `20260715120000`-style version your committed `supabase/migrations/*.sql` file carries. So a later `npx supabase db push` sees that file as un-applied and re-runs it → `index already exists`. One-time fix when you next push: `supabase migration repair --status applied <version>`. The *schema itself* is correct — only the CLI bookkeeping drifts. Always keep the committed `.sql` file as the authoritative record regardless.
+
+**Data migrations that flip stored-value semantics must land WITH the code deploy, never before** — e.g. the Vres Tin Frasi attempt-count→points flip (ADR 0014): inverting live rows while old code still posts the old shape corrupts the leaderboard until deploy. Hold such migrations until the code is live.
+
 ## Guardrails (from CLAUDE.md — read before any write)
 
 - **One Supabase project backs BOTH dev and prod.** Every write is production. `execute_sql` (writes), `apply_migration`, Vercel `deploy_*` prompt — treat as prod-affecting.

@@ -5,6 +5,16 @@
 
 ---
 
+## Session 85 — 2026-07-15: DB schema review follow-ups (Task A index + Vres flip + first-place count)
+Implemented the session-83 handoff after a `/grill-with-docs` design pass (handoff then deleted). Three atomic tickets.
+- **Ticket 0 — `game_scores` read indexes** (`migration 20260715120000`): `game_scores_game_date_score_idx (game_id, puzzle_date, score)` for the leaderboard top-20/rank + the new daily-MAX aggregate; `game_scores_device_id_idx (device_id)` for lifetime stats + Sign-in Restore. **APPLIED to prod 2026-07-15 + verified** (both indexes present via `pg_indexes`). Applied via MCP `execute_sql` (`apply_migration` was 502-ing; `execute_sql` write path worked) — so migration-history did NOT record version `20260715120000`; a future `db push` needs `supabase migration repair --status applied 20260715120000` (see `/project-mcp` skill, updated this session).
+- **Ticket 1 — Vres Tin Frasi → higher-is-better (ADR 0014).** Board now posts `scoreVresTinFrasi` points (6→1 win, 0 loss — already existed, was computed-but-unposted) instead of the raw attempt count; dropped the lone `sort=asc` in `GameLeaderboardModal` (labels → "Σκορ / υψηλότερο = καλύτερο"). Data migration `20260715120100` rewrites live rows (`7-score` for 1..6, `0` for 7). CONTEXT.md "Attempt Count" retired → points concept; new **ADR 0014** "every leaderboard is higher-is-better, no lower-is-better boards" (closes the per-game-direction problem for placement). **Data migration written, NOT yet applied.**
+- **Ticket 2 — Leksokipos first-place count (Πρωτιές).** New pure `countFirstPlaceFinishes(rows, deviceId)` (`src/lib/placement.ts`, data-class 2 derivation — ties share rank 1); `/api/profile/stats` gained a cross-device Leksokipos fetch + `leksokipos_first_place_count` field (index-backed; documented >10k Fluid-CPU escape hatch → RPC/view); 5th stat cell in `LifetimeStatsStrip`. New CONTEXT terms First-Place Finish / First-Place Count. **No schema change — ships without a DB push.**
+- **Parked** (per grill): Task C per-game max-score stat (until a Profile UI row exists); tiered `leksokipos-first-place-*` badges (frozen ids TBD); `player_placements` table (only if a live in-game "first!" badge is wanted).
+- Gates: **build 0 · eslint 0 · tests all green (0 fail).** ⚠️ Two migrations await a prod `db push` (shared dev/prod DB — every write is production).
+
+---
+
 ## Session 84 — 2026-07-15: Leksokipos soft cap (variable genius bar)
 Replaced the flat `MAX_SCORE_CAP: 600` hard clip on `maxScore` with a logarithmic **soft cap** so the top-rank (Απολυτότητα) bar tracks each puzzle's richness instead of pinning ~57% of days to a genius target of 480. Motivation: a player noticed the max-rank score was identical every day.
 - **Curve** (`softCap` in `games/leksokipos/lib/scoring.ts`): identity ≤ knee, then `knee + k·ln(1+(x−knee)/k)` above it — slope-1 continuous (no kink), strictly increasing, no hard ceiling. Operates on the 85%-scaled total (SCORE_SCALE unchanged).

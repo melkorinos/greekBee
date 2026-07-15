@@ -1,7 +1,7 @@
-// LifetimeStatsStrip — the three-number lifetime-stats strip on /profile.
+// LifetimeStatsStrip — the five-number lifetime-stats strip on /profile.
 //
 // Fetches GET /api/profile/stats on mount. Shows a skeleton while loading, the
-// three real numbers on success, and degrades to dashes on error — it must never
+// five real numbers on success, and degrades to dashes on error — it must never
 // block the page.
 
 import { render, screen, waitFor } from "@testing-library/react";
