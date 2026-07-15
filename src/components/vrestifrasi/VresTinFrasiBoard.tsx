@@ -1,19 +1,13 @@
 "use client";
 
 import type { VresTinFrasiPuzzle } from "@/games/vrestifrasi/types";
-import {
-  migrateLeksiarxeioIdentity,
-  setDisplayName as saveDisplayName,
-} from "@/hooks/useGameStore";
-import { useGameIdentity } from "@/hooks/useGameIdentity";
-import { useProfile } from "@/hooks/useProfile";
-import { useAuth } from "@/hooks/useAuth";
+import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { Keyboard } from "./Keyboard";
 import { PhraseGrid } from "./PhraseGrid";
-import { VresTinFrasiLeaderboardModal } from "./VresTinFrasiLeaderboardModal";
+import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { normalizeLetters } from "@/lib/normalize";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { useVresTinFrasiState } from "@/games/vrestifrasi/hooks/useVresTinFrasiState";
@@ -37,15 +31,8 @@ export function VresTinFrasiBoard({
   onOpenLeaderboard,
   onCloseLeaderboard,
 }: VresTinFrasiBoardProps) {
-  if (typeof window !== "undefined") migrateLeksiarxeioIdentity();
-  const { deviceId, displayName, setDeviceId, setDisplayName } = useGameIdentity();
-  const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } =
-    useProfile({
-      deviceId,
-      onDeviceIdChange:    setDeviceId,
-      onDisplayNameChange: (name) => { setDisplayName(name); saveDisplayName(name); },
-    });
-  const { authLinked, authUserName, signInWithGoogle, signOut } = useAuth();
+  const identity = usePlayerIdentity();
+  const { deviceId, displayName } = identity;
 
   const { submit: postScore } = useScoreSubmission({
     gameId:     "vrestifrasi",
@@ -135,22 +122,13 @@ export function VresTinFrasiBoard({
         </div>
       </div>
 
-      <VresTinFrasiLeaderboardModal
+      <GameLeaderboardModal
+        gameId="vrestifrasi"
         isOpen={isLeaderboardOpen}
-        today={today}
-        deviceId={deviceId}
-        displayName={displayName}
-        profileLinked={profileLinked}
-        onSaveName={(name) => { setDisplayName(name); saveDisplayName(name); }}
-        onProfileCreate={createProfile}
-        onTransferGenerate={generateTransferCode}
-        onTransferClaim={claimTransferCode}
-        onDisconnect={disconnect}
-        authLinked={authLinked}
-        authUserName={authUserName}
-        onSignIn={signInWithGoogle}
-        onSignOut={signOut}
+        today={new Date().toISOString().slice(0, 10)}
+        defaultDate={today}
         onClose={onCloseLeaderboard}
+        {...identity.leaderboardProps}
       />
     </>
   );

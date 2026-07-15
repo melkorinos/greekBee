@@ -4,13 +4,19 @@
 // JSON only, no words-el.json anywhere near this route, no DB).
 
 import { getPuzzleForDate, getTodayDateString } from "@/data/leksoplegma";
+import { resolvePuzzleDateParam } from "@/lib/puzzleDate";
 
 import { LeksoplegmaPageClient } from "@/components/leksoplegma/LeksoplegmaPageClient";
 
 export const dynamic = "force-dynamic";
 
-export default function LeksoplegmaPage() {
-  const today = getTodayDateString();
+interface LeksoplegmaPageProps {
+  searchParams: Promise<{ puzzle?: string }>;
+}
+
+export default async function LeksoplegmaPage({ searchParams }: LeksoplegmaPageProps) {
+  const { puzzle: puzzleParam } = await searchParams;
+  const today = resolvePuzzleDateParam(puzzleParam, getTodayDateString());
   const puzzle = getPuzzleForDate(today);
 
   return (

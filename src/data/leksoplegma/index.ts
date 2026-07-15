@@ -5,47 +5,35 @@
 // one would leak another game's daily answer — same invariant Leksodromia
 // enforces, but at rotation time since generation isn't date-coupled).
 //
-// The answers-*.json pools are imported DIRECTLY (≈300 KB total) — never via
-// @/data/leksiarxeio, whose module graph statically imports the MB-scale
-// words-*.json guess lists (Fluid CPU: this route must not parse those on
-// cold start). Bonus words are precomputed in the puzzle JSON; words-el.json
-// is nowhere near this game at runtime.
+// The same-day answer set comes from @/data/leksiarxeio/answerPools — the
+// Fluid-safe module that imports only answers-*.json, never the MB-scale
+// words-*.json guess lists (Fluid CPU: this route must not parse those on cold
+// start). Bonus words are precomputed in the puzzle JSON; words-el.json is
+// nowhere near this game at runtime.
 
 import type { LeksoplegmaPuzzle } from "@/games/leksoplegma/types";
 import { dateToIndex } from "@/lib/puzzleRotation";
+import { getSameDayFallbackAnswers } from "@/data/leksiarxeio/answerPools";
 
 import puzzlesJson from "./puzzles-el.json";
-
-import answers4 from "../leksiarxeio/answers-4.json";
-import answers5 from "../leksiarxeio/answers-5.json";
-import answers6 from "../leksiarxeio/answers-6.json";
-import answers7 from "../leksiarxeio/answers-7.json";
-import answers8 from "../leksiarxeio/answers-8.json";
 
 // Two-step cast: tsc infers `paths` as a union of exact per-puzzle key sets
 // (every Greek word key, optional everywhere), which never overlaps with
 // Record<string, number[]>. The generator's validatePuzzle guarantees the shape.
 const PUZZLES = puzzlesJson as unknown as LeksoplegmaPuzzle[];
 
-const LEKSIARXEIO_POOLS: readonly (readonly string[])[] = [
-  answers4 as string[],
-  answers5 as string[],
-  answers6 as string[],
-  answers7 as string[],
-  answers8 as string[],
-];
-
 /**
- * True when any of `puzzle`'s required words is Leksiarxeio's static fallback
- * answer (pool[dateToIndex]) for the same date, at any length.
+ * True when any of `puzzle`'s required words is one of Leksiarxeio's same-day
+ * fallback answers, at any length.
  */
 export function containsSameDayLeksiarxeioAnswer(
   puzzle: LeksoplegmaPuzzle,
   date: string,
 ): boolean {
-  return LEKSIARXEIO_POOLS.some(
-    (pool) => pool[dateToIndex(date, pool.length)] in puzzle.paths,
-  );
+  for (const answer of getSameDayFallbackAnswers(date)) {
+    if (answer in puzzle.paths) return true;
+  }
+  return false;
 }
 
 /** The daily Leksoplegma puzzle for `date` — pure, no I/O beyond static data. */

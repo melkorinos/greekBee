@@ -11,14 +11,9 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import {
-  migrateLeksiarxeioIdentity,
-  setDisplayName as saveDisplayName,
-} from "@/hooks/useGameStore";
-import { useGameIdentity } from "@/hooks/useGameIdentity";
-import { useProfile } from "@/hooks/useProfile";
-import { useAuth } from "@/hooks/useAuth";
+import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
+import { useLiveScorePost } from "@/hooks/useLiveScorePost";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import type { LeksodromiaLength } from "@/games/leksodromia/types";
@@ -34,7 +29,7 @@ import { computeWordPoints } from "@/games/leksodromia/lib/scoring";
 import { useLeksodromiaRound } from "@/games/leksodromia/hooks/useLeksodromiaRound";
 import { normalizeLetters } from "@/lib/normalize";
 
-import { LeksodromiaLeaderboardModal } from "./LeksodromiaLeaderboardModal";
+import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { RoundRecap } from "./RoundRecap";
 
 const GREEK_LETTER = /^[α-ωά-ώςΑ-ΩΆ-Ώ]$/;
@@ -57,15 +52,8 @@ export function LeksodromiaBoard({
   onOpenLeaderboard,
   onCloseLeaderboard,
 }: LeksodromiaBoardProps) {
-  if (typeof window !== "undefined") migrateLeksiarxeioIdentity();
-  const { deviceId, displayName, setDeviceId, setDisplayName } = useGameIdentity();
-  const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } =
-    useProfile({
-      deviceId,
-      onDeviceIdChange:    setDeviceId,
-      onDisplayNameChange: (name) => { setDisplayName(name); saveDisplayName(name); },
-    });
-  const { authLinked, authUserName, signInWithGoogle, signOut } = useAuth();
+  const identity = usePlayerIdentity();
+  const { deviceId, displayName } = identity;
 
   const { submit: postFinalScore } = useScoreSubmission({
     gameId:     "leksodromia",
@@ -75,7 +63,7 @@ export function LeksodromiaBoard({
   });
 
   const round = useLeksodromiaRound(puzzle);
-  const { state, dispatch, elapsedMs, submitWord, skipWord, setPaused } = round;
+  const { state, dispatch, elapsedMs, submitWord, skipWord, setPaused, hasLiveActed } = round;
 
   useEffect(() => { setPaused(paused); }, [paused, setPaused]);
 
@@ -84,18 +72,15 @@ export function LeksodromiaBoard({
   // them, so no wordIndex effect is needed.
   const [skipArmed, setSkipArmed] = useState(false);
 
-  // ── Score post — continuous on live increases; leaderboard opens on finish.
-  // The guard: the player must have acted this session (restores never post).
-  const userActedRef = useRef(false);
-  const finishedHandledRef = useRef(false);
-  useEffect(() => {
-    if (!userActedRef.current) return;
-    postFinalScore(getTotalScore(state)); // dedup: only strictly-increasing scores go out
-    if (state.status !== "finished" || finishedHandledRef.current) return;
-    finishedHandledRef.current = true;
-    const t = setTimeout(onOpenLeaderboard, 1500);
-    return () => clearTimeout(t);
-  }, [state, postFinalScore, onOpenLeaderboard]);
+  // Continuous posting + finish-once leaderboard open live in the shared policy
+  // hook; the spine's hasLiveActed keeps restored rounds from posting.
+  useLiveScorePost({
+    score:        getTotalScore(state),
+    isFinished:   state.status === "finished",
+    hasLiveActed,
+    post:         postFinalScore,
+    onFinish:     onOpenLeaderboard,
+  });
 
   // ── Input handlers ──────────────────────────────────────────────────────────
 
@@ -109,7 +94,6 @@ export function LeksodromiaBoard({
   }, [state]);
 
   const pickTile = useCallback((tileIndex: number) => {
-    userActedRef.current = true;
     setSkipArmed(false);
     const autoSubmit = willCompleteRow();
     dispatch({ type: "PICK_TILE", tileIndex });
@@ -117,7 +101,6 @@ export function LeksodromiaBoard({
   }, [dispatch, willCompleteRow, submitWord]);
 
   const addLetter = useCallback((letter: string) => {
-    userActedRef.current = true;
     setSkipArmed(false);
     const autoSubmit = willCompleteRow();
     dispatch({ type: "ADD_LETTER", letter: normalizeLetters(letter) });
@@ -135,13 +118,11 @@ export function LeksodromiaBoard({
   }, [dispatch]);
 
   const submit = useCallback(() => {
-    userActedRef.current = true;
     setSkipArmed(false);
     submitWord();
   }, [submitWord]);
 
   const confirmSkip = useCallback(() => {
-    userActedRef.current = true;
     setSkipArmed(false);
     skipWord();
   }, [skipWord]);
@@ -187,22 +168,13 @@ export function LeksodromiaBoard({
         <button onClick={onOpenLeaderboard} className="text-sm text-muted underline hover:text-foreground transition-colors">
           🏆 Δες τον πίνακα σκορ
         </button>
-        <LeksodromiaLeaderboardModal
+        <GameLeaderboardModal
+          gameId="leksodromia"
           isOpen={isLeaderboardOpen}
-          today={today}
-          deviceId={deviceId}
-          displayName={displayName}
-          profileLinked={profileLinked}
-          onSaveName={(name) => { setDisplayName(name); saveDisplayName(name); }}
-          onProfileCreate={createProfile}
-          onTransferGenerate={generateTransferCode}
-          onTransferClaim={claimTransferCode}
-          onDisconnect={disconnect}
-          authLinked={authLinked}
-          authUserName={authUserName}
-          onSignIn={signInWithGoogle}
-          onSignOut={signOut}
+          today={new Date().toISOString().slice(0, 10)}
+          defaultDate={today}
           onClose={onCloseLeaderboard}
+          {...identity.leaderboardProps}
         />
       </div>
     );
@@ -317,22 +289,12 @@ export function LeksodromiaBoard({
         )}
       </div>
 
-      <LeksodromiaLeaderboardModal
+      <GameLeaderboardModal
+        gameId="leksodromia"
         isOpen={isLeaderboardOpen}
         today={today}
-        deviceId={deviceId}
-        displayName={displayName}
-        profileLinked={profileLinked}
-        onSaveName={(name) => { setDisplayName(name); saveDisplayName(name); }}
-        onProfileCreate={createProfile}
-        onTransferGenerate={generateTransferCode}
-        onTransferClaim={claimTransferCode}
-        onDisconnect={disconnect}
-        authLinked={authLinked}
-        authUserName={authUserName}
-        onSignIn={signInWithGoogle}
-        onSignOut={signOut}
         onClose={onCloseLeaderboard}
+        {...identity.leaderboardProps}
       />
     </div>
   );

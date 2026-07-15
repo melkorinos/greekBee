@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { normalizePuzzleDate } from "@/lib/puzzleDate";
+import { normalizePuzzleDate, resolvePuzzleDateParam } from "@/lib/puzzleDate";
 
 describe("normalizePuzzleDate", () => {
   it("passes through a plain date unchanged", () => {
@@ -31,5 +31,29 @@ describe("normalizePuzzleDate", () => {
 
   it("returns empty string for an empty string", () => {
     expect(normalizePuzzleDate("")).toBe("");
+  });
+});
+
+describe("resolvePuzzleDateParam", () => {
+  const today = "2026-07-15";
+
+  it("passes through a valid YYYY-MM-DD param", () => {
+    expect(resolvePuzzleDateParam("2026-07-10", today)).toBe("2026-07-10");
+  });
+
+  it("falls back to today when the param is undefined", () => {
+    expect(resolvePuzzleDateParam(undefined, today)).toBe(today);
+  });
+
+  it("falls back to today for a malformed date", () => {
+    expect(resolvePuzzleDateParam("not-a-date", today)).toBe(today);
+  });
+
+  it("falls back to today for an empty string", () => {
+    expect(resolvePuzzleDateParam("", today)).toBe(today);
+  });
+
+  it("falls back to today for a date-like string with extra characters", () => {
+    expect(resolvePuzzleDateParam("2026-07-10T00:00:00", today)).toBe(today);
   });
 });

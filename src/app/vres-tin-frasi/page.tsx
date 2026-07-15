@@ -2,6 +2,7 @@
 // Loads today's phrase puzzle and word pools, then passes them to the client board.
 
 import { getTodaysVresTinFrasiPuzzle, getTodayDateString } from "@/data/vrestifrasi";
+import { resolvePuzzleDateParam } from "@/lib/puzzleDate";
 import { VresTinFrasiPageClient } from "@/components/vrestifrasi/VresTinFrasiPageClient";
 import { getValidWords } from "@/data/leksiarxeio";
 import type { LeksiarxeioLength } from "@/games/leksiarxeio/types";
@@ -10,8 +11,13 @@ import words3 from "@/data/leksiarxeio/words-3.json";
 
 export const dynamic = "force-dynamic";
 
-export default async function VresTinFrasiPage() {
-  const today = getTodayDateString();
+interface VresTinFrasiPageProps {
+  searchParams: Promise<{ puzzle?: string }>;
+}
+
+export default async function VresTinFrasiPage({ searchParams }: VresTinFrasiPageProps) {
+  const { puzzle: puzzleParam } = await searchParams;
+  const today = resolvePuzzleDateParam(puzzleParam, getTodayDateString());
   const { puzzle, submitter_name } = await getTodaysVresTinFrasiPuzzle(today);
 
   // Supply all word pools (2–8) to validate phrase guess words.

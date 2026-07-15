@@ -5,7 +5,7 @@
 // foundBonus, hintsUsed, status } under the puzzle date so a refresh restores
 // the dimmed board exactly (soft collapse is derived from foundRequired).
 
-import { useCallback, useMemo, useReducer } from "react";
+import { useCallback, useMemo, useReducer, useRef } from "react";
 
 import { useRoundPersistence } from "@/hooks/useRoundPersistence";
 
@@ -27,17 +27,32 @@ interface RoundSnapshot {
 interface LeksoplegmaRound {
   state:    LeksoplegmaState;
   dispatch: (action: LeksoplegmaAction) => void;
+  /**
+   * Whether the player has made a live (non-restored) action this session.
+   * The spine owns the restore vs. live distinction — it issues RESTORE_STATE
+   * itself — so score-posting eligibility no longer leaks into the Board.
+   */
+  hasLiveActed: () => boolean;
 }
 
 export function useLeksoplegmaRound(puzzle: LeksoplegmaPuzzle, today: string): LeksoplegmaRound {
-  const [state, dispatch] = useReducer(
+  const [state, rawDispatch] = useReducer(
     leksoplegmaReducer,
     undefined,
     () => makeInitialLeksoplegmaState(today, puzzle),
   );
 
+  // Any dispatch the Board issues (TRACE_WORD) is a live action; the internal
+  // RESTORE_STATE below goes through rawDispatch, so a pure restore never flips.
+  const hasLiveActedRef = useRef(false);
+  const dispatch = useCallback((action: LeksoplegmaAction) => {
+    hasLiveActedRef.current = true;
+    rawDispatch(action);
+  }, []);
+  const hasLiveActed = useCallback(() => hasLiveActedRef.current, []);
+
   const onRestore = useCallback((saved: RoundSnapshot) => {
-    dispatch({
+    rawDispatch({
       type:          "RESTORE_STATE",
       foundRequired: saved.foundRequired,
       // Snapshots saved by the brief bonus-less build lack foundBonus.
@@ -66,5 +81,5 @@ export function useLeksoplegmaRound(puzzle: LeksoplegmaPuzzle, today: string): L
       snap.hintsUsed.length > 0,
   );
 
-  return { state, dispatch };
+  return { state, dispatch, hasLiveActed };
 }

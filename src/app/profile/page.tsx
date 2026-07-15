@@ -17,9 +17,7 @@ import { NameEditor } from "@/components/profile/NameEditor";
 import { WelcomeBackBanner } from "@/components/profile/WelcomeBackBanner";
 import { LifetimeStatsStrip } from "@/components/profile/LifetimeStatsStrip";
 import { TrophyCase } from "@/components/profile/TrophyCase";
-import { useGameIdentity } from "@/hooks/useGameIdentity";
-import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
+import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
 import { useSyncExternalStore } from "react";
 
 // Server and first client paint both read `false`; after hydration the client
@@ -31,26 +29,25 @@ function useMounted(): boolean {
 }
 
 export default function ProfilePage() {
-  const { deviceId, displayName, setDeviceId, setDisplayName } = useGameIdentity();
-  const { authLinked, authUserName, signInWithGoogle, signOut } = useAuth();
+  const {
+    deviceId,
+    displayName,
+    profileLinked,
+    authLinked,
+    authUserName,
+    createProfile,
+    generateTransferCode,
+    claimTransferCode,
+    disconnect,
+    signInWithGoogle,
+    signOut,
+  } = usePlayerIdentity();
 
   // Every panel below reads client-only identity (localStorage device/name + the
   // Supabase session), which is empty on the server and filled on the client —
   // rendering it during hydration mismatches the server HTML. Gate on mount so the
   // server and first client paint agree, then swap in the real content.
   const mounted = useMounted();
-
-  const {
-    profileLinked,
-    createProfile,
-    generateTransferCode,
-    claimTransferCode,
-    disconnect,
-  } = useProfile({
-    deviceId,
-    onDeviceIdChange:    setDeviceId,
-    onDisplayNameChange: setDisplayName,
-  });
 
   // Persist the rename: createProfile POSTs /api/profile (which fans the name out
   // to the player's game_scores rows) and updates the local store. For an already

@@ -17,7 +17,7 @@ import { FoundWordsList } from "./FoundWordsList";
 import { FlowerGridPlayground as FlowerGrid } from "./FlowerGridPlayground";
 import { GiveUpModal } from "./GiveUpModal";
 import { GodModePanel } from "./GodModePanel";
-import { LeaderboardModal } from "./LeaderboardModal";
+import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { MissedWordsList } from "./MissedWordsList";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { ScoreBar } from "./ScoreBar";
@@ -384,10 +384,12 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
 
       {/* Leaderboard modal -- only for daily puzzles */}
       {isDaily && (
-        <LeaderboardModal
+        <GameLeaderboardModal
+          gameId="leksokipos"
           isOpen={leaderboardOpen}
-          defaultPuzzleId={leaderboardPuzzleId}
-          recentDates={recentPuzzleDates}
+          today={new Date().toISOString().split("T")[0]}
+          dates={recentPuzzleDates}
+          defaultDate={leaderboardPuzzleId}
           deviceId={deviceId}
           displayName={displayName}
           profileLinked={profileLinked}

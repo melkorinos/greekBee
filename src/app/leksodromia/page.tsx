@@ -3,13 +3,19 @@
 // pure functions over ~300 KB of static answer pools — no words-el.json, no DB).
 
 import { getTodayDateString, getTodaysLeksodromiaPuzzle } from "@/data/leksodromia";
+import { resolvePuzzleDateParam } from "@/lib/puzzleDate";
 
 import { LeksodromiaPageClient } from "@/components/leksodromia/LeksodromiaPageClient";
 
 export const dynamic = "force-dynamic";
 
-export default function LeksodromiaPage() {
-  const today = getTodayDateString();
+interface LeksodromiaPageProps {
+  searchParams: Promise<{ puzzle?: string }>;
+}
+
+export default async function LeksodromiaPage({ searchParams }: LeksodromiaPageProps) {
+  const { puzzle: puzzleParam } = await searchParams;
+  const today = resolvePuzzleDateParam(puzzleParam, getTodayDateString());
   const puzzle = getTodaysLeksodromiaPuzzle(today);
 
   return (

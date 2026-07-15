@@ -20,8 +20,8 @@ vi.mock("@/lib/postScore", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/postScore")>()),
   postScore: vi.fn(),
 }));
-vi.mock("@/components/leksoplegma/LeksoplegmaLeaderboardModal", () => ({
-  LeksoplegmaLeaderboardModal: () => null,
+vi.mock("@/components/shared/GameLeaderboardModal", () => ({
+  GameLeaderboardModal: () => null,
 }));
 vi.mock("@/hooks/useProfile", () => ({
   useProfile: () => ({

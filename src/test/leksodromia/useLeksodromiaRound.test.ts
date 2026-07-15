@@ -190,6 +190,31 @@ describe("useLeksodromiaRound", () => {
     expect(result.current.getElapsedMs()).toBe(9_000); // 7 s base + 2 s now
   });
 
+  it("hasLiveActed is false on a fresh round and flips on the first live action", () => {
+    const { result } = renderHook(() => useLeksodromiaRound(PUZZLE));
+    expect(result.current.hasLiveActed()).toBe(false);
+    act(() => { result.current.dispatch({ type: "ADD_LETTER", letter: "α" }); });
+    expect(result.current.hasLiveActed()).toBe(true);
+  });
+
+  it("a restore alone never flips hasLiveActed (a restored round must not post)", () => {
+    writeSlice("leksodromia", {
+      [PUZZLE.date]: {
+        puzzleId: PUZZLE.date,
+        wordIndex: 2,
+        currentElapsedMs: 30_000,
+        currentHintsUsed: 0,
+        results: [
+          { word: "αυγο", status: "solved", elapsedMs: 5_000, hintsUsed: 0, points: 55 },
+          { word: "βημα", status: "solved", elapsedMs: 8_000, hintsUsed: 0, points: 40 },
+        ],
+      },
+    });
+    const { result } = renderHook(() => useLeksodromiaRound(PUZZLE));
+    expect(result.current.state.wordIndex).toBe(2); // restore applied
+    expect(result.current.hasLiveActed()).toBe(false); // but no live action yet
+  });
+
   it("a refresh mid-second-chance restores the retry redirect and the cumulative clock", () => {
     writeSlice("leksodromia", {
       [PUZZLE.date]: {

@@ -11,16 +11,11 @@
 // all 9 — partial rounds still reach the leaderboard; useScoreSubmission's
 // strictly-increasing guard dedups). Restored state never posts.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
-import {
-  migrateLeksiarxeioIdentity,
-  setDisplayName as saveDisplayName,
-} from "@/hooks/useGameStore";
-import { useGameIdentity } from "@/hooks/useGameIdentity";
-import { useProfile } from "@/hooks/useProfile";
-import { useAuth } from "@/hooks/useAuth";
+import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
+import { useLiveScorePost } from "@/hooks/useLiveScorePost";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { LEKSOPLEGMA } from "@/config/gameRules";
@@ -31,7 +26,7 @@ import { isPerfectRound } from "@/games/leksoplegma/lib/scoring";
 import { useLeksoplegmaRound } from "@/games/leksoplegma/hooks/useLeksoplegmaRound";
 
 import { LeksoplegmaGrid } from "./LeksoplegmaGrid";
-import { LeksoplegmaLeaderboardModal } from "./LeksoplegmaLeaderboardModal";
+import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { LeksoplegmaRecap } from "./LeksoplegmaRecap";
 
 /** Hints are gone from the UX — the grid never highlights a hint start tile. */
@@ -52,17 +47,10 @@ export function LeksoplegmaBoard({
   onOpenLeaderboard,
   onCloseLeaderboard,
 }: LeksoplegmaBoardProps) {
-  if (typeof window !== "undefined") migrateLeksiarxeioIdentity();
-  const { deviceId, displayName, setDeviceId, setDisplayName } = useGameIdentity();
-  const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } =
-    useProfile({
-      deviceId,
-      onDeviceIdChange:    setDeviceId,
-      onDisplayNameChange: (name) => { setDisplayName(name); saveDisplayName(name); },
-    });
-  const { authLinked, authUserName, signInWithGoogle, signOut } = useAuth();
+  const identity = usePlayerIdentity();
+  const { deviceId, displayName } = identity;
 
-  const { state, dispatch } = useLeksoplegmaRound(puzzle, today);
+  const { state, dispatch, hasLiveActed } = useLeksoplegmaRound(puzzle, today);
   const totalScore = getRoundScore(state);
 
   const { submit: postFinalScore } = useScoreSubmission({
@@ -98,18 +86,15 @@ export function LeksoplegmaBoard({
     return [...current, tile];
   }, [webTileSet, webEdgeSet]);
 
-  // ── Score post — continuous on live increases; leaderboard opens on finish ──
-
-  const userActedRef = useRef(false);
-  const finishedHandledRef = useRef(false);
-  useEffect(() => {
-    if (!userActedRef.current) return; // restored state never posts
-    postFinalScore(getRoundScore(state)); // dedup: only strictly-increasing scores go out
-    if (state.status !== "finished" || finishedHandledRef.current) return;
-    finishedHandledRef.current = true;
-    const t = setTimeout(onOpenLeaderboard, 1500);
-    return () => clearTimeout(t);
-  }, [state, postFinalScore, onOpenLeaderboard]);
+  // Continuous posting + finish-once leaderboard open live in the shared policy
+  // hook; the spine's hasLiveActed keeps restored rounds from posting.
+  useLiveScorePost({
+    score:        totalScore,
+    isFinished:   state.status === "finished",
+    hasLiveActed,
+    post:         postFinalScore,
+    onFinish:     onOpenLeaderboard,
+  });
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -117,7 +102,6 @@ export function LeksoplegmaBoard({
     const current = traceRef.current;
     updateTrace([]);
     if (current.length < 2) return; // stray tap-release — clear silently
-    userActedRef.current = true;
     dispatch({ type: "TRACE_WORD", trace: current });
   }, [dispatch, updateTrace]);
 
@@ -177,22 +161,13 @@ export function LeksoplegmaBoard({
         <button onClick={onOpenLeaderboard} className="text-sm text-muted underline hover:text-foreground transition-colors">
           🏆 Δες τον πίνακα σκορ
         </button>
-        <LeksoplegmaLeaderboardModal
+        <GameLeaderboardModal
+          gameId="leksoplegma"
           isOpen={isLeaderboardOpen}
-          today={today}
-          deviceId={deviceId}
-          displayName={displayName}
-          profileLinked={profileLinked}
-          onSaveName={(name) => { setDisplayName(name); saveDisplayName(name); }}
-          onProfileCreate={createProfile}
-          onTransferGenerate={generateTransferCode}
-          onTransferClaim={claimTransferCode}
-          onDisconnect={disconnect}
-          authLinked={authLinked}
-          authUserName={authUserName}
-          onSignIn={signInWithGoogle}
-          onSignOut={signOut}
+          today={new Date().toISOString().slice(0, 10)}
+          defaultDate={today}
           onClose={onCloseLeaderboard}
+          {...identity.leaderboardProps}
         />
       </div>
     );
@@ -295,22 +270,12 @@ export function LeksoplegmaBoard({
         </div>
       )}
 
-      <LeksoplegmaLeaderboardModal
+      <GameLeaderboardModal
+        gameId="leksoplegma"
         isOpen={isLeaderboardOpen}
         today={today}
-        deviceId={deviceId}
-        displayName={displayName}
-        profileLinked={profileLinked}
-        onSaveName={(name) => { setDisplayName(name); saveDisplayName(name); }}
-        onProfileCreate={createProfile}
-        onTransferGenerate={generateTransferCode}
-        onTransferClaim={claimTransferCode}
-        onDisconnect={disconnect}
-        authLinked={authLinked}
-        authUserName={authUserName}
-        onSignIn={signInWithGoogle}
-        onSignOut={signOut}
         onClose={onCloseLeaderboard}
+        {...identity.leaderboardProps}
       />
     </div>
   );

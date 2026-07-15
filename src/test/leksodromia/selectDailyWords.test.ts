@@ -29,6 +29,20 @@ const REAL_POOLS: Record<LeksodromiaLength, readonly string[]> = {
   8: getAnswerPool(8),
 };
 
+/**
+ * The forbidden set the loader injects, re-derived here independently as the test
+ * oracle: one same-day answer per pool (pool[dateToIndex]). Kept local so the test
+ * verifies selectDailyWords against the math rather than against production code.
+ */
+function forbiddenFor(pools: Record<LeksodromiaLength, readonly string[]>, date: string): Set<string> {
+  return new Set(
+    LEKSODROMIA.LENGTHS.map((len) => {
+      const pool = pools[len];
+      return pool[dateToIndex(date, pool.length)];
+    }),
+  );
+}
+
 /** n consecutive ISO dates starting at 2026-01-01. */
 function dateRange(n: number): string[] {
   const out: string[] = [];
@@ -41,13 +55,13 @@ function dateRange(n: number): string[] {
 
 describe("selectDailyWords", () => {
   it("is deterministic — same date, same 10 words in the same order", () => {
-    const a = selectDailyWords("2026-07-13", REAL_POOLS);
-    const b = selectDailyWords("2026-07-13", REAL_POOLS);
+    const a = selectDailyWords("2026-07-13", REAL_POOLS, forbiddenFor(REAL_POOLS, "2026-07-13"));
+    const b = selectDailyWords("2026-07-13", REAL_POOLS, forbiddenFor(REAL_POOLS, "2026-07-13"));
     expect(a).toEqual(b);
   });
 
   it("returns 2 words per length, ascending 4→8", () => {
-    const words = selectDailyWords("2026-07-13", REAL_POOLS);
+    const words = selectDailyWords("2026-07-13", REAL_POOLS, forbiddenFor(REAL_POOLS, "2026-07-13"));
     expect(words.map((w) => w.length)).toEqual([4, 4, 5, 5, 6, 6, 7, 7, 8, 8]);
     expect(words).toHaveLength(
       LEKSODROMIA.LENGTHS.length * LEKSODROMIA.WORDS_PER_LENGTH,
@@ -56,7 +70,7 @@ describe("selectDailyWords", () => {
 
   it("the two words of each length are distinct and drawn from that length's pool", () => {
     for (const date of dateRange(30)) {
-      const words = selectDailyWords(date, REAL_POOLS);
+      const words = selectDailyWords(date, REAL_POOLS, forbiddenFor(REAL_POOLS, date));
       for (const len of LEKSODROMIA.LENGTHS) {
         const pair = words.filter((w) => w.length === len);
         expect(pair[0]).not.toBe(pair[1]);
@@ -66,13 +80,12 @@ describe("selectDailyWords", () => {
     }
   });
 
-  it("never selects Leksiarxeio's same-day fallback answer (cross-game leak)", () => {
+  it("never selects a forbidden answer (cross-game leak)", () => {
     for (const date of dateRange(365)) {
-      const words = selectDailyWords(date, REAL_POOLS);
-      for (const len of LEKSODROMIA.LENGTHS) {
-        const pool = REAL_POOLS[len];
-        const leksiarxeioAnswer = pool[dateToIndex(date, pool.length)];
-        expect(words).not.toContain(leksiarxeioAnswer);
+      const forbidden = forbiddenFor(REAL_POOLS, date);
+      const words = selectDailyWords(date, REAL_POOLS, forbidden);
+      for (const answer of forbidden) {
+        expect(words).not.toContain(answer);
       }
     }
   });
@@ -80,17 +93,17 @@ describe("selectDailyWords", () => {
   it("avoids the forbidden answer even in a tiny pool where random picks would hit it", () => {
     // With 5-word pools and 60 dates, an unguarded picker would collide.
     for (const date of dateRange(60)) {
-      const words = selectDailyWords(date, FIXTURE_POOLS);
-      for (const len of LEKSODROMIA.LENGTHS) {
-        const pool = FIXTURE_POOLS[len];
-        expect(words).not.toContain(pool[dateToIndex(date, pool.length)]);
+      const forbidden = forbiddenFor(FIXTURE_POOLS, date);
+      const words = selectDailyWords(date, FIXTURE_POOLS, forbidden);
+      for (const answer of forbidden) {
+        expect(words).not.toContain(answer);
       }
     }
   });
 
   it("varies across dates — not the same puzzle every day", () => {
     const distinct = new Set(
-      dateRange(30).map((d) => selectDailyWords(d, REAL_POOLS).join(",")),
+      dateRange(30).map((d) => selectDailyWords(d, REAL_POOLS, forbiddenFor(REAL_POOLS, d)).join(",")),
     );
     expect(distinct.size).toBeGreaterThan(1);
   });
