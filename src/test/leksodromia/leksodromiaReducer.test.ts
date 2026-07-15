@@ -184,6 +184,25 @@ describe("SUBMIT_WORD", () => {
     expect(after.results).toEqual([]);
     expect(after.wordIndex).toBe(0);
   });
+
+  it("accepts any valid anagram of the rack, recording the word actually spelled", () => {
+    // Answer "αυγο", but "ουγα" is listed as a valid anagram alternate.
+    let s = makeInitialLeksodromiaState("d", ["αυγο"], ["γοαυ"], [["αυγο", "ουγα"]]);
+    for (const letter of "ουγα") s = leksodromiaReducer(s, { type: "ADD_LETTER", letter });
+    s = leksodromiaReducer(s, { type: "SUBMIT_WORD", elapsedMs: 3_000 });
+    expect(s.wrongSubmit).toBe(false);
+    expect(s.results[0].status).toBe("solved");
+    expect(s.results[0].word).toBe("ουγα");
+  });
+
+  it("rejects a full-length arrangement that is not an accepted word", () => {
+    // Same rack, but no alternate is registered — only the canonical answer solves.
+    let s = makeInitialLeksodromiaState("d", ["αυγο"], ["γοαυ"], [["αυγο"]]);
+    for (const letter of "ουγα") s = leksodromiaReducer(s, { type: "ADD_LETTER", letter });
+    s = leksodromiaReducer(s, { type: "SUBMIT_WORD", elapsedMs: 3_000 });
+    expect(s.wrongSubmit).toBe(true);
+    expect(s.results).toEqual([]);
+  });
 });
 
 describe("USE_HINT", () => {

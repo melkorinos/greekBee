@@ -23,6 +23,8 @@ interface LeksodromiaPuzzle {
   date:      string;
   words:     string[];
   scrambles: string[];
+  /** Accepted inputs per word (answer + valid anagrams), parallel to `words`. */
+  accepted:  string[][];
 }
 
 interface RoundSnapshot {
@@ -59,7 +61,7 @@ export function useLeksodromiaRound(puzzle: LeksodromiaPuzzle): LeksodromiaRound
   const [state, rawDispatch] = useReducer(
     leksodromiaReducer,
     undefined,
-    () => makeInitialLeksodromiaState(puzzle.date, puzzle.words, puzzle.scrambles),
+    () => makeInitialLeksodromiaState(puzzle.date, puzzle.words, puzzle.scrambles, puzzle.accepted),
   );
 
   // Any dispatch the Board issues is a live action; the internal RESTORE_STATE

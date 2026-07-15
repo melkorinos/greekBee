@@ -53,6 +53,15 @@ export function getCurrentAnswer(state: LeksodromiaState): string {
   return state.words[origIndex(state)] ?? "";
 }
 
+/**
+ * Every input that solves the current step: the canonical answer plus any valid
+ * anagram of the rack. Falls back to the bare answer if no accepted list exists
+ * (pre-accepted saves / hand-built fixtures).
+ */
+export function getCurrentAccepted(state: LeksodromiaState): string[] {
+  return state.accepted[origIndex(state)] ?? [getCurrentAnswer(state)];
+}
+
 /** The current scrambled rack, or "" when the round is finished. */
 export function getCurrentScramble(state: LeksodromiaState): string {
   return state.scrambles[origIndex(state)] ?? "";
@@ -169,11 +178,14 @@ export function leksodromiaReducer(state: LeksodromiaState, action: LeksodromiaA
       const answer = getCurrentAnswer(state);
       const input = getCurrentInput(state);
       if (input.length < answer.length) return state;
-      // Wrong word: flag the shake and wipe the free picks so the player can
+      // Accept the canonical answer OR any valid anagram of the rack. Not a
+      // real word: flag the shake and wipe the free picks so the player can
       // rebuild instantly (the auto-submit UX). The hint prefix survives.
-      if (input !== answer) return { ...state, wrongSubmit: true, picked: [] };
+      if (!getCurrentAccepted(state).includes(input)) return { ...state, wrongSubmit: true, picked: [] };
       return advance(state, {
-        word:      answer,
+        // Record the word the player actually spelled — the recap shows their
+        // solve, not the puzzle's canonical answer.
+        word:      input,
         status:    "solved",
         elapsedMs: action.elapsedMs,
         hintsUsed: state.hintsUsed,
@@ -250,11 +262,15 @@ export function makeInitialLeksodromiaState(
   puzzleId: string,
   words: string[],
   scrambles: string[],
+  // Parallel to `words`; each entry lists every accepted input for that word
+  // (canonical answer + valid anagrams). Defaults to answer-only when omitted.
+  accepted: string[][] = words.map((w) => [w]),
 ): LeksodromiaState {
   return {
     puzzleId,
     words,
     scrambles,
+    accepted,
     wordIndex: 0,
     retries: {},
     status: "playing",

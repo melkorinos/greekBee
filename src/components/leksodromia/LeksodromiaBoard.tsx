@@ -35,7 +35,7 @@ import { RoundRecap } from "./RoundRecap";
 const GREEK_LETTER = /^[α-ωά-ώςΑ-ΩΆ-Ώ]$/;
 
 interface LeksodromiaBoardProps {
-  puzzle:             { date: string; words: string[]; scrambles: string[] };
+  puzzle:             { date: string; words: string[]; scrambles: string[]; accepted: string[][] };
   today:              string;
   /** True while a modal (HowToPlay) covers the board — freezes the decay clock. */
   paused:             boolean;

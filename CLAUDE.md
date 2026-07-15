@@ -38,12 +38,9 @@ All commands live in `.claude/skills/`. Project-specific first, then mattpocock/
 | `/apply-nominations` | Apply admin-accepted word Nominations to `words-el.json` + surgically re-sync `puzzles-el.json` (wraps `npm run apply-nominations[:dry]`) |
 | `/improve-codebase-architecture` | Surface architectural seams and deepening opportunities |
 | `/grill-with-docs` | Grill session that cross-checks against domain docs and updates them inline |
-| `/to-spec` | Synthesise current context into a structured spec (formerly `/to-prd`) |
 | `/to-tickets` | Break a plan into vertical-slice tickets on the issue tracker (formerly `/to-issues`) |
-| `/triage` | Move issues through the triage state machine |
 | `/diagnosing-bugs` | Disciplined debug loop — reproduce → hypothesise → fix → regression-test (formerly `/diagnose`) |
 | `/tdd` | Test-driven development with red-green-refactor vertical slices |
-| `/prototype` | Build a throwaway prototype to answer a design question |
 | `/handoff` | Compact the conversation into a handoff doc for the next session |
 | `/setup-matt-pocock-skills` | One-time setup: issue tracker, triage labels, domain doc layout |
 | `/writing-great-skills` | Reference for writing/editing skills well (formerly `/write-a-skill`) |

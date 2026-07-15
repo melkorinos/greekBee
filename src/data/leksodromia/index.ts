@@ -14,6 +14,14 @@ import {
   getSameDayFallbackAnswers,
 } from "@/data/leksiarxeio/answerPools";
 
+// Precomputed answer → valid-anagram alternates (see
+// scripts/generate-leksodromia-anagrams.ts). ~400 KB, keyed by answer-pool word;
+// only words with alternates appear. Deliberately NOT the MB-scale guess lists,
+// which must never enter this route's cold-start budget.
+import anagramAlternates from "./anagramAlternates.json";
+
+const ALTERNATES = anagramAlternates as Record<string, string[]>;
+
 export interface LeksodromiaPuzzle {
   /** ISO date (YYYY-MM-DD) — the puzzle id. */
   date:      string;
@@ -21,6 +29,11 @@ export interface LeksodromiaPuzzle {
   words:     string[];
   /** Deterministic scrambled form of each word (parallel to `words`). */
   scrambles: string[];
+  /**
+   * Every accepted input per word (parallel to `words`): the canonical answer
+   * first, then any valid Greek anagram of the same rack.
+   */
+  accepted:  string[][];
 }
 
 /** The daily Leksodromia puzzle for `date` — pure, no I/O beyond static data. */
@@ -30,6 +43,7 @@ export function getTodaysLeksodromiaPuzzle(date: string): LeksodromiaPuzzle {
     date,
     words,
     scrambles: words.map((w) => scrambleWord(w, date)),
+    accepted:  words.map((w) => [w, ...(ALTERNATES[w] ?? [])]),
   };
 }
 

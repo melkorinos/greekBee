@@ -39,6 +39,13 @@ export interface LeksodromiaState {
   words:          string[];
   /** Deterministic scrambled form of each word (parallel to `words`). */
   scrambles:      string[];
+  /**
+   * Every accepted input per word (parallel to `words`): the canonical answer
+   * at index 0, followed by any valid Greek anagram of the same rack. Lets a
+   * player claim a word for spelling ANY real word from the tiles, not only the
+   * one answer the puzzle happened to pose.
+   */
+  accepted:       string[][];
   /** Current step: 0..words.length-1 = first pass; beyond = second-chance steps. */
   wordIndex:      number;
   /** Second-chance steps (see LeksodromiaRetry), keyed by step index. */

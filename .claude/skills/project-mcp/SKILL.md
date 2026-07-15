@@ -42,6 +42,21 @@ Some sessions have **no Vercel MCP tools at all** (ToolSearch finds none — onl
 - `npx vercel logs greek-bee.vercel.app --json` — **live-streams runtime logs from now** (no lookback); wrap in `timeout N …` via Bash to sample a window. Rows have `source` (`static`/`edge-function`/`lambda`), `requestPath`, `cache`, `responseStatusCode`.
 - **Not available via CLI or MCP:** per-function CPU, Fluid gauge, billing-cycle reset date — Observability → Functions in the dashboard remains the only source; ask the operator.
 
+## Environment variables — CLI only (verified 2026-07-16)
+
+There is **no Vercel MCP tool for env vars** (ToolSearch finds none — `get_project`/`deploy_*`/logs only). Manage them with the CLI, always `--scope melkorinos-projects`:
+
+- **The repo is NOT `vercel link`ed** (`.vercel/` is gitignored). `vercel env`/`redeploy` need project context or they go interactive. Link non-interactively by writing `.vercel/project.json` yourself — no prompt, no network:
+  ```
+  {"projectId":"prj_HNH0oGZw3o7taDayCAtVe7BViOFl","orgId":"team_AUMxvbaDutPq8SMboMcf4sED"}
+  ```
+  (Vercel's `orgId` **is** the team id. The dir is gitignored, so it never pollutes the tree.)
+- `vercel env ls [production|preview] --scope melkorinos-projects` — lists names + which environments, **values shown as `Encrypted`** (never the plaintext).
+- **Updating a value = rm then add** (no in-place edit): `vercel env rm NAME <env> --yes` then `printf 'value' | vercel env add NAME <env>`. Pipe the value via stdin with `printf` (no trailing newline). A var can target multiple environments as ONE entry — removing `production` may drop the whole entry (its `preview` target then reports `env_not_found`); re-add each environment you want explicitly.
+- **New vars are created `Sensitive` by default → the value CANNOT be read back**, not even via `vercel env pull` (the pulled `.env` line is present but empty). Do **not** try to verify a secret by pulling — you'll see length 0 and misread it as "unset". Verify by exercising the deployed endpoint instead.
+- **Env changes are captured at BUILD time — they do NOT affect the running deployment.** A change goes live only on the **next deployment**: `vercel redeploy <prod-url-or-dpl_id> --scope …` (rebuilds current source with the new env), or piggyback on the next `main` deploy. Until then, prod keeps the old value. (This is why a freshly-set secret still 403s until a redeploy.)
+- `ADMIN_SECRET` gates the leksikastirio admin review routes (nominations approve/reject: JSON body `adminSecret`; community puzzles: `X-Admin-Secret` header) — both compared to `process.env.ADMIN_SECRET`. The `?godmode=zzkdgr3` URL param is a **client-only Leksokipos cheat** (hardcoded in `GameBoard.tsx`, never server-validated); it only doubles as an admin unlock when `ADMIN_SECRET` happens to equal it. Leksikastirio's `isAdmin` is just `param.length > 0`, so it shows approve/reject buttons for ANY value — they 403 unless the value matches `ADMIN_SECRET`.
+
 ## Verified project facts (so you don't re-derive)
 
 - **12 tables, all RLS-enabled** (`public.` schema): `game_scores` (~120), `game_state` (~93), `nominations`, `nomination_votes`, `player_profiles`, `player_achievements` (newest, migration `20260706093000`), `transfer_codes`, `identity_audit`, and 4 `community_*_puzzles`.

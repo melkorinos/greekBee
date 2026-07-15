@@ -48,6 +48,19 @@ describe("getTodaysLeksodromiaPuzzle", () => {
     }
   });
 
+  it("lists accepted inputs per word: the answer first, plus valid same-letter anagrams", () => {
+    const { words, accepted } = getTodaysLeksodromiaPuzzle("2026-07-13");
+    expect(accepted).toHaveLength(words.length);
+    words.forEach((word, i) => {
+      // The canonical answer is always accepted, and always first.
+      expect(accepted[i][0]).toBe(word);
+      // Every accepted alternate is a true anagram of the answer (same rack).
+      for (const alt of accepted[i]) {
+        expect(sortLetters(alt)).toBe(sortLetters(word));
+      }
+    });
+  });
+
   it("never surfaces a same-day Leksiarxeio fallback answer, all year (cross-game leak)", () => {
     for (const date of dateRange(365)) {
       const { words } = getTodaysLeksodromiaPuzzle(date);

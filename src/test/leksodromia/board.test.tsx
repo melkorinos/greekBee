@@ -54,7 +54,7 @@ const SCRAMBLES = [
   "γλοσαγε", "μιδαβαθ",
   "λακιεσγα", "ρσηκβααρ",
 ];
-const PUZZLE = { date: "2026-07-13", words: WORDS, scrambles: SCRAMBLES };
+const PUZZLE = { date: "2026-07-13", words: WORDS, scrambles: SCRAMBLES, accepted: WORDS.map((w) => [w]) };
 
 function renderBoard() {
   return render(
