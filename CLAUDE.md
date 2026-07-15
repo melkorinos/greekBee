@@ -35,6 +35,7 @@ All commands live in `.claude/skills/`. Project-specific first, then mattpocock/
 | Command | Purpose |
 |---------|---------|
 | `/aihelper` | Full context reload — reads all `.claude/aiHelper/` files then waits for your task |
+| `/apply-nominations` | Apply admin-accepted word Nominations to `words-el.json` + surgically re-sync `puzzles-el.json` (wraps `npm run apply-nominations[:dry]`) |
 | `/improve-codebase-architecture` | Surface architectural seams and deepening opportunities |
 | `/grill-with-docs` | Grill session that cross-checks against domain docs and updates them inline |
 | `/to-spec` | Synthesise current context into a structured spec (formerly `/to-prd`) |

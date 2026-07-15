@@ -1,7 +1,7 @@
 # Agent Goals — Greek Word Games Platform
 
 ## North Star
-Ship a polished multi-game Greek word game platform where Leksokipos, Leksiarxeio, Leksindeseis, Vres Tin Frasi, and Stavrolekso coexist cleanly — sharing a shell, persistence layer, and design foundation — plus the Leksikastirio community word-court — without any game's logic bleeding into another's.
+Ship a polished multi-game Greek word game platform where all seven games — Leksokipos, Leksiarxeio, Leksindeseis, Vres Tin Frasi, Stavrolekso, Leksodromia, and Leksoplegma — coexist cleanly, sharing a shell, persistence layer, cross-device identity (device + optional Google), and design foundation — plus the Leksikastirio community word-court — without any game's logic bleeding into another's.
 
 ---
 
@@ -34,17 +34,26 @@ Ship a polished multi-game Greek word game platform where Leksokipos, Leksiarxei
 
 ---
 
-## 🎯 Current Focus — Leksokipos Polish
+## ✅ Beyond Phase 4 — shipped since (see `log.md` for session detail)
 
-Priority order (work top-down):
+- **7 live games** — Vres Tin Frasi, Stavrolekso (community crossword browser + maker), Leksodromia (anagram sprint), and Leksoplegma (word-web) joined the original three.
+- **Cross-device identity** — device UUID + Profiles + TransferCodes; Google OAuth augments device identity (ADR 0007) and Sign-in Restore adopts the account's DeviceId + merges history (ADR 0012).
+- **Achievements** — immutable earned-fact rows (`player_achievements` / `player_pangrams`, ADR 0013); Profile Page + Trophy Case + Lifetime Stats.
+- **Community pipeline** — one `communityPuzzleLifecycle` owning submit → approve/reject → consume across Leksiarxeio / Leksindeseis / Vres Tin Frasi (+ never-consumed Stavrolekso); Leksikastirio review tabs.
+- **Design system** — CSS semantic tokens + per-game accent (ADR 0008/0009); recipe files; palette guard test.
+- **Cost work** — Vercel Fluid CPU mitigations (daily-combo prerender, lazy word-list, Edge routes); Vercel Pro.
+- **Leksokipos** — rank ladder + variable soft-cap genius bar; share card; offline lock + score outbox.
 
-1. **Rank badge on ScoreBar** — render the current rank label (ψαράκι → Απολυτότητα) as a styled badge inside the score bar, not just plain text. (The rank rename — dropping the flower metaphor for the rising-ranks ladder — is DONE; names now derive from the single-source `RANKS` array. A design-token / font consolidation follows; see ADR 0008 and issues 13–19.)
-2. **Share score** — after completing the game, offer a shareable score card (rank + score + date) that copies to clipboard.
-3. **Home page "played today" badge** — read `useGameStore` to show ✓ on each game card if played today.
-4. **Leksokipos stats modal** — device-local all-time stats: games played, best rank, total words. Read from localStorage.
-5. **E2E test (Playwright)** — at least one Leksokipos happy-path: load today's puzzle → type valid word → see it in found list.
-6. ~~**Leksiarxeio length variants (3–8)**~~ ✅ — 4–8 live; `words-N.json` + `answers-N.json` generated; length switcher in UI.
-7. **Visual rebrand** — Tailwind theme config or further polish beyond existing dark-mode toggle.
+---
+
+## 🎯 Current Focus
+
+No single active epic. Recent sessions have been architecture reviews, a DB-schema review, and the Leksokipos soft cap. Standing priorities / open threads:
+
+1. **Ship dev → main** — Leksodromia + Leksoplegma are the two games about to land on `main`. Manual browser play-through required before merge.
+2. **Disaster-recovery backups** — the one open tracker issue (`02`): free-tier Supabase has no PITR, single shared dev/prod project. Automate an off-site `db dump` + decide the dev/main DB split.
+3. **E2E coverage** — Playwright is now wired (`npm run test:e2e`); grow happy-path coverage per game.
+4. **Leksindeseis static-fallback supply** — thin `puzzles-connections.json` pool, no reminder system (see `reflections.md`).
 
 ---
 

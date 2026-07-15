@@ -1,4 +1,4 @@
-# � Greek Word Games Platform
+# 🇬🇷 Greek Word Games Platform
 
 A multi-game browser platform for Greek (and English) word games, built with **Next.js 16 · TypeScript · Tailwind CSS · Vitest**.
 
@@ -11,6 +11,8 @@ A multi-game browser platform for Greek (and English) word games, built with **N
 | 🔗 Leksindeseis | `/leksindeseis` | Live | Group 16 curated words into 4 categories of 4 |
 | 💬 Vres Tin Frasi | `/vres-tin-frasi` | Live | Guess the daily Greek phrase (3–4 words) tile-by-tile |
 | ✏️ Stavrolekso | `/stavrolekso` | Live | Browse & solve community-submitted Greek crosswords |
+| 🏃 Leksodromia | `/leksodromia` | Live | Daily anagram sprint — unscramble 10 words against a decaying-points clock |
+| 🕸️ Leksoplegma | `/leksoplegma` | Live | Daily word-web — trace authored words across a 4×4 tile grid (no timer) |
 | ⚖️ Leksikastirio | `/leksikastirio` | Live | Community word court — vote on words to add or remove from the dictionary |
 
 All games share a common shell (hamburger navigation menu), a unified persistence layer, and a consistent design foundation. Each game's logic, state, and data are fully isolated.
@@ -66,7 +68,7 @@ This project is managed with a dedicated AI coding agent using **Claude Code**. 
 |------|---------|
 | `.claude/aiHelper/soul.md` | Agent identity, beliefs, and hard constraints |
 | `.claude/aiHelper/memory.md` | All architecture decisions and context across sessions |
-| `.claude/aiHelper/goals.md` | Phased roadmap (Phase 1–4) with checkboxes |
+| `.claude/aiHelper/goals.md` | Roadmap — completed phases + current focus |
 | `.claude/aiHelper/log.md` | Per-session changelog |
 | `.claude/aiHelper/reflections.md` | Post-session risks, tensions, and open questions |
 
@@ -85,6 +87,8 @@ All commands live in `.claude/skills/`.
 | Command | Purpose |
 |---------|---------|
 | `/aihelper` | Full context reload — reads all `.claude/aiHelper/` files, then waits for your task |
+| `/apply-nominations` | Apply admin-accepted word Nominations to `words-el.json` + re-sync `puzzles-el.json` |
+| `/project-mcp` | Canonical Supabase & Vercel MCP IDs, call recipes, and param-traps — load before any Supabase/Vercel MCP call |
 | `/improve-codebase-architecture` | Surface architectural seams and deepening opportunities |
 | `/grill-with-docs` | Relentless Q&A to stress-test a plan or design, cross-checking against domain docs (CONTEXT.md, ADRs) and updating them inline |
 | `/to-spec` | Synthesise current context into a structured spec (formerly `/to-prd`) |
@@ -167,7 +171,7 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
    - 4-letter word → 1 pt
    - 5+ letter word → 1 pt per letter
    - Pangram (uses all 7 letters) → above + 7 bonus pts
-   - `maxScore` = sum of all word scores, hard-capped at 500 pts (`MAX_SCORE_CAP`).
+   - `maxScore` = sum of all word scores, scaled to 85%, then a soft cap (`softCap`) compresses totals above the knee so each puzzle's rank bar tracks its richness (no hard ceiling). Knobs: `SOFT_CAP_KNEE`, `SOFT_CAP_K`.
 
 7. **Rank calculation** (`src/games/leksokipos/lib/ranking.ts`)
    - Score is compared against thresholds as a % of `maxScore`:
@@ -210,14 +214,19 @@ src/
     leksindeseis/   Group 16 words into 4 categories
     vres-tin-frasi/ Daily Greek phrase guessing game
     stavrolekso/    Community crossword browser + maker (/[id], /maker)
+    leksodromia/    Daily anagram sprint (decay-to-floor scoring)
+    leksoplegma/    Daily word-web (trace words across a 4×4 grid, no timer)
+    profile/        Player identity, Lifetime Stats, Trophy Case
     leksikastirio/  Community word-court (public voting + admin review)
-    api/            Edge routes: game-scores, game-state, profile, transfer, nominations, community-puzzles, auth
+    api/            Edge routes: game-scores, game-state, profile, transfer, nominations, community-puzzles, pangrams, auth
   components/
     shared/         Cross-game UI primitives (Shell, FeedbackBanner, HowToPlayModal, LetterPickerModal)
     leksokipos/     Leksokipos components (LeksokiposLayout, GameBoard, FlowerGrid, FlowerGridPlayground, ScoreBar, LeaderboardModal, …)
     leksiarxeio/    Leksiarxeio components (LeksiarxeioBoard, GuessGrid, Tile, Keyboard)
     leksindeseis/   Leksindeseis components (GroupGrid, WordCard, CategoryReveal, ConnectionsBoard, ConnectionsLeaderboardModal)
     vrestifrasi/    Vres Tin Frasi components (board, phrase tiles, leaderboard modal)
+    leksodromia/    Leksodromia components (board, tile rack, recap, leaderboard modal)
+    leksoplegma/    Leksoplegma components (board, SVG live edges, hint chips, recap)
     leksikastirio/  Community word-court admin / voting UI
   games/            Pure logic — one folder per game, zero React imports
     leksokipos/
@@ -239,17 +248,29 @@ src/
     stavrolekso/
       lib/          autoNumberSlots, getSlotLength, isConnected, normalizeAndCompare
       types.ts   (also holds StavroleksoGrid.tsx — a React component, unlike the other games' pure-logic folders)
+    leksodromia/
+      lib/          selectDailyWords, scrambleWord, scoring
+      hooks/        useLeksodromiaRound (incl. useElapsedClock), leksodromiaReducer
+      types.ts
+    leksoplegma/
+      lib/          graph, scoring, generator (offline generator core), dataLoader
+      hooks/        useLeksoplegmaRound, leksoplegmaReducer
+      types.ts
   hooks/
     useGameStore.ts        Unified localStorage envelope — the only code that touches localStorage
-    useGameIdentity.ts     SSR-safe DeviceId + DisplayName init; used by all three game boards
-    useScoreSubmission.ts  Unified score-posting for all three games (submit / submitWithName / submitLength)
-    useRoundPersistence.ts Generic session persistence hook used by all three games (hydrate/save/clear)
+    usePlayerIdentity.ts   Bundles migrate + useGameIdentity + useProfile + useAuth for side-effect-free surfaces
+    useGameIdentity.ts     SSR-safe DeviceId + DisplayName init; used across the game boards
+    useScoreSubmission.ts  Unified score-posting (submit / submitWithName / submitLength)
+    useLiveScorePost.ts    Continuous-post + finish-once-open policy shared by the round games
+    useRoundPersistence.ts Generic per-session persistence hook (hydrate/save/clear)
     useGameStateSync.ts    Cross-device sync hook — pushes Leksokipos state on valid word submit
   data/
     leksokipos/     puzzles-el.json (daily puzzles), index.ts
     leksiarxeio/    words-2..8.json (per-length word lists from full dict), index.ts
     leksindeseis/   puzzles-connections.json (hand-curated), index.ts
     vrestifrasi/    phrases-el.json (static phrase fallback), index.ts
+    leksoplegma/    puzzles-el.json (committed generator batch, npm run generate-leksoplegma), index.ts
+    (leksodromia has no data folder — words derived deterministically from the leksiarxeio answer pools)
     words-el.json   ~795k normalised Greek words (no accents, ς→σ)
   lib/
     greeklish.ts    Bijective Greek↔greeklish codec for clean ASCII custom URLs
@@ -280,18 +301,11 @@ scripts/            Puzzle generation & curation CLIs (batch-generate, curate-an
 
 ## Tech debt
 
-Tracked as individual issues in [`.claude/issue-tracker/issues/`](.claude/issue-tracker/issues/). Each file has a `Status:` line using the project triage vocabulary (`needs-triage`, `ready-for-agent`, `ready-for-human`).
+Tracked as individual issues in [`.claude/issue-tracker/issues/`](.claude/issue-tracker/issues/). Each file has a `Status:` line using the project triage vocabulary (`needs-triage`, `ready-for-agent`, `ready-for-human`, `needs-info`, `wontfix`). Resolved issues are **deleted**, not marked done — see that directory for the live list.
 
 | # | Issue | Status |
 |---|-------|--------|
-| 01 | [No E2E tests](.claude/issue-tracker/issues/01-no-e2e-tests.md) | ready-for-agent |
-| 03 | [Style token cleanup](.claude/issue-tracker/issues/03-td001-style-tokens.md) | ready-for-agent |
-| 04 | [Max score cap](.claude/issue-tracker/issues/04-td002-max-score-cap.md) | needs-triage |
-| 05 | [Leksiarxeio answer pool quality](.claude/issue-tracker/issues/05-td003-wordle-answer-pool.md) | ready-for-agent |
-| 06 | [Supabase / Vercel storage](.claude/issue-tracker/issues/06-td004-supabase-vercel-storage.md) | ready-for-human |
-| 07 | [Strip validWords from puzzles-el.json](.claude/issue-tracker/issues/07-puzzles-json-file-size.md) | needs-triage |
-| 08 | [Scheduled stale-row cleanup](.claude/issue-tracker/issues/08-scheduled-stale-row-cleanup.md) | ready-for-agent |
-| 09 | [API rate limiting per device](.claude/issue-tracker/issues/09-api-rate-limiting.md) | ready-for-human |
+| 02 | [No disaster-recovery backups](.claude/issue-tracker/issues/02-no-disaster-recovery-backups.md) | needs-triage |
 
 ---
 
@@ -302,66 +316,11 @@ npm run test              # single run, all files
 npm run test:watch        # watch mode (re-runs on save)
 ```
 
-Test files are organised under `src/test/` by game and shared utilities:
+The authoritative, per-file **Test Coverage Map** lives in [`.claude/aiHelper/memory.md`](.claude/aiHelper/memory.md) (single source of truth — grep its `describe` column before writing a new test). It is kept current every session; this README does not duplicate it.
 
-**Leksokipos (`src/test/leksokipos/`)**
+End-to-end (Playwright):
 
-| File | Covers |
-|------|--------|
-| `gameLogic.test.ts` | `isPangram`, `scoreWord`, `maxScore`, `calculateRank`, `validateWord` |
-| `gameReducer.test.ts` | All reducer actions: `ADD_LETTER`, `DELETE_LETTER`, `SUBMIT_WORD`, `RESTORE_STATE`, etc. |
-| `greekLogic.test.ts` | Greek-specific normalisation, pangram detection, data layer |
-| `GameBoard.test.tsx` | Rendering, keyboard input, word submission, give-up flow, leaderboard button placement |
-| `computeValidWords.test.ts` | `computeValidWords` — valid word filtering, pangram detection |
-| `puzzle.test.ts` | `getPuzzleForDate`, `getPuzzleById`, fallback and edge-date handling |
-| `leksokiposDataLoader.test.ts` | Server-side data loading and URL param resolution |
-| `leksokiposRouting.test.ts` | Custom URL routing — greeklish encode/decode round-trip |
-| `customPuzzle.test.tsx` | Custom puzzle UI flow end-to-end |
-| `suggestions.test.ts` | Word suggestion localStorage helpers |
-| `suggestWordModal.test.tsx` | Suggest-word modal interaction |
-| `wordInput.test.tsx` | WordInput rendering and letter highlighting |
-| `missedWordsList.test.tsx` | MissedWordsList — give-up reveal, pangram highlights |
-
-**Leksiarxeio (`src/test/leksiarxeio/`)**
-
-| File | Covers |
-|------|--------|
-| `evaluateGuess.test.ts` | Two-pass algorithm — exact, present, absent, duplicate-letter edge cases |
-| `leksiarxeioReducer.test.ts` | `ADD_LETTER`, `DELETE_LETTER`, `SUBMIT_GUESS` (win/loss/invalid), `RESTORE_STATE` |
-| `gameLogic.test.ts` | `scoreLeksiarxeio`, `buildLetterStateMap` priority rules |
-| `guessGrid.test.tsx` | GuessGrid tile rendering and colour states |
-| `header.test.tsx` | Header length-picker and stats display |
-| `theme.test.tsx` | Dark theme token propagation |
-| `dataLoader.test.ts` | Word-list loading and length validation |
-
-**Leksindeseis (`src/test/leksindeseis/`)**
-
-| File | Covers |
-|------|--------|
-| `leksindeseisReducer.test.ts` | Leksindeseis reducer — guesses, solves, one-away detection |
-| `groupGrid.test.tsx` | GroupGrid rendering and animation states |
-| `dataLoader.test.ts` | Puzzle loading and date resolution |
-
-**Shared (`src/test/shared/` and `src/test/`)**
-
-| File | Covers |
-|------|--------|
-| `useGameStore.test.ts` | `readSlice`, `writeSlice`, `clearSlice`; `deviceId`, `displayName`, `profileLinked`, `disconnectIdentity` helpers |
-| `useGameIdentity.test.ts` | SSR-safe DeviceId + DisplayName init — initial values from store, setter stability |
-| `persistence.test.ts` | `useRoundPersistence` — hydration, saving, `clear()`, session isolation, `shouldSave` guard |
-| `Shell.test.tsx` | Hamburger open/close, navigation links, keyboard dismiss |
-| `leaderboardModal.test.tsx` | Day strip, play link, display-name editor, profile create/restore/linked/disconnect flows |
-| `feedbackMessage.test.tsx` | FeedbackMessage variants — accepted, errors, pangram, suggest button |
-| `greeklish.test.ts` | Bijective Greek↔greeklish codec round-trip |
-| `normalize.test.ts` | Accent stripping, ς→σ normalisation, deduplication |
-| `parseCustomUrl.test.ts` | Custom URL segment parsing |
-| `useLeaderboard.test.ts` | Leaderboard fetch hook — loading, error, refresh |
-| `useScoreSubmission.test.ts` | Unified score submission — `submit` + `submitWithName` (Leksokipos/Leksindeseis), `submitLength` with won/lost penalty (Leksiarxeio) |
-| `supabase.test.ts` | Supabase client initialisation guard |
-| `gameScoresRoute.test.ts` | `/api/game-scores` edge route |
-| `performance.test.ts` | Validation and scoring hot-path benchmarks |
-| `deploymentReadiness.test.ts` | Environment variable presence checks |
-| `leksokiposStyles.test.ts` | Leksokipos Tailwind class constants |
-| `noAccents.test.ts` | Accent-free word list integrity |
-| `letterPickerModal.test.tsx` | LetterPickerModal rendering and selection |
-| `mobileLayout.test.tsx` | Mobile viewport layout smoke test |
+```bash
+npm run test:e2e          # headless run
+npm run test:e2e:ui       # interactive UI mode
+```

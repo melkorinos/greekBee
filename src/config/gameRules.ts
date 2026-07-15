@@ -9,8 +9,16 @@
 export const LEKSOKIPOS = {
   MIN_WORD_LENGTH: 4,
   PANGRAM_BONUS:   7,
-  MAX_SCORE_CAP:   600,
   SCORE_SCALE:     0.85,
+  // Soft cap on a puzzle's rank-defining max score. Below SOFT_CAP_KNEE the
+  // scaled score passes through unchanged; above it the excess is compressed
+  // logarithmically toward the theoretical max — no hard ceiling — so the
+  // genius bar keeps rising with each puzzle's richness (giving day-to-day
+  // variety) while a word-dense "monster" garden never demands a runaway total.
+  // SOFT_CAP_K sets the compression strength (higher = more headroom for big
+  // puzzles). See softCap() in games/leksokipos/lib/scoring.ts.
+  SOFT_CAP_KNEE:   400,
+  SOFT_CAP_K:      250,
 } as const;
 
 export const LEKSIARXEIO = {

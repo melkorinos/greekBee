@@ -1,7 +1,15 @@
 # Agent Log — Greek Word Games Platform
 
 > Newest-first. Full detail for the two most recent sessions; older entries condensed below.
-> **Rule:** keep this file under 150 lines — condense before adding new entries.
+> **Rule:** keep this file under 250 lines — condense before adding new entries.
+
+---
+
+## Session 84 — 2026-07-15: Leksokipos soft cap (variable genius bar)
+Replaced the flat `MAX_SCORE_CAP: 600` hard clip on `maxScore` with a logarithmic **soft cap** so the top-rank (Απολυτότητα) bar tracks each puzzle's richness instead of pinning ~57% of days to a genius target of 480. Motivation: a player noticed the max-rank score was identical every day.
+- **Curve** (`softCap` in `games/leksokipos/lib/scoring.ts`): identity ≤ knee, then `knee + k·ln(1+(x−knee)/k)` above it — slope-1 continuous (no kink), strictly increasing, no hard ceiling. Operates on the 85%-scaled total (SCORE_SCALE unchanged).
+- **Knobs** in `LEKSOKIPOS` (gameRules.ts): `SOFT_CAP_KNEE: 400`, `SOFT_CAP_K: 250` — chosen by simulating all 1008 real puzzles. Result: genius target median ~474 (≈ today's 480) but now spreads ~460–685 for normal-rich days, monsters compress to ~750–986 (was: everything ≥600-raw pinned to 480). Days below the knee are byte-identical to before.
+- `MAX_SCORE_CAP` export removed (hard cap is gone as a concept). Tests: `gameLogic.test.ts` old "never exceeds 600" case → compression + strictly-increasing `softCap` cases. Docs updated (README stale "500" fixed; CONTEXT.md Max Score glossary). Gates: **test 1608 pass / 6 skip · eslint 0 · build 0** (1008-path SSG intact).
 
 ---
 
