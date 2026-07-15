@@ -9,6 +9,7 @@ import { Keyboard } from "./Keyboard";
 import { PhraseGrid } from "./PhraseGrid";
 import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { normalizeLetters } from "@/lib/normalize";
+import { scoreVresTinFrasi } from "@/games/vrestifrasi/lib/scoring";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { useVresTinFrasiState } from "@/games/vrestifrasi/hooks/useVresTinFrasiState";
 
@@ -43,8 +44,10 @@ export function VresTinFrasiBoard({
 
   const handleGameEnd = useCallback(
     (attempts: number, won: boolean) => {
-      const attemptCount = won ? attempts : 7;
-      postScore(attemptCount);
+      // Post points, higher-is-better (6 for a 1-guess win → 1 for a 6-guess
+      // win, 0 for a loss) — same scale as Leksiarxeio. The leaderboard sorts
+      // desc like every other game (ADR 0014); no lower-is-better boards.
+      postScore(scoreVresTinFrasi(attempts, won));
       setTimeout(() => onOpenLeaderboard(), 1500);
     },
     [postScore, onOpenLeaderboard],

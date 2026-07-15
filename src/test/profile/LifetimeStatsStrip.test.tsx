@@ -19,8 +19,8 @@ function mockStats(body: unknown, ok = true) {
 }
 
 describe("LifetimeStatsStrip", () => {
-  it("shows the four real numbers with Greek labels on success", async () => {
-    mockStats({ total_points: 150, puzzles_played: 5, tzimani_count: 2, pangram_count: 7 });
+  it("shows the five real numbers with Greek labels on success", async () => {
+    mockStats({ total_points: 150, puzzles_played: 5, tzimani_count: 2, pangram_count: 7, leksokipos_first_place_count: 3 });
     render(<LifetimeStatsStrip deviceId="dev-A" />);
 
     await waitFor(() => expect(screen.getByText("150")).toBeInTheDocument());
@@ -30,6 +30,8 @@ describe("LifetimeStatsStrip", () => {
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("Πανγκράμ")).toBeInTheDocument();
     expect(screen.getByText("7")).toBeInTheDocument();
+    expect(screen.getByText("Πρωτιές")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
   });
 
   it("shows a skeleton while the fetch is pending", () => {
@@ -42,6 +44,6 @@ describe("LifetimeStatsStrip", () => {
     mockStats({}, false); // ok: false
     render(<LifetimeStatsStrip deviceId="dev-A" />);
     await waitFor(() => expect(screen.queryByTestId("stats-skeleton")).toBeNull());
-    expect(screen.getAllByText("—")).toHaveLength(4);
+    expect(screen.getAllByText("—")).toHaveLength(5);
   });
 });

@@ -31,7 +31,9 @@ import {
 
 /**
  * Creates a standard /api/game-scores URL builder for a given game.
- * Pass { sort: "asc" } for games where lower score is better (e.g. VresTinFrasi).
+ * Every leaderboard game is higher-is-better and sorts desc (ADR 0014), so no
+ * caller passes a sort override today; the { sort: "asc" } escape hatch remains
+ * for generality.
  */
 export function buildLeaderboardUrl(
   gameId: string,

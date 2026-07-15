@@ -105,10 +105,11 @@ const GAME_LEADERBOARD_CONFIG: Record<LeaderboardGameId, LeaderboardViewConfig> 
     formatScore: (n: number) => `${n}/4`,
   },
   vrestifrasi: {
-    // sort=asc: fewer attempts ranks higher.
-    buildUrl:   buildLeaderboardUrl("vrestifrasi", { sort: "asc" }),
-    subtitle:   "Αριθμός προσπαθειών · χαμηλότερο = καλύτερο",
-    scoreLabel: "Προσπάθειες",
+    // Points, higher-is-better (fewer guesses → more points), sorted desc like
+    // every other board (ADR 0014). No sort override.
+    buildUrl:   buildLeaderboardUrl("vrestifrasi"),
+    subtitle:   "Πόντοι (λιγότερες προσπάθειες = περισσότεροι) · υψηλότερο = καλύτερο",
+    scoreLabel: "Σκορ",
     ...playLinkSlots("/vres-tin-frasi"),
   },
   leksodromia: {

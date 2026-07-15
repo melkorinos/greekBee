@@ -82,7 +82,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Misplaced-Word** *(Vres Tin Frasi)* — Tile state (purple): the guessed letter appears in the answer Phrase but in a different word than the one it was guessed in. Evaluated after greens are resolved: remaining answer letters form a cross-phrase pool; a letter not in its own word's pool but present in another word's pool → misplaced-word. Keyboard priority: `correct` > `present` > `misplaced-word` > `absent`. (Not: present — that is yellow, wrong position within the same word)
 
-**Attempt Count** *(Vres Tin Frasi leaderboard)* — Number of Guesses used (1–6). Lower is better. Failed = 7 penalty. Stored in `game_scores` with `game_id = "vrestifrasi"`. API field named `score` for interface compatibility.
+**Score** *(Vres Tin Frasi leaderboard)* — Points from `scoreVresTinFrasi`: 6 pts for a 1-guess win → 1 pt for a 6-guess win; a loss is 0. **Higher is better** (same scale as Leksiarxeio In-game Points), sorted descending like every other board (ADR 0014). Stored in `game_scores` with `game_id = "vrestifrasi"`; API field named `score`. The player still sees their raw attempt count in-game; only the leaderboard currency is points. (Converted from the retired lower-is-better *Attempt Count* — ADR 0014. Not: attempt count, προσπάθειες)
 
 **Category** *(Leksindeseis)* — Label naming a Group of 4 words. Hidden until the Group is solved. (Not: theme, topic)
 
@@ -112,7 +112,11 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Trophy Case** — The full Achievement display on the Profile Page: every catalog entry rendered, earned Badges lit, locked ones greyed with their unlock hint. (Not: badge list, achievements tab)
 
-**Lifetime Stats** — Per-player aggregates over full `game_scores` history (append-forever makes them safe): total points, puzzles played, Τζιμάνι count, and pangram count (from the separate `player_pangrams` set, not `game_scores`). Streak is defined below but not yet surfaced in the strip. Keyed by DeviceId — never `auth_user_id` (Sign-in Restore makes the adopted DeviceId canonical, so one key serves anonymous and AuthLinked players alike); Daily Puzzles only (Custom Puzzles never post scores). (Not: statistics, records — records are all-time bests, a parked pillar)
+**Lifetime Stats** — Per-player aggregates over full `game_scores` history (append-forever makes them safe): total points, puzzles played, Τζιμάνι count, pangram count (from the separate `player_pangrams` set, not `game_scores`), and First-Place Count (Πρωτιές — Leksokipos only in v1). Streak is defined below but not yet surfaced in the strip. Keyed by DeviceId — never `auth_user_id` (Sign-in Restore makes the adopted DeviceId canonical, so one key serves anonymous and AuthLinked players alike); Daily Puzzles only (Custom Puzzles never post scores). (Not: statistics, records — records are all-time bests, a parked pillar)
+
+**First-Place Finish** — Being rank 1 on a Game's Daily Puzzle Leaderboard for one `puzzle_date`. Ties share rank 1 — every player who matches the day's top score finished first (consistent with the Leaderboard's count-of-better-scores rank formula). Since every Leaderboard is higher-is-better (ADR 0014), "first" is simply the day's maximum `score`. (Not: win, top score)
+
+**First-Place Count** — The lifetime tally of a player's First-Place Finishes, shown as **Πρωτιές** in Lifetime Stats. Leksokipos-only in v1; extends per-Game later (each Game contributes its own daily firsts). **Derived** from append-forever `game_scores` (data-class 2), never stored — computed by `countFirstPlaceFinishes` (`src/lib/placement.ts`) over all of a Game's rows, index-backed by `game_scores_game_date_score_idx`. Tiered First-Place Badges are a deferred follow-up (frozen `leksokipos-first-place-*` ids chosen when built). (Not: wins count)
 
 **Streak** — Consecutive calendar days on which a player scored at least one Daily Puzzle in any Game (platform-wide, not per-Game). Derived from distinct `puzzle_date`s in `game_scores`; Custom Puzzles excluded. Current and Best Streak show in Lifetime Stats. (Not: per-game streak)
 

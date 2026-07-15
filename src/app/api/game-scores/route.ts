@@ -128,7 +128,8 @@ export async function GET(req: NextRequest) {
   const gameId    = req.nextUrl.searchParams.get("game_id") ?? "";
   const puzzleDate = req.nextUrl.searchParams.get("puzzle_date") ?? "";
   const deviceId  = req.nextUrl.searchParams.get("deviceId") ?? "";
-  // sort=asc for games where lower score is better (e.g. vrestifrasi attempt count)
+  // sort=asc for lower-is-better games. No game uses it today — every leaderboard
+  // is higher-is-better and sorts desc (ADR 0014) — but the param stays generic.
   const sortAsc   = req.nextUrl.searchParams.get("sort") === "asc";
 
   if (!gameId || !puzzleDate) {
