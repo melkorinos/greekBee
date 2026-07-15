@@ -37,18 +37,18 @@ All commands live in `.claude/skills/`. Project-specific first, then mattpocock/
 | `/aihelper` | Full context reload — reads all `.claude/aiHelper/` files then waits for your task |
 | `/improve-codebase-architecture` | Surface architectural seams and deepening opportunities |
 | `/grill-with-docs` | Grill session that cross-checks against domain docs and updates them inline |
-| `/to-prd` | Synthesise current context into a structured PRD |
-| `/to-issues` | Break a plan into vertical-slice issues on the issue tracker |
+| `/to-spec` | Synthesise current context into a structured spec (formerly `/to-prd`) |
+| `/to-tickets` | Break a plan into vertical-slice tickets on the issue tracker (formerly `/to-issues`) |
 | `/triage` | Move issues through the triage state machine |
-| `/diagnose` | Disciplined debug loop — reproduce → hypothesise → fix → regression-test |
+| `/diagnosing-bugs` | Disciplined debug loop — reproduce → hypothesise → fix → regression-test (formerly `/diagnose`) |
 | `/tdd` | Test-driven development with red-green-refactor vertical slices |
 | `/prototype` | Build a throwaway prototype to answer a design question |
-| `/zoom-out` | Map modules and callers when unfamiliar with an area |
 | `/handoff` | Compact the conversation into a handoff doc for the next session |
-| `/caveman` | Ultra-compressed mode — full technical accuracy, zero filler |
 | `/setup-matt-pocock-skills` | One-time setup: issue tracker, triage labels, domain doc layout |
-| `/write-a-skill` | Create a new skill with proper structure |
+| `/writing-great-skills` | Reference for writing/editing skills well (formerly `/write-a-skill`) |
 | `/project-mcp` | Canonical Supabase & Vercel MCP IDs, call recipes, and param-traps — load before any Supabase/Vercel MCP call to skip discovery thrash |
+
+Upstream dropped `caveman` and `zoom-out` with no replacement (removed here, 2026-07-14). Many more mattpocock skills are now installed beyond this table (`code-review`, `research`, `wayfinder`, `domain-modeling`, etc.) — see `.claude/skills/` for the full list.
 
 ## Agent skills
 

@@ -6,20 +6,14 @@
 
 import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
 import { LEKSIARXEIO } from "@/config/gameRules";
-import {
-  migrateLeksiarxeioIdentity,
-  readSlice,
-  setDisplayName as saveDisplayName,
-} from "@/hooks/useGameStore";
-import { useGameIdentity } from "@/hooks/useGameIdentity";
-import { useProfile } from "@/hooks/useProfile";
-import { useAuth } from "@/hooks/useAuth";
+import { readSlice } from "@/hooks/useGameStore";
+import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { GuessGrid } from "./GuessGrid";
 import { Keyboard } from "./Keyboard";
-import { LeksiarxeioLeaderboardModal } from "./LeksiarxeioLeaderboardModal";
+import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { normalizeLetters } from "@/lib/normalize";
 import { useLeksiarxeioScoreSubmission } from "@/hooks/useLeksiarxeioScoreSubmission";
 import { useLeksiarxeioState } from "@/games/leksiarxeio/hooks/useLeksiarxeioState";
@@ -181,18 +175,10 @@ export function LeksiarxeioBoard({
 }: LeksiarxeioBoardProps) {
   const [activeLength, setActiveLength] = useState<LeksiarxeioLength>(4);
 
-  // migrateLeksiarxeioIdentity must run before useGameIdentity reads the device ID,
-  // so that existing players' legacy UUID is promoted before getOrCreateDeviceId
-  // can create a fresh one. The function is idempotent — safe to call on every render.
-  if (typeof window !== "undefined") migrateLeksiarxeioIdentity();
-  const { deviceId, displayName, setDeviceId, setDisplayName } = useGameIdentity();
-  const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } =
-    useProfile({
-      deviceId,
-      onDeviceIdChange:    setDeviceId,
-      onDisplayNameChange: (name) => { setDisplayName(name); saveDisplayName(name); },
-    });
-  const { authLinked, authUserName, signInWithGoogle, signOut } = useAuth();
+  // usePlayerIdentity runs the legacy-identity migration before reading the device
+  // id, then assembles device + profile + auth (see its doc comment).
+  const identity = usePlayerIdentity();
+  const { deviceId, displayName } = identity;
 
   // Track which lengths are finished (won or lost) so auto-advance can skip them.
   // A ref is used alongside state to avoid stale-closure issues inside setTimeout.
@@ -300,22 +286,13 @@ export function LeksiarxeioBoard({
       ))}
 
       {/* ── Leaderboard modal ─────────────────────────────────────────────── */}
-      <LeksiarxeioLeaderboardModal
+      <GameLeaderboardModal
+        gameId="leksiarxeio"
         isOpen={isLeaderboardOpen}
-        today={today}
-        deviceId={deviceId}
-        displayName={displayName}
-        profileLinked={profileLinked}
-        onSaveName={(name) => { setDisplayName(name); saveDisplayName(name); }}
-        onProfileCreate={createProfile}
-        onTransferGenerate={generateTransferCode}
-        onTransferClaim={claimTransferCode}
-        onDisconnect={disconnect}
-        authLinked={authLinked}
-        authUserName={authUserName}
-        onSignIn={signInWithGoogle}
-        onSignOut={signOut}
+        today={new Date().toISOString().slice(0, 10)}
+        defaultDate={today}
         onClose={onCloseLeaderboard}
+        {...identity.leaderboardProps}
       />
     </>
   );

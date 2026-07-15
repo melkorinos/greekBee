@@ -1,0 +1,26 @@
+// Λεξοδρομία — server component.
+// Resolves today's date → deterministic daily puzzle (selection + scramble are
+// pure functions over ~300 KB of static answer pools — no words-el.json, no DB).
+
+import { getTodayDateString, getTodaysLeksodromiaPuzzle } from "@/data/leksodromia";
+import { resolvePuzzleDateParam } from "@/lib/puzzleDate";
+
+import { LeksodromiaPageClient } from "@/components/leksodromia/LeksodromiaPageClient";
+
+export const dynamic = "force-dynamic";
+
+interface LeksodromiaPageProps {
+  searchParams: Promise<{ puzzle?: string }>;
+}
+
+export default async function LeksodromiaPage({ searchParams }: LeksodromiaPageProps) {
+  const { puzzle: puzzleParam } = await searchParams;
+  const today = resolvePuzzleDateParam(puzzleParam, getTodayDateString());
+  const puzzle = getTodaysLeksodromiaPuzzle(today);
+
+  return (
+    <main data-game="leksodromia" className="flex flex-1 flex-col items-center gap-2 px-4 pt-4 bg-background text-foreground">
+      <LeksodromiaPageClient puzzle={puzzle} today={today} />
+    </main>
+  );
+}

@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { LeksindeseisPuzzle }           from "@/games/leksindeseis/types";
-import { ConnectionsLeaderboardModal }      from "@/components/leksindeseis/ConnectionsLeaderboardModal";
+import { GameLeaderboardModal }             from "@/components/shared/GameLeaderboardModal";
 import { FeedbackBanner }                  from "@/components/shared/FeedbackBanner";
 import { GroupGrid }                       from "@/components/leksindeseis/GroupGrid";
 import { setDisplayName } from "@/hooks/useGameStore";
@@ -183,9 +183,11 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
       )}
 
       {/* Leaderboard modal */}
-      <ConnectionsLeaderboardModal
+      <GameLeaderboardModal
+        gameId="leksindeseis"
         isOpen={lbOpen}
-        date={puzzle.date}
+        today={puzzle.date}
+        dates={[puzzle.date]}
         deviceId={deviceId}
         displayName={displayName}
         score={status === "won" ? mistakesRemaining : 0}

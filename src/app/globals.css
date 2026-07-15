@@ -59,6 +59,8 @@
 [data-game="leksiarxeio"]  { --game-accent: var(--color-green-600);  --game-accent-foreground: #ffffff; }
 [data-game="leksindeseis"] { --game-accent: var(--color-purple-600); --game-accent-foreground: #ffffff; }
 [data-game="vrestifrasi"]  { --game-accent: var(--color-purple-600); --game-accent-foreground: #ffffff; }
+[data-game="leksodromia"]  { --game-accent: var(--color-red-600);    --game-accent-foreground: #ffffff; }
+[data-game="leksoplegma"]  { --game-accent: var(--color-teal-600);   --game-accent-foreground: #ffffff; }
 
 @theme inline {
   --color-background: var(--background);

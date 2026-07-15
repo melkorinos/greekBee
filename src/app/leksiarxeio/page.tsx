@@ -3,14 +3,20 @@
 // Community queue is checked first; static word pools are the fallback.
 
 import { LEKSIARXEIO_LENGTHS, getAllTodaysLeksiarxeioPuzzles, getTodayDateString, getValidWords } from "@/data/leksiarxeio";
+import { resolvePuzzleDateParam } from "@/lib/puzzleDate";
 
 import type { LeksiarxeioLength } from "@/games/leksiarxeio/types";
 import { LeksiarxeioPageClient } from "@/components/leksiarxeio/LeksiarxeioPageClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function LeksiarxeioPage() {
-  const today = getTodayDateString();
+interface LeksiarxeioPageProps {
+  searchParams: Promise<{ puzzle?: string }>;
+}
+
+export default async function LeksiarxeioPage({ searchParams }: LeksiarxeioPageProps) {
+  const { puzzle: puzzleParam } = await searchParams;
+  const today = resolvePuzzleDateParam(puzzleParam, getTodayDateString());
   const { puzzles, submitter_name } = await getAllTodaysLeksiarxeioPuzzles(today);
   const wordLists = Object.fromEntries(
     LEKSIARXEIO_LENGTHS.map((l) => [l, getValidWords(l as LeksiarxeioLength)])

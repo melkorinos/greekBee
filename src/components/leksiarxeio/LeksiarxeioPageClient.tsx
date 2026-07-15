@@ -1,6 +1,7 @@
 "use client";
 
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
+import { GameHeaderTrophyButton } from "@/components/shared/GameHeaderTrophyButton";
 import { LeksiarxeioBoard } from "./LeksiarxeioBoard";
 import type { LeksiarxeioLength } from "@/games/leksiarxeio/types";
 import type { LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
@@ -33,14 +34,7 @@ export function LeksiarxeioPageClient({ puzzles, wordLists, today }: Leksiarxeio
           ✏️ Leksiarxeio
         </h1>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setLbOpen(true)}
-            className="text-muted hover:text-foreground transition-colors text-trophy"
-            aria-label="Πίνακας σκορ"
-            title="Πίνακας σκορ"
-          >
-            🏆
-          </button>
+          <GameHeaderTrophyButton onClick={() => setLbOpen(true)} />
           <HowToPlayModal
             title="Πώς να παίξεις — Leksiarxeio"
             items={LEKSIARXEIO_RULES}

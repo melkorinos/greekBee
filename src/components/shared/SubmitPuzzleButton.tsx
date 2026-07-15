@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CommunityLeksiarxeioSubmitModal } from "@/components/leksiarxeio/CommunityLeksiarxeioSubmitModal";
 import { CommunityLeksindeseisSubmitModal } from "@/components/leksindeseis/CommunityLeksindeseisSubmitModal";
 import { CommunityVresTinFrasiSubmitModal } from "@/components/vrestifrasi/CommunityVresTinFrasiSubmitModal";
+import { btnHeaderIcon, btnHeaderIconSize } from "@/styles/recipes";
 
 interface Props {
   game: "leksiarxeio" | "leksindeseis" | "vrestifrasi";
@@ -18,7 +19,7 @@ export function SubmitPuzzleButton({ game }: Props) {
         onClick={(e) => { e.preventDefault(); setOpen(true); }}
         aria-label="Υποβολή Παζλ"
         title="Υποβολή Παζλ"
-        className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-raised transition-colors text-base leading-none"
+        className={`${btnHeaderIconSize} ${btnHeaderIcon} text-base`}
       >
         ➕
       </button>

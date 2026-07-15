@@ -13,6 +13,7 @@
     "generate-puzzle": "tsx scripts/generate-puzzle.ts",
     "generate-puzzle-index": "node scripts/generate-puzzle-index.mjs",
     "batch-generate": "tsx scripts/batch-generate.ts",
+    "generate-leksoplegma": "tsx scripts/generate-leksoplegma.ts",
     "apply-nominations": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/apply-nominations.mjs",
     "apply-nominations:dry": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/apply-nominations.mjs --dry-run",
     "apply-proposed": "node scripts/apply-proposed-words.mjs",

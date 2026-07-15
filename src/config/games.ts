@@ -36,6 +36,22 @@ export const GAME_REGISTRY = {
     href:        "/vres-tin-frasi",
     wip:         false,
   },
+  leksodromia: {
+    label:       "🏁 Leksodromia",
+    emoji:       "🏁",
+    title:       "Leksodromia",
+    description: "Ξεμπέρδεψε 10 λέξεις — όσο πιο γρήγορα, τόσο περισσότεροι πόντοι.",
+    href:        "/leksodromia",
+    wip:         false,
+  },
+  leksoplegma: {
+    label:       "🕸️ Leksoplegma",
+    emoji:       "🕸️",
+    title:       "Leksoplegma",
+    description: "Βρες τις κρυμμένες λέξεις πάνω στις γραμμές του πλέγματος.",
+    href:        "/leksoplegma",
+    wip:         false,
+  },
   stavrolekso: {
     label:       "♟️ Stavrolekso",
     emoji:       "♟️",
