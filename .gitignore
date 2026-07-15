@@ -54,3 +54,15 @@ supabase/.temp/
 # answers-5.json and words-5.json are committed (Vercel needs them at build time)
 src/data/words-en.json
 src/data/*.dic
+
+# --- Agent skills: single source of truth = mattpocock/skills, pinned in skills-lock.json ---
+# Tool-managed skills are regenerated with `npx skills`; do NOT commit the vendored copies
+# (they drift and produce merge noise). skills-lock.json IS committed as the source of truth.
+# .agents/skills is 100% tool-generated — ignore it wholesale.
+.agents/skills/
+# .claude/skills mixes tool-managed skills with project-authored ones — ignore everything,
+# then whitelist the hand-authored project skills (not in skills-lock.json, not regenerable).
+.claude/skills/*
+!.claude/skills/aiHelper
+!.claude/skills/apply-nominations
+!.claude/skills/project-mcp
