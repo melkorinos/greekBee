@@ -46,7 +46,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Score** *(Leksokipos)* — Accumulated points: 4-letter words = 1 pt; 5+ = 1 pt/letter; Pangram +7 pt bonus.
 
-**Max Score** *(Leksokipos)* — Sum of all Valid Word scores, scaled to 85%, hard-capped at 600 pts. Used for Rank thresholds and as the Endgame Zone trigger.
+**Max Score** *(Leksokipos)* — Sum of all Valid Word scores, scaled to 85%, then passed through a soft cap: unchanged below the knee (`SOFT_CAP_KNEE`), logarithmically compressed above it (`SOFT_CAP_K`) so the value keeps rising with a puzzle's richness instead of pinning to one number — no hard ceiling. Used for Rank thresholds and as the Endgame Zone trigger.
 
 **Endgame Zone** *(Leksokipos)* — Scoring range entered when `score ≥ maxScore` (daily puzzles only). The rank-ladder popup is replaced by an endgame panel showing: total Valid Words remaining, pangrams remaining, and a count per word length (longest first). No hints are given.
 
@@ -178,7 +178,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 ---
 
-## Database tables (11)
+## Database tables (13)
 
 > **Authoritative schema** — columns, types, constraints, RLS policies and indexes live in `supabase/migrations/` (the `*_baseline_remote_schema.sql` baseline plus any later migrations), **not here**. Change the schema only via a new migration file applied with `npx supabase db push`; never edit the live DB without one, or the repo drifts. This table documents each table's **purpose** and the shape of its `jsonb` blobs (which the DDL can't express).
 
