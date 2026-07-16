@@ -114,6 +114,117 @@ describe.skipIf(!canRun)("live DB — game_scores RLS invariants", () => {
   });
 });
 
+// ── player_achievements / player_pangrams / game_state ───────────────────────
+//
+// Migration 20260716120100 narrowed the anon ALL-true policies to the commands
+// the app uses: SELECT+INSERT on the two ADR 0013 fact tables, SELECT+INSERT+
+// UPDATE on game_state. The invariant locked here is the removal: anon DELETE
+// matches zero rows table-wide (silently — no error), and the game_state
+// upsert (the restore path) still works.
+
+describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/pangrams/game_state)", () => {
+  let anon:    SupabaseClient;
+  let service: SupabaseClient;
+
+  const DEVICE = `__rls_${crypto.randomUUID()}`;
+
+  async function wipeSentinelRows() {
+    await table(service, "player_achievements").delete().like("device_uuid", "__rls_%");
+    await table(service, "player_pangrams").delete().like("device_uuid", "__rls_%");
+    await table(service, "game_state").delete().like("device_uuid", "__rls_%");
+  }
+
+  beforeAll(async () => {
+    anon    = createClient(url!, anonKey!,    { auth: { persistSession: false } });
+    service = createClient(url!, serviceKey!, { auth: { persistSession: false } });
+    await wipeSentinelRows();
+  });
+
+  afterAll(async () => {
+    await wipeSentinelRows();
+  });
+
+  it("blocks anon from DELETE-ing player_achievements rows", async () => {
+    const { error: seedErr } = await table(service, "player_achievements")
+      .insert({ device_uuid: DEVICE, achievement_id: "__rls_test__" });
+    expect(seedErr).toBeNull();
+
+    await table(anon, "player_achievements").delete().eq("device_uuid", DEVICE);
+
+    const { count } = await table(service, "player_achievements")
+      .select("id", { count: "exact", head: true })
+      .eq("device_uuid", DEVICE);
+    expect(count).toBe(1);
+  });
+
+  it("blocks anon from DELETE-ing player_pangrams rows", async () => {
+    const { error: seedErr } = await table(service, "player_pangrams")
+      .insert({ device_uuid: DEVICE, puzzle_date: PUZZLE_DATE, word: "__rls_test__" });
+    expect(seedErr).toBeNull();
+
+    await table(anon, "player_pangrams").delete().eq("device_uuid", DEVICE);
+
+    const { count } = await table(service, "player_pangrams")
+      .select("id", { count: "exact", head: true })
+      .eq("device_uuid", DEVICE);
+    expect(count).toBe(1);
+  });
+
+  it("blocks anon from DELETE-ing game_state rows", async () => {
+    const { error: seedErr } = await table(service, "game_state")
+      .insert({ device_uuid: DEVICE, game_id: GAME_ID, puzzle_date: PUZZLE_DATE, state: {} });
+    expect(seedErr).toBeNull();
+
+    await table(anon, "game_state").delete().eq("device_uuid", DEVICE);
+
+    const { count } = await table(service, "game_state")
+      .select("id", { count: "exact", head: true })
+      .eq("device_uuid", DEVICE);
+    expect(count).toBe(1);
+  });
+
+  it("still allows the anon game_state upsert the restore path depends on", async () => {
+    const device = `__rls_${crypto.randomUUID()}`;
+    const base   = { device_uuid: device, game_id: GAME_ID, puzzle_date: PUZZLE_DATE };
+
+    // Insert half of the upsert…
+    const first = await table(anon, "game_state").upsert(
+      { ...base, state: { step: 1 } },
+      { onConflict: "device_uuid,game_id,puzzle_date" },
+    );
+    expect(first.error).toBeNull();
+
+    // …and the update half, against the row that now exists.
+    const second = await table(anon, "game_state").upsert(
+      { ...base, state: { step: 2 } },
+      { onConflict: "device_uuid,game_id,puzzle_date" },
+    );
+    expect(second.error).toBeNull();
+
+    const { data } = await table(service, "game_state")
+      .select("state")
+      .eq("device_uuid", device)
+      .single();
+    expect((data as { state: { step: number } }).state.step).toBe(2);
+  });
+
+  it("still allows the anon insert-if-absent write on player_achievements", async () => {
+    const device = `__rls_${crypto.randomUUID()}`;
+    const row    = { device_uuid: device, achievement_id: "__rls_test__" };
+
+    const first = await table(anon, "player_achievements").upsert(
+      [row], { onConflict: "device_uuid,achievement_id", ignoreDuplicates: true },
+    );
+    expect(first.error).toBeNull();
+
+    // Re-submitting the same fact is a no-op, not an error (DO NOTHING).
+    const second = await table(anon, "player_achievements").upsert(
+      [row], { onConflict: "device_uuid,achievement_id", ignoreDuplicates: true },
+    );
+    expect(second.error).toBeNull();
+  });
+});
+
 // ── transfer_codes ────────────────────────────────────────────────────────────
 //
 // Server-only table (migration 20260716120000): a transfer code maps to a
