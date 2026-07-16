@@ -30,11 +30,15 @@ interface ResyncAdapter<Content> {
   id: string;
   load(): Content;
   resync(content: Content, edits: DictionaryEdits): { content: Content; report: ResyncReport };
-  write(content: Content): void;
+  files(content: Content): Array<{ path: string; contents: string }>;
 }
 ```
 
-`resync` is **pure** (content in, content out) so it is testable through its interface and re-runnable over committed data; `load`/`write` are the only I/O. The scripts become thin orchestrators that own `words-el.json` — the source — and walk the registry for everything derived from it. Adding a game means adding an adapter, not editing an orchestrator. Both scripts consume the same registry, so a word injected by either keeps every game correct.
+`resync` is **pure** (content in, content out) so it is testable through its interface and re-runnable over committed data. `files` is pure too — it returns the exact bytes persisting would write, without writing them. **`load` is the adapter's only I/O**; the registry does all writing, since the rule is the same for every game (never on a dry run, never when nothing changed).
+
+That split exists for a specific reason: the write path is the one part of re-sync that a dry run can never exercise, so a byte-format mistake would surface only by silently reformatting a data file on the first real run. Because `files` is pure, `premadeDataConsistency.test.ts` asserts `files(load())` reproduces every committed file byte for byte, with no I/O at all.
+
+The scripts become thin orchestrators that own `words-el.json` — the source — and walk the registry for everything derived from it. Adding a game means adding an adapter, not editing an orchestrator. Both scripts consume the same registry, so a word injected by either keeps every game correct.
 
 Adapters **reuse the real predicates** rather than mirroring them — `computeValidWords` for Leksokipos, `canTrace`/`edgesOf` for Leksoplegma, `normalizeLetters` platform-wide, `LEKSIARXEIO.LENGTHS`/`LEKSODROMIA.LENGTHS` from config. The Leksokipos adapter calls `computeValidWords(center, outer, [word])` per word rather than extracting a shared per-word predicate: it rebuilds a 7-element Set per check, which is irrelevant in a script, and it keeps a hot production path (with an explicit O(n) performance contract) untouched.
 
