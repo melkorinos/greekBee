@@ -5,6 +5,17 @@
 
 ---
 
+## Session 92 — 2026-07-16: Executed all four DB-hardening handoffs (4 migrations live, 4 commits)
+
+**Goal:** implement the session-91 handoffs, in the operator-agreed order. All four migrations were applied via MCP `apply_migration` with committed files, because `db push` is doubly blocked: `SUPABASE_DB_URL` absent AND push would fire the deploy-coupled `20260715120100` vrestifrasi flip. Operator decisions up front: MCP path, no pre-dump (no row data touched), **PG enum over CHECK**, one commit per task.
+
+1. **`4c8f68b` transfer codes** (`20260716120000`): dropped the anon ALL policy — server-only, deny-by-default like identity_audit; both routes on the service-role client; claim is now one conditional UPDATE returning the row (atomic single-use; follow-up lookup only picks the Greek copy); `crypto.getRandomValues` replaces Math.random. Verified live: e2e generate→claim→reuse-410→bogus-404 through a dev server, plus live-DB regressions (anon SELECT sees 0 rows past a sentinel; anon INSERT errors).
+2. **`74d278e` anon RLS narrowing** (`20260716120100`): the three ALL(true) tables became per-command — achievements/pangrams SELECT+INSERT, game_state SELECT+INSERT+UPDATE. Sweep confirmed deletes were service-role-only. ADR 0013 amended (DB now enforces append-only vs anon); advisor baseline note updated in project-mcp SKILL.md. Live-DB regressions: anon DELETE = 0-row no-op ×3, upsert + DO-NOTHING insert still work.
+3. **`1660d0c` dedup backstops** (`20260716120200`): UNIQUE(nomination_id, device_id) + partial unique on pending (word, direction) — session 86's deferred Option A; pre-flight showed 0 violations. Vote route: lookup errors short-circuit (the compounding-dupes bug), lost insert race re-reads → added/switched. Nominations POST: 23505 → **409 already_pending + pendingId**; NominationModal pivots to the existing upvote banner. Verified live: second device submitting the same word got the 409+id.
+4. **status enum, committed with this log entry** (`20260716120300`): `community_puzzle_status AS ENUM ('pending','approved')` on all four community tables — enum over CHECK so the value union survives into the generated types (ADR 0017 gap closed; amendment recorded). `'rejected'` deliberately absent (reject = DELETE); divergence from nominations' `accepted` documented, not unified. Regenerated `database.types.ts` via MCP; the compiler found exactly one site — `createListHandler` fed a raw `?status=` string into `.eq()` — now validated. tsc back at the 24-error baseline.
+
+**Important for the next deploy:** MCP `apply_migration` recorded invented versions (`202607161755xx`…), not the files' `202607161203xx` versions — the runbook handoff's repair step now lists **all five** versions and notes `db push --include-all` (the pending `20260715120100` sorts before recorded ones). Live-DB tests still silently skip without env injection (ticket 03) — this session ran them with `.env.local` vars injected into the shell; all green including the 7 new invariants.
+
 ## Session 91 — 2026-07-16: Full DB review (live schema × repo wiring) → 4 new handoffs, no code
 
 **Goal:** review the whole DB setup — schema, RLS, migrations, route wiring — before moving on. Everything verified live via MCP (read-only SQL, advisors, `pg_policies`) against the repo. Handoffs-only per operator; nothing changed except handoff files + this log.

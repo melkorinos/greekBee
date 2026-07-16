@@ -150,6 +150,13 @@ export function createListHandler(config: CommunityPuzzleGameConfig) {
     const defaultStatus = config.publicApprovedList ? "approved" : "pending";
     const status = req.nextUrl.searchParams.get("status") ?? defaultStatus;
 
+    // status is now a PG enum (community_puzzle_status), so the typed query
+    // below only accepts the union — an arbitrary ?status= string no longer
+    // flows into .eq() and answers an empty list; it is rejected here.
+    if (status !== "pending" && status !== "approved") {
+      return jsonMessage("status must be 'pending' or 'approved'");
+    }
+
     // Admin-only throughout, except the public approved browse list:
     // there only the pending review queue stays behind the secret.
     const requiresAdmin = config.publicApprovedList ? status === "pending" : true;

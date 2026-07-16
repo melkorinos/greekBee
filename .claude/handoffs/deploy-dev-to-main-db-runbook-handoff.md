@@ -33,9 +33,15 @@ migration inverts the ranking of existing rows.
 3. **Repair migration history** so push can work (the repo is NOT `supabase link`ed; use
    `--db-url "$SUPABASE_DB_URL"` — the var is currently absent from `.env.local`, the operator
    has the value):
-   `npx supabase migration repair --status applied 20260715120000 --db-url …`
-   Without this, `db push` re-runs the index migration (bare `CREATE INDEX`, no `IF NOT EXISTS`)
-   and fails on "already exists".
+   `npx supabase migration repair --status applied 20260715120000 20260716120000 20260716120100 20260716120200 20260716120300 --db-url …`
+   Without this, `db push` re-runs those migrations (bare `CREATE INDEX` / `DROP POLICY` /
+   `CREATE TYPE`, none idempotent) and fails on "already exists" / "does not exist".
+   *(Updated 2026-07-16: the four `202607161203xx`-range files — transfer-codes lockdown, anon
+   policy narrowing, dedup backstops, community status enum — were applied via MCP
+   `apply_migration`, which recorded its own invented versions (`20260716175545` etc.), not the
+   files' versions. The invented history rows are harmless; the five file versions above are the
+   ones push checks. Also: the still-pending `20260715120100` now sorts before recorded versions,
+   so `db push` will need `--include-all`.)*
 4. **Merge dev → main**, let Vercel build and go READY.
 5. **Immediately after the new code is live:** `npx supabase db push --db-url …` — the only
    pending migration is `20260715120100`, the row flip. Immediately-after (not before) is ADR
