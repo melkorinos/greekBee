@@ -5,6 +5,32 @@
 
 ---
 
+## Session 87 — 2026-07-16: Premade-data re-sync registry (ADR 0015)
+
+**Goal:** an accepted nomination should keep *every* dictionary-derived game correct, not just Leksokipos. Implemented the handoff in `.claude/handoffs/resync-registry-handoff.md`.
+
+**Enabling move:** `apply-nominations.mjs` → `.ts` via `tsx`. The `.mjs` boundary was forcing the script to re-mirror game logic (`normalise`, `puzzleAcceptsWord` with a hardcoded `>= 4` instead of `LEKSOKIPOS.MIN_WORD_LENGTH`). Both mirrors deleted — adapters call the real predicates.
+
+**Seam:** `scripts/lib/resync/` — a registry of per-game adapters over one contract (`load` / pure `resync` / `write`). Orchestrators own `words-el.json` (the source) and walk the registry for everything derived from it. Vres Tin Frasi deliberately omitted (phrases, not dictionary-derived).
+
+**Gaps closed:** Leksoplegma `bonusWords` (10 boards affected on the current backlog) and Leksodromia `anagramAlternates`. Both were silently going stale on every nomination.
+
+**Drift guard:** `src/test/shared/premadeDataConsistency.test.ts` checks committed data against the committed dictionary; tiered by cost (exhaustive for stale-removal, exact for Leksiarxeio/Leksodromia, deterministic sample for the expensive full re-derivations). Verified it actually fails on injected drift. Committed data is currently clean — no backfill needed.
+
+**Handoff was wrong on four counts** (all verified, not trusted):
+1. The env-flag risk it said to resolve first was a non-issue — `tsx` forwards `--env-file-if-exists`.
+2. The Leksokipos "predicate in `@/games/leksokipos/lib`" it said to import **does not exist**. Chose to call `computeValidWords(c, o, [word])` per word rather than extract one, keeping a perf-contracted hot path untouched.
+3. `apply-proposed-words.mjs` is a **second consumer** of the re-sync with the same mirrors and the same staleness bug — unmentioned. Converted it too; the seam now has two real consumers.
+4. Leksodromia `anagramAlternates` is **not** enumerated against `words-el.json` — keys come from curated `answers-{N}.json`, values from `words-{N}.json`. Derived *transitively*. Implemented a real delta, not the planned warning-only v1.
+
+**Traps worth remembering:**
+- `package.json` has no `"type": "module"` → `tsx` compiles scripts as **CJS**: use the plain `__dirname`, no top-level `await`. Lint, build and 1600+ tests all passed while the converted script was completely broken — **only running it caught this**.
+- `words-el.json` has 3 non-normalised entries (`παλμος`, `πολεμας`, `σαλος`, final sigma ς) whose normalised forms are also present → 3 redundant duplicates. Harmless at runtime (lookups normalise) but any raw string comparison against it is a false-positive trap.
+
+**Findings for the operator (current backlog):**
+- `ιουνιοσ` is a curated Leksodromia answer that an accepted nomination removes from the dictionary → the game would keep posing a non-word. Re-curate `answers-7.json`.
+- `σταυλου` is nominated twice. The old dry-run double-counted it; membership is now tracked in a Set so the preview matches the real run.
+
 ## Session 86 — 2026-07-16: Leksikastirio nomination guards (dedup normalization + name blocklist)
 Two guarantees for word reports/proposals.
 - **Duplicate hole fixed.** POST `/api/nominations` and `/api/nominations/lookup` normalized words with only `.toLowerCase().trim()`, while the platform stores accent-stripped/final-sigma-collapsed forms — so "καλός"/"καλος"/"καλοσ" were treated as distinct, letting duplicate pending nominations slip past the "vote for the existing one" flow (no DB unique constraint as backstop). Both routes + `NominationModal` now use `normalizeLetters` consistently (client `key` + `runLookup` targets + submit body), so variants collapse to one lookup key and the existing pending→upvote flow actually catches them. Stored nomination words are now normalized (matches dictionary storage; admins already see that form).

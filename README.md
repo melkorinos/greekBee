@@ -37,13 +37,19 @@ To apply approved nominations to the live word list, run the CLI script:
 
 ```bash
 # Dry-run (no changes)
-node scripts/apply-nominations.mjs --dry-run
+npm run apply-nominations:dry
 
-# Apply accepted nominations to src/data/words-el.json
-node scripts/apply-nominations.mjs
+# Apply accepted nominations to the dictionary + every derived file
+npm run apply-nominations
 ```
 
 The script reads `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from `.env.local`.
+
+It writes `src/data/words-el.json` and re-syncs every game whose premade data is
+derived from it (Leksokipos, Leksiarxeio, Leksoplegma, Leksodromia) — see
+ADR 0015. Anything it cannot safely auto-fix (curated Leksoplegma grid geometry,
+curated Leksodromia answer pools) is reported under `⚠ Manual action required`
+instead of being silently rewritten. Review the git diff, then build and deploy.
 
 ### Database schema & migrations
 

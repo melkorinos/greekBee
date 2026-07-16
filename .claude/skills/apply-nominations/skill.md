@@ -16,16 +16,41 @@ Apply admin-reviewed Leksikastirio nominations to the local dataset, verify the 
 
 ## What gets written
 
-- **`src/data/words-el.json`** — master dictionary (all accepted add/remove)
-- **`src/data/leksiarxeio/words-{N}.json`** — for accepted words of length 4–8
-- **`src/data/leksokipos/puzzles-el.json`** — embedded `validWords` of affected Pre-built Puzzles are re-synced so removed words stop scoring and added words start scoring (via `scripts/lib/resync-puzzles.mjs`)
+The dictionary is written by the script itself; every **derived** file below is
+re-synced by a per-game adapter in the re-sync registry (`scripts/lib/resync/`),
+so one accepted nomination keeps every dictionary-derived game correct. See
+ADR 0015.
+
+| File | Owner | What re-sync does |
+|---|---|---|
+| **`src/data/words-el.json`** | the script | master dictionary — all accepted add/remove |
+| **`src/data/leksiarxeio/words-{N}.json`** | `leksiarxeio` adapter | guess lists for lengths in `LEKSIARXEIO.LENGTHS` (4–8) |
+| **`src/data/leksokipos/puzzles-el.json`** | `leksokipos` adapter | each puzzle's embedded `validWords`, so removed words stop scoring and added words start |
+| **`src/data/leksoplegma/puzzles-el.json`** | `leksoplegma` adapter | each board's `bonusWords` (added only when the board can trace them) |
+| **`src/data/leksodromia/anagramAlternates.json`** | `leksodromia` adapter | anagram credit for the curated answer pools |
+
+**Never touched:** `src/data/leksiarxeio/answers-{N}.json` (curated answer pools),
+Leksoplegma `paths` (curated grid geometry), and Vres Tin Frasi's phrases (not
+dictionary-derived — a deliberate registry omission).
+
+### Warnings — the things re-sync refuses to auto-fix
+
+Some edits invalidate **curated** data that a word-list script must not silently
+rewrite. These print under `⚠ Manual action required` at the end of a run:
+
+- **Leksoplegma required word removed** — the board's grid geometry is now
+  invalid. `paths` is left untouched; regenerate the board
+  (`npm run generate-leksoplegma`).
+- **Leksodromia curated answer removed** — the game will still pose a word that
+  is no longer in the dictionary. `answers-{N}.json` is left untouched;
+  re-curate the pool.
 
 Nominations act by (direction × status):
 
 | | accepted | rejected |
 |---|---|---|
-| **add** | word added to dictionary + leksiarxeio + puzzle re-sync | no change (hidden from UI, row retained) |
-| **remove** | word deleted from dictionary + leksiarxeio + puzzle re-sync | no change (hidden from UI, row retained) |
+| **add** | word added to dictionary + re-sync of every derived file | no change (hidden from UI, row retained) |
+| **remove** | word deleted from dictionary + re-sync of every derived file | no change (hidden from UI, row retained) |
 
 Rejected rows are **reported, never deleted** — they are the source of the "already rejected" warning shown to a player who re-proposes the same word.
 
