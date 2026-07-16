@@ -55,14 +55,16 @@ supabase/.temp/
 src/data/words-en.json
 src/data/*.dic
 
-# --- Agent skills: single source of truth = mattpocock/skills, pinned in skills-lock.json ---
-# Tool-managed skills are regenerated with `npx skills`; do NOT commit the vendored copies
-# (they drift and produce merge noise). skills-lock.json IS committed as the source of truth.
-# .agents/skills is 100% tool-generated — ignore it wholesale.
+# --- Agent skills (policy changed 2026-07-16) ---
+# .claude/skills is now FULLY COMMITTED — every skill in it, vendored or hand-authored.
+# The old policy ignored the vendored copies and treated skills-lock.json as the sole
+# source of truth; that was written when 42 skills made the diffs noisy. At a curated ~14,
+# an upstream change showing up as a reviewable git diff is a feature, not noise — and it
+# means a fresh clone has working skills without running `npx skills` at all.
+# skills-lock.json is still committed and still drives `npx skills@latest add`.
+# See CLAUDE.md "Skill install note" for which skills are forked (out of the lock on purpose).
+#
+# .agents/skills is the vendor-neutral install location `npx skills` writes to before
+# mirroring into .claude/skills. Claude Code never reads it, so it stays ignored — it is
+# 100% tool-generated scratch.
 .agents/skills/
-# .claude/skills mixes tool-managed skills with project-authored ones — ignore everything,
-# then whitelist the hand-authored project skills (not in skills-lock.json, not regenerable).
-.claude/skills/*
-!.claude/skills/aiHelper
-!.claude/skills/apply-nominations
-!.claude/skills/project-mcp
