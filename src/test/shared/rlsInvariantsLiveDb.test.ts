@@ -114,6 +114,56 @@ describe.skipIf(!canRun)("live DB — game_scores RLS invariants", () => {
   });
 });
 
+// ── transfer_codes ────────────────────────────────────────────────────────────
+//
+// Server-only table (migration 20260716120000): a transfer code maps to a
+// device_uuid — the platform's de-facto bearer credential — so anon must have
+// NO access at all. Both /api/transfer routes use the service-role client.
+// The trap this locks down: anon SELECT with no policy is not an error, it
+// just returns zero rows — so only a sentinel row proves the denial is real.
+
+describe.skipIf(!canRun)("live DB — transfer_codes RLS invariants", () => {
+  let anon:    SupabaseClient;
+  let service: SupabaseClient;
+
+  const SENTINEL_CODE = "RLSTST";
+
+  async function wipeSentinelRows() {
+    await table(service, "transfer_codes").delete().eq("code", SENTINEL_CODE);
+  }
+
+  beforeAll(async () => {
+    anon    = createClient(url!, anonKey!,    { auth: { persistSession: false } });
+    service = createClient(url!, serviceKey!, { auth: { persistSession: false } });
+    await wipeSentinelRows();
+    const { error } = await table(service, "transfer_codes").insert({
+      code:        SENTINEL_CODE,
+      device_uuid: `__rls_${crypto.randomUUID()}`,
+      expires_at:  new Date(Date.now() + 60_000).toISOString(),
+    });
+    expect(error).toBeNull();
+  });
+
+  afterAll(async () => {
+    await wipeSentinelRows();
+  });
+
+  it("blocks anon from SELECT-ing transfer codes (zero rows despite the sentinel)", async () => {
+    const { data, error } = await table(anon, "transfer_codes").select("code, device_uuid");
+    expect(error).toBeNull();
+    expect(data).toHaveLength(0);
+  });
+
+  it("blocks anon from INSERT-ing a transfer code", async () => {
+    const { error } = await table(anon, "transfer_codes").insert({
+      code:        "RLSTS2",
+      device_uuid: "attacker-chosen",
+      expires_at:  new Date(Date.now() + 60_000).toISOString(),
+    });
+    expect(error).not.toBeNull();
+  });
+});
+
 // ── community_stavrolekso_puzzles ─────────────────────────────────────────────
 //
 // The creator-edit flow (ADR 0005) authorises with a server-side PIN check, which

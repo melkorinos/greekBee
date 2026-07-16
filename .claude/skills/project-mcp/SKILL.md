@@ -62,7 +62,7 @@ There is **no Vercel MCP tool for env vars** (ToolSearch finds none — `get_pro
 - **12 tables, all RLS-enabled** (`public.` schema): `game_scores` (~120), `game_state` (~93), `nominations`, `nomination_votes`, `player_profiles`, `player_achievements` (newest, migration `20260706093000`), `transfer_codes`, `identity_audit`, and 4 `community_*_puzzles`.
 - **No Supabase Edge Functions** — server logic is Next.js API routes on Vercel. Don't hunt for edge functions.
 - **Keys:** legacy anon JWT + publishable `sb_publishable_DzrXPPJlqRlQshOccwnlBg_n3IFkEy8` (both enabled).
-- **Advisor baseline is noisy but expected** — `get_advisors security` returns ~15 lints that are BY DESIGN: permissive anon-`INSERT`/`ALL` policies (public write is intentional — `game_state`, `player_achievements`, `nominations`, community tables), `identity_audit` RLS-enabled-no-policy, auth leaked-password-protection off. **Don't treat these as regressions.** `get_advisors performance` is clean.
+- **Advisor baseline is noisy but expected** — `get_advisors security` returns ~14 lints that are BY DESIGN: permissive anon-`INSERT`/`ALL` policies (public write is intentional — `game_state`, `player_achievements`, `nominations`, community tables), RLS-enabled-no-policy on the server-only tables (`identity_audit`, and `transfer_codes` since migration `20260716120000`), auth leaked-password-protection off. **Don't treat these as regressions.** `get_advisors performance` is clean.
 
 ## Happy-path recipes
 

@@ -1,8 +1,14 @@
 // POST /api/transfer/claim — claim a transfer code on a new device.
 //
-// Validates the code (exists, not used, not expired), marks it used,
-// and returns the source device_uuid + display_name so the new device
-// can adopt that identity.
+// The claim is atomic: a single conditional UPDATE marks the code used and
+// returns the row, so two devices racing on the same code cannot both win —
+// single-use is enforced by the write itself, not a check that precedes it.
+// Only when the UPDATE matches nothing do we look the row up, purely to pick
+// the right player-facing message (not found / already used / expired).
+//
+// Uses the service-role client: transfer_codes is a server-only table (anon has
+// no RLS policy at all — a code maps to a device_uuid, the platform's de-facto
+// bearer credential, so the table must never be readable with the public key).
 //
 // The `error` strings here are player-facing copy, not codes: useProfile's
 // claimTransferCode throws `err.error` and the UI renders it verbatim. They go
@@ -12,15 +18,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { jsonMessage, parseJson } from "@/lib/apiRoute";
-import { getSupabaseClient, table } from "@/lib/supabase";
+import { getServiceRoleClient, table } from "@/lib/supabase";
 
 export const runtime = "edge";
-
-interface TransferCodeRow {
-  device_uuid: string;
-  expires_at:  string;
-  used:        boolean;
-}
 
 export async function POST(req: NextRequest) {
   const parsed = await parseJson<{ code: string }>(req);
@@ -31,28 +31,38 @@ export async function POST(req: NextRequest) {
     return jsonMessage("code is required");
   }
 
-  const supabase = getSupabaseClient();
+  const supabase = getServiceRoleClient();
 
-  const { data: row, error: lookupErr } = await table(supabase, "transfer_codes")
-    .select("device_uuid, expires_at, used")
+  // Atomic claim: mark used and fetch the uuid in one statement. An already
+  // used, expired, or missing code matches zero rows.
+  const { data: claimed, error: claimErr } = await table(supabase, "transfer_codes")
+    .update({ used: true })
     .eq("code", code)
-    .single();
+    .eq("used", false)
+    .gt("expires_at", new Date().toISOString())
+    .select("device_uuid");
 
-  if (lookupErr || !row) {
+  if (claimErr) {
     return jsonMessage("Ο κωδικός δεν βρέθηκε.", 404);
   }
 
-  const { device_uuid, expires_at, used } = row as TransferCodeRow;
+  if (!claimed || claimed.length === 0) {
+    // Claim failed — look the row up only to explain why.
+    const { data: row } = await table(supabase, "transfer_codes")
+      .select("used, expires_at")
+      .eq("code", code)
+      .maybeSingle();
 
-  if (used) {
+    if (!row) {
+      return jsonMessage("Ο κωδικός δεν βρέθηκε.", 404);
+    }
+    if (new Date(row.expires_at) < new Date() && !row.used) {
+      return jsonMessage("Ο κωδικός έχει λήξει.", 410);
+    }
     return jsonMessage("Ο κωδικός έχει ήδη χρησιμοποιηθεί.", 410);
   }
-  if (new Date(expires_at) < new Date()) {
-    return jsonMessage("Ο κωδικός έχει λήξει.", 410);
-  }
 
-  // Mark used
-  await table(supabase, "transfer_codes").update({ used: true }).eq("code", code);
+  const { device_uuid } = claimed[0];
 
   // Fetch display_name from the profile
   const { data: profile } = await table(supabase, "player_profiles")
