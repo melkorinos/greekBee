@@ -6,6 +6,8 @@
 // phrase content, not derived from words-el.json, so a Nomination can never make
 // it stale. Its absence is a decision, not an oversight.
 
+import { writeFileSync } from "fs";
+
 import { leksiarxeioAdapter } from "./leksiarxeio";
 import { leksodromiaAdapter } from "./leksodromia";
 import { leksokiposAdapter } from "./leksokipos";
@@ -28,8 +30,13 @@ export function register<Content>(adapter: ResyncAdapter<Content>): RegisteredRe
     id: adapter.id,
     apply(edits, { dryRun }) {
       const { content, report } = adapter.resync(adapter.load(), edits);
+      // Writing lives here, not in the adapters: it is the same rule for every
+      // game (never on a dry run, never when nothing changed), and keeping it
+      // out of the adapters leaves them pure apart from load().
       if (!dryRun && report.changed.length > 0) {
-        adapter.write(content);
+        for (const file of adapter.files(content)) {
+          writeFileSync(file.path, file.contents, "utf8");
+        }
       }
       return report;
     },

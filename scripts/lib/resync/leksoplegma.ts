@@ -21,7 +21,7 @@
 // operator regenerates it (npm run generate-leksoplegma) — silently mutating
 // curated geometry from a word-list script would be far worse than a loud stop.
 
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync } from "fs";
 import { join } from "path";
 
 import { BONUS_MIN_LENGTH, canTrace } from "@/games/leksoplegma/lib/generator";
@@ -125,5 +125,5 @@ export const leksoplegmaAdapter: ResyncAdapter<LeksoplegmaResyncContent> = {
   load: () => JSON.parse(readFileSync(puzzlesPath, "utf8")) as LeksoplegmaResyncContent,
   resync,
   // Compact JSON — match generate-leksoplegma.ts exactly, or the whole file diffs.
-  write: (puzzles) => writeFileSync(puzzlesPath, JSON.stringify(puzzles), "utf8"),
+  files: (puzzles) => [{ path: puzzlesPath, contents: JSON.stringify(puzzles) }],
 };

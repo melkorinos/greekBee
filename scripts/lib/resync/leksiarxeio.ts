@@ -11,7 +11,7 @@
 // Words outside LEKSIARXEIO.LENGTHS (len ≤ 3, len > 8) live in words-el.json and
 // nowhere else; for them this adapter is correctly a no-op.
 
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync } from "fs";
 import { join } from "path";
 
 import { LEKSIARXEIO } from "@/config/gameRules";
@@ -103,9 +103,11 @@ export const leksiarxeioAdapter: ResyncAdapter<LeksiarxeioResyncContent> = {
 
   resync,
 
-  write: ({ byLength, dirty }) => {
-    for (const n of dirty) {
-      writeFileSync(wordsPath(n), JSON.stringify([...byLength[n]].sort()), "utf8");
-    }
-  },
+  // Only the buckets that actually changed — an untouched words-{N}.json is
+  // never rewritten. Compact JSON, sorted; matches how the lists are stored.
+  files: ({ byLength, dirty }) =>
+    dirty.map((n) => ({
+      path: wordsPath(n),
+      contents: JSON.stringify([...byLength[n]].sort()),
+    })),
 };

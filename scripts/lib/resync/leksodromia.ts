@@ -21,7 +21,7 @@
 // longer in the dictionary. That is a curated-pool problem, not a derived-data
 // problem, so we warn and leave the pool alone rather than silently editing it.
 
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync } from "fs";
 import { join } from "path";
 
 import { LEKSODROMIA } from "@/config/gameRules";
@@ -150,10 +150,10 @@ export const leksodromiaAdapter: ResyncAdapter<LeksodromiaResyncContent> = {
 
   // Sorted keys + trailing newline — match generate-leksodromia-anagrams.ts
   // exactly, or re-running the generator produces a spurious whole-file diff.
-  write: ({ alternates }) => {
+  files: ({ alternates }) => {
     const sorted = Object.fromEntries(
       Object.keys(alternates).sort().map((k) => [k, alternates[k]]),
     );
-    writeFileSync(alternatesPath, JSON.stringify(sorted) + "\n", "utf8");
+    return [{ path: alternatesPath, contents: JSON.stringify(sorted) + "\n" }];
   },
 };

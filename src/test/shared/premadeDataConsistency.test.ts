@@ -32,6 +32,10 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
 
+import { leksiarxeioAdapter } from "../../../scripts/lib/resync/leksiarxeio";
+import { leksodromiaAdapter } from "../../../scripts/lib/resync/leksodromia";
+import { leksokiposAdapter } from "../../../scripts/lib/resync/leksokipos";
+import { leksoplegmaAdapter } from "../../../scripts/lib/resync/leksoplegma";
 import { LEKSIARXEIO, LEKSODROMIA } from "@/config/gameRules";
 import { normalizeLetters } from "@/lib/normalize";
 import { computeValidWords } from "@/games/leksokipos/lib/computeValidWords";
@@ -142,6 +146,44 @@ describe("drift guard: leksoplegma boards", () => {
       const missing = expected.filter((w) => !listed.has(w));
       expect({ id: b.id, missing: missing.slice(0, 5) }).toEqual({ id: b.id, missing: [] });
     }
+  });
+});
+
+describe("write path: serialisation is byte-identical to what is on disk", () => {
+  // The write path is the one part of re-sync that a dry run never exercises, so
+  // a format mistake would only surface by silently reformatting a data file on
+  // the first real run. files() is pure, so we can assert the exact bytes here
+  // without writing anything: load() → files() must reproduce the committed file.
+  //
+  // Line endings are normalised because core.autocrlf checks these files out with
+  // CRLF on Windows while git stores (and JSON.stringify emits) LF. That
+  // difference is git's, not ours, and produces no diff on commit.
+  const lf = (s: string) => s.replace(/\r\n/g, "\n");
+
+  const roundTrip = (files: { path: string; contents: string }[]) => {
+    expect(files.length).toBeGreaterThan(0);
+    for (const file of files) {
+      expect({ path: file.path, same: lf(file.contents) === lf(readFileSync(file.path, "utf8")) })
+        .toEqual({ path: file.path, same: true });
+    }
+  };
+
+  it("leksokipos puzzles-el.json", () => {
+    roundTrip(leksokiposAdapter.files(leksokiposAdapter.load()));
+  });
+
+  it("leksoplegma puzzles-el.json", () => {
+    roundTrip(leksoplegmaAdapter.files(leksoplegmaAdapter.load()));
+  });
+
+  it("leksodromia anagramAlternates.json", () => {
+    roundTrip(leksodromiaAdapter.files(leksodromiaAdapter.load()));
+  });
+
+  it("leksiarxeio words-{N}.json", () => {
+    // files() emits only dirty buckets; mark them all to serialise every file.
+    const loaded = leksiarxeioAdapter.load();
+    roundTrip(leksiarxeioAdapter.files({ ...loaded, dirty: [...LEKSIARXEIO.LENGTHS] }));
   });
 });
 

@@ -33,13 +33,27 @@ export interface ResyncReport {
   warnings: string[];
 }
 
+/** One file's exact on-disk bytes. */
+export interface ResyncFile {
+  path: string;
+  contents: string;
+}
+
 export interface ResyncAdapter<Content> {
   /** Matches a RegistryGameId — see src/config/games.ts. */
   id: string;
-  /** Read this game's derived data file(s) from disk. */
+  /** Read this game's derived data file(s) from disk. The only read I/O. */
   load(): Content;
   /** Pure: apply the edits, report what changed and what needs a human. */
   resync(content: Content, edits: DictionaryEdits): { content: Content; report: ResyncReport };
-  /** Write back. The orchestrator only calls this when report.changed is non-empty. */
-  write(content: Content): void;
+  /**
+   * Pure: exactly the files — and exactly the bytes — that persisting this
+   * content writes. Serialisation must match each game's generator byte for
+   * byte, or re-running the generator produces a spurious whole-file diff.
+   *
+   * Kept separate from the writing itself so the byte format is testable with
+   * no I/O at all: premadeDataConsistency.test.ts asserts that
+   * files(load()) reproduces what is on disk. The registry does the writing.
+   */
+  files(content: Content): ResyncFile[];
 }

@@ -16,7 +16,7 @@
 // Set per check — irrelevant for a script, and it means this can never drift
 // from what the game actually scores.
 
-import { readFileSync, writeFileSync } from "fs";
+import { readFileSync } from "fs";
 import { join } from "path";
 
 import { computeValidWords } from "@/games/leksokipos/lib/computeValidWords";
@@ -101,5 +101,6 @@ export const leksokiposAdapter: ResyncAdapter<LeksokiposResyncContent> = {
   id: "leksokipos",
   load: () => JSON.parse(readFileSync(puzzlesElPath, "utf8")) as LeksokiposResyncContent,
   resync,
-  write: (puzzles) => writeFileSync(puzzlesElPath, JSON.stringify(puzzles, null, 2), "utf8"),
+  // Pretty-printed (2-space) — match batch-generate.ts exactly.
+  files: (puzzles) => [{ path: puzzlesElPath, contents: JSON.stringify(puzzles, null, 2) }],
 };
