@@ -9,5 +9,4 @@ export {
   getNextPuzzle,
   buildCustomPuzzle,
   getPrebuiltPuzzleByLetters,
-  getRecentPuzzleDates,
 } from "./leksokipos/index";

@@ -10,8 +10,9 @@ import {
   getPuzzleById,
   getPuzzleForDate,
   getRandomPuzzle,
-  getRecentPuzzleDates,
 } from "@/data/leksokipos";
+import puzzlesEl from "@/data/leksokipos/puzzles-el.json";
+import { getLast7Dates, todayISO } from "@/lib/puzzleDate";
 
 // ── getPuzzleForDate ───────────────────────────────────────────────────────────
 
@@ -174,44 +175,27 @@ describe("getPuzzleForDate — leaderboard routing regression", () => {
   });
 });
 
-// ── getRecentPuzzleDates ──────────────────────────────────────────────────────
+// ── Puzzle-set density ────────────────────────────────────────────────────────
 
-describe("getRecentPuzzleDates", () => {
-  it("returns exactly n dates", () => {
-    const dates = getRecentPuzzleDates(7);
-    expect(dates).toHaveLength(7);
-  });
-
-  it("returns dates sorted newest-first", () => {
-    const dates = getRecentPuzzleDates(7);
-    for (let i = 0; i < dates.length - 1; i++) {
-      expect(dates[i] > dates[i + 1]).toBe(true);
+// The leaderboard strip is derived from the calendar (getLast7Dates), not from
+// the puzzle JSON. That is only equivalent while the puzzle set has no calendar
+// gaps — a gap would render a pill for a puzzle that doesn't exist.
+describe("puzzle set density", () => {
+  it("has a puzzle for every calendar day in its range, with no gaps or dupes", () => {
+    const dates = puzzlesEl.map((p) => p.date);
+    const expected: string[] = [];
+    const d = new Date(dates[0] + "T00:00:00Z");
+    const last = new Date(dates[dates.length - 1] + "T00:00:00Z");
+    while (d <= last) {
+      expected.push(d.toISOString().slice(0, 10));
+      d.setUTCDate(d.getUTCDate() + 1);
     }
+    expect(dates).toEqual(expected);
   });
 
-  it("first date is today or in the past (not in the future)", () => {
-    const today = new Date().toISOString().split("T")[0];
-    const dates = getRecentPuzzleDates(7);
-    expect(dates[0] <= today).toBe(true);
-  });
-
-  it("all returned dates are valid YYYY-MM-DD strings", () => {
-    const dates = getRecentPuzzleDates(7);
-    dates.forEach((d) => expect(d).toMatch(/^\d{4}-\d{2}-\d{2}$/));
-  });
-
-  it("all returned dates correspond to real puzzles in the data", () => {
-    const dates = getRecentPuzzleDates(7);
-    dates.forEach((d) => {
-      const p = getPuzzleForDate(d);
-      expect(p.date).toBe(d);
+  it("covers the whole rolling strip back from today", () => {
+    getLast7Dates(todayISO()).forEach((date) => {
+      expect(getPuzzleForDate(date).date).toBe(date);
     });
-  });
-
-  it("works with n=1 (returns only today's date)", () => {
-    const today = new Date().toISOString().split("T")[0];
-    const dates = getRecentPuzzleDates(1);
-    expect(dates).toHaveLength(1);
-    expect(dates[0]).toBe(today);
   });
 });

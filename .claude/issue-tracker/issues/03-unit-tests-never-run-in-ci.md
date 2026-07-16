@@ -25,6 +25,8 @@ It also **blocks the deferred drift guard in ADR 0017**, which lists "a CI job t
 ## Notes
 
 - The live-DB tests (`rlsInvariantsLiveDb`, `cleanupScoresLiveDb`) are `describe.skipIf(!canRun)`-gated on env vars, so they will **auto-skip in CI** unless the secrets are added. That is fine and by design — but it means a CI vitest job guards the mocked suite, not the live-DB invariants.
+- **They also skip *locally*, which is not by design — they have never run anywhere.** Verified 2026-07-16: nothing loads `.env.local` into vitest (no dotenv in `vitest.config.ts`, no `--env-file` on the `test` script), so `canRun` is false even on a machine with all three keys present. The suites report as skipped, not failed, so this has been invisible. Getting them to run means exporting the env into the shell first — which is how the `community_stavrolekso_puzzles` posture was actually verified when the silent-edit bug was fixed.
+- Consequence: **every live-DB "lock" committed so far is inert**, including the `game_scores` RLS matrix and the new community-table posture. Any future ticket that proposes a live-DB regression test (e.g. issue 04) inherits this — the test will pass by skipping. Worth fixing here, via `--env-file-if-exists=.env.local` on the `test` script (matching what `apply-nominations` already does in `package.json`) or a dotenv load in `vitest.config.ts`. It changes how tests run for everyone, so it wants a deliberate call rather than a drive-by.
 - The workflow already wires `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` from repo secrets for the build step, so the pattern for adding secrets is established.
 - Not urgent pre-launch. Worth doing before the test suite is trusted as a merge gate.
 

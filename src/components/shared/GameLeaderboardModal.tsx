@@ -23,8 +23,8 @@ import type { PlayerIdentityLeaderboardProps } from "@/hooks/usePlayerIdentity";
 import {
   LeaderboardModalBase,
   buildLeaderboardUrl,
-  getLast7Dates,
 } from "@/components/shared/LeaderboardModal";
+import { getLast7Dates } from "@/lib/puzzleDate";
 import { useLeaderboardProfileSlot } from "@/components/shared/LeaderboardProfileSlot";
 
 // ── Config ────────────────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { normalizePuzzleDate, resolvePuzzleDateParam, todayISO } from "@/lib/puzzleDate";
+import { getLast7Dates, normalizePuzzleDate, resolvePuzzleDateParam, todayISO } from "@/lib/puzzleDate";
 
 describe("todayISO", () => {
   afterEach(() => {
@@ -88,5 +88,35 @@ describe("resolvePuzzleDateParam", () => {
 
   it("falls back to today for a date-like string with extra characters", () => {
     expect(resolvePuzzleDateParam("2026-07-10T00:00:00", today)).toBe(today);
+  });
+});
+
+describe("getLast7Dates", () => {
+  it("starts at today, so the strip always has a 'Σήμερα' pill", () => {
+    // The regression. The old local-midnight parse serialised back one day
+    // early for every viewer east of UTC — the whole Greek audience — so the
+    // leftmost pill was yesterday and 'Σήμερα' never rendered.
+    expect(getLast7Dates("2026-07-16")[0]).toBe("2026-07-16");
+  });
+
+  it("returns n consecutive calendar days, newest-first", () => {
+    expect(getLast7Dates("2026-07-16")).toEqual([
+      "2026-07-16", "2026-07-15", "2026-07-14", "2026-07-13",
+      "2026-07-12", "2026-07-11", "2026-07-10",
+    ]);
+  });
+
+  it("steps across a month boundary", () => {
+    expect(getLast7Dates("2026-03-02", 3)).toEqual(["2026-03-02", "2026-03-01", "2026-02-28"]);
+  });
+
+  it("is independent of the machine timezone", () => {
+    // Guards both directions: local-clock arithmetic breaks east of UTC, and a
+    // half-converted UTC parse breaks west of it.
+    for (const tz of ["UTC", "Europe/Athens", "Asia/Tokyo", "America/New_York", "Pacific/Honolulu"]) {
+      vi.stubEnv("TZ", tz);
+      expect(getLast7Dates("2026-07-16")[0]).toBe("2026-07-16");
+    }
+    vi.unstubAllEnvs();
   });
 });

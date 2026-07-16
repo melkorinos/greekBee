@@ -41,12 +41,10 @@ const subscribeNever = () => () => {};
 
 interface GameBoardProps {
   puzzle: LeksokiposPuzzle;
-  /** Last 7 daily puzzle dates (newest-first), computed server-side. */
-  recentPuzzleDates?: string[];
   variant?: "pie" | "flower";
 }
 
-export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoardProps) {
+export function GameBoard({ puzzle, variant }: GameBoardProps) {
   const {
     puzzle: activePuzzle,
     currentInput,
@@ -393,7 +391,6 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
           gameId="leksokipos"
           isOpen={leaderboardOpen}
           today={todayISO()}
-          dates={recentPuzzleDates}
           defaultDate={leaderboardPuzzleId}
           deviceId={deviceId}
           displayName={displayName}

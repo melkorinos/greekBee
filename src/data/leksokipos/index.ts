@@ -95,22 +95,6 @@ export function getPrebuiltPuzzleByLetters(
 }
 
 /**
- * Returns the most recent `n` puzzle dates (YYYY-MM-DD), up to and including
- * today, sorted newest-first.
- *
- * Used by the leaderboard to build the rolling 7-day strip instead of a
- * free-form date picker.
- */
-export function getRecentPuzzleDates(n: number, language: Language = "el"): string[] {
-  const today = todayISO();
-  const past = PUZZLES[language].filter((p) => p.date <= today);
-  return past
-    .slice(-n)
-    .map((p) => p.date)
-    .reverse(); // newest-first: [today, yesterday, …]
-}
-
-/**
  * Builds a fully playable Puzzle from an arbitrary 7-letter combination by
  * computing the valid word list on the fly from the full word list.
  *
@@ -119,8 +103,12 @@ export function getRecentPuzzleDates(n: number, language: Language = "el"): stri
  * progress persists across refreshes for as long as the player keeps using the
  * same URL.
  *
- * The `date` field is set to today so the UI displays something sensible, but
- * it plays no role in word-validity logic.
+ * The `date` field is empty: a custom puzzle is not date-bound. It cannot be
+ * set from the clock here — this function runs behind `revalidate` on the
+ * [center]/[outer] route, so any "today" it computed would be frozen into the
+ * CDN-cached HTML and served stale for up to a week. Every reader of `date`
+ * (score submission, achievement sync, state sync, useDayChange) is gated on
+ * `isDailyPuzzle`, which keys off the `custom-` id prefix rather than the date.
  *
  * ── Performance note ────────────────────────────────────────────────────────
  * `computeValidWords` linearly scans the full 811 k-word Greek dictionary
@@ -159,8 +147,6 @@ export async function buildCustomPuzzle(
   const sortedOuter = [...outer].sort().join("");
   const id = `custom-${center}-${sortedOuter}`;
 
-  const today = todayISO();
-
   // Cache key = canonical puzzle ID (letters only, order-independent).
   // The same key is used for localStorage persistence so the cache can never
   // serve stale words for a given URL.
@@ -183,6 +169,6 @@ export async function buildCustomPuzzle(
     centerLetter: center,
     outerLetters: outer,
     validWords,
-    date: today,
+    date: "",
   };
 }

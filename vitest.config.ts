@@ -16,6 +16,10 @@ export default defineConfig({
     globals: true,
     // Exclude Playwright E2E tests — they are run by `playwright test`, not vitest
     exclude: ["e2e/**", "node_modules/**"],
+    // Pin the clock to the real audience's zone. The suite used to inherit the
+    // machine's zone, so date bugs that only bite east of UTC (where Athens is)
+    // passed locally on any UTC/CI box and shipped.
+    env: { TZ: "Europe/Athens" },
   },
   resolve: {
     // Mirror the @/* alias defined in tsconfig so imports work in tests too
