@@ -9,7 +9,7 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-type ChainResult = { data?: unknown; error?: { message: string } | null; count?: number | null };
+type ChainResult = { data?: unknown; error?: { message: string; code?: string } | null; count?: number | null };
 
 let _callQueue: ChainResult[] = [];
 
@@ -246,6 +246,20 @@ describe("POST /api/nominations — happy path", () => {
     }));
     expect(res.status).toBe(201);
   });
+
+  it("409 already_pending with the existing id when the pending-unique backstop fires", async () => {
+    // 23505 from nominations_pending_word_direction_key: an identical pending
+    // proposal landed between the client's lookup and this POST.
+    enqueue({ error: { message: "duplicate key value", code: "23505" } }); // insert conflict
+    enqueue({ data: { id: "nom-9" }, error: null });                       // existing pending row
+    const res = await submitNomination(makePost("http://localhost/api/nominations", {
+      word: "καλος", direction: "add", deviceId: "d1",
+    }));
+    expect(res.status).toBe(409);
+    const json = await res.json() as { error: string; pendingId: string | null };
+    expect(json.error).toBe("already_pending");
+    expect(json.pendingId).toBe("nom-9");
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -404,6 +418,34 @@ describe("POST /api/nominations/[id]/vote — happy path", () => {
     enqueue({ error: { message: "insert fail" } });    // insert fails
     const res = await voteOnNomination(makePost(url, { deviceId: "d1", voteType: "up" }), withParams("n1"));
     expect(res.status).toBe(500);
+  });
+
+  it("500 when the existing-vote lookup errors — must NOT fall through to insert", async () => {
+    // This was the compounding bug: a multiplicity error from maybeSingle left
+    // `existing` null and the route inserted a third row. If the route (wrongly)
+    // fell through, the insert would dequeue a default success and answer 201.
+    enqueue({ data: null, error: { message: "multiple rows returned" } });
+    const res = await voteOnNomination(makePost(url, { deviceId: "d1", voteType: "up" }), withParams("n1"));
+    expect(res.status).toBe(500);
+  });
+
+  it("201 added when a concurrent insert of the same voteType wins the race (23505)", async () => {
+    enqueue({ data: null, error: null });                            // no existing vote
+    enqueue({ error: { message: "duplicate key", code: "23505" } }); // insert loses the race
+    enqueue({ data: { id: "v1", vote_type: "up" }, error: null });   // re-read the raced row
+    const res = await voteOnNomination(makePost(url, { deviceId: "d1", voteType: "up" }), withParams("n1"));
+    expect(res.status).toBe(201);
+    expect((await res.json()).action).toBe("added");
+  });
+
+  it("200 switched when the raced row holds the opposite voteType (23505)", async () => {
+    enqueue({ data: null, error: null });                            // no existing vote
+    enqueue({ error: { message: "duplicate key", code: "23505" } }); // insert loses the race
+    enqueue({ data: { id: "v1", vote_type: "down" }, error: null }); // raced row is a down-vote
+    enqueue({ error: null });                                        // update to up
+    const res = await voteOnNomination(makePost(url, { deviceId: "d1", voteType: "up" }), withParams("n1"));
+    expect(res.status).toBe(200);
+    expect((await res.json()).action).toBe("switched");
   });
 });
 

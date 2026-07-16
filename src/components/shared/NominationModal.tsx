@@ -189,6 +189,16 @@ export function NominationModal({
         setStatus("idle");
         return;
       }
+      if (res.status === 409) {
+        // The DB's pending-uniqueness backstop fired: an identical proposal
+        // landed between our lookup and our POST. Same pivot as pendingHit —
+        // surface the "upvote the existing one" banner with the id the server
+        // returned.
+        const data = (await res.json().catch(() => null)) as { pendingId?: string | null } | null;
+        setLookup({ word: trimmed, blocked: false, rejected: 0, accepted: 0, pending: 1, pendingId: data?.pendingId ?? null });
+        setStatus("idle");
+        return;
+      }
       if (!res.ok) {
         throw new Error("server error");
       }

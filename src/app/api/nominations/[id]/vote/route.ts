@@ -32,12 +32,18 @@ export async function POST(
 
   const supabase = getSupabaseClient();
 
-  // Check for an existing vote from this device on this nomination.
-  const { data: existing } = await table(supabase, "nomination_votes")
+  // Check for an existing vote from this device on this nomination. A lookup
+  // failure must short-circuit — falling through to insert on error is what
+  // used to compound duplicates once two rows existed for the pair.
+  const { data: existing, error: lookupErr } = await table(supabase, "nomination_votes")
     .select("id, vote_type")
     .eq("nomination_id", id)
     .eq("device_id",     deviceId)
-    .maybeSingle() as { data: { id: string; vote_type: string } | null };
+    .maybeSingle() as { data: { id: string; vote_type: string } | null; error: { message: string } | null };
+
+  if (lookupErr) {
+    return jsonError("db_error", lookupErr.message);
+  }
 
   if (existing) {
     if (existing.vote_type === voteType) {
@@ -61,6 +67,26 @@ export async function POST(
   });
 
   if (error) {
+    // 23505: a concurrent request from this device won the insert race
+    // (UNIQUE (nomination_id, device_id) backstop). The vote exists — resolve
+    // against it instead of answering 500.
+    if ((error as { code?: string }).code === "23505") {
+      const { data: raced } = await table(supabase, "nomination_votes")
+        .select("id, vote_type")
+        .eq("nomination_id", id)
+        .eq("device_id",     deviceId)
+        .maybeSingle() as { data: { id: string; vote_type: string } | null };
+
+      if (raced) {
+        if (raced.vote_type === voteType) {
+          return NextResponse.json({ ok: true, action: "added" }, { status: 201 });
+        }
+        await table(supabase, "nomination_votes")
+          .update({ vote_type: voteType })
+          .eq("id", raced.id);
+        return NextResponse.json({ ok: true, action: "switched" });
+      }
+    }
     return jsonError("db_error", error.message);
   }
 

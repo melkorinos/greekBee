@@ -140,6 +140,24 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) {
+    // 23505 from the partial unique index on pending (word, direction): an
+    // identical proposal is already in the queue — a concurrent submit from
+    // another tab/device that the client-side lookup couldn't see. Hand back
+    // the existing row's id so the client can offer "upvote it instead",
+    // the same pivot the lookup path drives.
+    if ((error as { code?: string }).code === "23505") {
+      const { data: pending } = await table(supabase, "nominations")
+        .select("id")
+        .eq("word", normalised)
+        .eq("direction", direction)
+        .eq("status", "pending")
+        .maybeSingle() as { data: { id: string } | null };
+
+      return NextResponse.json(
+        { error: "already_pending", pendingId: pending?.id ?? null },
+        { status: 409 },
+      );
+    }
     return jsonError("db_error", error.message);
   }
 
