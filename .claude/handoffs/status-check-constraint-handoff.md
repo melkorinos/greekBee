@@ -61,6 +61,14 @@ SELECT status, count(*) FROM community_leksiarxeio_puzzles GROUP BY status;
 optional curiosity — it is the go/no-go. If prod holds a value you did not expect, the migration
 fails on apply, or worse, you constrain away a value something depends on.
 
+**Go/no-go already ran once — 2026-07-16 DB review, verified live:** the four community tables
+held exactly **one row total** (`community_leksindeseis_puzzles`, `status = 'pending'`); the other
+three were empty. So the constraint/enum applies cleanly as of that date — re-run the query on
+the day you apply, but expect green. Also verified then: `nominations` live vocabulary is exactly
+its CHECK (`accepted` 51, `rejected` 95, `pending` 0), and the only writers of community `status`
+are the lifecycle module (anon INSERT of `pending` via submit; service-role UPDATE to `approved`)
+— there is no dashboard-era stray value to worry about.
+
 Also worth resolving: `nominations` uses `accepted`, the community tables use `approved`. Same
 concept, two words. Decide whether to unify or to document the divergence deliberately — but
 **do not silently normalize one into the other**; `nominations.status` is constrained and its
@@ -73,7 +81,9 @@ values are load-bearing for the admin review queue.
    vocabulary the data actually holds.
 3. Apply with `npx supabase db push`. **Never** the dashboard, and never MCP `apply_migration`
    without committing the matching migration file — see the drift warning in
-   `.claude/skills/project-mcp/SKILL.md`.
+   `.claude/skills/project-mcp/SKILL.md`. **Prerequisite:** `db push` fails until the
+   `20260715120000` history repair has run — see `deploy-dev-to-main-db-runbook-handoff.md`
+   step 3. Do this task after that runbook.
 4. Consider whether `status` should be a real **PG enum** rather than a CHECK. An enum *would*
    generate as a TypeScript union and close the loop opened in ADR 0017 — the compiler would then
    reject `"utter_garbage"` at the call site. This is the more interesting option and probably the

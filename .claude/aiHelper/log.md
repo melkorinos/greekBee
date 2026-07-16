@@ -5,6 +5,19 @@
 
 ---
 
+## Session 91 — 2026-07-16: Full DB review (live schema × repo wiring) → 4 new handoffs, no code
+
+**Goal:** review the whole DB setup — schema, RLS, migrations, route wiring — before moving on. Everything verified live via MCP (read-only SQL, advisors, `pg_policies`) against the repo. Handoffs-only per operator; nothing changed except handoff files + this log.
+
+- **Worst finding: Stavrolekso creator edit silently no-ops in prod.** The PATCH edit route UPDATEs via the anon client, but live `pg_policies` grants `community_stavrolekso_puzzles` anon INSERT+SELECT only → RLS matches 0 rows, no error, route returns `ok:true`, edit discarded. Fix = service-role write after PIN check, never an anon UPDATE policy (RLS can't see the PIN). → `stavrolekso-edit-rls-noop-handoff.md`.
+- **Deploy coupling:** main..dev = 13 commits incl. the ADR 0014 vrestifrasi flip; live vrestifrasi rows are old-shape (2/3/6), migration `20260715120100` correctly unapplied, `20260715120000` applied-but-unrecorded (needs `migration repair` before any `db push`). Ordered runbook → `deploy-dev-to-main-db-runbook-handoff.md`.
+- **transfer_codes = device_uuid oracle:** anon ALL(true) lets the public key SELECT every active code + its device_uuid; claim is also check-then-set (race) and Math.random. → `transfer-codes-hardening-handoff.md`.
+- **ADR 0013 contradiction:** player_achievements/player_pangrams/game_state are anon ALL(true) — "immutable" fact rows are anon-DELETEable table-wide; app paths need only SELECT/INSERT(+UPDATE for state). game_scores open-write stays (recorded decision). → `narrow-anon-rls-policies-handoff.md`.
+- **No DB dedup backstops:** votes lack UNIQUE(nomination_id,device_id) (maybeSingle compounds dupes → toggle breaks), pending nominations lack the session-86-deferred partial unique index. Zero violations live today — applies cleanly. → `db-dedup-backstops-handoff.md`.
+- **Enriched** the parked status-CHECK handoff with the live go/no-go (1 pending row total; nominations vocab confirmed).
+- **Healthy, verified:** cron pruning works (state 2026-07-06.., codes 0 rows, accepted nominations all reviewed_at-stamped — first 30-day delete ~07-26); both July-15 indexes live; generated types match live schema; advisors == documented baseline, performance clean; postgres logs clean; no orphan votes; no non-ISO puzzle_dates (cron cutoff safe); identity wiring (profile token-scoped client, auth/link occupied-device guard) sound.
+- Operator FYIs: 1 pending Leksindeseis community puzzle awaits review; typed-client work still uncommitted; `npm run db:backup` still broken (ticket 02); leaderboard top-20 rank ignores ties while playerRow rank shares them (cosmetic).
+
 ## Session 90 — 2026-07-16: The schema types get generated and wired into the compiler (ADR 0017)
 
 **Goal:** resolve the parked typed-client handoff. Its own framing was that a ~200-line hand-written `Database` interface, which nothing type-checked against, had silently drifted from the real schema — regenerate it or delete it, but don't leave it.
