@@ -54,17 +54,15 @@ if (words.length === 0) {
 }
 
 // ── File helpers (match apply-nominations serialisation exactly) ──────────────
+// words-el.json is the dictionary itself — the source every adapter derives from
+// — so this script owns it directly. Everything downstream is a registry adapter.
 const wordsElPath = join(__dirname, "../src/data/words-el.json");
-const LEKSIARXEIO_LENGTHS = [4, 5, 6, 7, 8];
-const leksiarxeioPath = (n: number) => join(__dirname, `../src/data/leksiarxeio/words-${n}.json`);
 
 const readJson = <T>(p: string): T => JSON.parse(readFileSync(p, "utf8")) as T;
 
 // ── Apply ─────────────────────────────────────────────────────────────────────
 const wordsEl = readJson<string[]>(wordsElPath);
 const wordsElSet = new Set(wordsEl);
-const leksiarxeio: Record<number, string[]> = {};
-for (const n of LEKSIARXEIO_LENGTHS) leksiarxeio[n] = readJson<string[]>(leksiarxeioPath(n));
 
 const added: string[] = [];
 const skipped: string[] = [];
@@ -80,10 +78,7 @@ for (const raw of words) {
   console.log(`  ADD   (len ${len}) → ${word}`);
   added.push(word);
   wordsElSet.add(word);
-  if (!isDryRun) {
-    wordsEl.push(word);
-    if (LEKSIARXEIO_LENGTHS.includes(len)) leksiarxeio[len].push(word);
-  }
+  if (!isDryRun) wordsEl.push(word);
 }
 
 if (added.length === 0) {
@@ -91,18 +86,10 @@ if (added.length === 0) {
   process.exit(0);
 }
 
-// ── Word-list files ───────────────────────────────────────────────────────────
+// ── The dictionary itself ─────────────────────────────────────────────────────
 if (!isDryRun) {
   writeFileSync(wordsElPath, JSON.stringify(wordsEl.sort()), "utf8");
   console.log(`\nUpdated src/data/words-el.json`);
-
-  const touchedLengths = [...new Set(
-    added.map((w) => [...w].length).filter((n) => LEKSIARXEIO_LENGTHS.includes(n)),
-  )];
-  for (const n of touchedLengths) {
-    writeFileSync(leksiarxeioPath(n), JSON.stringify(leksiarxeio[n].sort()), "utf8");
-    console.log(`Updated src/data/leksiarxeio/words-${n}.json`);
-  }
 }
 
 // ── Premade-data re-sync (every dictionary-derived game) ──────────────────────

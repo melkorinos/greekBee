@@ -73,19 +73,6 @@ function writeWordsEl(words: string[]): void {
   writeFileSync(wordsElPath, JSON.stringify(words.sort()), "utf8");
 }
 
-const LEKSIARXEIO_LENGTHS = [4, 5, 6, 7, 8];
-
-function leksiarxeioPath(n: number): string {
-  return join(__dirname, `../src/data/leksiarxeio/words-${n}.json`);
-}
-
-function readLeksiarxeioWords(n: number): string[] {
-  return JSON.parse(readFileSync(leksiarxeioPath(n), "utf8")) as string[];
-}
-
-function writeLeksiarxeioWords(n: number, words: string[]): void {
-  writeFileSync(leksiarxeioPath(n), JSON.stringify(words.sort()), "utf8");
-}
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 // Wrapped in main() rather than using top-level await: package.json has no
@@ -112,12 +99,11 @@ async function main(): Promise<void> {
 
   console.log(`Found ${nominations.length} accepted nomination(s)${isDryRun ? " [DRY RUN]" : ""}:\n`);
 
-  // Load all files once upfront
+  // words-el.json is the dictionary itself — the source every adapter derives
+  // from — so the orchestrator owns it directly. Everything downstream of it is
+  // an adapter in the re-sync registry.
   let wordsEl = readWordsEl();
-  const leksiarxeio: Record<number, string[]> = {};
-  for (const n of LEKSIARXEIO_LENGTHS) {
-    leksiarxeio[n] = readLeksiarxeioWords(n);
-  }
+  const wordsElSet = new Set(wordsEl);
 
   const added: string[] = [];
   const removed: string[] = [];
@@ -125,56 +111,37 @@ async function main(): Promise<void> {
 
   for (const nom of nominations) {
     const word = normalizeLetters(nom.word);
-    const len = word.length;
+    const len = [...word].length;
 
     if (nom.direction === "add") {
-      if (wordsEl.includes(word)) {
+      if (wordsElSet.has(word)) {
         console.log(`  SKIP  (already exists) → ${word}`);
         skipped.push(word);
       } else {
         console.log(`  ADD   (len ${len}) → ${word}`);
         added.push(word);
-        if (!isDryRun) {
-          wordsEl.push(word);
-          if (LEKSIARXEIO_LENGTHS.includes(len)) {
-            leksiarxeio[len].push(word);
-          }
-        }
+        wordsElSet.add(word);
+        if (!isDryRun) wordsEl.push(word);
       }
     } else if (nom.direction === "remove") {
-      if (!wordsEl.includes(word)) {
+      if (!wordsElSet.has(word)) {
         console.log(`  SKIP  (not in list)    → ${word}`);
         skipped.push(word);
       } else {
         console.log(`  REMOVE (len ${len}) → ${word}`);
         removed.push(word);
-        if (!isDryRun) {
-          wordsEl = wordsEl.filter((w) => w !== word);
-          if (LEKSIARXEIO_LENGTHS.includes(len)) {
-            leksiarxeio[len] = leksiarxeio[len].filter((w) => w !== word);
-          }
-        }
+        wordsElSet.delete(word);
+        if (!isDryRun) wordsEl = wordsEl.filter((w) => w !== word);
       }
     }
   }
 
   const wordListChanged = added.length > 0 || removed.length > 0;
 
-  // ── Word-list files ─────────────────────────────────────────────────────────
+  // ── The dictionary itself ───────────────────────────────────────────────────
   if (!isDryRun && wordListChanged) {
     writeWordsEl(wordsEl);
     console.log(`\nUpdated src/data/words-el.json`);
-
-    // Write only leksiarxeio files that were actually touched
-    const touchedLengths = [...new Set(
-      [...added, ...removed]
-        .map((w) => w.length)
-        .filter((n) => LEKSIARXEIO_LENGTHS.includes(n))
-    )];
-    for (const n of touchedLengths) {
-      writeLeksiarxeioWords(n, leksiarxeio[n]);
-      console.log(`Updated src/data/leksiarxeio/words-${n}.json`);
-    }
   }
 
   // ── Premade-data re-sync (every dictionary-derived game) ────────────────────

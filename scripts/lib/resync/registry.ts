@@ -6,7 +6,10 @@
 // phrase content, not derived from words-el.json, so a Nomination can never make
 // it stale. Its absence is a decision, not an oversight.
 
+import { leksiarxeioAdapter } from "./leksiarxeio";
+import { leksodromiaAdapter } from "./leksodromia";
 import { leksokiposAdapter } from "./leksokipos";
+import { leksoplegmaAdapter } from "./leksoplegma";
 import type { DictionaryEdits, ResyncAdapter, ResyncReport } from "./types";
 
 /**
@@ -33,4 +36,11 @@ export function register<Content>(adapter: ResyncAdapter<Content>): RegisteredRe
   };
 }
 
-export const RESYNC_REGISTRY: RegisteredResync[] = [register(leksokiposAdapter)];
+// Order matters for reading the output, not for correctness: every adapter
+// derives from the same DictionaryEdits, never from another adapter's output.
+export const RESYNC_REGISTRY: RegisteredResync[] = [
+  register(leksiarxeioAdapter),
+  register(leksokiposAdapter),
+  register(leksoplegmaAdapter),
+  register(leksodromiaAdapter),
+];
