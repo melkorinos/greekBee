@@ -24,14 +24,23 @@ function makeChain(result: ChainResult) {
   return chain;
 }
 
+// Both clients draw from one queue: the tests care about the sequence of calls,
+// not which client made them. Which client the UPDATE uses is pinned separately
+// (getServiceRoleClient is spied on below) because RLS makes that the difference
+// between an edit persisting and silently vanishing.
+const fromQueue = () => ({
+  from: () => {
+    const result = _callQueue.shift() ?? { data: null, error: null };
+    return makeChain(result);
+  },
+});
+
+const getServiceRoleClient = vi.fn(fromQueue);
+
 vi.mock("@/lib/supabase", () => ({
   table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
-  getSupabaseClient: () => ({
-    from: () => {
-      const result = _callQueue.shift() ?? { data: null, error: null };
-      return makeChain(result);
-    },
-  }),
+  getSupabaseClient: () => fromQueue(),
+  getServiceRoleClient: () => getServiceRoleClient(),
 }));
 
 const { GET, PATCH } = await import("@/app/api/community-puzzles/stavrolekso/[id]/route");
@@ -68,7 +77,7 @@ const PUZZLE_DATA = {
   cells: {},
 };
 
-beforeEach(() => { _callQueue = []; });
+beforeEach(() => { _callQueue = []; getServiceRoleClient.mockClear(); });
 afterEach(()  => { _callQueue = []; });
 
 // ── GET ───────────────────────────────────────────────────────────────────────
@@ -145,7 +154,7 @@ describe("PATCH /api/community-puzzles/stavrolekso/[id] — auth + state guards"
 describe("PATCH /api/community-puzzles/stavrolekso/[id] — happy path", () => {
   it("200 ok when PIN matches and puzzle is still pending", async () => {
     enqueue({ data: { status: "pending", edit_pin: "correct" }, error: null }); // fetch
-    enqueue({ error: null });                                                     // update
+    enqueue({ data: [{ id: 1 }], error: null });                                // update
     const res = await PATCH(
       makePatch("p1", { edit_pin: "correct", data: PUZZLE_DATA, title: "Νέος τίτλος" }),
       withParams("p1"),
@@ -156,7 +165,7 @@ describe("PATCH /api/community-puzzles/stavrolekso/[id] — happy path", () => {
 
   it("200 ok even when optional title/submitter_name are omitted", async () => {
     enqueue({ data: { status: "pending", edit_pin: "pin123" }, error: null });
-    enqueue({ error: null });
+    enqueue({ data: [{ id: 1 }], error: null });
     const res = await PATCH(makePatch("p1", { edit_pin: "pin123", data: PUZZLE_DATA }), withParams("p1"));
     expect(res.status).toBe(200);
   });
@@ -166,5 +175,25 @@ describe("PATCH /api/community-puzzles/stavrolekso/[id] — happy path", () => {
     enqueue({ error: { message: "update failed" } });
     const res = await PATCH(makePatch("p1", { edit_pin: "pin123", data: PUZZLE_DATA }), withParams("p1"));
     expect(res.status).toBe(500);
+  });
+});
+
+// The table grants anon INSERT and SELECT but no UPDATE, and RLS cannot see the
+// request's edit_pin. An anon UPDATE therefore matches zero rows *without error* —
+// so the edit is discarded and the creator is told ok:true. These two lock the fix.
+describe("PATCH /api/community-puzzles/stavrolekso/[id] — the edit actually persists", () => {
+  it("writes through the service-role client, which RLS grants UPDATE", async () => {
+    enqueue({ data: { status: "pending", edit_pin: "pin123" }, error: null });
+    enqueue({ data: [{ id: 1 }], error: null });
+    await PATCH(makePatch("p1", { edit_pin: "pin123", data: PUZZLE_DATA }), withParams("p1"));
+    expect(getServiceRoleClient).toHaveBeenCalled();
+  });
+
+  it("500s rather than ok:true when the UPDATE touches no row", async () => {
+    enqueue({ data: { status: "pending", edit_pin: "pin123" }, error: null });
+    enqueue({ data: [], error: null }); // RLS/no-match: empty set, no error
+    const res = await PATCH(makePatch("p1", { edit_pin: "pin123", data: PUZZLE_DATA }), withParams("p1"));
+    expect(res.status).toBe(500);
+    expect((await res.json()).ok).toBeUndefined();
   });
 });

@@ -4,7 +4,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
-import { getSupabaseClient, table, type Json, type Update } from "@/lib/supabase";
+import {
+  getServiceRoleClient,
+  getSupabaseClient,
+  table,
+  type Json,
+  type Update,
+} from "@/lib/supabase";
 import { validateStavroleksoData } from "@/games/stavrolekso/lib/validateSubmission";
 import type { StavroleksoPuzzleData } from "@/games/stavrolekso/types";
 
@@ -82,10 +88,23 @@ export async function PATCH(
   if (title !== undefined) updates.title = title?.trim() ?? null;
   if (submitter_name !== undefined) updates.submitter_name = submitter_name.trim();
 
-  const { error: updateError } = await table(supabase, "community_stavrolekso_puzzles")
+  // The PIN check above is this route's whole authorisation, and it is server-side:
+  // RLS cannot see the request's edit_pin, so anon has no UPDATE policy here (any
+  // policy broad enough for this route would let the public anon key rewrite every
+  // pending puzzle straight through PostgREST). The write privilege therefore has
+  // to be server-side too — same reasoning as createReviewHandler's approve/reject.
+  const { data: updated, error: updateError } = await table(
+    getServiceRoleClient(),
+    "community_stavrolekso_puzzles",
+  )
     .update(updates)
-    .eq("id", Number(id));
+    .eq("id", Number(id))
+    .select("id");
 
   if (updateError) return jsonError("db_error", updateError.message);
+  // An UPDATE that matches no row is not an error — it returns an empty set. Reporting
+  // ok:true there is what let this edit silently vanish for the creator; treat it as a
+  // failure so the same bug can't come back quietly.
+  if (!updated || updated.length === 0) return jsonError("db_error", "update affected no rows");
   return NextResponse.json({ ok: true });
 }

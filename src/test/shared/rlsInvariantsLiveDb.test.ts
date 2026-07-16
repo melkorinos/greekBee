@@ -1,5 +1,5 @@
-// rlsInvariantsLiveDb.test.ts — integration test of the game_scores RLS posture
-// against the real Supabase database.
+// rlsInvariantsLiveDb.test.ts — integration test of the RLS posture of the tables
+// whose access matrix is load-bearing, against the real Supabase database.
 //
 // Why this exists: RLS policies are invisible to mocked unit tests — only a live
 // check can prove that the anon role (the public key shipped to every browser)
@@ -7,7 +7,8 @@
 // access matrix so a future policy change (or a bad migration) can't silently
 // re-open deletes or break inserts/reads.
 //
-// Asserted invariants for `public.game_scores`:
+// Asserted invariants for `public.community_stavrolekso_puzzles` are at the foot of
+// the file. For `public.game_scores`:
 //   1. anon CAN insert a score          (leaderboard writes work)
 //   2. anon CAN read scores             (leaderboard reads work)
 //   3. anon CANNOT delete a score       (the DELETE lockdown holds)
@@ -22,7 +23,7 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { table } from "@/lib/supabase";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const url        = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey    = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -110,5 +111,78 @@ describe.skipIf(!canRun)("live DB — game_scores RLS invariants", () => {
     // A second raw insert for the same triplet must violate the unique constraint.
     const second = await table(anon, "game_scores").insert(scoreRow(device_id, 99));
     expect(second.error).not.toBeNull();
+  });
+});
+
+// ── community_stavrolekso_puzzles ─────────────────────────────────────────────
+//
+// The creator-edit flow (ADR 0005) authorises with a server-side PIN check, which
+// RLS cannot see — so anon deliberately has no UPDATE policy and the route writes
+// with the service role. This locks that posture down from both ends, because the
+// failure mode is silent: an anon UPDATE with no policy is not an error, it just
+// matches zero rows, which is how the edit route came to answer ok:true while
+// discarding the edit.
+//
+// Safety: rows carry a sentinel title, and the service role wipes them either side.
+
+const SENTINEL_TITLE = "__rls_test__";
+
+describe.skipIf(!canRun)("live DB — community_stavrolekso_puzzles RLS invariants", () => {
+  let anon:    SupabaseClient;
+  let service: SupabaseClient;
+  let rowId:   number;
+
+  async function wipeSentinelRows() {
+    await table(service, "community_stavrolekso_puzzles").delete().eq("title", SENTINEL_TITLE);
+  }
+
+  beforeAll(async () => {
+    anon    = createClient(url!, anonKey!,    { auth: { persistSession: false } });
+    service = createClient(url!, serviceKey!, { auth: { persistSession: false } });
+    await wipeSentinelRows();
+  });
+
+  afterAll(async () => {
+    await wipeSentinelRows();
+  });
+
+  beforeEach(async () => {
+    await wipeSentinelRows();
+    const { data, error } = await table(service, "community_stavrolekso_puzzles")
+      .insert({
+        title:          SENTINEL_TITLE,
+        submitter_name: "rls-test",
+        edit_pin:       "0000",
+        status:         "pending",
+        data:           { slots: [] },
+      } as never)
+      .select("id")
+      .single();
+    expect(error).toBeNull();
+    rowId = (data as { id: number }).id;
+  });
+
+  it("blocks anon from UPDATE-ing a pending puzzle", async () => {
+    // No UPDATE policy → zero rows matched, and (the trap) no error.
+    await table(anon, "community_stavrolekso_puzzles")
+      .update({ title: "hijacked" } as never)
+      .eq("id", rowId);
+
+    const { data } = await table(service, "community_stavrolekso_puzzles")
+      .select("title")
+      .eq("id", rowId)
+      .single();
+    expect((data as { title: string }).title).toBe(SENTINEL_TITLE);
+  });
+
+  it("allows the service role to UPDATE a pending puzzle (the edit route's path)", async () => {
+    const { data, error } = await table(service, "community_stavrolekso_puzzles")
+      .update({ submitter_name: "edited" } as never)
+      .eq("id", rowId)
+      .select("id");
+
+    expect(error).toBeNull();
+    // The route reads this same non-empty result as proof the edit landed.
+    expect(data).toHaveLength(1);
   });
 });
