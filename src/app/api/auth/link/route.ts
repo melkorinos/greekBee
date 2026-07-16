@@ -26,10 +26,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
-import { getServiceRoleClient, getSupabaseClient, table } from "@/lib/supabase";
+import { getServiceRoleClient, getSupabaseClient, table, type BoundTable } from "@/lib/supabase";
 
 /** This route's local table shorthand — see the `db` binding in POST. */
-type Db = (name: string) => ReturnType<typeof table>;
+type Db = BoundTable;
 import { planScoreMerge, type MergeRow } from "@/lib/scoreMerge";
 import { planAchievementMerge, type AchievementMergeRow } from "@/lib/achievementMerge";
 import { planPangramMerge, type PangramMergeRow } from "@/lib/pangramMerge";
@@ -70,10 +70,11 @@ export async function POST(req: NextRequest) {
   const supabase = getServiceRoleClient();
 
   // Local shorthand over the shared table() accessor — this route makes ~20 calls
-  // against dynamic table names and reads better without the client repeated each
-  // time. table() calls from() as a method, so the old `this`-binding hazard
+  // and reads better without the client repeated each time. Generic, so binding
+  // the client does not flatten each table's Row/Insert types back to a union.
+  // table() calls from() as a method, so the old `this`-binding hazard
   // ("Cannot read properties of undefined (reading 'rest')") cannot return here.
-  const db = (name: string) => table(supabase, name);
+  const db: Db = (name) => table(supabase, name);
 
   // 3. Is this auth account already anchored to a profile? The unique partial
   //    index on player_profiles.auth_user_id guarantees at most one.

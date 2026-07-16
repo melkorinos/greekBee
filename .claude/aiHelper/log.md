@@ -5,6 +5,26 @@
 
 ---
 
+## Session 90 — 2026-07-16: The schema types get generated and wired into the compiler (ADR 0017)
+
+**Goal:** resolve the parked typed-client handoff. Its own framing was that a ~200-line hand-written `Database` interface, which nothing type-checked against, had silently drifted from the real schema — regenerate it or delete it, but don't leave it.
+
+**The blocker was obsolete, and re-testing it was the whole decision.** A comment claimed the `Database` generic "requires matching supabase-js internal GenericSchema exactly, which is brittle across minor versions." It had been justifying the `any` for months. On supabase-js **2.105.4 it did not reproduce** — `createClient<Database>` instantiates cleanly and writes compile with no cast. `QueryBuilder = any` is **deleted**, not narrowed.
+
+**Two facts the handoff had wrong, both found by checking rather than trusting:**
+1. Its Option B said to keep three types (`WordSuggestionInsert`/`WordSuggestionRow`/`NominationVoteInsert`) as hand-written standalones. They had **zero consumers** repo-wide — dead exports. Option B was "delete 215 lines and write nothing."
+2. Its headline evidence was the community `status` typed `"accepted"` while code writes `"approved"`. **Generated types do not fix that** — `status` generates as `string`, because CHECK constraints don't survive into TS (only PG enums do; this DB has none). Verified by compiling `status: "utter_garbage"` — it passes. The old union wasn't stale so much as **aspirational**: it encoded a constraint the DB never had. Split to `.claude/handoffs/status-check-constraint-handoff.md`.
+
+**Narrowed, not widened.** Every caller passed a literal, so params became the table-name union rather than taking a cast: `CommunityPuzzleGameConfig.table` → `CommunityPuzzleTable` (only the 4 community queues), `consumeApprovedPuzzle`/`upsertAndClean` → the union, and `auth/link`'s `db` shorthand → a generic `BoundTable` — that one line alone fixed **23 of that file's 23 errors**; they'd all cascaded from `name: string`. All new exports are **type-only**, so the 20 `vi.mock` factories needed no changes.
+
+**The compiler immediately found a real mismatch:** `.eq("id", id)` was passing URL strings into `bigint` columns in three routes; PostgREST had been coercing them. Now `Number(id)` — two tests asserted the old string and were updated to say why.
+
+**Q4 (drift guard) — decided C: none for now, and the reasoning is in the ADR so it isn't re-litigated.** I proposed a migration-parsing test on the premise it would "run free in CI." **False — vitest has never run in CI here**; `e2e.yml` runs only `npm ci` + `build` + Playwright. That killed A's only advantage. B (regenerate-and-diff vs the live DB) is the right guard, deferred to launch on two unmet prerequisites: `SUPABASE_DB_URL` in `.env.local` (genuinely absent) and a CI job that runs vitest (→ ticket 03). **No `npm run db:types` script** — verified `gen types` fails with `LegacyPlatformAuthRequiredError`, and a script that always throws is the same decorative artifact this ADR deletes. Regeneration goes through read-only MCP `generate_typescript_types`.
+
+**The durable lesson (ADR 0017):** a type nothing enforces will rot — and what fixes that is wiring it into the compiler, not bolting a checker onto it. A generated file nothing checks against would rot identically.
+
+**Also found, outside scope:** `npm run db:backup` currently throws (`scripts/backup-db.ps1` hard-requires the same missing `SUPABASE_DB_URL`).
+
 ## Session 89 — 2026-07-16: One route envelope (ADR 0016) + Leksiarxeio's fold gets tested
 
 **Goal:** items 1 + 5 of the architecture review. `src/lib/apiRoute.ts` now owns what every route does before its own logic; the Leksiarxeio score fold comes out of the HTTP handler.

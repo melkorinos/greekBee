@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
-import { getSupabaseClient, table } from "@/lib/supabase";
+import { getSupabaseClient, table, type Json } from "@/lib/supabase";
 import { isISODate } from "@/games/leksokipos/lib";
 import { upsertAndClean } from "@/lib/supabasePost";
 import { normalizePuzzleDate } from "@/lib/puzzleDate";
@@ -49,7 +49,9 @@ export async function POST(req: NextRequest) {
       device_uuid,
       game_id,
       puzzle_date,
-      state,
+      // Each game owns its own state shape; the column is jsonb, so the DB
+      // types it only as Json. The payload is guarded above (object, non-null).
+      state: state as Json,
       updated_at: new Date().toISOString(),
     },
   );

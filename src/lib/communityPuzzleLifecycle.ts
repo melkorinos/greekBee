@@ -19,7 +19,20 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { jsonError, jsonMessage, parseJson, requireAdmin } from "@/lib/apiRoute";
-import { getServiceRoleClient, getSupabaseClient, table } from "@/lib/supabase";
+import {
+  getServiceRoleClient,
+  getSupabaseClient,
+  table,
+  type Insert,
+  type TableName,
+} from "@/lib/supabase";
+
+/**
+ * The four tables this module drives. Narrower than TableName on purpose: the
+ * lifecycle only makes sense for the community_* queues, so pointing a config
+ * at (say) game_scores is a compile error rather than a runtime surprise.
+ */
+export type CommunityPuzzleTable = Extract<TableName, `community_${string}_puzzles`>;
 
 /** Result of a game's submission-validation adapter. */
 export type SubmissionValidation =
@@ -30,7 +43,7 @@ export type SubmissionValidation =
 
 export interface CommunityPuzzleGameConfig {
   /** Supabase table backing this game's Community Puzzles. */
-  table: string;
+  table: CommunityPuzzleTable;
   /** Validation adapter: parsed request body → row to insert, or an error response. */
   validate: (body: unknown) => SubmissionValidation;
   /** Columns returned by the list endpoint. Default: id, submitter_name, data, status, created_at. */
@@ -63,7 +76,7 @@ export interface ConsumedPuzzle<TData> {
 }
 
 export async function consumeApprovedPuzzle<TData>(
-  tableName: string,
+  tableName: CommunityPuzzleTable,
 ): Promise<ConsumedPuzzle<TData> | null> {
   try {
     // Claiming an approved row DELETEs it — a privileged op the anon role has no
@@ -103,18 +116,28 @@ export function createSubmitHandler(config: CommunityPuzzleGameConfig) {
     }
 
     const supabase = getSupabaseClient();
-    const row = { ...result.row, status: "pending" };
+
+    // The one place the schema types cannot reach. A game's validate() adapter
+    // is a pure function in that game's lib and returns an untyped bag of
+    // columns (SubmissionValidation.row) — the module deliberately knows nothing
+    // about per-game puzzle shapes, which is what lets one lifecycle serve four
+    // games. So the payload is widened here, at the single seam where an
+    // adapter's output crosses into a typed query, rather than at the two
+    // .insert() calls below. Cost of being wrong: a bad adapter surfaces as a
+    // db_error at runtime instead of a compile error. Validation adapters are
+    // unit-tested per game, which is where that shape is actually pinned down.
+    const row = { ...result.row, status: "pending" } as Insert<CommunityPuzzleTable>;
 
     if (config.returnInsertedId) {
       const { data, error } = await table(supabase, config.table)
-        .insert(row)
+        .insert(row as never)
         .select("id")
         .single();
       if (error) return jsonError("db_error", error.message);
       return NextResponse.json({ ok: true, id: (data as { id: number }).id });
     }
 
-    const { error } = await table(supabase, config.table).insert(row);
+    const { error } = await table(supabase, config.table).insert(row as never);
     if (error) return jsonError("db_error", error.message);
     return NextResponse.json({ ok: true });
   };
@@ -178,15 +201,21 @@ export function createReviewHandler(config: Pick<CommunityPuzzleGameConfig, "tab
     // client to persist the review.
     const supabase = getServiceRoleClient();
 
+    // `id` arrives from the URL as a string; the column is a bigint. The old
+    // untyped client shipped the string to PostgREST, which coerced it. Number()
+    // makes the conversion explicit — garbage still lands in the same db_error
+    // path (Postgres rejects "NaN" exactly as it rejected "abc").
+    const rowId = Number(id);
+
     if (action === "approve") {
       const { error } = await table(supabase, config.table)
         .update({ status: "approved" })
-        .eq("id", id);
+        .eq("id", rowId);
       if (error) return jsonError("db_error", error.message);
     } else {
       const { error } = await table(supabase, config.table)
         .delete()
-        .eq("id", id);
+        .eq("id", rowId);
       if (error) return jsonError("db_error", error.message);
     }
 

@@ -16,10 +16,15 @@ async function getPuzzle(id: string): Promise<PuzzleRow | null> {
     const supabase = getSupabaseClient();
     const { data, error } = await table(supabase, "community_stavrolekso_puzzles")
       .select("id, title, submitter_name, data, status")
-      .eq("id", id)
+      // The route param is a string; the column is a bigint.
+      .eq("id", Number(id))
       .single();
     if (error || !data) return null;
-    return data as PuzzleRow;
+    // `data` is jsonb — the DB types it as Json and knows nothing of the puzzle
+    // shape inside. StavroleksoPuzzleData is a game-level contract enforced by
+    // validateStavroleksoSubmission on the way in, so the double cast is the
+    // honest way to say "narrower than the DB can prove".
+    return data as unknown as PuzzleRow;
   } catch {
     return null;
   }

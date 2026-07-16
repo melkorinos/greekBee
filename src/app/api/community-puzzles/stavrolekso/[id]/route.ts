@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
-import { getSupabaseClient, table } from "@/lib/supabase";
+import { getSupabaseClient, table, type Json, type Update } from "@/lib/supabase";
 import { validateStavroleksoData } from "@/games/stavrolekso/lib/validateSubmission";
 import type { StavroleksoPuzzleData } from "@/games/stavrolekso/types";
 
@@ -21,7 +21,7 @@ export async function GET(
 
   const { data, error } = await table(supabase, "community_stavrolekso_puzzles")
     .select("id, title, submitter_name, data, status, created_at")
-    .eq("id", id)
+    .eq("id", Number(id))
     .single();
 
   if (error || !data) return jsonError("not_found", error?.message);
@@ -54,7 +54,7 @@ export async function PATCH(
 
   const { data: row, error: fetchError } = await table(supabase, "community_stavrolekso_puzzles")
     .select("status, edit_pin")
-    .eq("id", id)
+    .eq("id", Number(id))
     .single();
 
   if (fetchError || !row) return jsonError("not_found", fetchError?.message);
@@ -76,13 +76,15 @@ export async function PATCH(
     return jsonMessage(dataError);
   }
 
-  const updates: Record<string, unknown> = { data };
+  // `data` is a game-level shape (validated just above); the column is jsonb, so
+  // the DB types it only as Json. The cast is that narrowing, made explicit.
+  const updates: Update<"community_stavrolekso_puzzles"> = { data: data as unknown as Json };
   if (title !== undefined) updates.title = title?.trim() ?? null;
   if (submitter_name !== undefined) updates.submitter_name = submitter_name.trim();
 
   const { error: updateError } = await table(supabase, "community_stavrolekso_puzzles")
     .update(updates)
-    .eq("id", id);
+    .eq("id", Number(id));
 
   if (updateError) return jsonError("db_error", updateError.message);
   return NextResponse.json({ ok: true });

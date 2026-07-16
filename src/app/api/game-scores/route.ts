@@ -14,7 +14,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseClient, table } from "@/lib/supabase";
+import { getSupabaseClient, table, type Insert } from "@/lib/supabase";
 import { isISODate } from "@/games/leksokipos/lib";
 import { upsertAndClean } from "@/lib/supabasePost";
 import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
     return jsonMessage("Missing required fields");
   }
 
-  const row: Record<string, unknown> = { game_id, puzzle_date, device_id, display_name: name, score };
+  const row: Insert<"game_scores"> = { game_id, puzzle_date, device_id, display_name: name, score };
   if (is_perfect === true) row.is_perfect = true;
 
   const err = await upsertAndClean(

@@ -20,7 +20,9 @@ async function getApprovedPuzzles(): Promise<PuzzleRow[]> {
       .eq("status", "approved")
       .order("created_at", { ascending: false });
     if (error) return [];
-    return (data ?? []) as PuzzleRow[];
+    // `data` is jsonb — typed Json by the DB, narrowed here to the game-level
+    // contract that validateStavroleksoSubmission enforces on the way in.
+    return (data ?? []) as unknown as PuzzleRow[];
   } catch {
     return [];
   }
