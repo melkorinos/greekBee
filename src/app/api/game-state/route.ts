@@ -10,7 +10,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
+import { getSupabaseClient, table } from "@/lib/supabase";
 import { isISODate } from "@/games/leksokipos/lib";
 import { upsertAndClean } from "@/lib/supabasePost";
 import { normalizePuzzleDate } from "@/lib/puzzleDate";
@@ -27,22 +28,18 @@ interface UpsertStatePayload {
 }
 
 export async function POST(req: NextRequest) {
-  let body: UpsertStatePayload;
-  try {
-    body = (await req.json()) as UpsertStatePayload;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+  const parsed = await parseJson<UpsertStatePayload>(req);
+  if (!parsed.ok) return parsed.response;
 
-  const { device_uuid, game_id, puzzle_date: rawDate, state } = body;
+  const { device_uuid, game_id, puzzle_date: rawDate, state } = parsed.body;
 
   const puzzle_date = normalizePuzzleDate(rawDate);
 
   if (!device_uuid || !game_id || !puzzle_date || !state || typeof state !== "object") {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    return jsonMessage("Missing required fields");
   }
   if (!isISODate(puzzle_date)) {
-    return NextResponse.json({ error: "Invalid puzzle_date format" }, { status: 400 });
+    return jsonMessage("Invalid puzzle_date format");
   }
 
   const err = await upsertAndClean(
@@ -57,7 +54,7 @@ export async function POST(req: NextRequest) {
     },
   );
 
-  if (err) return NextResponse.json({ error: err }, { status: 500 });
+  if (err) return jsonError("db_error", err);
   return NextResponse.json({ ok: true });
 }
 
@@ -69,16 +66,12 @@ export async function GET(req: NextRequest) {
   const puzzle_date = req.nextUrl.searchParams.get("puzzle_date") ?? "";
 
   if (!device_uuid || !game_id || !puzzle_date) {
-    return NextResponse.json(
-      { error: "device_uuid, game_id, and puzzle_date are required" },
-      { status: 400 },
-    );
+    return jsonMessage("device_uuid, game_id, and puzzle_date are required");
   }
 
   const supabase = getSupabaseClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from("game_state") as any)
+  const { data, error } = await table(supabase, "game_state")
     .select("state")
     .eq("device_uuid", device_uuid)
     .eq("game_id", game_id)
@@ -90,7 +83,7 @@ export async function GET(req: NextRequest) {
     if ((error as { code?: string }).code === "PGRST116") {
       return NextResponse.json({ state: null });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return jsonError("db_error", error.message);
   }
 
   return NextResponse.json({ state: (data as { state: unknown }).state });

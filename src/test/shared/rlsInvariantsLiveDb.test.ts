@@ -21,6 +21,7 @@
 // role wipes every sentinel row before and after the run.
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { table } from "@/lib/supabase";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const url        = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -45,8 +46,7 @@ describe.skipIf(!canRun)("live DB — game_scores RLS invariants", () => {
   let service: SupabaseClient;
 
   async function wipeSentinelRows() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (service.from("game_scores") as any).delete().eq("game_id", GAME_ID);
+    await table(service, "game_scores").delete().eq("game_id", GAME_ID);
   }
 
   beforeAll(async () => {
@@ -62,13 +62,11 @@ describe.skipIf(!canRun)("live DB — game_scores RLS invariants", () => {
   it("allows anon to INSERT a score", async () => {
     const device_id = freshDeviceId();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (anon.from("game_scores") as any).insert(scoreRow(device_id));
+    const { error } = await table(anon, "game_scores").insert(scoreRow(device_id));
     expect(error).toBeNull();
 
     // Confirm it actually persisted (read back with the service role).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { count } = await (service.from("game_scores") as any)
+    const { count } = await table(service, "game_scores")
       .select("id", { count: "exact", head: true })
       .eq("game_id", GAME_ID)
       .eq("device_id", device_id);
@@ -77,11 +75,9 @@ describe.skipIf(!canRun)("live DB — game_scores RLS invariants", () => {
 
   it("allows anon to SELECT scores", async () => {
     const device_id = freshDeviceId();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (service.from("game_scores") as any).insert(scoreRow(device_id, 5));
+    await table(service, "game_scores").insert(scoreRow(device_id, 5));
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (anon.from("game_scores") as any)
+    const { data, error } = await table(anon, "game_scores")
       .select("device_id, score")
       .eq("game_id", GAME_ID)
       .eq("device_id", device_id);
@@ -93,16 +89,13 @@ describe.skipIf(!canRun)("live DB — game_scores RLS invariants", () => {
 
   it("blocks anon from DELETE-ing a score", async () => {
     const device_id = freshDeviceId();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (service.from("game_scores") as any).insert(scoreRow(device_id));
+    await table(service, "game_scores").insert(scoreRow(device_id));
 
     // anon delete: with no DELETE policy, RLS matches zero rows (no error, no effect).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (anon.from("game_scores") as any).delete().eq("device_id", device_id);
+    await table(anon, "game_scores").delete().eq("device_id", device_id);
 
     // The row must still be there.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { count } = await (service.from("game_scores") as any)
+    const { count } = await table(service, "game_scores")
       .select("id", { count: "exact", head: true })
       .eq("game_id", GAME_ID)
       .eq("device_id", device_id);
@@ -111,13 +104,11 @@ describe.skipIf(!canRun)("live DB — game_scores RLS invariants", () => {
 
   it("enforces the (game_id, device_id, puzzle_date) uniqueness constraint", async () => {
     const device_id = freshDeviceId();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const first = await (service.from("game_scores") as any).insert(scoreRow(device_id));
+    const first = await table(service, "game_scores").insert(scoreRow(device_id));
     expect(first.error).toBeNull();
 
     // A second raw insert for the same triplet must violate the unique constraint.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const second = await (anon.from("game_scores") as any).insert(scoreRow(device_id, 99));
+    const second = await table(anon, "game_scores").insert(scoreRow(device_id, 99));
     expect(second.error).not.toBeNull();
   });
 });

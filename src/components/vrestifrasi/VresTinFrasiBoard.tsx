@@ -9,6 +9,7 @@ import { Keyboard } from "./Keyboard";
 import { PhraseGrid } from "./PhraseGrid";
 import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { normalizeLetters } from "@/lib/normalize";
+import { todayISO } from "@/lib/puzzleDate";
 import { scoreVresTinFrasi } from "@/games/vrestifrasi/lib/scoring";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { useVresTinFrasiState } from "@/games/vrestifrasi/hooks/useVresTinFrasiState";
@@ -128,7 +129,7 @@ export function VresTinFrasiBoard({
       <GameLeaderboardModal
         gameId="vrestifrasi"
         isOpen={isLeaderboardOpen}
-        today={new Date().toISOString().slice(0, 10)}
+        today={todayISO()}
         defaultDate={today}
         onClose={onCloseLeaderboard}
         {...identity.leaderboardProps}

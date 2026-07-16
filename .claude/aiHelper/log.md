@@ -5,6 +5,42 @@
 
 ---
 
+## Session 89 — 2026-07-16: One route envelope (ADR 0016) + Leksiarxeio's fold gets tested
+
+**Goal:** items 1 + 5 of the architecture review. `src/lib/apiRoute.ts` now owns what every route does before its own logic; the Leksiarxeio score fold comes out of the HTTP handler.
+
+**The envelope** — `parseJson` (body + the 400 guard, ~10 hand-copied try/catch blocks), `requireAdmin` (the admin gate), and **two error channels sharing one body shape**. `{ error: string }` is unchanged on the wire; the meaning splits: `jsonError(code, detail?)` for envelope-owned codes (`invalid_json`/`unauthorized`/`not_found`/`db_error`) with `detail` logged and dropped, `jsonMessage(text, status?)` for copy the route authors. Migrated 14 route callers + `communityPuzzleLifecycle` (which had grown private `isAdmin`/parse copies — the seam wanted to exist one layer up).
+
+**The review was wrong on two counts, both verified against the code:**
+1. *"error bodies leak implementation"* — only some do. `/api/transfer/claim` returns **Greek player-facing copy** that `useProfile.ts:88` throws and the UI renders; the Leksindeseis/VresTinFrasi submit modals render `json.error` into the form. A blanket code vocabulary would have blanked the player's explanation. Hence the message channel — the split is the design, not a compromise.
+2. *"24 routes each improvise"* — 9 community-puzzle routes already delegated to `communityPuzzleLifecycle`. Real count ~14, which the review's own leverage bullet admits.
+
+**Deliberately not migrated:** `/api/cleanup-scores`. Cron-only behind `CRON_SECRET` — its PG messages go to Vercel, not a player. Diagnostic, not leak.
+
+**Breaking change, taken on purpose:** `/api/nominations/[id]/review` moves the secret body → header and 403 → 401. Client + server ship together, no external consumers, so a compat shim would only have kept the second shape alive forever. `requireAdmin` tests assert the body-borne secret **no longer works**. `requireAdmin` also now denies everyone when `ADMIN_SECRET` is unset (the old `isAdmin` relied on an empty header failing the compare — right answer, by luck).
+
+**Item 5 — `mergeLengthScore(existing, length, points)`** in `scoreMerge.ts` (same module as `planScoreMerge`; both are folds over `game_scores`). Absorbs the old one-line `aggregateLeksiarxeioScore`. The tests now cover the branches that could actually be wrong — no row yet, `data` null, a length posting twice, a lost (0-point) length, non-mutation — one line each, no faked request or DB. **Behaviour preserved, not improved:** a re-post overwrites rather than max-wins. Safe today (a length is played once/day, so a re-post is an identical replay, and overwrite is exactly idempotent); a test documents this so allowing replays-for-a-better-result fails there first.
+
+**Two tests changed meaning rather than being fixed:** `gameScoresRoute` asserted `json.error === "DB exploded"` and `/Invalid JSON/i` — those described the defect, not a requirement.
+
+## Session 88 — 2026-07-16: One `todayISO()` — "today's puzzle date" gets a module
+
+**Goal:** ~12 re-derivations of "today" collapsed into one function. `todayISO()` now lives in `src/lib/puzzleDate.ts` beside `normalizePuzzleDate`/`resolvePuzzleDateParam`.
+
+**Removed:** 4 byte-identical `getTodayDateString` copies (leksiarxeio/vrestifrasi/leksodromia/leksoplegma data loaders — now `export { todayISO as getTodayDateString }`, so callers and tests are untouched), 4 inline `.split("T")[0]` in leksokipos (`index.ts` ×3, `puzzleIndex.ts`), a local `getTodayString` in `leksindeseis/page.tsx`, 2 in `useDayChange`, 5 Board leaderboard props, `HomeTrophyButton`. Two idioms (`.slice(0,10)` vs `.split("T")[0]`) → one.
+
+**UTC rollover preserved deliberately** (operator's call). `toISOString()` is UTC, so the daily puzzle rolls over at 02:00/03:00 Athens — Greek players between midnight and 3am get "yesterday". That is now a one-line change in one place instead of a 12-site sweep; tests pin the behaviour so a future switch to Europe/Athens is a deliberate red test, not an accident. If it's ever changed, think about already-persisted round state keyed by date.
+
+**The architecture review was wrong on two counts** (both verified against the code):
+1. *"Boards prefer the `today` prop they already receive"* — would have introduced a bug. The `today` prop is **not** today; it's the resolved puzzle date, set from `?puzzle=` via `resolvePuzzleDateParam`, so it can be any past date. The modal's `today` anchors the 7-day strip and the "Σήμερα" pill; `defaultDate` is the selection. The Boards passing `today={todayISO()} defaultDate={today}` were already correct.
+2. *`LeaderboardModal.tsx:60` is a call site* — it isn't. That line is inside `getLast7Dates`, doing arithmetic on a caller-passed `today`. Left alone.
+
+**Real bug found behind the review's "intra-module drift" flag** (right smell, wrong direction): `LeksodromiaBoard`'s **playing** branch passed `today={today}` (the puzzle date) with no `defaultDate`. Opening the leaderboard mid-game on a past puzzle anchored the strip on that date and labelled it "Σήμερα". Now matches the finished branch.
+
+**Review missed** `useDayChange.ts` (2 sites) — the one place the rollover rule has user-visible behaviour, since it's what redirects a stale tab off yesterday's puzzle. Swept.
+
+**Out of scope:** `scripts/*.ts` (Node-side, not the platform clock), `api/cleanup-scores` (a retention cutoff, not today), test fixtures deriving their own dates.
+
 ## Session 87 — 2026-07-16: Premade-data re-sync registry (ADR 0015)
 
 **Goal:** an accepted nomination should keep *every* dictionary-derived game correct, not just Leksokipos. Implemented the handoff in `.claude/handoffs/resync-registry-handoff.md`.

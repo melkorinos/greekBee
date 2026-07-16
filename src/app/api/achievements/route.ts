@@ -10,7 +10,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
+import { getSupabaseClient, table } from "@/lib/supabase";
 import { ALL_ACHIEVEMENT_IDS } from "@/games/leksokipos/lib/achievements";
 
 export const runtime = "edge";
@@ -23,17 +24,13 @@ interface EarnPayload {
 }
 
 export async function POST(req: NextRequest) {
-  let body: EarnPayload;
-  try {
-    body = (await req.json()) as EarnPayload;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+  const parsed = await parseJson<EarnPayload>(req);
+  if (!parsed.ok) return parsed.response;
 
-  const { device_uuid, achievement_ids } = body;
+  const { device_uuid, achievement_ids } = parsed.body;
 
   if (!device_uuid || !Array.isArray(achievement_ids)) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    return jsonMessage("Missing required fields");
   }
 
   // Keep only known, de-duped ids — unknown ids would be permanent junk in an
@@ -46,13 +43,12 @@ export async function POST(req: NextRequest) {
   const rows = ids.map((achievement_id) => ({ device_uuid, achievement_id }));
 
   const supabase = getSupabaseClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from("player_achievements") as any).upsert(
+  const { error } = await table(supabase, "player_achievements").upsert(
     rows,
     { onConflict: "device_uuid,achievement_id", ignoreDuplicates: true },
   );
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return jsonError("db_error", error.message);
   return NextResponse.json({ ok: true });
 }
 
@@ -62,16 +58,15 @@ export async function GET(req: NextRequest) {
   const device_uuid = req.nextUrl.searchParams.get("device_uuid") ?? "";
 
   if (!device_uuid) {
-    return NextResponse.json({ error: "device_uuid is required" }, { status: 400 });
+    return jsonMessage("device_uuid is required");
   }
 
   const supabase = getSupabaseClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from("player_achievements") as any)
+  const { data, error } = await table(supabase, "player_achievements")
     .select("achievement_id")
     .eq("device_uuid", device_uuid);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return jsonError("db_error", error.message);
 
   const earned = ((data as { achievement_id: string }[] | null) ?? []).map(
     (r) => r.achievement_id,

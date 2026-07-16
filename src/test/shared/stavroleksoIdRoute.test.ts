@@ -25,6 +25,7 @@ function makeChain(result: ChainResult) {
 }
 
 vi.mock("@/lib/supabase", () => ({
+  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
   getSupabaseClient: () => ({
     from: () => {
       const result = _callQueue.shift() ?? { data: null, error: null };

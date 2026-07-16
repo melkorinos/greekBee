@@ -24,7 +24,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { jsonError, jsonMessage } from "@/lib/apiRoute";
+import { getSupabaseClient, table } from "@/lib/supabase";
 import { aggregateLifetimeStats, type LifetimeStatRow } from "@/lib/lifetimeStats";
 import { countFirstPlaceFinishes, type PlacementRow } from "@/lib/placement";
 
@@ -33,34 +34,31 @@ export const runtime = "edge";
 export async function GET(req: NextRequest) {
   const deviceId = req.nextUrl.searchParams.get("device_uuid") ?? "";
   if (!deviceId) {
-    return NextResponse.json({ error: "device_uuid is required" }, { status: 400 });
+    return jsonMessage("device_uuid is required");
   }
 
   const supabase = getSupabaseClient();
   const [scoresRes, pangramRes, leksokiposRes] = await Promise.all([
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from("game_scores") as any)
+    table(supabase, "game_scores")
       .select("game_id, score, is_perfect")
       .eq("device_id", deviceId),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from("player_pangrams") as any)
+    table(supabase, "player_pangrams")
       .select("*", { count: "exact", head: true })
       .eq("device_uuid", deviceId),
     // Cross-device: all Leksokipos rows, to find each day's top score.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from("game_scores") as any)
+    table(supabase, "game_scores")
       .select("device_id, puzzle_date, score")
       .eq("game_id", "leksokipos"),
   ]);
 
   if (scoresRes.error) {
-    return NextResponse.json({ error: scoresRes.error.message }, { status: 500 });
+    return jsonError("db_error", scoresRes.error.message);
   }
   if (pangramRes.error) {
-    return NextResponse.json({ error: pangramRes.error.message }, { status: 500 });
+    return jsonError("db_error", pangramRes.error.message);
   }
   if (leksokiposRes.error) {
-    return NextResponse.json({ error: leksokiposRes.error.message }, { status: 500 });
+    return jsonError("db_error", leksokiposRes.error.message);
   }
 
   const stats = aggregateLifetimeStats((scoresRes.data as LifetimeStatRow[]) ?? []);

@@ -28,6 +28,7 @@ import {
 import { computeWordPoints } from "@/games/leksodromia/lib/scoring";
 import { useLeksodromiaRound } from "@/games/leksodromia/hooks/useLeksodromiaRound";
 import { normalizeLetters } from "@/lib/normalize";
+import { todayISO } from "@/lib/puzzleDate";
 
 import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { RoundRecap } from "./RoundRecap";
@@ -171,7 +172,7 @@ export function LeksodromiaBoard({
         <GameLeaderboardModal
           gameId="leksodromia"
           isOpen={isLeaderboardOpen}
-          today={new Date().toISOString().slice(0, 10)}
+          today={todayISO()}
           defaultDate={today}
           onClose={onCloseLeaderboard}
           {...identity.leaderboardProps}
@@ -292,7 +293,8 @@ export function LeksodromiaBoard({
       <GameLeaderboardModal
         gameId="leksodromia"
         isOpen={isLeaderboardOpen}
-        today={today}
+        today={todayISO()}
+        defaultDate={today}
         onClose={onCloseLeaderboard}
         {...identity.leaderboardProps}
       />

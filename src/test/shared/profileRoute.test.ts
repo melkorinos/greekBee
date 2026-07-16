@@ -42,6 +42,7 @@ function makeClient() {
 }
 
 vi.mock("@/lib/supabase", () => ({
+  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
   getSupabaseClient:    () => makeClient(),
   getTokenScopedClient: (token: string) => { hoisted.tokens.push(token); return makeClient(); },
 }));

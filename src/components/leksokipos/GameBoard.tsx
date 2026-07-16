@@ -25,6 +25,7 @@ import type { EndgameInfo } from "./ScoreBar";
 import { NominationModal } from "@/components/shared/NominationModal";
 import { WordInput } from "./WordInput";
 import { btnSecondary } from "@/styles/recipes";
+import { todayISO } from "@/lib/puzzleDate";
 import { useAchievementSync } from "@/games/leksokipos/hooks/useAchievementSync";
 import { FEATURE_FLAGS } from "@/config/featureFlags";
 import type { EarnedToast } from "@/games/leksokipos/lib/achievements";
@@ -391,7 +392,7 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
         <GameLeaderboardModal
           gameId="leksokipos"
           isOpen={leaderboardOpen}
-          today={new Date().toISOString().split("T")[0]}
+          today={todayISO()}
           dates={recentPuzzleDates}
           defaultDate={leaderboardPuzzleId}
           deviceId={deviceId}

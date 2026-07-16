@@ -31,13 +31,9 @@
 // added words start scoring. Coupled into this one script on purpose — a
 // separate, skippable re-sync step is exactly how it got missed before.
 
-import { readFileSync, writeFileSync } from "fs";
 import { createClient } from "@supabase/supabase-js";
-import { join } from "path";
 
-import { normalizeLetters } from "@/lib/normalize";
-
-import { RESYNC_REGISTRY } from "./lib/resync/registry";
+import { applyDictionaryEdits } from "./lib/resync/applyDictionaryEdits";
 
 interface Nomination {
   id: string;
@@ -60,19 +56,6 @@ if (!supabaseUrl || !serviceKey) {
 }
 
 const supabase = createClient(supabaseUrl, serviceKey);
-
-// ── Word list helpers ─────────────────────────────────────────────────────────
-
-const wordsElPath = join(__dirname, "../src/data/words-el.json");
-
-function readWordsEl(): string[] {
-  return JSON.parse(readFileSync(wordsElPath, "utf8")) as string[];
-}
-
-function writeWordsEl(words: string[]): void {
-  writeFileSync(wordsElPath, JSON.stringify(words.sort()), "utf8");
-}
-
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 // Wrapped in main() rather than using top-level await: package.json has no
@@ -99,88 +82,12 @@ async function main(): Promise<void> {
 
   console.log(`Found ${nominations.length} accepted nomination(s)${isDryRun ? " [DRY RUN]" : ""}:\n`);
 
-  // words-el.json is the dictionary itself — the source every adapter derives
-  // from — so the orchestrator owns it directly. Everything downstream of it is
-  // an adapter in the re-sync registry.
-  let wordsEl = readWordsEl();
-  const wordsElSet = new Set(wordsEl);
-
-  const added: string[] = [];
-  const removed: string[] = [];
-  const skipped: string[] = [];
-
-  for (const nom of nominations) {
-    const word = normalizeLetters(nom.word);
-    const len = [...word].length;
-
-    if (nom.direction === "add") {
-      if (wordsElSet.has(word)) {
-        console.log(`  SKIP  (already exists) → ${word}`);
-        skipped.push(word);
-      } else {
-        console.log(`  ADD   (len ${len}) → ${word}`);
-        added.push(word);
-        wordsElSet.add(word);
-        if (!isDryRun) wordsEl.push(word);
-      }
-    } else if (nom.direction === "remove") {
-      if (!wordsElSet.has(word)) {
-        console.log(`  SKIP  (not in list)    → ${word}`);
-        skipped.push(word);
-      } else {
-        console.log(`  REMOVE (len ${len}) → ${word}`);
-        removed.push(word);
-        wordsElSet.delete(word);
-        if (!isDryRun) wordsEl = wordsEl.filter((w) => w !== word);
-      }
-    }
-  }
-
-  const wordListChanged = added.length > 0 || removed.length > 0;
-
-  // ── The dictionary itself ───────────────────────────────────────────────────
-  if (!isDryRun && wordListChanged) {
-    writeWordsEl(wordsEl);
-    console.log(`\nUpdated src/data/words-el.json`);
-  }
-
-  // ── Premade-data re-sync (every dictionary-derived game) ────────────────────
-  // Each registered adapter patches its own derived data so removed words stop
-  // scoring and added words start scoring. Runs in dry-run too, as a preview
-  // (the registry gates the write, not this loop).
-  if (wordListChanged) {
-    const warnings: string[] = [];
-
-    for (const game of RESYNC_REGISTRY) {
-      const report = game.apply({ added, removed }, { dryRun: isDryRun });
-      warnings.push(...report.warnings);
-
-      if (report.changed.length === 0) {
-        console.log(`\n${game.id}: no premade data affected — unchanged.`);
-        continue;
-      }
-
-      console.log(
-        `\n${game.id}: re-sync${isDryRun ? " [DRY RUN]" : ""} — ${report.changed.length} item(s) affected`,
-      );
-      for (const c of report.changed) {
-        const parts: string[] = [];
-        if (c.added.length) parts.push(`+${c.added.join(", +")}`);
-        if (c.removed.length) parts.push(`-${c.removed.join(", -")}`);
-        console.log(`  ${c.id ?? "(no id)"}: ${parts.join("  ")}`);
-      }
-      if (!isDryRun) {
-        console.log(`Updated ${game.id} premade data.`);
-      }
-    }
-
-    // Things no adapter could auto-fix — surfaced last so they are the final
-    // thing the operator reads before touching the git diff.
-    if (warnings.length > 0) {
-      console.log(`\n⚠ Manual action required:`);
-      for (const w of warnings) console.log(`  - ${w}`);
-    }
-  }
+  // Dictionary I/O, dedup routing, the re-sync registry walk and the report are
+  // all the orchestrator's — this script only knows how to source its edits.
+  const { added, removed, skipped, wordListChanged } = applyDictionaryEdits(
+    nominations,
+    { dryRun: isDryRun },
+  );
 
   // ── Mark accepted rows reviewed; report rejected (housekeeping only) ────────
   if (!isDryRun) {

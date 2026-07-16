@@ -40,6 +40,7 @@ const { holder, mockScoresEq, mockPangramEq, mockLeksokiposEq, mockLt } = vi.hoi
 });
 
 vi.mock("@/lib/supabase", () => ({
+  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
   getSupabaseClient: () => ({
     from: (table: string) =>
       table === "player_pangrams"

@@ -1,3 +1,15 @@
+/**
+ * Today's ISO date string (YYYY-MM-DD) — the platform's single definition of
+ * "which puzzle is today's".
+ *
+ * The clock is UTC, so the daily rollover happens at 02:00/03:00 Athens time
+ * rather than local midnight. That is the long-standing behaviour and is
+ * deliberately preserved here; this function is the one place to change it.
+ */
+export function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 /** Strips a trailing locale suffix from a puzzle ID (e.g. "2026-05-22-el" → "2026-05-22"). */
 export function normalizePuzzleDate(raw: string | null | undefined): string {
   return (raw ?? "").replace(/-[a-z]{2}$/i, "");

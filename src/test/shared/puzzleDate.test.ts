@@ -1,8 +1,41 @@
-// puzzleDate.test.ts — normalizePuzzleDate: strips trailing locale suffix.
+// puzzleDate.test.ts — the platform's puzzle-date helpers.
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { normalizePuzzleDate, resolvePuzzleDateParam } from "@/lib/puzzleDate";
+import { normalizePuzzleDate, resolvePuzzleDateParam, todayISO } from "@/lib/puzzleDate";
+
+describe("todayISO", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns a YYYY-MM-DD date string", () => {
+    expect(todayISO()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("reads the UTC date, not the local one", () => {
+    // 00:30 UTC on the 15th. Any local-time reading east of UTC still says the
+    // 15th, so the discriminating case is a *westward* offset, where local time
+    // is still the 14th.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-15T00:30:00Z"));
+    expect(todayISO()).toBe("2026-07-15");
+  });
+
+  it("rolls over at UTC midnight — 23:59 UTC is still the same day", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-15T23:59:59Z"));
+    expect(todayISO()).toBe("2026-07-15");
+  });
+
+  it("does not roll over at Athens midnight (UTC+3 in July)", () => {
+    // 00:30 Athens on the 16th = 21:30 UTC on the 15th. The daily puzzle
+    // deliberately still serves the 15th until 03:00 Athens time.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-15T21:30:00Z"));
+    expect(todayISO()).toBe("2026-07-15");
+  });
+});
 
 describe("normalizePuzzleDate", () => {
   it("passes through a plain date unchanged", () => {

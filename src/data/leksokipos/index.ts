@@ -7,6 +7,7 @@ import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { computeValidWords } from "@/games/leksokipos/lib/computeValidWords";
 import greekPuzzles from "./puzzles-el.json";
 import { normalizeLetters } from "@/lib/normalize";
+import { todayISO } from "@/lib/puzzleDate";
 
 // Cast the imported JSON to the typed Puzzle array.
 // TypeScript will warn us if the JSON shape ever drifts from the Puzzle interface.
@@ -35,8 +36,7 @@ export function getPuzzleForDate(date: string, language: Language = "el"): Lekso
  * Returns today's puzzle using the current date in ISO format (YYYY-MM-DD).
  */
 export function getTodaysPuzzle(language: Language = "el"): LeksokiposPuzzle {
-  const today = new Date().toISOString().split("T")[0];
-  return getPuzzleForDate(today, language);
+  return getPuzzleForDate(todayISO(), language);
 }
 
 /**
@@ -102,7 +102,7 @@ export function getPrebuiltPuzzleByLetters(
  * free-form date picker.
  */
 export function getRecentPuzzleDates(n: number, language: Language = "el"): string[] {
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayISO();
   const past = PUZZLES[language].filter((p) => p.date <= today);
   return past
     .slice(-n)
@@ -159,7 +159,7 @@ export async function buildCustomPuzzle(
   const sortedOuter = [...outer].sort().join("");
   const id = `custom-${center}-${sortedOuter}`;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayISO();
 
   // Cache key = canonical puzzle ID (letters only, order-independent).
   // The same key is used for localStorage persistence so the cache can never

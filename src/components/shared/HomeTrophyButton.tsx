@@ -7,6 +7,7 @@
 
 import { useState } from "react";
 import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
+import { todayISO } from "@/lib/puzzleDate";
 import { btnHeaderIcon, btnHeaderIconSize } from "@/styles/recipes";
 import {
   GameLeaderboardModal,
@@ -21,7 +22,7 @@ export function HomeTrophyButton({ gameId }: HomeTrophyButtonProps) {
   const [isOpen, setIsOpen] = useState(false);
   const identity = usePlayerIdentity();
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayISO();
 
   return (
     <>

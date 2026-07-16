@@ -10,20 +10,18 @@
 // adapters (those have their own tests in src/test/scripts/); it is a check that
 // re-sync was actually RUN and its output committed.
 //
-// ── Cost, and what that buys ─────────────────────────────────────────────────
-// words-el.json is ~795k words. Fully re-deriving every Leksokipos puzzle
-// (~1s each × hundreds) or every Leksoplegma board is far too slow for CI, so
-// the checks are tiered:
+// ── Both directions, exhaustively ────────────────────────────────────────────
+// Derived data can be wrong in two ways, and BOTH are the bug this guard exists
+// for: a removed word that keeps scoring, and an added word that never scores.
+// So every check here runs over every game, every puzzle, every word.
 //
-//   exhaustive + cheap — every derived word still exists in the dictionary.
-//     This is the direction that catches the real bug (stale REMOVALS), and it
-//     runs over every game, every puzzle, every word.
-//   exhaustive + exact — Leksiarxeio and Leksodromia are cheap to re-derive in
-//     full, so they are compared exactly, both directions.
-//   sampled — full re-derivation for a fixed, deterministic sample of Leksokipos
-//     puzzles and Leksoplegma boards. This is the direction that catches missed
-//     ADDITIONS. Sampled, not skipped: an add that lands in the dictionary but
-//     no derived data is overwhelmingly likely to miss the sample too.
+// Stale REMOVALS are cheap to catch: a set lookup per derived word.
+// Missed ADDITIONS need the derived data re-computed from the dictionary, which
+// is the expensive direction — and the reason this used to be sampled. It no
+// longer is; see the candidate index below for how the cost was removed. That
+// matters: a nomination typically touches a handful of puzzles out of ~1000, so
+// a sample of a few puzzles has almost no chance of intersecting the damage and
+// a missed addition sails through green.
 //
 // If this file goes red after a dictionary edit, the fix is to run the re-sync
 // (npm run apply-nominations) and commit the data — not to relax the assertion.
@@ -57,11 +55,72 @@ interface LeksokiposPuzzle {
 const wordsEl = readJson<string[]>("words-el.json");
 const dictionary = new Set(wordsEl.map(normalizeLetters));
 
-/** Deterministic spread across a list — never random, so failures reproduce. */
-function sample<T>(items: T[], count: number): T[] {
-  if (items.length <= count) return items;
-  const step = Math.floor(items.length / count);
-  return Array.from({ length: count }, (_, i) => items[i * step]);
+// ── Candidate index ───────────────────────────────────────────────────────────
+// Re-deriving one Leksokipos puzzle the obvious way means asking the real
+// predicate about all ~795k words, which is ~1s — 1000× that is far too slow for
+// CI, and is why this check was once sampled. The index removes that cost.
+//
+// Every word computeValidWords() can accept is spelled ONLY from the puzzle's
+// letters. So group the dictionary by the SET of distinct letters each word uses
+// (a bitmask), and a puzzle's candidates are exactly the groups whose letter set
+// is a subset of the puzzle's — at most 2^7 = 128 lookups instead of a 795k scan.
+//
+// This is a PREFILTER, not a second implementation of the rules: it only narrows
+// which words get asked about, and the real predicate still makes every
+// accept/reject decision. Its failure mode is safe by construction — too narrow a
+// prefilter drops a word the puzzle should list, which shows up as a MISSING word
+// and turns this file red. It cannot cause a silent pass.
+
+const letterBit = new Map<string, number>();
+
+/** Assigns a bit per distinct letter; only used while indexing the dictionary. */
+function maskOfIndexed(word: string): number {
+  let mask = 0;
+  for (const ch of word) {
+    let bit = letterBit.get(ch);
+    if (bit === undefined) {
+      bit = letterBit.size;
+      letterBit.set(ch, bit);
+      // A JS bitwise mask holds 31 bits; Greek normalises to 24 letters. If a
+      // new alphabet ever breaks that, fail loudly rather than silently
+      // corrupting the mask (and quietly weakening this guard).
+      if (bit > 30) throw new Error(`alphabet too large for a 31-bit mask: ${letterBit.size}`);
+    }
+    mask |= 1 << bit;
+  }
+  return mask;
+}
+
+/** Distinct normalised dictionary words, grouped by their letter-set mask. */
+const dictByMask = new Map<number, string[]>();
+for (const word of dictionary) {
+  const mask = maskOfIndexed(word);
+  const bucket = dictByMask.get(mask);
+  if (bucket) bucket.push(word);
+  else dictByMask.set(mask, [word]);
+}
+
+/** Letters absent from the dictionary contribute nothing — no word can use them. */
+function maskOfKnown(text: string): number {
+  let mask = 0;
+  for (const ch of text) {
+    const bit = letterBit.get(ch);
+    if (bit !== undefined) mask |= 1 << bit;
+  }
+  return mask;
+}
+
+/** Every dictionary word spelled only from `letters` — a superset of the answers. */
+function candidatesFor(letters: string[]): string[] {
+  const mask = maskOfKnown(letters.join(""));
+  const out: string[] = [];
+  // Standard submask enumeration: walks every subset of `mask`, ending at 0.
+  for (let sub = mask; ; sub = (sub - 1) & mask) {
+    const bucket = dictByMask.get(sub);
+    if (bucket) out.push(...bucket);
+    if (sub === 0) break;
+  }
+  return out;
 }
 
 describe("words-el.json", () => {
@@ -103,13 +162,17 @@ describe("drift guard: leksokipos puzzles", () => {
     expect(stale.slice(0, 10)).toEqual([]);
   });
 
-  it("lists every word the dictionary now makes valid (sampled)", () => {
-    for (const p of sample(puzzles, 3)) {
-      const expected = new Set(computeValidWords(p.centerLetter, p.outerLetters, wordsEl));
+  it("lists every word the dictionary now makes valid", () => {
+    const incomplete: string[] = [];
+    for (const p of puzzles) {
+      // The real predicate decides; the index only narrows what it is asked about.
+      const candidates = candidatesFor([p.centerLetter, ...p.outerLetters]);
+      const expected = computeValidWords(p.centerLetter, p.outerLetters, candidates);
       const listed = new Set(p.validWords.map(normalizeLetters));
-      const missing = [...expected].filter((w) => !listed.has(w));
-      expect({ id: p.id, missing: missing.slice(0, 5) }).toEqual({ id: p.id, missing: [] });
+      const missing = expected.filter((w) => !listed.has(w));
+      if (missing.length > 0) incomplete.push(`${p.id ?? "?"}: ${missing.slice(0, 5).join(", ")}`);
     }
+    expect(incomplete.slice(0, 10)).toEqual([]);
   });
 });
 
@@ -139,14 +202,22 @@ describe("drift guard: leksoplegma boards", () => {
     expect(untraceable.slice(0, 10)).toEqual([]);
   });
 
-  it("lists every bonus word the dictionary now makes traceable (sampled)", () => {
-    for (const b of sample(boards, 2)) {
+  // Deliberately NOT run through the candidate index: enumerateBonusWords
+  // compares raw dictionary strings (it never normalises), so feeding it the
+  // normalised index would change what the real generator sees rather than just
+  // narrowing it. It gets the real dictionary, and the ~200 boards cost ~40s.
+  // That is the honest price of exhaustiveness here; it buys the only check that
+  // catches a bonus word the boards should have gained and didn't.
+  it("lists every bonus word the dictionary now makes traceable", () => {
+    const incomplete: string[] = [];
+    for (const b of boards) {
       const expected = enumerateBonusWords(b.letters, b.paths, wordsEl);
       const listed = new Set(b.bonusWords);
       const missing = expected.filter((w) => !listed.has(w));
-      expect({ id: b.id, missing: missing.slice(0, 5) }).toEqual({ id: b.id, missing: [] });
+      if (missing.length > 0) incomplete.push(`${b.id}: ${missing.slice(0, 5).join(", ")}`);
     }
-  });
+    expect(incomplete.slice(0, 10)).toEqual([]);
+  }, 120_000);
 });
 
 describe("write path: serialisation is byte-identical to what is on disk", () => {

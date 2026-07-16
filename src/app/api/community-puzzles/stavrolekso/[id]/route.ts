@@ -3,7 +3,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
+import { getSupabaseClient, table } from "@/lib/supabase";
 import { validateStavroleksoData } from "@/games/stavrolekso/lib/validateSubmission";
 import type { StavroleksoPuzzleData } from "@/games/stavrolekso/types";
 
@@ -18,13 +19,12 @@ export async function GET(
   const { id } = await params;
   const supabase = getSupabaseClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from("community_stavrolekso_puzzles") as any)
+  const { data, error } = await table(supabase, "community_stavrolekso_puzzles")
     .select("id, title, submitter_name, data, status, created_at")
     .eq("id", id)
     .single();
 
-  if (error || !data) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (error || !data) return jsonError("not_found", error?.message);
   return NextResponse.json({ puzzle: data });
 }
 
@@ -43,51 +43,47 @@ export async function PATCH(
 ) {
   const { id } = await params;
 
-  let body: EditPayload;
-  try {
-    body = (await req.json()) as EditPayload;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+  const parsed = await parseJson<EditPayload>(req);
+  if (!parsed.ok) return parsed.response;
 
-  const { edit_pin, data, title, submitter_name } = body;
+  const { edit_pin, data, title, submitter_name } = parsed.body;
 
-  if (!edit_pin) return NextResponse.json({ error: "edit_pin required" }, { status: 400 });
+  if (!edit_pin) return jsonMessage("edit_pin required");
 
   const supabase = getSupabaseClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: row, error: fetchError } = await (supabase.from("community_stavrolekso_puzzles") as any)
+  const { data: row, error: fetchError } = await table(supabase, "community_stavrolekso_puzzles")
     .select("status, edit_pin")
     .eq("id", id)
     .single();
 
-  if (fetchError || !row) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (fetchError || !row) return jsonError("not_found", fetchError?.message);
 
   const existing = row as { status: string; edit_pin: string };
 
+  // Both 403s are the creator's own explanation of why their edit bounced (ADR
+  // 0005) — copy the maker renders, not an auth code.
   if (existing.status !== "pending") {
-    return NextResponse.json({ error: "Puzzle is no longer editable" }, { status: 403 });
+    return jsonMessage("Puzzle is no longer editable", 403);
   }
   if (existing.edit_pin !== edit_pin) {
-    return NextResponse.json({ error: "Incorrect PIN" }, { status: 403 });
+    return jsonMessage("Incorrect PIN", 403);
   }
 
   // An edit must clear the same bar as a submission — same invariants, one module.
   const dataError = validateStavroleksoData(data);
   if (dataError) {
-    return NextResponse.json({ error: dataError }, { status: 400 });
+    return jsonMessage(dataError);
   }
 
   const updates: Record<string, unknown> = { data };
   if (title !== undefined) updates.title = title?.trim() ?? null;
   if (submitter_name !== undefined) updates.submitter_name = submitter_name.trim();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: updateError } = await (supabase.from("community_stavrolekso_puzzles") as any)
+  const { error: updateError } = await table(supabase, "community_stavrolekso_puzzles")
     .update(updates)
     .eq("id", id);
 
-  if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
+  if (updateError) return jsonError("db_error", updateError.message);
   return NextResponse.json({ ok: true });
 }

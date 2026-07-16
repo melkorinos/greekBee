@@ -10,6 +10,17 @@
 import { createClient } from "@supabase/supabase-js";
 
 // Typed schema — extend this as new tables are added.
+//
+// ⚠️ STALE — DO NOT TRUST. Nothing type-checks against this interface (the client
+// is created without the Database generic, and every query goes through table()),
+// so it has silently drifted from the real schema. Verified against the live DB
+// on 2026-07-16: `player_achievements`, `player_pangrams` and `identity_audit`
+// are missing entirely; `game_scores` is missing `is_perfect`; the community_*
+// tables say status is "accepted" where the code writes "approved". It is kept
+// only because WordSuggestion*/NominationVoteInsert below are derived from it.
+//
+// Do NOT hand-patch it — regenerate from the DB instead. See
+// .claude/handoffs/supabase-typed-client-handoff.md.
 export interface Database {
   public: {
     Tables: {
@@ -216,17 +227,53 @@ export type WordSuggestionRow =
 export type NominationVoteInsert =
   Database["public"]["Tables"]["nomination_votes"]["Insert"];
 
+/** The Supabase client shape returned by every getter in this module. */
+export type SupabaseClient = ReturnType<typeof createClient>;
+
+// ── The table accessor ────────────────────────────────────────────────────────
+//
+// This module owns the untyped-client cast exactly once, so no call site needs
+// `(supabase.from(x) as any)` plus a paired eslint-disable.
+//
+// Why the cast is needed at all: the client is created without the Database
+// generic (see below), so supabase-js resolves every table's Insert/Update
+// payload type to `never` — any write fails to compile. Reads type-check without
+// a cast, but they route through table() too, so that giving the client real
+// types later is a change to this file alone rather than to ~20 call sites.
+//
+// The `any` is deliberate and is the point of the seam: it is a single, named,
+// documented hole rather than ~60 anonymous ones.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type QueryBuilder = any;
+
+/**
+ * Any Supabase client. Typed structurally rather than as `SupabaseClient` so
+ * that table() also accepts clients built with an explicit schema generic —
+ * the live-DB tests construct their own with the anon and service-role keys.
+ */
+type FromCapable = { from: (relation: string) => unknown };
+
+/**
+ * Returns a query builder for `name` on `client`, with the untyped-client cast
+ * applied. Pass the client explicitly — the anon singleton, a token-scoped
+ * client, and the service-role client are all valid callers and the choice is
+ * security-relevant, so it stays visible at the call site.
+ */
+export function table(client: FromCapable, name: string): QueryBuilder {
+  return client.from(name);
+}
+
 // Untyped client — tables are typed at the call site via WordSuggestionInsert.
 // Using the Database generic on createClient requires matching supabase-js
 // internal GenericSchema exactly, which is brittle across minor versions.
-let _client: ReturnType<typeof createClient> | null = null;
+let _client: SupabaseClient | null = null;
 
 /**
  * Returns the singleton Supabase client.
  * Safe to call in browser or API-route code; will throw at runtime (not build
  * time) if the env vars are missing — which surfaces the misconfiguration clearly.
  */
-export function getSupabaseClient(): ReturnType<typeof createClient> {
+export function getSupabaseClient(): SupabaseClient {
   if (_client) return _client;
 
   const url  = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -260,7 +307,7 @@ export function getSupabaseClient(): ReturnType<typeof createClient> {
  * RLS stays authoritative, so the caller can only touch rows the policy allows.
  * Not a singleton — a fresh client per token.
  */
-export function getTokenScopedClient(accessToken: string): ReturnType<typeof createClient> {
+export function getTokenScopedClient(accessToken: string): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
@@ -278,7 +325,7 @@ export function getTokenScopedClient(accessToken: string): ReturnType<typeof cre
  * which is not a NEXT_PUBLIC_ var and so is never shipped to the client.
  * Throws at runtime (not build time) when the env vars are missing.
  */
-export function getServiceRoleClient(): ReturnType<typeof createClient> {
+export function getServiceRoleClient(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {

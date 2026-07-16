@@ -42,6 +42,7 @@ vi.mock("@/lib/supabase", () => {
   // The admin/privileged paths (list, review, consume) use the service-role
   // client; the public submit path uses the anon client. Both share the queue.
   return {
+  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
     getSupabaseClient:    () => client,
     getServiceRoleClient: () => client,
   };

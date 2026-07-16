@@ -15,6 +15,7 @@ import { GuessGrid } from "./GuessGrid";
 import { Keyboard } from "./Keyboard";
 import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { normalizeLetters } from "@/lib/normalize";
+import { todayISO } from "@/lib/puzzleDate";
 import { useLeksiarxeioScoreSubmission } from "@/hooks/useLeksiarxeioScoreSubmission";
 import { useLeksiarxeioState } from "@/games/leksiarxeio/hooks/useLeksiarxeioState";
 
@@ -289,7 +290,7 @@ export function LeksiarxeioBoard({
       <GameLeaderboardModal
         gameId="leksiarxeio"
         isOpen={isLeaderboardOpen}
-        today={new Date().toISOString().slice(0, 10)}
+        today={todayISO()}
         defaultDate={today}
         onClose={onCloseLeaderboard}
         {...identity.leaderboardProps}

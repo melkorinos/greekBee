@@ -134,7 +134,9 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Vote** — Player endorsement of a Nomination, stored as `(nomination_id, device_id)`.
 
-**Admin Mode** — `?admin=<secret>` URL param matching `ADMIN_SECRET`. Reveals Approve/Reject on Nomination Cards and Community Puzzle review tabs. Not linked from nav.
+**Admin Mode** — `?admin=<secret>` URL param matching `ADMIN_SECRET`. Reveals Approve/Reject on Nomination Cards and Community Puzzle review tabs. Not linked from nav. On the wire the secret always travels as an `X-Admin-Secret` header and a bad one is always a 401 — one shape across every admin route, enforced by `requireAdmin` in the **Route Envelope** (ADR 0016).
+
+**Route Envelope** — The three things every `/api` route does before its own logic, owned once in `src/lib/apiRoute.ts`: `parseJson` (body + the 400 guard), `requireAdmin` (the admin gate), and the error body. Error bodies stay `{ error: string }` but split into two deliberate channels: `jsonError(code)` for stable codes the envelope owns (`invalid_json`, `unauthorized`, `not_found`, `db_error`) — implementation detail is logged, never sent — and `jsonMessage(text, status)` for copy the route authors on purpose, including the Greek strings the UI renders verbatim. Choosing between them is the discipline: if you can't name the code, you're probably about to leak something. (ADR 0016)
 
 **Flag** — In-game Leksokipos action that opens NominationModal with `direction: "remove"`.
 

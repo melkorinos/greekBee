@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { StavroleksoPlayer } from "./StavroleksoPlayer";
-import { getSupabaseClient } from "@/lib/supabase";
+import { getSupabaseClient, table } from "@/lib/supabase";
 import type { StavroleksoPuzzleData } from "@/games/stavrolekso/types";
 
 interface PuzzleRow {
@@ -14,8 +14,7 @@ interface PuzzleRow {
 async function getPuzzle(id: string): Promise<PuzzleRow | null> {
   try {
     const supabase = getSupabaseClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from("community_stavrolekso_puzzles") as any)
+    const { data, error } = await table(supabase, "community_stavrolekso_puzzles")
       .select("id, title, submitter_name, data, status")
       .eq("id", id)
       .single();

@@ -33,6 +33,7 @@ vi.mock("@/lib/supabase", () => {
   // Review handlers use the service-role client (RLS bypass); both resolve to the
   // same queue-backed mock here.
   return {
+  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
     getSupabaseClient:    () => client,
     getServiceRoleClient: () => client,
   };

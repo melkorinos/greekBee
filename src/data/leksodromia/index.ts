@@ -47,7 +47,5 @@ export function getTodaysLeksodromiaPuzzle(date: string): LeksodromiaPuzzle {
   };
 }
 
-/** Returns today's ISO date string (YYYY-MM-DD) using the server clock. */
-export function getTodayDateString(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+/** Today's ISO date string (YYYY-MM-DD). Re-exported from `@/lib/puzzleDate`. */
+export { todayISO as getTodayDateString } from "@/lib/puzzleDate";

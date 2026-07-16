@@ -18,7 +18,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getServiceRoleClient, getSupabaseClient } from "@/lib/supabase";
+import { jsonError, jsonMessage, parseJson, requireAdmin } from "@/lib/apiRoute";
+import { getServiceRoleClient, getSupabaseClient, table } from "@/lib/supabase";
 
 /** Result of a game's submission-validation adapter. */
 export type SubmissionValidation =
@@ -62,14 +63,13 @@ export interface ConsumedPuzzle<TData> {
 }
 
 export async function consumeApprovedPuzzle<TData>(
-  table: string,
+  tableName: string,
 ): Promise<ConsumedPuzzle<TData> | null> {
   try {
     // Claiming an approved row DELETEs it — a privileged op the anon role has no
     // RLS policy for. Use the service-role client (server-only serve path).
     const supabase = getServiceRoleClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from(table) as any)
+    const { data, error } = await table(supabase, tableName)
       .select("id, submitter_name, data")
       .eq("status", "approved")
       .order("created_at", { ascending: true })
@@ -81,8 +81,7 @@ export async function consumeApprovedPuzzle<TData>(
     const row = data as { id: number; submitter_name: string | null; data: TData };
 
     // Delete immediately — consumed puzzles are never reused.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase.from(table) as any).delete().eq("id", row.id);
+    await table(supabase, tableName).delete().eq("id", row.id);
 
     return { data: row.data, submitter_name: row.submitter_name || null };
   } catch {
@@ -91,23 +90,14 @@ export async function consumeApprovedPuzzle<TData>(
   }
 }
 
-function isAdmin(req: NextRequest): boolean {
-  const secret = req.headers.get("x-admin-secret") ?? "";
-  return Boolean(secret) && secret === process.env.ADMIN_SECRET;
-}
-
 // ── POST (submit) ─────────────────────────────────────────────────────────────
 
 export function createSubmitHandler(config: CommunityPuzzleGameConfig) {
   return async function POST(req: NextRequest) {
-    let body: unknown;
-    try {
-      body = await req.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-    }
+    const parsed = await parseJson<unknown>(req);
+    if (!parsed.ok) return parsed.response;
 
-    const result = config.validate(body);
+    const result = config.validate(parsed.body);
     if (!result.ok) {
       return NextResponse.json(result.body, { status: result.status });
     }
@@ -116,18 +106,16 @@ export function createSubmitHandler(config: CommunityPuzzleGameConfig) {
     const row = { ...result.row, status: "pending" };
 
     if (config.returnInsertedId) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.from(config.table) as any)
+      const { data, error } = await table(supabase, config.table)
         .insert(row)
         .select("id")
         .single();
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return jsonError("db_error", error.message);
       return NextResponse.json({ ok: true, id: (data as { id: number }).id });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from(config.table) as any).insert(row);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const { error } = await table(supabase, config.table).insert(row);
+    if (error) return jsonError("db_error", error.message);
     return NextResponse.json({ ok: true });
   };
 }
@@ -142,21 +130,21 @@ export function createListHandler(config: CommunityPuzzleGameConfig) {
     // Admin-only throughout, except the public approved browse list:
     // there only the pending review queue stays behind the secret.
     const requiresAdmin = config.publicApprovedList ? status === "pending" : true;
-    if (requiresAdmin && !isAdmin(req)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (requiresAdmin) {
+      const denied = requireAdmin(req);
+      if (denied) return denied;
     }
 
     // Admin queues read non-public statuses (pending); several tables grant anon
     // no SELECT policy at all, so the admin path must use the service-role client.
     // The public approved-browse list stays on the anon client (RLS-guarded).
     const supabase = requiresAdmin ? getServiceRoleClient() : getSupabaseClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from(config.table) as any)
+    const { data, error } = await table(supabase, config.table)
       .select(config.select ?? DEFAULT_SELECT)
       .eq("status", status)
       .order("created_at", { ascending: (config.listOrder ?? "asc") === "asc" });
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return jsonError("db_error", error.message);
     return NextResponse.json({ puzzles: data ?? [] });
   };
 }
@@ -172,22 +160,17 @@ export function createReviewHandler(config: Pick<CommunityPuzzleGameConfig, "tab
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> },
   ) {
-    if (!isAdmin(req)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const denied = requireAdmin(req);
+    if (denied) return denied;
 
     const { id } = await params;
 
-    let body: ReviewPayload;
-    try {
-      body = (await req.json()) as ReviewPayload;
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-    }
+    const parsed = await parseJson<ReviewPayload>(req);
+    if (!parsed.ok) return parsed.response;
 
-    const { action } = body;
+    const { action } = parsed.body;
     if (action !== "approve" && action !== "reject") {
-      return NextResponse.json({ error: "action must be 'approve' or 'reject'" }, { status: 400 });
+      return jsonMessage("action must be 'approve' or 'reject'");
     }
 
     // approve UPDATEs status, reject DELETEs — neither is granted to anon by RLS
@@ -196,17 +179,15 @@ export function createReviewHandler(config: Pick<CommunityPuzzleGameConfig, "tab
     const supabase = getServiceRoleClient();
 
     if (action === "approve") {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from(config.table) as any)
+      const { error } = await table(supabase, config.table)
         .update({ status: "approved" })
         .eq("id", id);
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return jsonError("db_error", error.message);
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase.from(config.table) as any)
+      const { error } = await table(supabase, config.table)
         .delete()
         .eq("id", id);
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return jsonError("db_error", error.message);
     }
 
     return NextResponse.json({ ok: true });

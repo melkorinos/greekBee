@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getSupabaseClient } from "@/lib/supabase";
+import { getSupabaseClient, table } from "@/lib/supabase";
 import type { StavroleksoPuzzleData } from "@/games/stavrolekso/types";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +15,7 @@ interface PuzzleRow {
 async function getApprovedPuzzles(): Promise<PuzzleRow[]> {
   try {
     const supabase = getSupabaseClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from("community_stavrolekso_puzzles") as any)
+    const { data, error } = await table(supabase, "community_stavrolekso_puzzles")
       .select("id, title, submitter_name, data, created_at")
       .eq("status", "approved")
       .order("created_at", { ascending: false });

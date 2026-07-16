@@ -38,6 +38,7 @@ vi.mock("@/lib/supabase", () => {
   // The review route uses the service-role client (RLS bypass); everything else
   // uses the anon client. Both resolve to the same queue-backed mock here.
   return {
+  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
     getSupabaseClient:      () => client,
     getServiceRoleClient:   () => client,
   };
@@ -62,11 +63,15 @@ const { POST: reviewNomination } =
 
 function enqueue(...results: ChainResult[]) { _callQueue.push(...results); }
 
-function makePost(url: string, body: unknown) {
+function makePost(url: string, body: unknown, adminSecret?: string) {
   return new NextRequest(url, {
     method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(body),
+    headers: {
+      "Content-Type": "application/json",
+      // The admin gate reads the header, never the body (requireAdmin).
+      ...(adminSecret === undefined ? {} : { "X-Admin-Secret": adminSecret }),
+    },
+    body: JSON.stringify(body),
   });
 }
 
@@ -409,35 +414,50 @@ describe("POST /api/nominations/[id]/vote — happy path", () => {
 describe("POST /api/nominations/[id]/review — auth", () => {
   const url = "http://localhost/api/nominations/n1/review";
 
-  it("403 when adminSecret is wrong", async () => {
+  // Auth is the shared envelope's (requireAdmin, exercised exhaustively in
+  // apiRoute.test.ts). What matters here is that this route is behind it, and on
+  // the platform's terms: the header, answered 401 — not the `adminSecret` body
+  // field answered 403 that it used to have.
+  it("401 when the admin secret is wrong", async () => {
     const res = await reviewNomination(
-      makePost(url, { action: "approve", adminSecret: "wrong" }),
+      makePost(url, { action: "approve" }, "wrong"),
       withParams("n1"),
     );
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
   });
 
-  it("403 when adminSecret is missing", async () => {
+  it("401 when the admin secret header is missing", async () => {
     const res = await reviewNomination(
       makePost(url, { action: "approve" }),
       withParams("n1"),
     );
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
+  });
+
+  it("401 when the secret is sent the old way, in the body", async () => {
+    const res = await reviewNomination(
+      makePost(url, { action: "approve", adminSecret: "secret-admin" }),
+      withParams("n1"),
+    );
+    expect(res.status).toBe(401);
   });
 });
 
 describe("POST /api/nominations/[id]/review — validation", () => {
-  const url    = "http://localhost/api/nominations/n1/review";
-  const AUTH   = { adminSecret: "secret-admin" };
+  const url = "http://localhost/api/nominations/n1/review";
 
   it("400 on invalid JSON", async () => {
-    const req = new NextRequest(url, { method: "POST", body: "{bad", headers: { "Content-Type": "application/json" } });
+    const req = new NextRequest(url, {
+      method:  "POST",
+      body:    "{bad",
+      headers: { "Content-Type": "application/json", "X-Admin-Secret": "secret-admin" },
+    });
     expect((await reviewNomination(req, withParams("n1"))).status).toBe(400);
   });
 
   it("400 when action is not approve or reject", async () => {
     const res = await reviewNomination(
-      makePost(url, { ...AUTH, action: "delete" }),
+      makePost(url, { action: "delete" }, "secret-admin"),
       withParams("n1"),
     );
     expect(res.status).toBe(400);
@@ -445,25 +465,26 @@ describe("POST /api/nominations/[id]/review — validation", () => {
 });
 
 describe("POST /api/nominations/[id]/review — happy path", () => {
-  const url  = "http://localhost/api/nominations/n1/review";
-  const AUTH = { adminSecret: "secret-admin" };
+  const url    = "http://localhost/api/nominations/n1/review";
+  const SECRET = "secret-admin";
 
   it("200 ok on approve", async () => {
     enqueue({ error: null });
-    const res = await reviewNomination(makePost(url, { ...AUTH, action: "approve" }), withParams("n1"));
+    const res = await reviewNomination(makePost(url, { action: "approve" }, SECRET), withParams("n1"));
     expect(res.status).toBe(200);
     expect((await res.json()).ok).toBe(true);
   });
 
   it("200 ok on reject", async () => {
     enqueue({ error: null });
-    const res = await reviewNomination(makePost(url, { ...AUTH, action: "reject" }), withParams("n1"));
+    const res = await reviewNomination(makePost(url, { action: "reject" }, SECRET), withParams("n1"));
     expect(res.status).toBe(200);
   });
 
-  it("500 on DB error", async () => {
-    enqueue({ error: { message: "db error" } });
-    const res = await reviewNomination(makePost(url, { ...AUTH, action: "approve" }), withParams("n1"));
+  it("500 on DB error, without leaking the Postgres message", async () => {
+    enqueue({ error: { message: "relation \"nominations\" does not exist" } });
+    const res = await reviewNomination(makePost(url, { action: "approve" }, SECRET), withParams("n1"));
     expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "db_error" });
   });
 });

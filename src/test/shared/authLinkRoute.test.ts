@@ -124,6 +124,7 @@ function makeChain(table: string) {
 }
 
 vi.mock("@/lib/supabase", () => ({
+  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
   getSupabaseClient: () => ({
     auth: {
       getUser: () => Promise.resolve({ data: { user: _authUser }, error: _authError }),

@@ -14,7 +14,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { jsonError, jsonMessage } from "@/lib/apiRoute";
+import { getSupabaseClient, table } from "@/lib/supabase";
 import { isBlockedWord } from "@/lib/nominationBlocklist";
 import { normalizeLetters } from "@/lib/normalize";
 
@@ -25,10 +26,10 @@ export async function GET(req: NextRequest) {
   const direction = req.nextUrl.searchParams.get("direction");
 
   if (!word || !word.trim()) {
-    return NextResponse.json({ error: "word required" }, { status: 400 });
+    return jsonMessage("word required");
   }
   if (direction !== "add" && direction !== "remove") {
-    return NextResponse.json({ error: "direction must be 'add' or 'remove'" }, { status: 400 });
+    return jsonMessage("direction must be 'add' or 'remove'");
   }
 
   // Match the dictionary's storage form (accent-stripped, final sigma collapsed)
@@ -54,8 +55,7 @@ export async function GET(req: NextRequest) {
 
   // Rejected: head-only count — no rows transferred, just the total.
   const rejectedQuery =
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from("nominations") as any)
+    table(supabase, "nominations")
       .select("id", { count: "exact", head: true })
       .eq("word", normalised)
       .eq("direction", direction)
@@ -64,8 +64,7 @@ export async function GET(req: NextRequest) {
   // Accepted: approved but not yet released (apply-nominations hasn't run), so the
   // word is not in the dictionary yet. Head-only count is enough.
   const acceptedQuery =
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from("nominations") as any)
+    table(supabase, "nominations")
       .select("id", { count: "exact", head: true })
       .eq("word", normalised)
       .eq("direction", direction)
@@ -74,8 +73,7 @@ export async function GET(req: NextRequest) {
   // Pending: fetch the ids (earliest first) so the client can offer to upvote the
   // existing proposal instead of inserting a duplicate. `pendingId` = the original.
   const pendingQuery =
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from("nominations") as any)
+    table(supabase, "nominations")
       .select("id", { count: "exact" })
       .eq("word", normalised)
       .eq("direction", direction)
@@ -91,7 +89,7 @@ export async function GET(req: NextRequest) {
   ];
 
   if (rejectedRes.error || acceptedRes.error || pendingRes.error) {
-    return NextResponse.json({ error: "db_error" }, { status: 500 });
+    return jsonError("db_error", rejectedRes.error ?? acceptedRes.error ?? pendingRes.error);
   }
 
   return NextResponse.json({

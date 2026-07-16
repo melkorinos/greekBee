@@ -22,12 +22,9 @@
 // (scripts/lib/resync/), so a word injected here keeps every dictionary-derived
 // game correct — not just Leksokipos.
 
-import { readFileSync, writeFileSync } from "fs";
-import { join } from "path";
+import { readFileSync } from "fs";
 
-import { normalizeLetters } from "@/lib/normalize";
-
-import { RESYNC_REGISTRY } from "./lib/resync/registry";
+import { applyDictionaryEdits } from "./lib/resync/applyDictionaryEdits";
 
 const args = process.argv.slice(2);
 const isDryRun = args.includes("--dry-run");
@@ -53,71 +50,17 @@ if (words.length === 0) {
   process.exit(1);
 }
 
-// ── File helpers (match apply-nominations serialisation exactly) ──────────────
-// words-el.json is the dictionary itself — the source every adapter derives from
-// — so this script owns it directly. Everything downstream is a registry adapter.
-const wordsElPath = join(__dirname, "../src/data/words-el.json");
-
-const readJson = <T>(p: string): T => JSON.parse(readFileSync(p, "utf8")) as T;
-
 // ── Apply ─────────────────────────────────────────────────────────────────────
-const wordsEl = readJson<string[]>(wordsElPath);
-const wordsElSet = new Set(wordsEl);
+// Add-only: dictionary I/O, dedup, the re-sync walk and the report all belong to
+// the orchestrator — this script only knows how to source its words.
+const { added, skipped, wordListChanged } = applyDictionaryEdits(
+  words.map((word) => ({ word, direction: "add" as const })),
+  { dryRun: isDryRun },
+);
 
-const added: string[] = [];
-const skipped: string[] = [];
-
-for (const raw of words) {
-  const word = normalizeLetters(raw);
-  const len = [...word].length;
-  if (wordsElSet.has(word)) {
-    console.log(`  SKIP  (already exists) → ${word}`);
-    skipped.push(word);
-    continue;
-  }
-  console.log(`  ADD   (len ${len}) → ${word}`);
-  added.push(word);
-  wordsElSet.add(word);
-  if (!isDryRun) wordsEl.push(word);
-}
-
-if (added.length === 0) {
+if (!wordListChanged) {
   console.log(`\nNothing to add (${skipped.length} already present). No files written.`);
   process.exit(0);
-}
-
-// ── The dictionary itself ─────────────────────────────────────────────────────
-if (!isDryRun) {
-  writeFileSync(wordsElPath, JSON.stringify(wordsEl.sort()), "utf8");
-  console.log(`\nUpdated src/data/words-el.json`);
-}
-
-// ── Premade-data re-sync (every dictionary-derived game) ──────────────────────
-const warnings: string[] = [];
-
-for (const game of RESYNC_REGISTRY) {
-  const report = game.apply({ added, removed: [] }, { dryRun: isDryRun });
-  warnings.push(...report.warnings);
-
-  if (report.changed.length === 0) {
-    console.log(`\n${game.id}: no premade data affected — unchanged.`);
-    continue;
-  }
-
-  console.log(
-    `\n${game.id}: re-sync${isDryRun ? " [DRY RUN]" : ""} — ${report.changed.length} item(s) affected`,
-  );
-  for (const c of report.changed) {
-    if (c.added.length) console.log(`  ${c.id ?? "(no id)"}: +${c.added.join(", +")}`);
-  }
-  if (!isDryRun) {
-    console.log(`Updated ${game.id} premade data.`);
-  }
-}
-
-if (warnings.length > 0) {
-  console.log(`\n⚠ Manual action required:`);
-  for (const w of warnings) console.log(`  - ${w}`);
 }
 
 console.log(`\nSummary: +${added.length} added, ${skipped.length} skipped${isDryRun ? " [DRY RUN]" : ""}.`);

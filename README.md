@@ -31,7 +31,7 @@ All players can visit this page to see pending nominations (words proposed for a
 
 `/leksikastirio?admin=YOUR_ADMIN_SECRET`
 
-Appending `?admin=<secret>` enables admin mode. Each nomination card shows **Έγκριση** (Approve) and **Απόρριψη** (Reject) buttons. The secret is validated server-side against the `ADMIN_SECRET` environment variable — the UI only reveals the buttons when the param is non-empty, but any API call with a wrong secret returns 403.
+Appending `?admin=<secret>` enables admin mode. Each nomination card shows **Έγκριση** (Approve) and **Απόρριψη** (Reject) buttons. The secret is validated server-side against the `ADMIN_SECRET` environment variable — the UI only reveals the buttons when the param is non-empty, but any API call with a wrong secret returns 401. Admin calls carry the secret in an `X-Admin-Secret` header (ADR 0016); if `ADMIN_SECRET` is unset, every admin route denies everyone.
 
 To apply approved nominations to the live word list, run the CLI script:
 

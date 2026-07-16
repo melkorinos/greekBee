@@ -14,7 +14,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
+import { getSupabaseClient, table } from "@/lib/supabase";
 import { isISODate } from "@/games/leksokipos/lib/puzzle";
 import { sanitizePangramWords } from "@/games/leksokipos/lib/pangrams";
 
@@ -27,17 +28,13 @@ interface PangramPayload {
 }
 
 export async function POST(req: NextRequest) {
-  let body: PangramPayload;
-  try {
-    body = (await req.json()) as PangramPayload;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+  const parsed = await parseJson<PangramPayload>(req);
+  if (!parsed.ok) return parsed.response;
 
-  const { device_uuid, puzzle_date, words } = body;
+  const { device_uuid, puzzle_date, words } = parsed.body;
 
   if (!device_uuid || typeof puzzle_date !== "string" || !isISODate(puzzle_date)) {
-    return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400 });
+    return jsonMessage("Missing or invalid fields");
   }
 
   const clean = sanitizePangramWords(words);
@@ -45,21 +42,19 @@ export async function POST(req: NextRequest) {
 
   if (clean.length > 0) {
     const rows = clean.map((word) => ({ device_uuid, puzzle_date, word }));
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from("player_pangrams") as any).upsert(
+    const { error } = await table(supabase, "player_pangrams").upsert(
       rows,
       { onConflict: "device_uuid,puzzle_date,word", ignoreDuplicates: true },
     );
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return jsonError("db_error", error.message);
   }
 
   // Fresh lifetime count for the device — HEAD exact count, no rows transferred.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { count, error } = await (supabase.from("player_pangrams") as any)
+  const { count, error } = await table(supabase, "player_pangrams")
     .select("*", { count: "exact", head: true })
     .eq("device_uuid", device_uuid);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return jsonError("db_error", error.message);
 
   return NextResponse.json({ count: count ?? 0 });
 }

@@ -20,6 +20,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@/lib/supabase", () => ({
+  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
   getSupabaseClient: () => ({
     auth: { exchangeCodeForSession: mockExchange },
   }),
