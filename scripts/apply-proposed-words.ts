@@ -1,6 +1,6 @@
-#!/usr/bin/env node
-// apply-proposed-words.mjs — adds a human-reviewed list of derived/proposed words
-// to the dataset (words-el.json + leksiarxeio/words-{N}.json + puzzle re-sync).
+#!/usr/bin/env tsx
+// apply-proposed-words.ts — adds a human-reviewed list of derived/proposed words
+// to the dataset (words-el.json + leksiarxeio/words-{N}.json + premade re-sync).
 //
 // This is the *inject* half of the /apply-nominations proposer flow: the agent
 // generates morphological relatives of freshly-accepted words, the developer
@@ -9,27 +9,31 @@
 // nominations table. Add-only (no removes). Words already present are skipped.
 //
 // Usage:
-//   node scripts/apply-proposed-words.mjs word1 word2 ...
-//   node scripts/apply-proposed-words.mjs --dry-run word1 word2 ...
-//   node scripts/apply-proposed-words.mjs --file path/to/list.txt   (# comments + whitespace-separated)
+//   npm run apply-proposed -- word1 word2 ...
+//   npm run apply-proposed:dry -- word1 word2 ...
+//   npm run apply-proposed -- --file path/to/list.txt   (# comments + whitespace-separated)
 //
 // Routing by length mirrors apply-nominations:
 //   len ≤ 3  → words-el.json only
 //   len 4–8  → words-el.json AND src/data/leksiarxeio/words-{N}.json
 //   len > 8  → words-el.json only (no leksiarxeio bucket) — still re-synced into puzzles
+//
+// Premade re-sync goes through the same registry as apply-nominations
+// (scripts/lib/resync/), so a word injected here keeps every dictionary-derived
+// game correct — not just Leksokipos.
 
 import { readFileSync, writeFileSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+import { join } from "path";
 
-import { resyncPuzzles } from "./lib/resync-puzzles.mjs";
+import { normalizeLetters } from "@/lib/normalize";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import { RESYNC_REGISTRY } from "./lib/resync/registry";
+
 const args = process.argv.slice(2);
 const isDryRun = args.includes("--dry-run");
 
 // ── Collect input words (positional args and/or --file) ───────────────────────
-const words = [];
+const words: string[] = [];
 for (let i = 0; i < args.length; i++) {
   const a = args[i];
   if (a === "--dry-run") continue;
@@ -49,34 +53,24 @@ if (words.length === 0) {
   process.exit(1);
 }
 
-// ── Normalise (mirrors src/lib/normalize.ts) ──────────────────────────────────
-function normalise(word) {
-  return word
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/ς/g, "σ");
-}
-
 // ── File helpers (match apply-nominations serialisation exactly) ──────────────
 const wordsElPath = join(__dirname, "../src/data/words-el.json");
 const LEKSIARXEIO_LENGTHS = [4, 5, 6, 7, 8];
-const leksiarxeioPath = (n) => join(__dirname, `../src/data/leksiarxeio/words-${n}.json`);
-const puzzlesElPath = join(__dirname, "../src/data/leksokipos/puzzles-el.json");
+const leksiarxeioPath = (n: number) => join(__dirname, `../src/data/leksiarxeio/words-${n}.json`);
 
-const readJson = (p) => JSON.parse(readFileSync(p, "utf8"));
+const readJson = <T>(p: string): T => JSON.parse(readFileSync(p, "utf8")) as T;
 
 // ── Apply ─────────────────────────────────────────────────────────────────────
-let wordsEl = readJson(wordsElPath);
+const wordsEl = readJson<string[]>(wordsElPath);
 const wordsElSet = new Set(wordsEl);
-const leksiarxeio = {};
-for (const n of LEKSIARXEIO_LENGTHS) leksiarxeio[n] = readJson(leksiarxeioPath(n));
+const leksiarxeio: Record<number, string[]> = {};
+for (const n of LEKSIARXEIO_LENGTHS) leksiarxeio[n] = readJson<string[]>(leksiarxeioPath(n));
 
-const added = [];
-const skipped = [];
+const added: string[] = [];
+const skipped: string[] = [];
 
 for (const raw of words) {
-  const word = normalise(raw);
+  const word = normalizeLetters(raw);
   const len = [...word].length;
   if (wordsElSet.has(word)) {
     console.log(`  SKIP  (already exists) → ${word}`);
@@ -111,23 +105,32 @@ if (!isDryRun) {
   }
 }
 
-// ── Pre-built Leksokipos puzzles (validWords re-sync) ─────────────────────────
-{
-  const puzzles = readJson(puzzlesElPath);
-  const { puzzles: resynced, changed } = resyncPuzzles(puzzles, { added });
+// ── Premade-data re-sync (every dictionary-derived game) ──────────────────────
+const warnings: string[] = [];
 
-  if (changed.length === 0) {
-    console.log(`\nNo pre-built puzzles affected — puzzles-el.json unchanged.`);
-  } else {
-    console.log(`\nRe-sync${isDryRun ? " [DRY RUN]" : ""}: ${changed.length} puzzle(s) affected`);
-    for (const c of changed) {
-      if (c.added.length) console.log(`  ${c.id ?? "(no id)"}: +${c.added.join(", +")}`);
-    }
-    if (!isDryRun) {
-      writeFileSync(puzzlesElPath, JSON.stringify(resynced, null, 2), "utf8");
-      console.log(`Updated src/data/leksokipos/puzzles-el.json`);
-    }
+for (const game of RESYNC_REGISTRY) {
+  const report = game.apply({ added, removed: [] }, { dryRun: isDryRun });
+  warnings.push(...report.warnings);
+
+  if (report.changed.length === 0) {
+    console.log(`\n${game.id}: no premade data affected — unchanged.`);
+    continue;
   }
+
+  console.log(
+    `\n${game.id}: re-sync${isDryRun ? " [DRY RUN]" : ""} — ${report.changed.length} item(s) affected`,
+  );
+  for (const c of report.changed) {
+    if (c.added.length) console.log(`  ${c.id ?? "(no id)"}: +${c.added.join(", +")}`);
+  }
+  if (!isDryRun) {
+    console.log(`Updated ${game.id} premade data.`);
+  }
+}
+
+if (warnings.length > 0) {
+  console.log(`\n⚠ Manual action required:`);
+  for (const w of warnings) console.log(`  - ${w}`);
 }
 
 console.log(`\nSummary: +${added.length} added, ${skipped.length} skipped${isDryRun ? " [DRY RUN]" : ""}.`);
