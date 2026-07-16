@@ -15,6 +15,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseClient } from "@/lib/supabase";
+import { isBlockedWord } from "@/lib/nominationBlocklist";
+import { normalizeLetters } from "@/lib/normalize";
 
 export const runtime = "edge";
 
@@ -29,7 +31,25 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "direction must be 'add' or 'remove'" }, { status: 400 });
   }
 
-  const normalised = word.toLowerCase().trim();
+  // Match the dictionary's storage form (accent-stripped, final sigma collapsed)
+  // so variants of the same word collapse to one lookup key.
+  const normalised = normalizeLetters(word).trim();
+
+  // A blocklisted add-word (proper noun / month / place / foreign word) is
+  // refused outright — the client shows a "not accepted" banner and disables
+  // submit, so there's no point querying the pending/rejected/accepted counts.
+  if (direction === "add" && isBlockedWord(normalised)) {
+    return NextResponse.json({
+      word:      normalised,
+      direction,
+      blocked:   true,
+      rejected:  0,
+      accepted:  0,
+      pending:   0,
+      pendingId: null,
+    });
+  }
+
   const supabase   = getSupabaseClient();
 
   // Rejected: head-only count — no rows transferred, just the total.
@@ -77,6 +97,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     word:      normalised,
     direction,
+    blocked:   false,
     rejected:  rejectedRes.count ?? 0,
     accepted:  acceptedRes.count ?? 0,
     pending:   pendingRes.count ?? 0,

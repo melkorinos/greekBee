@@ -4,6 +4,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseClient } from "@/lib/supabase";
+import { isBlockedWord } from "@/lib/nominationBlocklist";
+import { normalizeLetters } from "@/lib/normalize";
 
 export const runtime = "edge";
 
@@ -116,7 +118,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "deviceId required" }, { status: 400 });
   }
 
-  const normalised = word.toLowerCase().trim();
+  // Normalise the same way the dictionary is stored (accent-stripped, final
+  // sigma collapsed) so "καλός"/"καλος"/"καλοσ" all resolve to one word — this
+  // is what makes the duplicate/pending lookup actually collapse variants.
+  const normalised = normalizeLetters(word).trim();
+
+  if (!normalised) {
+    return NextResponse.json({ error: "word required" }, { status: 400 });
+  }
+
+  // Reject proposals to ADD a blocklisted word (proper noun / month / place /
+  // foreign word). Authoritative guard — the client warns first, but never
+  // trust the client. Removal reports are unaffected.
+  if (direction === "add" && isBlockedWord(normalised)) {
+    return NextResponse.json({ error: "blocked_word" }, { status: 422 });
+  }
 
   const supabase = getSupabaseClient();
 

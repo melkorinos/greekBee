@@ -223,6 +223,24 @@ describe("POST /api/nominations — happy path", () => {
     }));
     expect(res.status).toBe(500);
   });
+
+  it("422 when adding a blocklisted proper noun (no insert attempted)", async () => {
+    // Μαρία is one of the ~17k curated-out proper nouns. No DB row is enqueued —
+    // the route must short-circuit before touching Supabase.
+    const res = await submitNomination(makePost("http://localhost/api/nominations", {
+      word: "Μαρία", direction: "add", deviceId: "d1",
+    }));
+    expect(res.status).toBe(422);
+    expect((await res.json()).error).toBe("blocked_word");
+  });
+
+  it("allows REMOVING a blocklisted word (block is add-only)", async () => {
+    enqueue({ error: null }); // insert succeeds
+    const res = await submitNomination(makePost("http://localhost/api/nominations", {
+      word: "Μαρία", direction: "remove", deviceId: "d1",
+    }));
+    expect(res.status).toBe(201);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -262,7 +280,7 @@ describe("GET /api/nominations/lookup — happy path", () => {
     expect(json.rejected).toBe(2);
     expect(json.accepted).toBe(3);
     expect(json.pending).toBe(1);
-    expect(json.word).toBe("καλος");
+    expect(json.word).toBe("καλοσ"); // normalised: final sigma ς → σ
   });
 
   it("returns the earliest pending id so the client can upvote it instead of duplicating", async () => {
@@ -290,7 +308,25 @@ describe("GET /api/nominations/lookup — happy path", () => {
     enqueue({ count: 0, error: null });
     const res  = await lookupNomination(makeReq("  Καλός  ", "remove"));
     const json = await res.json() as { word: string };
-    expect(json.word).toBe("καλός");
+    // normalizeLetters: lowercased, accents stripped, final sigma ς → σ.
+    expect(json.word).toBe("καλοσ");
+  });
+
+  it("returns blocked=true for a blocklisted add-word without querying the DB", async () => {
+    // No counts enqueued — a blocked add-word must short-circuit before Supabase.
+    const res  = await lookupNomination(makeReq("Αθήνα", "add"));
+    const json = await res.json() as { blocked: boolean; word: string };
+    expect(json.blocked).toBe(true);
+    expect(json.word).toBe("αθηνα");
+  });
+
+  it("blocked=false for a normal add-word", async () => {
+    enqueue({ count: 0, error: null }); // rejected
+    enqueue({ count: 0, error: null }); // accepted
+    enqueue({ data: [], count: 0, error: null }); // pending
+    const res  = await lookupNomination(makeReq("καλος", "add"));
+    const json = await res.json() as { blocked: boolean };
+    expect(json.blocked).toBe(false);
   });
 
   it("500 when either count query fails", async () => {
