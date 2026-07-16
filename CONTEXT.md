@@ -191,18 +191,18 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 | Table | Purpose |
 |---|---|
 | `player_profiles` | Device identity: `device_uuid` → `display_name`. Optional `auth_user_id` links a Google account and is the durable identity anchor — authoritative device→account map, unique partial index on `auth_user_id` (ADR 0012; column introduced by ADR 0007). |
-| `transfer_codes` | Single-use 6-char codes for cross-device identity transfer, 24h TTL. |
+| `transfer_codes` | Single-use 6-char codes for cross-device identity transfer, 24h TTL. **Server-only**: zero anon RLS policies (migration `20260716120000`) because a code maps to a `device_uuid` — the platform's bearer credential; both `/api/transfer` routes use the service-role client, and the claim is an atomic conditional UPDATE (single-use enforced by the write). |
 | `game_scores` | Unified leaderboard for all games, keyed by `game_id` (`leksokipos`/`leksiarxeio`/`leksindeseis`/`vrestifrasi`/`leksodromia`/`leksoplegma`) + `device_id`. Leksiarxeio writes one row per `word_length`. Device-keyed only — no `auth_user_id` column; Sign-in Restore makes the adopted DeviceId canonical, so device_id serves anonymous and AuthLinked players alike (the device→account map lives in `player_profiles`). |
 | `game_state` | Serialised Session for cross-device sync (Leksokipos daily puzzles only). Blob: `{ foundWords: string[] }`. Pushed after every valid word; pulled on mount when local progress is empty. Both require ProfileLinked. |
-| `nominations` | Community word proposals (add / remove a word). |
-| `nomination_votes` | Up/down votes on nominations, one per device. |
+| `nominations` | Community word proposals (add / remove a word). One *pending* row per normalized (word, direction) — DB-enforced partial unique index (migration `20260716120200`); a duplicate POST answers `409 already_pending` + the existing id, and the client pivots to upvoting it. |
+| `nomination_votes` | Up/down votes on nominations, one per device — DB-enforced `UNIQUE(nomination_id, device_id)` (migration `20260716120200`); the toggle route resolves insert races instead of 500ing. |
 | `community_leksiarxeio_puzzles` | Player-submitted Leksiarxeio puzzles. One row = all 5 lengths (`data` jsonb `{"4":…,"8":…}`). Deleted on consumption. |
 | `community_leksindeseis_puzzles` | Player-submitted Leksindeseis puzzles (`data` jsonb 4-group array). Deleted on consumption. |
 | `community_vrestifrasi_puzzles` | Player-submitted Vres Tin Frasi phrases (`data` jsonb `{ "phrase": "…" }`). Deleted on consumption. |
 | `community_stavrolekso_puzzles` | Community-submitted crosswords (`data` jsonb slot-based; PIN-gated creator edits). **Never deleted after approval.** |
 | `identity_audit` | Append-only log of identity-mapping changes, written by `/api/auth/link` when a link establishes a mapping the profile row didn't already hold. Service-role only (RLS on, zero policies); never pruned. Backs Admin Restore (ADR 0012). |
-| `player_achievements` | Immutable earned-Achievement facts: one row = one Achievement (one-shot or tier id) a device earned. `UNIQUE(device_uuid, achievement_id)`, insert-if-absent (never revoked). Open RLS (anon writes, mirrors `game_state`). Append-forever — never swept. Unioned onto the canonical identity on Sign-in Restore (ADR 0013). |
-| `player_pangrams` | Append-only pangram find-set (Κυνηγός Πανγκράμ tier progress): one row = one pangram `word` a device found on one `puzzle_date`. `UNIQUE(device_uuid, puzzle_date, word)`, insert-if-absent. Progress = `COUNT(*)`, never a counter. Open RLS, append-forever — never swept. Unioned on Sign-in Restore via `planPangramMerge` (ADR 0013 B2). |
+| `player_achievements` | Immutable earned-Achievement facts: one row = one Achievement (one-shot or tier id) a device earned. `UNIQUE(device_uuid, achievement_id)`, insert-if-absent (never revoked). Anon RLS = SELECT+INSERT only since migration `20260716120100` — the DB itself enforces append-only against the public key; deletes/updates are service-role only (merge, cron). Append-forever — never swept. Unioned onto the canonical identity on Sign-in Restore (ADR 0013). |
+| `player_pangrams` | Append-only pangram find-set (Κυνηγός Πανγκράμ tier progress): one row = one pangram `word` a device found on one `puzzle_date`. `UNIQUE(device_uuid, puzzle_date, word)`, insert-if-absent. Progress = `COUNT(*)`, never a counter. Anon RLS = SELECT+INSERT only (`20260716120100`), append-forever — never swept. Unioned on Sign-in Restore via `planPangramMerge` (ADR 0013 B2). |
 
 ---
 
@@ -216,6 +216,9 @@ No per-device rate limiting is implemented on INSERT-capable API routes. RLS pol
 
 **`game_scores` is append-forever (2026-07-02; enforced in code 2026-07-05)**
 Rows are never pruned. The 7-day leaderboard window is query-side only. Lifetime Stats, Streaks, and the derived-on-read lifetime-point Achievements all read full `game_scores` history, so deletion would silently corrupt them. (Achievements themselves are not backfilled — they start at zero at launch — but their live derivation from post-launch history still depends on nothing being pruned.) When the 50 000-row alert fires, the answer is "raise the alert / optimize storage" — never "prune history." **Until 2026-07-05 this was policy only — the daily `/api/cleanup-scores` cron still deleted `game_scores` older than 10 days (issue 03), so "Lifetime" Stats were really last-10-days stats.** The cron now prunes only the ephemeral tables (`game_state`, `transfer_codes`) governed by `SESSION_RETENTION_DAYS`; `game_scores` is untouched.
+
+**DB-enforced integrity backstops + status enum (2026-07-16)**
+Four migrations (`202607161200xx`) hardened what routes previously promised only in code: `transfer_codes` went server-only (no anon policies); the three anon `ALL (true)` policies became per-command (SELECT+INSERT, plus UPDATE only where the app upserts — `game_state`); the two check-then-act dedup flows got unique indexes (votes, pending nominations) with 23505 handling in the routes; and community `status` became the PG enum `community_puzzle_status ('pending'|'approved')` — enum over CHECK so the value union reaches TypeScript (ADR 0017 amendment). `'rejected'` is deliberately not a value (reject = DELETE); `nominations.status` keeps its different CHECK vocabulary (`accepted`, history retained) on purpose. Open anon INSERT everywhere remains the recorded accepted risk (see "API rate limiting").
 
 **`player_profiles` cleanup — deferred (2026-07-01)**
 No deletion policy is implemented. `last_active` is updated on every profile upsert (POST /api/profile) so it reflects genuine activity when cleanup is eventually designed.
