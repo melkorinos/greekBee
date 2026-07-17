@@ -42,7 +42,10 @@ interface DbState {
 
 interface RecordedWrite {
   table:   string;
-  op:      "upsert" | "update" | "delete" | "insert";
+  /** A chain starts in "select" and is promoted by the first write verb it sees.
+   *  "select" is a real state of the mock's state machine — the tests below filter
+   *  it out with `op !== "select"` — so the union has to admit it. */
+  op:      "select" | "upsert" | "update" | "delete" | "insert";
   payload?: unknown;
   eqs:     [string, unknown][];
   ins:     [string, unknown[]][];
@@ -93,9 +96,7 @@ function resolveWrite(w: RecordedWrite) {
 }
 
 function makeChain(table: string) {
-  const st: RecordedWrite & { op: RecordedWrite["op"] | "select" } = {
-    table, op: "select", eqs: [], ins: [],
-  };
+  const st: RecordedWrite = { table, op: "select", eqs: [], ins: [] };
   const chain: Record<string, unknown> = {};
   chain.select = () => chain;
   chain.update = (p: unknown) => { st.op = "update"; st.payload = p; return chain; };
@@ -105,20 +106,20 @@ function makeChain(table: string) {
   chain.in = (c: string, v: unknown[]) => { st.ins.push([c, v]); return chain; };
   chain.upsert = (p: unknown) => {
     st.op = "upsert"; st.payload = p;
-    _writes.push(st as RecordedWrite);
-    return Promise.resolve(resolveWrite(st as RecordedWrite));
+    _writes.push(st);
+    return Promise.resolve(resolveWrite(st));
   };
   chain.insert = (p: unknown) => {
     st.op = "insert"; st.payload = p;
-    _writes.push(st as RecordedWrite);
-    return Promise.resolve(resolveWrite(st as RecordedWrite));
+    _writes.push(st);
+    return Promise.resolve(resolveWrite(st));
   };
   chain.maybeSingle = () => Promise.resolve(resolveRead(table, st.eqs));
   chain.single      = () => Promise.resolve(resolveRead(table, st.eqs));
   chain.then = (resolve: (v: unknown) => void) => {
     if (st.op === "select") return resolve(resolveRead(table, st.eqs));
-    _writes.push(st as RecordedWrite);
-    return resolve(resolveWrite(st as RecordedWrite));
+    _writes.push(st);
+    return resolve(resolveWrite(st));
   };
   return chain;
 }

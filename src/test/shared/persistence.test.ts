@@ -167,11 +167,11 @@ describe("clear()", () => {
 
   it("does not disturb other game slices when clearing", () => {
     writeSlice(GAME_ID, { [SESSION]: SNAPSHOT });
-    writeSlice("wordle", { "2026-05-22-wordle-5": { guesses: [], status: "playing" } });
+    writeSlice("leksiarxeio", { "2026-05-22-leksiarxeio-5": { guesses: [], status: "playing" } });
 
     const { result } = renderPersistence(SNAPSHOT);
     act(() => result.current());
 
-    expect(readSlice("wordle")).not.toBeNull();
+    expect(readSlice("leksiarxeio")).not.toBeNull();
   });
 });

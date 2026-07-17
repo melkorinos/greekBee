@@ -8,20 +8,33 @@ import { renderHook, waitFor } from "@testing-library/react";
 interface StatsRead { leksokipos_points: number | null; pangram_count: number | null }
 const NO_STATS: StatsRead = { leksokipos_points: null, pangram_count: null };
 
-const postAchievements = vi.fn();
-const fetchLifetimeStats = vi.fn(async (): Promise<StatsRead | null> => NO_STATS);
-const postPangrams = vi.fn(async (): Promise<number | null> => null);
-const fetchEarnedAchievementIds = vi.fn(async (): Promise<string[]> => []);
+// Each mock carries its real signature from @/games/leksokipos/sync. Typing them
+// as zero-arg fns made `mock.calls[0][0]` an index into an empty tuple, so the
+// call-shape assertions below were only ever checked at runtime.
+type PostAchievementsArgs = { deviceUuid: string; achievementIds: string[] };
+type PostPangramsArgs = { deviceUuid: string; puzzleDate: string; words: string[] };
+
+const postAchievements = vi.fn<(params: PostAchievementsArgs) => void>();
+const fetchLifetimeStats = vi.fn<(deviceUuid: string) => Promise<StatsRead | null>>(
+  async () => NO_STATS,
+);
+const postPangrams = vi.fn<(params: PostPangramsArgs) => Promise<number | null>>(
+  async () => null,
+);
+const fetchEarnedAchievementIds = vi.fn<(deviceUuid: string) => Promise<string[]>>(
+  async () => [],
+);
 vi.mock("@/games/leksokipos/sync", () => ({
-  postAchievements: (...args: unknown[]) => postAchievements(...args),
-  fetchLifetimeStats: (...args: unknown[]) => fetchLifetimeStats(...args),
-  postPangrams: (...args: unknown[]) => postPangrams(...args),
-  fetchEarnedAchievementIds: (...args: unknown[]) => fetchEarnedAchievementIds(...args),
+  postAchievements: (...args: Parameters<typeof postAchievements>) => postAchievements(...args),
+  fetchLifetimeStats: (...args: Parameters<typeof fetchLifetimeStats>) => fetchLifetimeStats(...args),
+  postPangrams: (...args: Parameters<typeof postPangrams>) => postPangrams(...args),
+  fetchEarnedAchievementIds: (...args: Parameters<typeof fetchEarnedAchievementIds>) =>
+    fetchEarnedAchievementIds(...args),
 }));
 
 /** The achievementIds of every postAchievements call flattened into one array. */
 function allPostedIds(): string[] {
-  return postAchievements.mock.calls.flatMap((c) => c[0].achievementIds as string[]);
+  return postAchievements.mock.calls.flatMap((c) => c[0].achievementIds);
 }
 
 const { useAchievementSync } = await import("@/games/leksokipos/hooks/useAchievementSync");

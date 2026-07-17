@@ -26,7 +26,15 @@ const SCRAMBLES = [
   "γλοσαγε", "μιδαβαθ",
   "λακιεσγα", "ρσηκβααρ",
 ];
-const PUZZLE = { date: "2026-07-13", words: WORDS, scrambles: SCRAMBLES };
+// `accepted` is required on LeksodromiaPuzzle: every accepted input per word, the
+// canonical answer at index 0. One-entry lists mirror what makeInitialLeksodromiaState
+// already defaults to (words.map(w => [w])), so this fixture keeps its old behaviour.
+const PUZZLE = {
+  date:      "2026-07-13",
+  words:     WORDS,
+  scrambles: SCRAMBLES,
+  accepted:  WORDS.map((w) => [w]),
+};
 
 function setVisibility(state: "visible" | "hidden") {
   Object.defineProperty(document, "visibilityState", {

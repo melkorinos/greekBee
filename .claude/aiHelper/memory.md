@@ -157,7 +157,7 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `achievementMerge.test.ts` / `pangramMerge.test.ts` | `planAchievementMerge` / `planPangramMerge` — Sign-in Restore unions |
 | `achievementsRoute.test.ts` / `pangramsRoute.test.ts` | `POST/GET /api/achievements` (id whitelist) · `POST /api/pangrams` (insert-if-absent, validation, DB errors) |
 | `authCallbackRedirect.test.tsx` | `/auth/callback` redirect destination |
-| `cleanupScoresRoute.test.ts` + `cleanupScoresLiveDb.test.ts` | Cron — CRON_SECRET auth, never touches append-forever tables; live-DB twin **skips without env vars** (issue 03) |
+| `cleanupScoresRoute.test.ts` + `cleanupScoresLiveDb.test.ts` | Cron — CRON_SECRET auth, never touches append-forever tables; live-DB twin asserts the cron's **effect on seeded sentinels** (stale game_state pruned, fresh one kept, stale game_scores survives) — it invokes the real handler, so it prunes prod game_state as the nightly run does. Runs locally off `.env.local`; auto-skips in CI |
 | `communityPuzzlesReviewRoute.test.ts` | PATCH review — auth + leksiarxeio/leksindeseis routes |
 | `feedbackModal.test.tsx` | FeedbackModal — visibility, required text, submission, 60s throttle |
 | `gameScoresRoute.test.ts` | `POST/GET /api/game-scores` — validation, locale-suffix strip, Leksiarxeio read-modify-write |
@@ -174,7 +174,7 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `profileStatsRoute.test.ts` | `GET /api/profile/stats` |
 | `puzzleDate.test.ts` | `todayISO` / `getLast7Dates` (UTC anchoring) / `normalizePuzzleDate` / `resolvePuzzleDateParam` |
 | `puzzleRotation.test.ts` | `dateToIndex` |
-| `rlsInvariantsLiveDb.test.ts` | Live-DB RLS posture matrix — **skips without env vars** (issue 03) |
+| `rlsInvariantsLiveDb.test.ts` | Live-DB RLS posture matrix. Runs locally off `.env.local` (`vitest.config.ts` forwards the 3 Supabase keys); auto-skips in CI, where live-DB secrets are deliberately absent |
 | `scoreMerge.test.ts` | `planScoreMerge` (best-per-puzzle) + `mergeLengthScore` (Leksiarxeio fold; re-post overwrite documented) |
 | `stavroleksoIdRoute.test.ts` | GET/PATCH stavrolekso `[id]` — PIN auth + state guards, "the edit actually persists" (service-role write) |
 | `supabase.test.ts` | `getSupabaseClient`, `signInWithGoogle` |
