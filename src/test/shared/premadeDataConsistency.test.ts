@@ -34,7 +34,9 @@ import { leksiarxeioAdapter } from "../../../scripts/lib/resync/leksiarxeio";
 import { leksodromiaAdapter } from "../../../scripts/lib/resync/leksodromia";
 import { leksokiposAdapter } from "../../../scripts/lib/resync/leksokipos";
 import { leksoplegmaAdapter } from "../../../scripts/lib/resync/leksoplegma";
-import { LEKSIARXEIO, LEKSODROMIA } from "@/config/gameRules";
+import { vrestifrasiAdapter } from "../../../scripts/lib/resync/vrestifrasi";
+import { LEKSIARXEIO, LEKSODROMIA, VRESTIFRASI } from "@/config/gameRules";
+import { isBlockedWord } from "@/lib/nominationBlocklist";
 import { normalizeLetters } from "@/lib/normalize";
 import { computeValidWords } from "@/games/leksokipos/lib/computeValidWords";
 import { BONUS_MIN_LENGTH, canTrace, enumerateBonusWords } from "@/games/leksoplegma/lib/generator";
@@ -149,6 +151,92 @@ describe("drift guard: leksiarxeio guess lists", () => {
   });
 });
 
+describe("drift guard: vres tin frasi short guess pools", () => {
+  // words-2/3.json are the same thing as the 4–8 lists — the dictionary sliced
+  // by length — but for Vres Tin Frasi (ADR 0006's 2026-05-29 revision). Until
+  // the vrestifrasi adapter existed nothing re-synced them, and they drifted;
+  // see the ratchet below.
+
+  // MISSED ADDITIONS are guarded with no exceptions. This is the direction the
+  // adapter is here to fix, and it is currently clean — a word the dictionary
+  // has but the pool lacks is a short word the game wrongly rejects.
+  it.each([...VRESTIFRASI.SHORT_WORD_LENGTHS])(
+    "words-%i.json lists every dictionary word of its length",
+    (n) => {
+      const listed = new Set(
+        readJson<string[]>("leksiarxeio", `words-${n}.json`).map(normalizeLetters),
+      );
+      const expected = [...dictionary].filter((w) => [...w].length === n);
+      const missing = expected.filter((w) => !listed.has(w));
+
+      expect(missing.slice(0, 5)).toEqual([]);
+    },
+  );
+
+  // ── STALE REMOVALS: a pinned, shrink-only ratchet ───────────────────────────
+  // The other direction is NOT clean, and deliberately not forced green here.
+  //
+  // These 118 words are in the pools but not in words-el.json. Every one of them
+  // is on the proper-noun blocklist (asserted below): they were curated OUT of
+  // the dictionary, and because no adapter owned words-2/3.json, the pools never
+  // heard about it — the exact bug this guard exists for, already realised
+  // before the guard could see it.
+  //
+  // They are pinned rather than purged because purging is a GAMEPLAY decision,
+  // not a data-hygiene one: dropping "ρει" makes the committed phrase
+  // "Τα πάντα ρει" unwinnable (the reducer refuses to submit a guess word that
+  // is not in the pool, so the player could not type the right answer). That
+  // call is the developer's. Until then the drift is at least visible and frozen.
+  //
+  // Like DEFERRED_BLOCKLIST_DICTIONARY_OVERLAP, this list may only ever SHRINK:
+  // a NEW stale word turns this red, so the adapter's work is still guarded.
+  const KNOWN_STALE_SHORT_POOL_WORDS: readonly string[] = [
+    // len 2
+    "αε", "κω", "λσ", "νδ", "οα", "οε", "ρα",
+    // len 3
+    "αια", "αμω", "αρκ", "αρλ", "ασα", "ατμ", "αωε", "αωο", "βεα", "βιη", "γεσ",
+    "γυη", "δολ", "εαμ", "εκο", "ελι", "εμα", "εμπ", "εοκ", "ερα", "εση", "ευα",
+    "ευη", "εφτ", "ζεη", "ηπα", "ηρω", "θωρ", "ιαν", "ιβο", "ιδη", "ικα", "ιλο",
+    "ιμα", "ινω", "ιωβ", "ιωσ", "κεα", "κεν", "κιμ", "κκε", "κοχ", "κωσ", "λεα",
+    "λεο", "λια", "λιο", "λιρ", "λοσ", "μαη", "μαξ", "μαο", "μει", "μελ", "μιξ",
+    "μισ", "μμε", "νει", "νιλ", "νιν", "ντι", "νωε", "οαπ", "οηε", "οια", "οιη",
+    "ορφ", "οτε", "οτο", "παπ", "περ", "πιτ", "ποε", "πολ", "πωλ", "ραι", "ρασ",
+    "ρεα", "ρει", "ριο", "ροε", "ροθ", "ρον", "ροσ", "σαο", "σεκ", "σιχ", "σον",
+    "σρι", "συμ", "ταμ", "ταο", "τει", "τελ", "τζο", "τντ", "τομ", "τσε", "υασ",
+    "υλα", "φεζ", "φει", "φιλ", "φοξ", "φπα", "χαλ", "χαν", "χια", "χιε", "χιλ",
+    "χιο",
+  ];
+
+  const staleInPools = () => {
+    const stale: string[] = [];
+    for (const n of VRESTIFRASI.SHORT_WORD_LENGTHS) {
+      for (const w of readJson<string[]>("leksiarxeio", `words-${n}.json`).map(normalizeLetters)) {
+        if (!dictionary.has(w)) stale.push(w);
+      }
+    }
+    return stale;
+  };
+
+  it("has no stale pool word beyond the pinned, known-drift list", () => {
+    const unexpected = staleInPools().filter((w) => !KNOWN_STALE_SHORT_POOL_WORDS.includes(w));
+    expect(unexpected.slice(0, 10)).toEqual([]);
+  });
+
+  it("pins the known drift exactly — the list may only shrink", () => {
+    // Pinned both ways: a word that gets cleaned up must leave this list too, or
+    // the ratchet quietly stops being a ceiling.
+    expect([...staleInPools()].sort()).toEqual([...KNOWN_STALE_SHORT_POOL_WORDS].sort());
+  });
+
+  it("every known-drift word is blocklisted — none is an accidental deletion", () => {
+    // This is what makes the deferral safe to look at: the drift is entirely
+    // proper nouns/acronyms curated out on purpose (ΗΠΑ, ΚΚΕ, ΟΤΕ, ΦΠΑ…), not a
+    // real Greek word that fell out of the dictionary by mistake.
+    const notBlocked = KNOWN_STALE_SHORT_POOL_WORDS.filter((w) => !isBlockedWord(w));
+    expect(notBlocked).toEqual([]);
+  });
+});
+
 describe("drift guard: leksokipos puzzles", () => {
   const puzzles = readJson<LeksokiposPuzzle[]>("leksokipos", "puzzles-el.json");
 
@@ -255,6 +343,11 @@ describe("write path: serialisation is byte-identical to what is on disk", () =>
     // files() emits only dirty buckets; mark them all to serialise every file.
     const loaded = leksiarxeioAdapter.load();
     roundTrip(leksiarxeioAdapter.files({ ...loaded, dirty: [...LEKSIARXEIO.LENGTHS] }));
+  });
+
+  it("vrestifrasi words-{2,3}.json", () => {
+    const loaded = vrestifrasiAdapter.load();
+    roundTrip(vrestifrasiAdapter.files({ ...loaded, dirty: [...VRESTIFRASI.SHORT_WORD_LENGTHS] }));
   });
 });
 

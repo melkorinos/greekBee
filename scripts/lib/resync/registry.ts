@@ -2,9 +2,11 @@
 // premade data. apply-nominations.ts walks this list; adding a game means adding
 // an adapter here, not touching the orchestrator.
 //
-// Deliberate omission — Vres Tin Frasi: its premade data (phrases-el.json) is
-// phrase content, not derived from words-el.json, so a Nomination can never make
-// it stale. Its absence is a decision, not an oversight.
+// Partial entry — Vres Tin Frasi: its phrases (phrases-el.json) are authored
+// content, not derived from words-el.json, so no Nomination can make them stale
+// and no adapter covers them. Its guess-validation POOLS (words-2/3.json) are a
+// different story — those are pure dictionary slices, and the vrestifrasi
+// adapter owns them. The distinction is the decision; only the phrases are out.
 
 import { writeFileSync } from "fs";
 
@@ -12,6 +14,7 @@ import { leksiarxeioAdapter } from "./leksiarxeio";
 import { leksodromiaAdapter } from "./leksodromia";
 import { leksokiposAdapter } from "./leksokipos";
 import { leksoplegmaAdapter } from "./leksoplegma";
+import { vrestifrasiAdapter } from "./vrestifrasi";
 import type { DictionaryEdits, ResyncAdapter, ResyncReport } from "./types";
 
 /**
@@ -47,6 +50,7 @@ export function register<Content>(adapter: ResyncAdapter<Content>): RegisteredRe
 // derives from the same DictionaryEdits, never from another adapter's output.
 export const RESYNC_REGISTRY: RegisteredResync[] = [
   register(leksiarxeioAdapter),
+  register(vrestifrasiAdapter),
   register(leksokiposAdapter),
   register(leksoplegmaAdapter),
   register(leksodromiaAdapter),

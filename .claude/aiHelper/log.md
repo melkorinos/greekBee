@@ -5,6 +5,17 @@
 
 ---
 
+## Session 99 — 2026-07-17: Vres Tin Frasi's short guess pools joined the re-sync registry (issue 05, TDD)
+
+**The false premise:** the `leksiarxeio` adapter's header claimed words of len ≤ 3 "live in words-el.json and nowhere else". They don't — `words-2/3.json` are Vres Tin Frasi's guess-validation pools, dictionary-derived since ADR 0006's 2026-05-29 revision, and no adapter owned them. The drift guard iterated `LEKSIARXEIO.LENGTHS` (4–8) only, so it couldn't see it either.
+
+- **A sibling `vrestifrasi` adapter, not an extension of `leksiarxeio`.** The files sit in `src/data/leksiarxeio/` but are not Leksiarxeio's — it is never played below 4 letters. Extending `LEKSIARXEIO.LENGTHS` to 2–8 would have corrupted a real game rule and made the operator report name the wrong game. `id: "vrestifrasi"` is a real `RegistryGameId`. The slicing rule is identical for both, so it moved to **`lengthSlicedWords.ts`** (`createLengthSlicedWordsAdapter(id, lengths)`); `leksiarxeio.ts` is now a 3-line binding and keeps exporting `LeksiarxeioResyncContent` for its callers. **The two length sets must stay disjoint** — both write the same directory — and a guard test pins that.
+- **New config knob:** `VRESTIFRASI.SHORT_WORD_LENGTHS = [2, 3]`. Nothing hardcodes a length.
+- **🔴 PRE-EXISTING DRIFT, DEFERRED — needs a developer decision.** 118 words (7 at len 2, 111 at len 3) are in the pools but absent from `words-el.json`. **All 118 are on the proper-noun blocklist** (ΗΠΑ, ΚΚΕ, ΟΤΕ, ΦΠΑ, Νώε, Κιμ…) — curated out of the dictionary while the pools never heard. Missed-addition direction is clean; only stale removals accumulated. **Not purged, and no data file was touched.** Purging is a *gameplay* call: dropping `ρει` makes the committed phrase **"Τα πάντα ρει" unwinnable** (the reducer refuses to submit a guess word absent from the pool, so the player cannot type the right answer). Pinned instead as a **shrink-only ratchet** in `premadeDataConsistency.test.ts` (same shape as `DEFERRED_BLOCKLIST_DICTIONARY_OVERLAP`), pinned both ways so a cleanup must also shrink the list; a *new* stale word is red. A third assertion proves every pinned word is blocklisted — i.e. none is an accidental deletion.
+- **⚠️ Separate, larger bug found — NOT in scope, no ticket yet.** 147 of 498 committed phrases are **already unwinnable today**: the pool covers lengths 2–8, but their phrases contain words >8 letters (`αγοραζεται`, `οικογενεια`, `δικαιοσυνη`…) or 1-letter words (`η`, `ο`), and `SUBMIT_GUESS` rejects any word not in `validWords`. The "Τα πάντα ρει" case above is one more of the same class, not a new one. Worth a ticket: either widen the pools or validate phrases at authoring time.
+- **Verified beyond tests:** ran the real registry over committed data (dry-run) — `βρε` correctly a no-op (already listed), removing `ηπα` correctly claimed by `vrestifrasi` → `words-3.json`. Mutation-tested the ratchet: dropping one pinned word turns exactly the 2 intended tests red.
+- Tests: new `resyncVrestifrasi.test.ts` (12, incl. the disjointness guard and "len 5 is not mine"); `premadeDataConsistency.test.ts` +6 (missed-additions per length, the 3 ratchet assertions, write-path round-trip for words-2/3). Docs: ADR 0015 (table + the "deliberately absent" note now separates *phrases* from *pools*), `apply-nominations/skill.md` (table + the "len ≤ 3 → words-el.json only" routing line, which was the same false premise).
+
 ## Session 98 — 2026-07-17: the blocklist is now re-checked at apply time (issue 07, TDD)
 
 **The window:** the blocklist was enforced only at propose-time (the two edge nomination routes). Nothing re-checked it when an admin approved, or when the approved word was applied — and the blocklist is a version-controlled JSON file editable without a deploy, so a word could be approved while clean, blocklisted afterwards, and written into `words-el.json` anyway. Session 97's guard catches that state only *after* the bad data is committed; this closes the door instead.
@@ -227,13 +238,5 @@ Implemented item #4 of `architecture-review-2026-07-15.html` (final arch-review 
 | 33 | 2026-05-23 | Internal identifier rebranding to Greek names (hooks/components/types). Puzzle ID strings unchanged (localStorage compat). |
 | 32 | 2026-05-23 | `FlowerGrid.tsx` — SVG flower grid; replaced `HoneycombGrid`. |
 | 31 | 2026-05-22 | Platform rebrand: Spelling Bee→Leksokipos, Wordle GR→Leksiarxeio, Connections→Leksindeseis; Greek rank names; routes/components renamed. |
-| 30 | 2026-05-22 | Connections leaderboard: `POST/GET /api/connections-scores`, hook, modal, board extracted. |
-| 29 | 2026-05-22 | `postScore` + `upsertAndClean` shared libs; submission hook refactor. |
-| 28 | 2026-05-22 | `useRoundPersistence` replaces 3 per-game persistence patterns. |
-| 27 | 2026-05-22 | `CONTEXT.md` created; `Puzzle`→`SpellingBeePuzzle`; `getPrebuiltPuzzleByLetters`. |
-| 26 | 2026-05-21 | `flex-1 aspect-square` tiles + per-length `max-w-*`; `WordleHeader` extracted; 🏆 in header. |
-| 25 | 2026-05-21 | Vercel Fluid CPU mitigations: `validWordsCache`, ISR `revalidate=3600`, Edge runtime on all API routes. |
-| 24 | 2026-05-20 | `isDailyPuzzle` + `isISODate` single-source; replaced 4 inline regexes. |
-| 23 | 2026-05-20 | `useScoreSubmission` + submission hook; `useLeaderboard` `buildUrl` param. |
-| 22 | 2026-05-20 | Spelling Bee Give-Up: confirm → locked game → missed words revealed; `givenUp` persisted. |
+| 22–30 | 2026-05-20/22 | Shared-lib consolidation era: `postScore`+`upsertAndClean`, `useRoundPersistence` (replaced 3 per-game patterns), `useScoreSubmission`+`useLeaderboard` `buildUrl`, `isDailyPuzzle`/`isISODate` single-source. Connections leaderboard (`/api/connections-scores`). Vercel Fluid CPU mitigations: `validWordsCache`, ISR `revalidate=3600`, Edge runtime on all API routes. `CONTEXT.md` created. Spelling Bee Give-Up flow. Wordle tile sizing + `WordleHeader`. |
 | 1–21 | 2026-05-12–19 | Foundation (shell, routing, persistence, types) · Leksiarxeio · Theming · Leksindeseis · Greeklish URLs · quality filter · suggestions · per-puzzle leaderboard + 7-day strip · mobile · no-accent invariant · `maxScore` cap. |

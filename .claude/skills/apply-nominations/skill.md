@@ -25,13 +25,16 @@ ADR 0015.
 |---|---|---|
 | **`src/data/words-el.json`** | the script | master dictionary — all accepted add/remove |
 | **`src/data/leksiarxeio/words-{N}.json`** | `leksiarxeio` adapter | guess lists for lengths in `LEKSIARXEIO.LENGTHS` (4–8) |
+| **`src/data/leksiarxeio/words-{2,3}.json`** | `vrestifrasi` adapter | Vres Tin Frasi's short-word guess pool (`VRESTIFRASI.SHORT_WORD_LENGTHS`). Same directory and format as the 4–8 lists, but Leksiarxeio is never played below 4 — these exist only to validate the short function words its phrases use |
 | **`src/data/leksokipos/puzzles-el.json`** | `leksokipos` adapter | each puzzle's embedded `validWords`, so removed words stop scoring and added words start |
 | **`src/data/leksoplegma/puzzles-el.json`** | `leksoplegma` adapter | each board's `bonusWords` (added only when the board can trace them) |
 | **`src/data/leksodromia/anagramAlternates.json`** | `leksodromia` adapter | anagram credit for the curated answer pools |
 
 **Never touched:** `src/data/leksiarxeio/answers-{N}.json` (curated answer pools),
-Leksoplegma `paths` (curated grid geometry), and Vres Tin Frasi's phrases (not
-dictionary-derived — a deliberate registry omission).
+Leksoplegma `paths` (curated grid geometry), and Vres Tin Frasi's
+`phrases-el.json` (authored content, not dictionary-derived — a deliberate
+registry omission). Note the distinction: Vres Tin Frasi's *phrases* are out of
+scope, but its *guess pools* are re-synced by the `vrestifrasi` adapter.
 
 ### Warnings — the things re-sync refuses to auto-fix
 
@@ -67,8 +70,10 @@ After the DB nominations are applied, the accepted **adds** are used as seeds to
 
 ## Word routing (for reference)
 
-- `len ≤ 3` → `src/data/words-el.json` only
-- `len 4–8` → `src/data/words-el.json` **and** `src/data/leksiarxeio/words-{N}.json`
+- `len 1` → `src/data/words-el.json` only (no pool covers single letters)
+- `len 2–3` → `src/data/words-el.json` **and** `src/data/leksiarxeio/words-{N}.json` (Vres Tin Frasi's short pool)
+- `len 4–8` → `src/data/words-el.json` **and** `src/data/leksiarxeio/words-{N}.json` (Leksiarxeio's guess lists)
+- `len > 8` → `src/data/words-el.json` only
 - `direction: remove` → cascades to all files the word appears in
 
 ## Pre-requisites

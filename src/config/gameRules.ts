@@ -28,6 +28,14 @@ export const LEKSIARXEIO = {
 
 export const VRESTIFRASI = {
   MAX_GUESSES: 6,
+  // Guess-word pool lengths this game owns. A phrase guess is validated word by
+  // word against pools covering 2–8 letters: 4–8 are Leksiarxeio's guess lists
+  // (LEKSIARXEIO.LENGTHS), reused read-only, while these two exist only for Vres
+  // Tin Frasi — its phrases are full of short function words (δες, πες, ντε,
+  // βρε) that Leksiarxeio is never played at. Must stay DISJOINT from
+  // LEKSIARXEIO.LENGTHS: each length has exactly one owning re-sync adapter
+  // (ADR 0015), and resyncVrestifrasi.test.ts pins that.
+  SHORT_WORD_LENGTHS: [2, 3] as const,
 } as const;
 
 export const LEKSINDESEIS = {
