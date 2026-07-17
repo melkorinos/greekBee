@@ -50,10 +50,11 @@ Ship a polished multi-game Greek word game platform where all seven games — Le
 
 No single active epic. Recent sessions have been architecture reviews, a DB-schema review, and the Leksokipos soft cap. Standing priorities / open threads:
 
-1. **Ship dev → main** — Leksodromia + Leksoplegma are the two games about to land on `main`. Manual browser play-through required before merge.
-2. **Open tracker issues** — `02` disaster-recovery backups (no PITR, shared dev/prod project — automate an off-site dump + decide the DB split), `03` unit tests never run in CI, `04` Stavrolekso edit PIN readable by anon (ready-for-agent), `05` words-2/3.json missed by the nomination re-sync.
-3. **E2E coverage** — Playwright is now wired (`npm run test:e2e`); grow happy-path coverage per game.
-4. **Leksindeseis static-fallback supply** — thin `puzzles-connections.json` pool, no reminder system (see `reflections.md`).
+1. **Ship dev → main** — Leksodromia + Leksoplegma are the two games about to land on `main`. Manual browser play-through required before merge. Sessions 102–104 also shipped small deliberate visual shifts to eyeball in that play-through: leksindeseis/stavrolekso page rhythm (canonical frame), stavrolekso maker CTAs (`py-3`→`py-2`/`text-sm`), NominationModal blocked/accepted banner hues (rose→red, emerald→green).
+2. **UI redesign (queued, next big epic)** — the seams are ready (sessions 102–104; ADR 0008/0009 extensions): the whole redesign surface is `globals.css` + `recipes.ts` + `Modal.tsx` + `GamePageShell`/`GameHeader` + `GameLeaderboardModal`. Open decisions to make *during* the redesign: full-bleed vs padded game headers (Leksokipos keeps a bespoke full-bleed wrapper until then), real accent colours for stavrolekso/leksikastirio (current sky/indigo rows are placeholders), and whether to tokenise `FeedbackBanner` + drop its `theme` prop (visible change to Leksiarxeio's banner — see ADR 0008 exceptions).
+3. **Open tracker issues** — see `.claude/issue-tracker/issues/` for the current list (03/04/05/06/07/08 closed in sessions 96–101; 09/10 filed since).
+4. **E2E coverage** — Playwright is now wired (`npm run test:e2e`); grow happy-path coverage per game.
+5. **Leksindeseis static-fallback supply** — thin `puzzles-connections.json` pool, no reminder system (see `reflections.md`).
 
 ---
 

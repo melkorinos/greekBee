@@ -36,6 +36,14 @@ ADR 0002 considered CSS custom properties and rejected them as "a much larger re
 - "Change the brand colour / surface / font" becomes a one-file (often one-line) edit, by design.
 - During propagation, two styling idioms coexist (literal `dark:` pairs in not-yet-migrated games, tokens in migrated ones). Accepted as transitional; the per-game issue list tracks the remaining surface.
 
+## Extension (2026-07-17) — status, shape, and container tokens
+
+Pre-redesign seam work (sessions 102–104) grew the token set along the lines this ADR anticipated:
+
+- **Status tokens.** `warning` / `info` promoted from the exceptions list below to real token trios (base = strong banner text, `-surface` = pale fill, `-border` = hairline), and `danger` / `success` gained the same `-surface`/`-border` companions; `--info-strong` backs the solid info action fill (`btnInfo` recipe). All four NominationModal banners now carry zero `dark:` pairs. The blocked/accepted banners were rose/emerald and were normalised into the danger/success families per the "nearest token" rule — a small deliberate hue shift. `LetterPickerModal`'s hand-rolled brand yellow moved to `brand`/`accent` in the same sweep.
+- **Shape tokens.** `--radius-card` (1rem), `--radius-control` (0.75rem), `--shadow-card` (= `shadow-sm`) in `@theme` — recorded knobs, not a sweep: adopted only inside `Modal.tsx` and `recipes.ts`, with values that compile byte-identically to the classes they replaced. The static `cardShell` deliberately has no shadow (adding one would be a visible change); only `cardShellInteractive` uses `shadow-card`.
+- **Container token.** `--container-game: 24rem` → the `max-w-game` utility — the single knob for the platform content column (see ADR 0009's layout seam). Guarded by `noLiteralColumnWidth.test.ts`: shipped `.tsx` may not contain a literal `max-w-sm`, no allowlist.
+
 ## Documented exceptions (intentional non-token colours)
 
 A few colour sets are deliberately **not** tokens — they encode meaning as a fixed palette, not theme surfaces, so they stay constant (or self-contained) across light/dark:
@@ -43,7 +51,7 @@ A few colour sets are deliberately **not** tokens — they encode meaning as a f
 - **Leksindeseis difficulty colours** (amber/green/blue/purple, tiers 1–4) — a meaningful difficulty scale.
 - **Stavrolekso crossword grid** (`StavroleksoGrid`) — an intentional "paper" widget: cells stay light (white→stone-100) in *both* themes, with pale paper-tint highlights distinct from the solid feedback tokens.
 - **Selection highlights** (the blue "selected clue/cell" in the Stavrolekso maker/player).
-- **Status banners** — `amber` = warning, `sky` = info (e.g. NominationModal). These keep their own `dark:` variants by design; they are a small status palette, not brand surfaces. Candidates for future `warning`/`info` tokens if the need recurs.
+- ~~**Status banners**~~ — *resolved by the 2026-07-17 extension above: `warning`/`info` are tokens now.*
 - **Shell slide-out drawer** (`Shell`) — an intentionally always-dark nav panel (`zinc-*`) that stays dark in *both* themes; there is no "always-dark surface" token, and tokenising it would make it flip to light. Candidate for a `--drawer-*` token pair if a second always-dark surface appears.
 - **`FeedbackBanner`** — takes an explicit `theme` prop so each game forces its own banner appearance (Leksiarxeio dark, Leksindeseis light) independent of the app theme; the success/error tints have no surface-tint token equivalents. Tokenising it is a design change (drop the prop + add `success`/`error` surface tokens), not a literal swap — deferred.
 - **`FlowerGridPlayground`** — a dev-only design tool (not shipped UI); its chart-style fixed colours are out of scope for the token system.
