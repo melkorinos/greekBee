@@ -14,6 +14,7 @@ import {
   validateStavroleksoData,
 } from "@/games/stavrolekso/lib";
 import type { Direction, SlotDef } from "@/games/stavrolekso/types";
+import { btnModalSubmit, btnPrimaryCompact } from "@/styles/recipes";
 
 type Phase = 1 | 2 | 3;
 type GridSize = 9 | 13 | 15;
@@ -84,7 +85,7 @@ function ResumeForm({ onLoaded }: {
       <button
         disabled={!puzzleId.trim() || !pin || loading}
         onClick={handleResume}
-        className="w-full py-2 rounded-lg bg-inverted text-inverted-foreground text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition-colors"
+        className={`w-full ${btnModalSubmit}`}
       >
         {loading ? "Φόρτωση…" : "Φόρτωσε"}
       </button>
@@ -508,7 +509,7 @@ export default function StavroleksoMakerPage() {
 
           <button
             onClick={() => setPhase(2)}
-            className="w-full py-3 rounded-xl bg-inverted text-inverted-foreground font-semibold disabled:opacity-40 hover:opacity-90 transition-colors"
+            className={`w-full ${btnModalSubmit}`}
           >
             Δημιούργησε πλέγμα →
           </button>
@@ -540,7 +541,7 @@ export default function StavroleksoMakerPage() {
                 const first = slots[0];
                 if (first) setSelectedSlot({ number: first.number, direction: first.direction });
               }}
-                className="text-xs px-3 py-1.5 rounded-lg bg-inverted text-inverted-foreground font-semibold hover:opacity-90 transition-colors">
+                className={btnPrimaryCompact}>
                 Λέξεις →
               </button>
             )}
@@ -661,7 +662,7 @@ export default function StavroleksoMakerPage() {
             <button
               disabled={submitting}
               onClick={handleSubmit}
-              className="w-full py-3 rounded-xl bg-inverted text-inverted-foreground font-semibold disabled:opacity-40 hover:opacity-90 transition-colors"
+              className={`w-full ${btnModalSubmit}`}
             >
               {submitting ? "Αποστολή…" : resumeId !== null ? "Ενημέρωσε παζλ" : "Υποβολή παζλ"}
             </button>

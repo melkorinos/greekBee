@@ -65,9 +65,11 @@ export const btnPrimaryCompact =
 export const btnCancel =
   "flex-1 py-2 rounded-xl border border-border text-muted text-sm font-medium hover:bg-surface-raised active:bg-border transition-colors";
 
-/** Full-width modal submit button */
+/** Primary modal submit button — solid inverted fill. Owns colour/typography/
+ * radius/padding only; the call site adds layout (flex-1 when paired with
+ * btnCancel in a row, w-full when standalone). */
 export const btnModalSubmit =
-  "flex-1 py-2 rounded-xl bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity";
+  "py-2 rounded-xl bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity";
 
 /** Standalone (auto-width) primary modal button — e.g. the "Κλείσιμο" button in a
  * success state. Unlike btnModalSubmit it isn't flex-1; add layout margin at the
@@ -89,6 +91,26 @@ export const btnApprove =
 /** Reject / destructive action fill — solid danger red, white text. */
 export const btnReject =
   "bg-danger text-white hover:opacity-90 disabled:opacity-50 transition-opacity";
+
+// ── Tooltip ───────────────────────────────────────────────────────────────────
+
+/** Hover tooltip bubble that hangs below its trigger. The trigger must be a
+ * `group` (opacity flips on `group-hover`). Owns the whole bubble — position it
+ * with the trigger, not with layout overrides here. */
+export const tooltipBubble =
+  "pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-inverted px-2.5 py-1 text-xs text-inverted-foreground opacity-0 group-hover:opacity-100 transition-opacity z-10";
+
+// ── Card shell ────────────────────────────────────────────────────────────────
+// The platform card: rounded panel, hairline border, surface fill. Call sites
+// add their own overflow-hidden / layout / padding.
+
+/** Static card shell — panels that don't react to hover (profile sections). */
+export const cardShell =
+  "rounded-2xl border border-border bg-surface";
+
+/** Interactive card shell — clickable cards that lift on hover (home GameCard). */
+export const cardShellInteractive =
+  "rounded-2xl border border-border bg-surface shadow-sm hover:shadow-md transition-all";
 
 // ── Leaderboard table ─────────────────────────────────────────────────────────
 

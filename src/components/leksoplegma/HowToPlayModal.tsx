@@ -6,6 +6,7 @@
 
 import { Modal } from "@/components/shared/Modal";
 import { LEKSOPLEGMA } from "@/config/gameRules";
+import { btnModalSubmit } from "@/styles/recipes";
 
 interface Props {
   isOpen:  boolean;
@@ -62,7 +63,7 @@ export function HowToPlayModal({ isOpen, onClose }: Props) {
 
       <button
         onClick={onClose}
-        className="mt-5 w-full py-2.5 rounded-xl bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
+        className={`mt-5 w-full ${btnModalSubmit}`}
       >
         Κατάλαβα!
       </button>

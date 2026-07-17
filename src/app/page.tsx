@@ -13,7 +13,7 @@ import { PLATFORM_NAME } from "@/config/platform";
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
 import { HomeTrophyButton } from "@/components/shared/HomeTrophyButton";
 import { SubmitPuzzleButton } from "@/components/shared/SubmitPuzzleButton";
-import { btnHeaderIcon, btnHeaderIconSize } from "@/styles/recipes";
+import { btnHeaderIcon, btnHeaderIconSize, cardShellInteractive } from "@/styles/recipes";
 import Link from "next/link";
 
 function StavroleksoMakerButton() {
@@ -150,7 +150,7 @@ function submitButtonFor(id: (typeof GAMES)[number]["id"]): React.ReactNode {
 
 function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submitButton?: React.ReactNode }) {
   return (
-    <li className="flex items-stretch rounded-2xl bg-surface border border-border shadow-sm hover:shadow-md hover:border-border transition-all overflow-hidden">
+    <li className={`flex items-stretch ${cardShellInteractive} overflow-hidden`}>
       <Link href={game.href} className="flex-1 flex items-start gap-4 p-5">
         <span className="text-3xl mt-0.5">{game.emoji}</span>
         <div>

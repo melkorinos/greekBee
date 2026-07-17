@@ -143,7 +143,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
               onClick={handleSubmit}
               disabled={status === "submitting" || !message.trim()}
               data-testid="feedback-modal-submit"
-              className={btnModalSubmit}
+              className={`flex-1 ${btnModalSubmit}`}
             >
               {status === "submitting" ? "…" : "Αποστολή"}
             </button>

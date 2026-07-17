@@ -8,7 +8,7 @@ import { GameHeader } from "@/components/shared/GameHeader";
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
 import { markSuggested } from "@/hooks/suggestions";
 import { LEKSIARXEIO } from "@/config/gameRules";
-import { btnApprove, btnReject } from "@/styles/recipes";
+import { btnApprove, btnPrimary, btnReject } from "@/styles/recipes";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -430,7 +430,7 @@ function LeksikastiríoClient() {
           <button
             onClick={() => setModalOpen(true)}
             data-testid="open-nomination-modal"
-            className="px-4 py-2 rounded-full bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 transition-colors"
+            className={btnPrimary}
           >
             {nominationTabCopy[activeTab].buttonLabel}
           </button>

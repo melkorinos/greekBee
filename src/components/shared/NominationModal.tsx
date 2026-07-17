@@ -405,7 +405,7 @@ export function NominationModal({
                   pendingHit
                 }
                 data-testid="nomination-modal-submit"
-                className={btnModalSubmit}
+                className={`flex-1 ${btnModalSubmit}`}
               >
                 {status === "submitting" ? "…" : "Αποστολή"}
               </button>

@@ -24,6 +24,10 @@ import {
   // Status action buttons
   btnApprove,
   btnReject,
+  // Tooltip + card shells
+  tooltipBubble,
+  cardShell,
+  cardShellInteractive,
   // Inputs
   inputClass,
   inputCompactClass,
@@ -61,6 +65,9 @@ const ALL_TOKENS: [string, string][] = [
   [btnHeaderIcon, "btnHeaderIcon"],
   [btnApprove, "btnApprove"],
   [btnReject, "btnReject"],
+  [tooltipBubble, "tooltipBubble"],
+  [cardShell, "cardShell"],
+  [cardShellInteractive, "cardShellInteractive"],
   [lbRowBase, "lbRowBase"],
   [lbRowPlayer, "lbRowPlayer"],
   [lbTdRank, "lbTdRank"],
@@ -105,6 +112,25 @@ describe("recipes.ts — visual design contracts", () => {
     it("btnPrimary", () => expect(btnPrimary).toContain("transition-opacity"));
     it("btnCancel", () => expect(btnCancel).toContain("transition-colors"));
     it("btnModalSubmit", () => expect(btnModalSubmit).toContain("transition-opacity"));
+  });
+
+  describe("tooltip bubble", () => {
+    it("uses the inverted fill token", () => expect(tooltipBubble).toContain("bg-inverted"));
+    it("reveals on group-hover", () => expect(tooltipBubble).toContain("group-hover:opacity-100"));
+    it("is absolutely positioned", () => expect(tooltipBubble).toContain("absolute"));
+  });
+
+  describe("card shells", () => {
+    it("cardShell is a rounded surface panel", () => {
+      expect(cardShell).toContain("rounded-2xl");
+      expect(cardShell).toContain("border-border");
+      expect(cardShell).toContain("bg-surface");
+    });
+    it("cardShellInteractive lifts on hover", () => {
+      expect(cardShellInteractive).toContain("bg-surface");
+      expect(cardShellInteractive).toContain("hover:shadow-md");
+      expect(cardShellInteractive).toContain("transition-all");
+    });
   });
 
   describe("leaderboard player row is visually distinct", () => {

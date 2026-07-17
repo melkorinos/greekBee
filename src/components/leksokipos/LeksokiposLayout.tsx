@@ -7,7 +7,7 @@ import { GameHeader } from "@/components/shared/GameHeader";
 import { HowToPlayModal } from "./HowToPlayModal";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { ShareButton } from "./ShareButton";
-import { btnHeaderIcon, btnHeaderIconSize } from "@/styles/recipes";
+import { btnHeaderIcon, btnHeaderIconSize, tooltipBubble } from "@/styles/recipes";
 
 // ── Variant preference store ──────────────────────────────────────────────────
 // Module-level pub/sub so useSyncExternalStore can subscribe without effects.
@@ -50,7 +50,7 @@ function VariantToggleButton({
       >
         {variant === "pie" ? "🌸" : "🥧"}
       </button>
-      <div className="pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-inverted px-2.5 py-1 text-xs text-inverted-foreground opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      <div className={tooltipBubble}>
         {nextLabel}
       </div>
     </div>

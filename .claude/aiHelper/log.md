@@ -5,6 +5,15 @@
 
 ---
 
+## Session 103 — 2026-07-17: the recipe leaks are closed — inverted buttons, the tooltip, and the card shell (handoff 02)
+
+**The seam:** `recipes.ts` exists so a button-outline redesign is a one-file edit, but ~9 primary buttons re-typed the `bg-inverted …` strings inline, one tooltip bubble was pasted byte-identical in 4 files, and the platform card was a de-facto recipe that wasn't one. All three now route through `recipes.ts`.
+
+- **Inverted buttons → recipes.** `btnModalSubmit` lost its baked-in `flex-1` (the recipe now owns colour/typography/radius/padding only; the 5 side-by-side modal submits add `flex-1` at the call site). The 3 full-width HowToPlay closes → `` `mt-5 w-full ${btnModalSubmit}` ``; the 3 success-state closes → `` `mt-5 ${btnModalPrimary}` ``. Stavrolekso maker: the 3 full-width submit/save → `` `w-full ${btnModalSubmit}` `` (normalises `py-3`/`rounded-lg`/`transition-colors` to the recipe), the compact phase-nav pill → `btnPrimaryCompact`. Leksikastirio's nominate button → `btnPrimary` (px-4→px-8 normalised). **Left alone:** the 4 selection-state toggles (stavrolekso:488, ConnectionsBoard, WordCard, LetterPickerModal) — inverted-as-selected, not buttons.
+- **`tooltipBubble`** — one export replaces the pasted string at HeaderIconButton + the 3 leksokipos buttons (Layout, NewPuzzleButton, ShareButton).
+- **`cardShell` / `cardShellInteractive`** — static panel + hover-lift variant. Home `GameCard` → interactive (dropped a redundant `hover:border-border`); the 4 profile sections (incl. skeleton) → static. `GameBoard`'s `bg-surface-raised` gameplay surface left as-is per handoff.
+- **Locked:** `recipes.test.ts` gains non-empty + token contracts for all three new exports. Greps clean: `bg-inverted` outside recipes/selection-states = 0, the tooltip string = 0, the card string = 0. Verified `npm run test -- --run` / `npx eslint .` / `npm run build` all green. **Docs deliberately not written** (per handoff): recipes.ts section list in ADR 0009, memory.md Theming row left for the operator's doc session.
+
 ## Session 102 — 2026-07-17: the game-page frame is now two shared components + one token (handoff 01)
 
 **The seam:** restyling any game page's frame meant a multi-file sweep — the title row was copy-pasted in 9 files, the `<main>` wrapper existed in 4 divergent idioms, and `max-w-sm` (the platform column width) was a magic literal at ~45 sites. Now the frame is `GamePageShell` + `GameHeader` + `max-w-game`, so "restyle every game page" is a two-file edit.
@@ -17,11 +26,7 @@
 
 ## Session 101 — 2026-07-17: the nominations dedup backstops are now checked against the live DB (issue 08)
 
-**The gap (same shape as the score/state/community blocks):** the two dedup DB objects from migration `20260716120200` — `nomination_votes_nomination_device_unique` UNIQUE (nomination_id, device_id) and `nominations_pending_word_direction_key` UNIQUE (word, direction) WHERE status='pending' — were only ever "tested" by unit tests that *inject* `code: "23505"` into a mocked Supabase. That proves the route branches on a violation, not that a violation occurs. Drop either object and the whole mocked suite stays green while duplicates return silently.
-
-- **A new live-DB block in `rlsInvariantsLiveDb.test.ts`** (service role throughout — RLS is not under test; a unique index binds every role, so bypassing RLS isolates the constraint as the only thing that can fail). Asserts: a second PENDING (word, direction) is rejected with `23505`; the same word in the *other* direction is allowed (the index keys on the pair); accepted/rejected duplicates coexist and pending-alongside-rejected-history still allows exactly one new pending — **the partial `WHERE status='pending'` predicate**, which is what keeps re-proposing a rejected word a feature; and the vote pair: one device twice on one nomination is `23505`, but one device across two nominations and two devices on one nomination both pass.
-- **Sentinel word is `normalizeLetters("__RLS_TEST_ΛΈΞΗΣ__")` = `__rls_test_λεξησ__`** — normalised the same way `route.ts` stores every word, because the index is built on the stored form; a raw sentinel would exercise a different key. Devices carry a `__rls_` prefix. `wipeSentinelRows` clears both tables (votes first — FK) before/after the run and before each test.
-- **Verified beyond the run:** confirmed read-only (Supabase MCP) that zero sentinel rows survive across all eight tables the whole live suite touches; `tsc --noEmit`, eslint, `npm run build`, and the full vitest run are all green with the block executing (not skipped) against the real DB.
+The two dedup objects from migration `20260716120200` (`nomination_votes` UNIQUE (nomination_id, device_id); `nominations` UNIQUE (word, direction) WHERE status='pending') were only "tested" by unit tests that *inject* `23505` into a mocked Supabase — proving the route branches, not that a violation occurs. New live-DB block in `rlsInvariantsLiveDb.test.ts` (service role throughout; a unique index binds every role, so bypassing RLS isolates the constraint) asserts: a second PENDING (word, direction) → `23505`, the other direction allowed, the partial `WHERE status='pending'` lets a rejected word be re-proposed exactly once, and the vote pair (same device twice on one nomination fails; across two nominations / two devices pass). Sentinel word is `normalizeLetters("__RLS_TEST_ΛΈΞΗΣ__")` (the stored form the index is built on); `wipeSentinelRows` clears both tables (votes first — FK) around the run. Verified read-only that zero sentinels survive; tsc/eslint/build/vitest all green with the block executing against the real DB.
 
 ## Session 100 — 2026-07-17: vitest+eslint+tsc now run in CI, and the live-DB suites run *at all* (issue 03)
 
