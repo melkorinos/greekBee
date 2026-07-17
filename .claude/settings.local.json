@@ -1,6 +1,12 @@
 {
   "permissions": {
-    "deny": [],
+    "deny": [
+      "Bash(git push)",
+      "Bash(git push:*)",
+      "PowerShell(git push)",
+      "PowerShell(git push*)",
+      "mcp__claude_ai_Vercel__deploy_to_vercel"
+    ],
     "allow": [
       "Edit",
       "Write",
