@@ -52,13 +52,23 @@ All commands live in `.claude/skills/`. Project-specific first, then mattpocock/
 | `/setup-matt-pocock-skills` | One-time setup: issue tracker, triage labels, domain doc layout |
 | `/writing-great-skills` | Reference for writing/editing skills well (formerly `/write-a-skill`) |
 | `/project-mcp` | Canonical Supabase & Vercel MCP IDs, call recipes, and param-traps — load before any Supabase/Vercel MCP call to skip discovery thrash |
+| `/wayfinder` | Map a body of work too large for one session as decision tickets on the issue tracker, resolved one at a time |
+| `/code-review` | mattpocock's review pass. **Shadows the Claude Code built-in of the same name** — see the note below |
+| `/research` | Investigate a question against primary sources; captures findings as a Markdown file in the repo |
+| `/prototype` | Throwaway prototype to answer a design question (state model or UI shape) before committing to it |
 
 **This table is the whole list.** Pruned to it on 2026-07-16 (42 skill folders → 14). The only things in `.claude/skills/` beyond the table are three **base skills** with no slash command of their own, kept solely because the wrappers above are empty without them:
 
 - `grilling` + `domain-modeling` — backing `/grill-with-docs`
 - `codebase-design` — architecture vocabulary for `/improve-codebase-architecture` (which also runs `grilling` + `domain-modeling`)
 
-Do not install a mattpocock skill just because it exists upstream — add one only when a real task needs it. Note that `/code-review` is a **Claude Code built-in**; upstream ships a `code-review` skill of the same name that shadows it. Don't reinstall it. Ditto `research`/`prototype`, which overlap the built-in `/verify` and `/simplify`. Upstream dropped `caveman` and `zoom-out` with no replacement (removed here, 2026-07-14).
+Do not install a mattpocock skill just because it exists upstream — add one only when a real task needs it. Upstream dropped `caveman` and `zoom-out` with no replacement (removed here, 2026-07-14).
+
+**`/code-review` now resolves to the mattpocock skill, not the built-in** (installed 2026-07-17, deliberately reversing the earlier "don't reinstall it" rule). The cost is that the built-in `/code-review` is unreachable while the skill is installed — including **`/code-review ultra`**, the multi-agent cloud review. To get the built-in back, delete `code-review` from **both** `.claude/skills/` and `.agents/skills/` and drop it from `skills-lock.json`.
+
+**`/research` and `/prototype` overlap the built-in `/verify` and `/simplify`** but do not collide by name, so all four are reachable. Installed 2026-07-17 alongside `/wayfinder` by explicit request.
+
+**These four are junctions, not copies.** `npx skills` now links `.claude/skills/<name>` → `.agents/skills/<name>` rather than copying (the older skills above are real directories). Git follows the junction and commits the real files, so the "everything in `.claude/skills/` is committed" rule still holds — but editing either path edits the same file, so a local fork of one of these cannot be protected the way `grilling` and `to-tickets` are.
 
 ## Agent skills
 
