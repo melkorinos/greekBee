@@ -36,6 +36,9 @@ interface StandardScorePayload {
   display_name: string;
   score:        number;
   is_perfect?:  boolean;
+  // Optional per-game metadata (e.g. Leksokipos { words, pangrams }) stored in the
+  // row's jsonb. Counts only — never the word list (game_scores is public-read).
+  data?:        Record<string, number>;
 }
 
 interface LeksiarxeioScorePayload {
@@ -48,6 +51,15 @@ interface LeksiarxeioScorePayload {
 }
 
 type ScorePayload = StandardScorePayload | LeksiarxeioScorePayload;
+
+// The optional `data` blob is client-supplied and lands in a public-read jsonb, so
+// only accept a flat object whose values are all finite numbers (word/pangram counts).
+// Anything else — nested objects, strings, an attempt to smuggle the word list — is dropped.
+export function isCountRecord(data: unknown): data is Record<string, number> {
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return false;
+  const values = Object.values(data);
+  return values.length > 0 && values.every((v) => typeof v === "number" && Number.isFinite(v));
+}
 
 export async function POST(req: NextRequest) {
   const parsed = await parseJson<ScorePayload>(req);
@@ -103,13 +115,14 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Standard games ──────────────────────────────────────────────────────────
-  const { score, is_perfect } = body as StandardScorePayload;
+  const { score, is_perfect, data } = body as StandardScorePayload;
   if (typeof score !== "number") {
     return jsonMessage("Missing required fields");
   }
 
   const row: Insert<"game_scores"> = { game_id, puzzle_date, device_id, display_name: name, score };
   if (is_perfect === true) row.is_perfect = true;
+  if (isCountRecord(data)) row.data = data;
 
   const err = await upsertAndClean(
     "game_scores",

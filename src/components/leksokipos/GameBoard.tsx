@@ -113,8 +113,15 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
     isPerfect,
   });
 
+  // Per-score metadata for fairness analysis: how many words / pangrams this score
+  // represents. Counts only — the word list never leaves the client (issue 10).
+  const scoreData = useMemo(
+    () => ({ words: foundWords.length, pangrams: foundPangrams.length }),
+    [foundWords.length, foundPangrams.length],
+  );
+
   // Auto-post whenever the score increases.
-  useEffect(() => { postScore(score); }, [score, postScore]);
+  useEffect(() => { postScore(score, scoreData); }, [score, scoreData, postScore]);
 
   // Detect + post earned achievements as the game state crosses their thresholds,
   // and surface each genuinely-new badge as an in-game unlock toast.
@@ -137,7 +144,7 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
   const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } = useProfile({
     deviceId,
     onDeviceIdChange:    setDeviceIdState,
-    onDisplayNameChange: (name) => { setDisplayNameState(name); postScoreWithName(score, name); },
+    onDisplayNameChange: (name) => { setDisplayNameState(name); postScoreWithName(score, name, scoreData); },
   });
 
   // Cross-device sync — pushes state on every valid word, daily puzzles only.

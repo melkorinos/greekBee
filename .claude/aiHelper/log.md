@@ -5,6 +5,10 @@
 
 ---
 
+## Session 106 — 2026-07-17: fixed the 28 zero-pangram Leksokipos boards (issue 09)
+
+Root cause: `batch-generate.ts` enforces a pangram at creation, but the ADR-0015 re-sync (`scripts/lib/resync/leksokipos.ts`) drops words removed by accepted Nominations from each board's `validWords` — and had silently stripped 28 boards of their only pangram. Confirmed dead: for all 28 letter sets the *current* dictionary has no pangram at all, so they can't be salvaged by re-adding a word — the letter set itself has to change. Fix (3 parts): (1) regenerated the **26 future** boards in place (same id/date, fresh random 7-letter set with a real pangram, min-50 words, no dup set) via a one-off scratchpad script; left the **2 already-played** boards (2026-06-20, 06-30) untouched by decision. (2) new drift-guard test `everyPuzzleHasPangram.test.ts` — every board has ≥1 pangram, the two legacy dates the only allowlisted exceptions (and it asserts they stay exactly those two). (3) hardened the re-sync adapter to emit a `warnings[]` entry when a removal strips a board's last pangram (was previously "every edit auto-fixable"); resync test updated. Regenerated `puzzles-index-el.json`. Deleted the issue file. Tests/eslint/build all green. Follow-up issue 10 (word-count on score posts) left open.
+
 ## Session 105 — 2026-07-17: redesign-prep doc session (closes the 01/02/03 handoff chain)
 
 Docs-only. ADR 0008 gained an "Extension (2026-07-17)" section (status trios, shape tokens, `--container-game`; status banners struck from the exceptions list); ADR 0009 gained the layout-seam extension (GamePageShell/GameHeader, recipe completion, 8/8 accent map, the Leksokipos full-bleed exception, the five-file redesign surface). memory.md Theming row + coverage map (`noLiteralColumnWidth`), CLAUDE.md styling rule (frame components + `max-w-game`), goals.md Current Focus (redesign queued, its 3 open decisions, the pre-merge eyeball list) all updated. Deleted the superseded `ui-redesign-readiness.html` audit (artifact URL stays live). Open question parked in goals: FeedbackBanner tokenization. No code touched — gates not re-run.

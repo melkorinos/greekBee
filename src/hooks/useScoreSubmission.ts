@@ -10,6 +10,9 @@
 //   - fetch URL + JSON field names
 //   - error silencing — score posting must never crash the game
 //   - no-op when disabled or deviceId unknown
+//
+// submit/submitWithName take an optional `data` record (counts only) that rides along
+// into the row's jsonb — e.g. Leksokipos posts { words, pangrams } for fairness analysis.
 
 import { useCallback, useEffect, useRef } from "react";
 
@@ -50,7 +53,7 @@ export function useScoreSubmission({
   // ── Leksokipos + Leksindeseis ──────────────────────────────────────────────
 
   const submit = useCallback(
-    (score: number) => {
+    (score: number, data?: Record<string, number>) => {
       if (!enabled || !deviceId) return;
       if (score <= 0 || score <= lastPostedRef.current) return;
       lastPostedRef.current = score;
@@ -62,6 +65,7 @@ export function useScoreSubmission({
         display_name: sanitizeDisplayName(displayNameRef.current),
       };
       if (isPerfectRef.current) body.is_perfect = true;
+      if (data) body.data = data;
       postScore("/api/game-scores", body);
     },
     [enabled, gameId, puzzleDate, deviceId],
@@ -69,7 +73,7 @@ export function useScoreSubmission({
 
   /** Force-post with a new name, bypassing the strictly-increasing guard. */
   const submitWithName = useCallback(
-    (score: number, name: string) => {
+    (score: number, name: string, data?: Record<string, number>) => {
       if (!enabled || !deviceId || score <= 0) return;
       const body: Record<string, unknown> = {
         game_id:      gameId,
@@ -79,6 +83,7 @@ export function useScoreSubmission({
         display_name: sanitizeDisplayName(name),
       };
       if (isPerfectRef.current) body.is_perfect = true;
+      if (data) body.data = data;
       postScore("/api/game-scores", body);
     },
     [enabled, gameId, puzzleDate, deviceId],
