@@ -7,7 +7,18 @@ Status: ready-for-agent
 - Ticket's shape confirmed as-is: apply-time re-check via `isBlockedWord`, hit = loud failure that
   stops the run (no silent skip), `--dry` reports identically.
 - Heads-up from issue 06's triage: the 14 month names stay in both files as a deferred allowlist,
-  so the apply-time check must use the same allowlist (or run after 06 lands) to avoid false stops.
+  so the apply-time check must use the same allowlist to avoid false stops.
+
+**Issue 06 has LANDED (session 97).** The allowlist is real and importable — do not re-derive it:
+
+```ts
+import { DEFERRED_BLOCKLIST_DICTIONARY_OVERLAP, isBlockedWord } from "@/lib/nominationBlocklist";
+```
+
+The 14 month names are in BOTH `nominations-blocklist.json` and `words-el.json` on purpose, so a
+naive `isBlockedWord` filter at apply-time would loudly stop a run over a word that is deliberately
+in both. Exempt the allowlist from the loud failure. Note `ατλασ`/`ορκα` are no longer blocklisted
+(removed as false positives in 06), so they are nominatable and must pass the check.
 
 ## The one-sentence version
 
@@ -36,9 +47,10 @@ makes it mutable between propose and apply.
 3. Someone adds that word to the blocklist (a name/place slips through, gets reported, gets listed).
 4. `npm run apply-nominations` runs and writes it into `words-el.json` anyway.
 
-Nothing detects this. The word is now in the dictionary *and* on the blocklist — which is
-[issue 06](06-blocklist-dictionary-overlap-unguarded.md)'s exact broken state, arrived at
-automatically rather than by hand.
+Nothing detects this. The word is now in the dictionary *and* on the blocklist — which is issue 06's
+exact broken state (resolved in session 97; see `.claude/aiHelper/log.md`), arrived at automatically
+rather than by hand. Note 06's guard test now catches this state *after the fact* — but only on the
+next test run, and only after the bad data is committed. This ticket closes the door instead.
 
 ## Severity
 

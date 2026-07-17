@@ -163,7 +163,7 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `gameScoresRoute.test.ts` | `POST/GET /api/game-scores` — validation, locale-suffix strip, Leksiarxeio read-modify-write |
 | `gameStateRoute.test.ts` | `POST/GET /api/game-state` |
 | `lifetimeStats.test.ts` | `aggregateLifetimeStats` |
-| `nominationBlocklist.test.ts` | `isBlockedWord` (16,947-entry proper-noun blocklist) |
+| `nominationBlocklist.test.ts` | `isBlockedWord` (proper-noun blocklist) **+ the disjointness guard**: `blocklist ∩ words-el.json` must equal `DEFERRED_BLOCKLIST_DICTIONARY_OVERLAP` (the 14 month names) exactly, and that allowlist may only shrink (pinned vs a frozen ceiling) |
 | `nominationsRoute.test.ts` | Nominations GET/POST (422 blocked_word, 409 already_pending)/lookup/vote/review (header auth) |
 | `noRawPaletteClasses.test.ts` / `noRawActionButtonColors.test.ts` | ADR 0008 guards — no literal neutral palette / no hand-rolled green-red action fills |
 | `performance.test.ts` | Hotpath timing budgets — computeValidWords, buildCustomPuzzle cache, prebuilt scan |
