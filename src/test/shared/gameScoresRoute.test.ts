@@ -30,6 +30,7 @@ function makeChain(result: ChainResult) {
 }
 
 vi.mock("@/lib/supabase", () => ({
+  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
   getSupabaseClient: () => ({
     from: () => {
       const result = _callQueue.shift() ?? { data: null, error: null, count: null };
@@ -76,7 +77,7 @@ describe("POST /api/game-scores — validation", () => {
     const res = await POST(req);
     expect(res.status).toBe(400);
     const json = await res.json() as { error: string };
-    expect(json.error).toMatch(/Invalid JSON/i);
+    expect(json.error).toBe("invalid_json");
   });
 
   it("returns 400 when game_id is missing", async () => {
@@ -148,14 +149,16 @@ describe("POST /api/game-scores — happy path", () => {
     expect(res.status).toBe(200);
   });
 
-  it("returns 500 when Supabase upsert returns an error", async () => {
-    enqueue({ error: { message: "DB exploded" } });
+  it("returns 500 without leaking the Postgres message when the upsert fails", async () => {
+    // This test used to assert the raw message reached the client. It didn't
+    // describe a requirement — it pinned the leak in place. The client gets a
+    // stable code; the detail goes to the server log (see apiRoute.test.ts).
+    enqueue({ error: { message: 'duplicate key value violates unique constraint "game_scores_pkey"' } });
     const res = await POST(makePostReq({
       game_id: "leksokipos", puzzle_date: "2026-05-22", device_id: "d1", display_name: "Νίκος", score: 10,
     }));
     expect(res.status).toBe(500);
-    const json = await res.json() as { error: string };
-    expect(json.error).toBe("DB exploded");
+    expect(await res.json()).toEqual({ error: "db_error" });
   });
 });
 

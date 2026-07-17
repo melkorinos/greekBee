@@ -25,7 +25,11 @@
 // Idempotent — safe to call on every sign-in.
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceRoleClient, getSupabaseClient } from "@/lib/supabase";
+import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
+import { getServiceRoleClient, getSupabaseClient, table, type BoundTable } from "@/lib/supabase";
+
+/** This route's local table shorthand — see the `db` binding in POST. */
+type Db = BoundTable;
 import { planScoreMerge, type MergeRow } from "@/lib/scoreMerge";
 import { planAchievementMerge, type AchievementMergeRow } from "@/lib/achievementMerge";
 import { planPangramMerge, type PangramMergeRow } from "@/lib/pangramMerge";
@@ -41,38 +45,36 @@ export async function POST(req: NextRequest) {
   const authHeader = req.headers.get("Authorization") ?? "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : "";
   if (!token) {
-    return NextResponse.json({ error: "Missing bearer token" }, { status: 401 });
+    return jsonError("unauthorized");
   }
 
   const { data: { user }, error: authError } = await getSupabaseClient().auth.getUser(token);
   if (authError || !user) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    // Missing vs. rejected token are one answer on the wire — telling an
+    // unauthenticated caller which of the two it was only helps an attacker.
+    return jsonError("unauthorized", authError?.message);
   }
 
   const auth_user_id = user.id;
   const googleName = (user.user_metadata?.["full_name"] as string | undefined) ?? null;
 
   // 2. device_uuid is the only body field — the caller's own device to link.
-  let body: LinkPayload;
-  try {
-    body = (await req.json()) as LinkPayload;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+  const parsed = await parseJson<LinkPayload>(req);
+  if (!parsed.ok) return parsed.response;
 
-  const { device_uuid } = body;
+  const { device_uuid } = parsed.body;
   if (!device_uuid) {
-    return NextResponse.json({ error: "device_uuid is required" }, { status: 400 });
+    return jsonMessage("device_uuid is required");
   }
 
   const supabase = getServiceRoleClient();
 
-  // Bind `from` to the client: supabase-js's from() reads `this.rest`, so a
-  // detached `supabase.from` reference (ESM strict mode → this === undefined)
-  // throws "Cannot read properties of undefined (reading 'rest')". The `as any`
-  // keeps the dynamic table-name calls below untyped.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase.from.bind(supabase) as any;
+  // Local shorthand over the shared table() accessor — this route makes ~20 calls
+  // and reads better without the client repeated each time. Generic, so binding
+  // the client does not flatten each table's Row/Insert types back to a union.
+  // table() calls from() as a method, so the old `this`-binding hazard
+  // ("Cannot read properties of undefined (reading 'rest')") cannot return here.
+  const db: Db = (name) => table(supabase, name);
 
   // 3. Is this auth account already anchored to a profile? The unique partial
   //    index on player_profiles.auth_user_id guarantees at most one.
@@ -132,7 +134,7 @@ export async function POST(req: NextRequest) {
   );
 
   if (profileError) {
-    return NextResponse.json({ error: profileError.message }, { status: 500 });
+    return jsonError("db_error", profileError.message);
   }
 
   // 8. Audit the mapping change (ADR 0012): append an identity_audit row only
@@ -160,8 +162,7 @@ export async function POST(req: NextRequest) {
 // returned device_uuid (auth/callback → adoptDeviceIdentity), so no anonymous
 // history of the resident's is absorbed. restored:false — nothing came back.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function linkFreshDevice(db: any, auth_user_id: string, googleName: string | null) {
+async function linkFreshDevice(db: Db, auth_user_id: string, googleName: string | null) {
   const device_uuid  = crypto.randomUUID();
   const display_name = googleName?.trim() || "Ανώνυμος";
 
@@ -170,7 +171,7 @@ async function linkFreshDevice(db: any, auth_user_id: string, googleName: string
     { onConflict: "device_uuid" }
   );
   if (profileError) {
-    return NextResponse.json({ error: profileError.message }, { status: 500 });
+    return jsonError("db_error", profileError.message);
   }
 
   const { error: auditError } = await db("identity_audit")
@@ -192,8 +193,7 @@ async function linkFreshDevice(db: any, auth_user_id: string, googleName: string
 
 interface Anchor { device_uuid: string; display_name: string }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function restore(db: any, oldDevice: string, anchor: Anchor) {
+async function restore(db: Db, oldDevice: string, anchor: Anchor) {
   const canonical = anchor.device_uuid;
 
   // Read both identities' scores and decide the winners off-DB.

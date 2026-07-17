@@ -25,6 +25,7 @@ import { getRoundScore } from "@/games/leksoplegma/lib/leksoplegmaReducer";
 import { isPerfectRound } from "@/games/leksoplegma/lib/scoring";
 import { useLeksoplegmaRound } from "@/games/leksoplegma/hooks/useLeksoplegmaRound";
 
+import { todayISO } from "@/lib/puzzleDate";
 import { LeksoplegmaGrid } from "./LeksoplegmaGrid";
 import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { LeksoplegmaRecap } from "./LeksoplegmaRecap";
@@ -164,7 +165,7 @@ export function LeksoplegmaBoard({
         <GameLeaderboardModal
           gameId="leksoplegma"
           isOpen={isLeaderboardOpen}
-          today={new Date().toISOString().slice(0, 10)}
+          today={todayISO()}
           defaultDate={today}
           onClose={onCloseLeaderboard}
           {...identity.leaderboardProps}

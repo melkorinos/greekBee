@@ -3,12 +3,9 @@
 import { ConnectionsBoard }            from "./ConnectionsBoard";
 import { HowToPlayModal }              from "@/components/shared/HowToPlayModal";
 import { getTodaysLeksindeseisPuzzle } from "@/data/leksindeseis";
+import { todayISO }                    from "@/lib/puzzleDate";
 
 export const dynamic = "force-dynamic";
-
-function getTodayString(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 const CONNECTIONS_RULES = [
   "Οι 16 λέξεις χωρίζονται σε **4 κατηγορίες των 4 λέξεων**.",
@@ -20,7 +17,7 @@ const CONNECTIONS_RULES = [
 ];
 
 export default async function LeksindeseisPage() {
-  const today = getTodayString();
+  const today = todayISO();
   const { puzzle, submitter_name } = await getTodaysLeksindeseisPuzzle(today);
 
   return (

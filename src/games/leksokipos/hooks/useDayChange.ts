@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { isDailyPuzzle } from "@/games/leksokipos/lib";
+import { todayISO } from "@/lib/puzzleDate";
 
 export function useDayChange(puzzle: LeksokiposPuzzle) {
   const router = useRouter();
@@ -28,13 +29,12 @@ export function useDayChange(puzzle: LeksokiposPuzzle) {
     // Skip the redirect entirely — they should be able to play past puzzles.
     // The stale-tab case is covered below: a puzzle that was current at mount
     // will still be redirected via visibilitychange once the day rolls over.
-    const mountDate = new Date().toISOString().split("T")[0];
+    const mountDate = todayISO();
     if (puzzle.date < mountDate) return;
 
     function check() {
-      // Matches getTodaysPuzzle() server-side (UTC date), so client and server agree.
-      const today = new Date().toISOString().split("T")[0];
-      if (puzzle.date < today) {
+      // todayISO() is what getTodaysPuzzle() uses server-side, so client and server agree.
+      if (puzzle.date < todayISO()) {
         router.replace("/leksokipos");
       }
     }

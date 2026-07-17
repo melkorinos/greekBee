@@ -23,7 +23,7 @@ Durable identity  (PREREQUISITE — ✅ DONE 2026-07-03, ADR 0012; handoff delet
 
 **Decided:** identity comes first (achievements are worthless if losable). **✅ Satisfied 2026-07-03:** Sign-in Restore / Disconnect / `identity_audit` all shipped; merge semantics live in **ADR 0012** (auth account = anchor, device adopts canonical `device_uuid`, best score per puzzle wins). The identity handoff is deleted — cite ADR 0012.
 
-**Display surface — ✅ SHIPPED 2026-07-03 (Profile Page epic; its handoff `profilePageAndAchievements.md` is retired):** `/profile` is live — identity header, three entry points, a **v1 lifetime-stats strip**, and the **Trophy Case**. The Trophy Case renders the frozen Leksokipos catalog (`src/games/leksokipos/lib/achievements.ts`) **all locked**; `achievementsLeksokipos.md` now only wires the *earned* state onto it (its "no profile page" blocker is resolved). Manual verification pending (`manualTestingDevToMain.md` §2).
+**Display surface — ✅ SHIPPED 2026-07-03 (Profile Page epic; its handoff `profilePageAndAchievements.md` is retired):** `/profile` is live — identity header, three entry points, a **v1 lifetime-stats strip**, and the **Trophy Case**. The Trophy Case renders the frozen Leksokipos catalog (`src/games/leksokipos/lib/achievements.ts`) and lights earned badges (earned-state wiring shipped with Epics A/B1/B2). The B1/B2 manual prod smoke-check is still pending — see `achievements-future-parked.md`.
 
 ---
 
@@ -31,11 +31,11 @@ Durable identity  (PREREQUISITE — ✅ DONE 2026-07-03, ADR 0012; handoff delet
 
 | Pillar | What it is | Data exists today? | Handoff |
 |---|---|---|---|
-| Achievements | One-shot + tiered badges (Leksokipos v1) | Partially (`is_perfect`; pangrams NOT captured). **Display surface (locked Trophy Case) ✅ shipped on `/profile`** — only earned-state wiring remains | `achievementsLeksokipos.md` |
+| Achievements | One-shot + tiered badges (Leksokipos v1) | **✅ SHIPPED** — Epic A one-shots + B1 points tier + B2 pangram tier (`player_achievements`/`player_pangrams`, ADR 0013); toasts + lit Trophy Case live | done — remaining ideas in `achievements-other-ideas.md` (its old handoff `achievementsLeksokipos.md` is retired) |
 | Nemesis / taunts | Notification when overtaken on a Leaderboard | No — needs `notifications` table | parked (details below) |
 | Weekly leaderboard | Sum of daily scores per week per player | **Yes** — aggregate `game_scores` by `puzzle_date` range | parked |
 | Records / Hall of Fame | Highest score ever, most words in a day, etc. | Partially — per-day rows exist, no all-time views | parked |
-| Lifetime stats | Pangrams found, Τζιμάνι count, totals per player | **v1 SHIPPED** — `/profile` strip (`GET /api/profile/stats`): total points + puzzles played (cross-game) + Τζιμάνι (leksokipos `is_perfect`), all derived on read from `game_scores`. **Still parked:** pangram counters (never posted) + streaks | Profile Page (done); remaining counters overlap `achievementsLeksokipos.md` |
+| Lifetime stats | Pangrams found, Τζιμάνι count, totals per player | **SHIPPED** — `/profile` strip (`GET /api/profile/stats`): total points, puzzles played, Τζιμάνι, pangram count (`player_pangrams`), Πρωτιές (First-Place Count, session 85). **Still parked:** streak display | Profile Page (done); new-capture ideas in `stats-new-capture-ideas.md` |
 | Streaks | Consecutive days played — strongest retention mechanic in daily games | Derivable from `game_scores` dates | parked |
 | Live head-to-head sessions | Two players agree to start together, race to find most words in a fixed window (e.g. 10 min) | No — needs realtime session/matchmaking state | parked (details below) |
 | Friends / private leagues leaderboard | Scope the leaderboard to people you know, not the whole global top 20 | No — needs a friendship/league membership model | parked (details below) |
@@ -68,7 +68,7 @@ Pure aggregation — `SUM(score) GROUP BY player, week` over `game_scores`. Open
 
 ### Records / Hall of Fame
 
-All-time bests: highest daily score, most words found, fastest Τζιμάνι, longest streak. Caution from the achievements grill prep: raw "highest score ever" is distorted — Leksokipos `maxScore` varies per puzzle (capped 600), so consider records as % of that day's max, or per-game framing. Needs retention decision (same as weekly).
+All-time bests: highest daily score, most words found, fastest Τζιμάνι, longest streak. Caution from the achievements grill prep: raw "highest score ever" is distorted — Leksokipos `maxScore` varies per puzzle (soft-capped since session 84, no hard ceiling), so consider records as % of that day's max, or per-game framing. Retention is settled: `game_scores` is append-forever.
 
 ### Lifetime stats
 
@@ -91,7 +91,7 @@ At scale, global top-20 stops being meaningful to most players — want to see r
 ## Sequencing recommendation
 
 1. ~~Durable identity~~ — ✅ DONE 2026-07-03 (ADR 0012)
-2. `achievementsLeksokipos.md` — favourite; its data model (counters) should be designed with Lifetime stats in mind
+2. ~~Achievements (Leksokipos v1)~~ — ✅ DONE (Epic A + B1 + B2; leftovers in `achievements-other-ideas.md`)
 3. Weekly leaderboard — cheap, visible, competitive
 4. Streaks → Records → Nemesis (nemesis last: most moving parts, benefits from all prior data existing)
 
@@ -99,5 +99,4 @@ At scale, global top-20 stops being meaningful to most players — want to see r
 
 - `/aihelper` — context reload at session start
 - `/grill-with-docs` — when activating any parked pillar, grill it and spawn its handoff
-- `/to-prd` — if the epic needs a single consolidated PRD for the tracker instead
-- `/to-issues` + `/tdd` — per pillar once its handoff is ready-for-agent
+- `/to-tickets` + `/tdd` — per pillar once its handoff is ready-for-agent

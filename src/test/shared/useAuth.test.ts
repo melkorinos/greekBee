@@ -33,6 +33,7 @@ const {
 }));
 
 vi.mock("@/lib/supabase", () => ({
+  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
   getSupabaseClient: () => ({
     auth: {
       getSession:        mockGetSession,

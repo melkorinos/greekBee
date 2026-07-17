@@ -3,7 +3,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
+import { getSupabaseClient, table } from "@/lib/supabase";
 
 export const runtime = "edge";
 
@@ -18,41 +19,40 @@ export async function POST(
 ) {
   const { id } = await params;
 
-  let body: VotePayload;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
-  }
+  const parsed = await parseJson<VotePayload>(req);
+  if (!parsed.ok) return parsed.response;
 
-  const { deviceId, voteType = "up" } = body;
+  const { deviceId, voteType = "up" } = parsed.body;
   if (!deviceId || typeof deviceId !== "string") {
-    return NextResponse.json({ error: "deviceId required" }, { status: 400 });
+    return jsonMessage("deviceId required");
   }
   if (voteType !== "up" && voteType !== "down") {
-    return NextResponse.json({ error: "voteType must be 'up' or 'down'" }, { status: 400 });
+    return jsonMessage("voteType must be 'up' or 'down'");
   }
 
   const supabase = getSupabaseClient();
 
-  // Check for an existing vote from this device on this nomination.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: existing } = await (supabase.from("nomination_votes") as any)
+  // Check for an existing vote from this device on this nomination. A lookup
+  // failure must short-circuit — falling through to insert on error is what
+  // used to compound duplicates once two rows existed for the pair.
+  const { data: existing, error: lookupErr } = await table(supabase, "nomination_votes")
     .select("id, vote_type")
     .eq("nomination_id", id)
     .eq("device_id",     deviceId)
-    .maybeSingle() as { data: { id: string; vote_type: string } | null };
+    .maybeSingle() as { data: { id: string; vote_type: string } | null; error: { message: string } | null };
+
+  if (lookupErr) {
+    return jsonError("db_error", lookupErr.message);
+  }
 
   if (existing) {
     if (existing.vote_type === voteType) {
       // Same type — undo the vote.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from("nomination_votes") as any).delete().eq("id", existing.id);
+      await table(supabase, "nomination_votes").delete().eq("id", existing.id);
       return NextResponse.json({ ok: true, action: "removed" });
     } else {
       // Opposite type — switch the vote.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase.from("nomination_votes") as any)
+      await table(supabase, "nomination_votes")
         .update({ vote_type: voteType })
         .eq("id", existing.id);
       return NextResponse.json({ ok: true, action: "switched" });
@@ -60,15 +60,34 @@ export async function POST(
   }
 
   // No existing vote — insert.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from("nomination_votes") as any).insert({
+  const { error } = await table(supabase, "nomination_votes").insert({
     nomination_id: id,
     device_id:     deviceId,
     vote_type:     voteType,
   });
 
   if (error) {
-    return NextResponse.json({ error: "db_error" }, { status: 500 });
+    // 23505: a concurrent request from this device won the insert race
+    // (UNIQUE (nomination_id, device_id) backstop). The vote exists — resolve
+    // against it instead of answering 500.
+    if ((error as { code?: string }).code === "23505") {
+      const { data: raced } = await table(supabase, "nomination_votes")
+        .select("id, vote_type")
+        .eq("nomination_id", id)
+        .eq("device_id",     deviceId)
+        .maybeSingle() as { data: { id: string; vote_type: string } | null };
+
+      if (raced) {
+        if (raced.vote_type === voteType) {
+          return NextResponse.json({ ok: true, action: "added" }, { status: 201 });
+        }
+        await table(supabase, "nomination_votes")
+          .update({ vote_type: voteType })
+          .eq("id", raced.id);
+        return NextResponse.json({ ok: true, action: "switched" });
+      }
+    }
+    return jsonError("db_error", error.message);
   }
 
   return NextResponse.json({ ok: true, action: "added" }, { status: 201 });

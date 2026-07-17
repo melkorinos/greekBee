@@ -7,14 +7,16 @@
 import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
 import { LEKSIARXEIO } from "@/config/gameRules";
 import { readSlice } from "@/hooks/useGameStore";
+import { usePhysicalKeyboard } from "@/hooks/usePhysicalKeyboard";
 import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { GuessGrid } from "./GuessGrid";
 import { Keyboard } from "./Keyboard";
 import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { normalizeLetters } from "@/lib/normalize";
+import { todayISO } from "@/lib/puzzleDate";
 import { useLeksiarxeioScoreSubmission } from "@/hooks/useLeksiarxeioScoreSubmission";
 import { useLeksiarxeioState } from "@/games/leksiarxeio/hooks/useLeksiarxeioState";
 
@@ -75,22 +77,13 @@ function LengthPanel({
     clearMessage,
   } = useLeksiarxeioState(puzzle, validWords, handleGameEnd);
 
-  // Physical keyboard — only active panel handles keys
-  const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
-  useLayoutEffect(() => {
-    keyHandlerRef.current = (e: KeyboardEvent) => {
-      if (!isActive) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === "Enter")     return submitGuess();
-      if (e.key === "Backspace") return deleteLetter();
-      if (GREEK_LETTER.test(e.key)) addLetter(normalizeLetters(e.key));
-    };
+  // Only the active panel handles keys — all lengths stay mounted.
+  usePhysicalKeyboard((e) => {
+    if (!isActive) return;
+    if (e.key === "Enter")     return submitGuess();
+    if (e.key === "Backspace") return deleteLetter();
+    if (GREEK_LETTER.test(e.key)) addLetter(normalizeLetters(e.key));
   });
-  useEffect(() => {
-    const listener = (e: KeyboardEvent) => keyHandlerRef.current(e);
-    window.addEventListener("keydown", listener);
-    return () => window.removeEventListener("keydown", listener);
-  }, []);
 
   // Auto-clear transient messages
   useEffect(() => {
@@ -289,7 +282,7 @@ export function LeksiarxeioBoard({
       <GameLeaderboardModal
         gameId="leksiarxeio"
         isOpen={isLeaderboardOpen}
-        today={new Date().toISOString().slice(0, 10)}
+        today={todayISO()}
         defaultDate={today}
         onClose={onCloseLeaderboard}
         {...identity.leaderboardProps}

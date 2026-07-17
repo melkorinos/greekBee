@@ -6,12 +6,19 @@
 // and is imported only here, so its Word Pool imports stay out of the other
 // games' edge bundles. This file only declares the config.
 
-import { createListHandler, createSubmitHandler } from "@/lib/communityPuzzleLifecycle";
+import {
+  createListHandler,
+  createSubmitHandler,
+  type CommunityPuzzleGameConfig,
+} from "@/lib/communityPuzzleLifecycle";
 import { validateLeksiarxeioSubmission } from "@/games/leksiarxeio/lib/validateSubmission";
 
 export const runtime = "edge";
 
-const config = { table: "community_leksiarxeio_puzzles", validate: validateLeksiarxeioSubmission };
+const config: CommunityPuzzleGameConfig = {
+  table:    "community_leksiarxeio_puzzles",
+  validate: validateLeksiarxeioSubmission,
+};
 
 export const POST = createSubmitHandler(config);
 export const GET  = createListHandler(config);

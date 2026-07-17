@@ -1,5 +1,5 @@
-// rlsInvariantsLiveDb.test.ts — integration test of the game_scores RLS posture
-// against the real Supabase database.
+// rlsInvariantsLiveDb.test.ts — integration test of the RLS posture of the tables
+// whose access matrix is load-bearing, against the real Supabase database.
 //
 // Why this exists: RLS policies are invisible to mocked unit tests — only a live
 // check can prove that the anon role (the public key shipped to every browser)
@@ -7,7 +7,8 @@
 // access matrix so a future policy change (or a bad migration) can't silently
 // re-open deletes or break inserts/reads.
 //
-// Asserted invariants for `public.game_scores`:
+// Asserted invariants for `public.community_stavrolekso_puzzles` are at the foot of
+// the file. For `public.game_scores`:
 //   1. anon CAN insert a score          (leaderboard writes work)
 //   2. anon CAN read scores             (leaderboard reads work)
 //   3. anon CANNOT delete a score       (the DELETE lockdown holds)
@@ -21,7 +22,8 @@
 // role wipes every sentinel row before and after the run.
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { table } from "@/lib/supabase";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const url        = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anonKey    = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -45,8 +47,7 @@ describe.skipIf(!canRun)("live DB — game_scores RLS invariants", () => {
   let service: SupabaseClient;
 
   async function wipeSentinelRows() {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (service.from("game_scores") as any).delete().eq("game_id", GAME_ID);
+    await table(service, "game_scores").delete().eq("game_id", GAME_ID);
   }
 
   beforeAll(async () => {
@@ -62,13 +63,11 @@ describe.skipIf(!canRun)("live DB — game_scores RLS invariants", () => {
   it("allows anon to INSERT a score", async () => {
     const device_id = freshDeviceId();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (anon.from("game_scores") as any).insert(scoreRow(device_id));
+    const { error } = await table(anon, "game_scores").insert(scoreRow(device_id));
     expect(error).toBeNull();
 
     // Confirm it actually persisted (read back with the service role).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { count } = await (service.from("game_scores") as any)
+    const { count } = await table(service, "game_scores")
       .select("id", { count: "exact", head: true })
       .eq("game_id", GAME_ID)
       .eq("device_id", device_id);
@@ -77,11 +76,9 @@ describe.skipIf(!canRun)("live DB — game_scores RLS invariants", () => {
 
   it("allows anon to SELECT scores", async () => {
     const device_id = freshDeviceId();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (service.from("game_scores") as any).insert(scoreRow(device_id, 5));
+    await table(service, "game_scores").insert(scoreRow(device_id, 5));
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (anon.from("game_scores") as any)
+    const { data, error } = await table(anon, "game_scores")
       .select("device_id, score")
       .eq("game_id", GAME_ID)
       .eq("device_id", device_id);
@@ -93,16 +90,13 @@ describe.skipIf(!canRun)("live DB — game_scores RLS invariants", () => {
 
   it("blocks anon from DELETE-ing a score", async () => {
     const device_id = freshDeviceId();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (service.from("game_scores") as any).insert(scoreRow(device_id));
+    await table(service, "game_scores").insert(scoreRow(device_id));
 
     // anon delete: with no DELETE policy, RLS matches zero rows (no error, no effect).
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (anon.from("game_scores") as any).delete().eq("device_id", device_id);
+    await table(anon, "game_scores").delete().eq("device_id", device_id);
 
     // The row must still be there.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { count } = await (service.from("game_scores") as any)
+    const { count } = await table(service, "game_scores")
       .select("id", { count: "exact", head: true })
       .eq("game_id", GAME_ID)
       .eq("device_id", device_id);
@@ -111,13 +105,245 @@ describe.skipIf(!canRun)("live DB — game_scores RLS invariants", () => {
 
   it("enforces the (game_id, device_id, puzzle_date) uniqueness constraint", async () => {
     const device_id = freshDeviceId();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const first = await (service.from("game_scores") as any).insert(scoreRow(device_id));
+    const first = await table(service, "game_scores").insert(scoreRow(device_id));
     expect(first.error).toBeNull();
 
     // A second raw insert for the same triplet must violate the unique constraint.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const second = await (anon.from("game_scores") as any).insert(scoreRow(device_id, 99));
+    const second = await table(anon, "game_scores").insert(scoreRow(device_id, 99));
     expect(second.error).not.toBeNull();
+  });
+});
+
+// ── player_achievements / player_pangrams / game_state ───────────────────────
+//
+// Migration 20260716120100 narrowed the anon ALL-true policies to the commands
+// the app uses: SELECT+INSERT on the two ADR 0013 fact tables, SELECT+INSERT+
+// UPDATE on game_state. The invariant locked here is the removal: anon DELETE
+// matches zero rows table-wide (silently — no error), and the game_state
+// upsert (the restore path) still works.
+
+describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/pangrams/game_state)", () => {
+  let anon:    SupabaseClient;
+  let service: SupabaseClient;
+
+  const DEVICE = `__rls_${crypto.randomUUID()}`;
+
+  async function wipeSentinelRows() {
+    await table(service, "player_achievements").delete().like("device_uuid", "__rls_%");
+    await table(service, "player_pangrams").delete().like("device_uuid", "__rls_%");
+    await table(service, "game_state").delete().like("device_uuid", "__rls_%");
+  }
+
+  beforeAll(async () => {
+    anon    = createClient(url!, anonKey!,    { auth: { persistSession: false } });
+    service = createClient(url!, serviceKey!, { auth: { persistSession: false } });
+    await wipeSentinelRows();
+  });
+
+  afterAll(async () => {
+    await wipeSentinelRows();
+  });
+
+  it("blocks anon from DELETE-ing player_achievements rows", async () => {
+    const { error: seedErr } = await table(service, "player_achievements")
+      .insert({ device_uuid: DEVICE, achievement_id: "__rls_test__" });
+    expect(seedErr).toBeNull();
+
+    await table(anon, "player_achievements").delete().eq("device_uuid", DEVICE);
+
+    const { count } = await table(service, "player_achievements")
+      .select("id", { count: "exact", head: true })
+      .eq("device_uuid", DEVICE);
+    expect(count).toBe(1);
+  });
+
+  it("blocks anon from DELETE-ing player_pangrams rows", async () => {
+    const { error: seedErr } = await table(service, "player_pangrams")
+      .insert({ device_uuid: DEVICE, puzzle_date: PUZZLE_DATE, word: "__rls_test__" });
+    expect(seedErr).toBeNull();
+
+    await table(anon, "player_pangrams").delete().eq("device_uuid", DEVICE);
+
+    const { count } = await table(service, "player_pangrams")
+      .select("id", { count: "exact", head: true })
+      .eq("device_uuid", DEVICE);
+    expect(count).toBe(1);
+  });
+
+  it("blocks anon from DELETE-ing game_state rows", async () => {
+    const { error: seedErr } = await table(service, "game_state")
+      .insert({ device_uuid: DEVICE, game_id: GAME_ID, puzzle_date: PUZZLE_DATE, state: {} });
+    expect(seedErr).toBeNull();
+
+    await table(anon, "game_state").delete().eq("device_uuid", DEVICE);
+
+    const { count } = await table(service, "game_state")
+      .select("id", { count: "exact", head: true })
+      .eq("device_uuid", DEVICE);
+    expect(count).toBe(1);
+  });
+
+  it("still allows the anon game_state upsert the restore path depends on", async () => {
+    const device = `__rls_${crypto.randomUUID()}`;
+    const base   = { device_uuid: device, game_id: GAME_ID, puzzle_date: PUZZLE_DATE };
+
+    // Insert half of the upsert…
+    const first = await table(anon, "game_state").upsert(
+      { ...base, state: { step: 1 } },
+      { onConflict: "device_uuid,game_id,puzzle_date" },
+    );
+    expect(first.error).toBeNull();
+
+    // …and the update half, against the row that now exists.
+    const second = await table(anon, "game_state").upsert(
+      { ...base, state: { step: 2 } },
+      { onConflict: "device_uuid,game_id,puzzle_date" },
+    );
+    expect(second.error).toBeNull();
+
+    const { data } = await table(service, "game_state")
+      .select("state")
+      .eq("device_uuid", device)
+      .single();
+    expect((data as { state: { step: number } }).state.step).toBe(2);
+  });
+
+  it("still allows the anon insert-if-absent write on player_achievements", async () => {
+    const device = `__rls_${crypto.randomUUID()}`;
+    const row    = { device_uuid: device, achievement_id: "__rls_test__" };
+
+    const first = await table(anon, "player_achievements").upsert(
+      [row], { onConflict: "device_uuid,achievement_id", ignoreDuplicates: true },
+    );
+    expect(first.error).toBeNull();
+
+    // Re-submitting the same fact is a no-op, not an error (DO NOTHING).
+    const second = await table(anon, "player_achievements").upsert(
+      [row], { onConflict: "device_uuid,achievement_id", ignoreDuplicates: true },
+    );
+    expect(second.error).toBeNull();
+  });
+});
+
+// ── transfer_codes ────────────────────────────────────────────────────────────
+//
+// Server-only table (migration 20260716120000): a transfer code maps to a
+// device_uuid — the platform's de-facto bearer credential — so anon must have
+// NO access at all. Both /api/transfer routes use the service-role client.
+// The trap this locks down: anon SELECT with no policy is not an error, it
+// just returns zero rows — so only a sentinel row proves the denial is real.
+
+describe.skipIf(!canRun)("live DB — transfer_codes RLS invariants", () => {
+  let anon:    SupabaseClient;
+  let service: SupabaseClient;
+
+  const SENTINEL_CODE = "RLSTST";
+
+  async function wipeSentinelRows() {
+    await table(service, "transfer_codes").delete().eq("code", SENTINEL_CODE);
+  }
+
+  beforeAll(async () => {
+    anon    = createClient(url!, anonKey!,    { auth: { persistSession: false } });
+    service = createClient(url!, serviceKey!, { auth: { persistSession: false } });
+    await wipeSentinelRows();
+    const { error } = await table(service, "transfer_codes").insert({
+      code:        SENTINEL_CODE,
+      device_uuid: `__rls_${crypto.randomUUID()}`,
+      expires_at:  new Date(Date.now() + 60_000).toISOString(),
+    });
+    expect(error).toBeNull();
+  });
+
+  afterAll(async () => {
+    await wipeSentinelRows();
+  });
+
+  it("blocks anon from SELECT-ing transfer codes (zero rows despite the sentinel)", async () => {
+    const { data, error } = await table(anon, "transfer_codes").select("code, device_uuid");
+    expect(error).toBeNull();
+    expect(data).toHaveLength(0);
+  });
+
+  it("blocks anon from INSERT-ing a transfer code", async () => {
+    const { error } = await table(anon, "transfer_codes").insert({
+      code:        "RLSTS2",
+      device_uuid: "attacker-chosen",
+      expires_at:  new Date(Date.now() + 60_000).toISOString(),
+    });
+    expect(error).not.toBeNull();
+  });
+});
+
+// ── community_stavrolekso_puzzles ─────────────────────────────────────────────
+//
+// The creator-edit flow (ADR 0005) authorises with a server-side PIN check, which
+// RLS cannot see — so anon deliberately has no UPDATE policy and the route writes
+// with the service role. This locks that posture down from both ends, because the
+// failure mode is silent: an anon UPDATE with no policy is not an error, it just
+// matches zero rows, which is how the edit route came to answer ok:true while
+// discarding the edit.
+//
+// Safety: rows carry a sentinel title, and the service role wipes them either side.
+
+const SENTINEL_TITLE = "__rls_test__";
+
+describe.skipIf(!canRun)("live DB — community_stavrolekso_puzzles RLS invariants", () => {
+  let anon:    SupabaseClient;
+  let service: SupabaseClient;
+  let rowId:   number;
+
+  async function wipeSentinelRows() {
+    await table(service, "community_stavrolekso_puzzles").delete().eq("title", SENTINEL_TITLE);
+  }
+
+  beforeAll(async () => {
+    anon    = createClient(url!, anonKey!,    { auth: { persistSession: false } });
+    service = createClient(url!, serviceKey!, { auth: { persistSession: false } });
+    await wipeSentinelRows();
+  });
+
+  afterAll(async () => {
+    await wipeSentinelRows();
+  });
+
+  beforeEach(async () => {
+    await wipeSentinelRows();
+    const { data, error } = await table(service, "community_stavrolekso_puzzles")
+      .insert({
+        title:          SENTINEL_TITLE,
+        submitter_name: "rls-test",
+        edit_pin:       "0000",
+        status:         "pending",
+        data:           { slots: [] },
+      } as never)
+      .select("id")
+      .single();
+    expect(error).toBeNull();
+    rowId = (data as { id: number }).id;
+  });
+
+  it("blocks anon from UPDATE-ing a pending puzzle", async () => {
+    // No UPDATE policy → zero rows matched, and (the trap) no error.
+    await table(anon, "community_stavrolekso_puzzles")
+      .update({ title: "hijacked" } as never)
+      .eq("id", rowId);
+
+    const { data } = await table(service, "community_stavrolekso_puzzles")
+      .select("title")
+      .eq("id", rowId)
+      .single();
+    expect((data as { title: string }).title).toBe(SENTINEL_TITLE);
+  });
+
+  it("allows the service role to UPDATE a pending puzzle (the edit route's path)", async () => {
+    const { data, error } = await table(service, "community_stavrolekso_puzzles")
+      .update({ submitter_name: "edited" } as never)
+      .eq("id", rowId)
+      .select("id");
+
+    expect(error).toBeNull();
+    // The route reads this same non-empty result as proof the edit landed.
+    expect(data).toHaveLength(1);
   });
 });

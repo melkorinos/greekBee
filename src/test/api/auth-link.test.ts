@@ -56,6 +56,7 @@ const h = vi.hoisted(() => {
 });
 
 vi.mock("@/lib/supabase", () => ({
+  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
   getSupabaseClient:    () => ({ auth: { getUser: h.getUser } }),
   getServiceRoleClient: () => h.ref.client,
 }));

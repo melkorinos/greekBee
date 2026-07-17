@@ -5,6 +5,139 @@
 
 ---
 
+## Session 94 — 2026-07-17: Full documentation audit — every doc cross-checked against code + live DB
+
+All docs read (ADRs 0001–0017, aiHelper files, CONTEXT/README/CLAUDE, 3 issues, 7 handoffs, apply-nominations + project-mcp skills) and every checkable claim verified against the working tree, git, and live Supabase/Vercel MCP. Fixed: README (rank ladder was fully wrong — old Τζάμι/6–55% table vs real Φωτιά/8–80% `RANKS`; Vres leaderboard still said lower-is-better vs ADR 0014; Leksodromia/Leksoplegma boards missing; skills table listed uninstalled `/to-spec`/`/triage`/`/prototype`; tech-debt table listed only issue 02; arch tree claimed "leksodromia has no data folder"), CLAUDE.md (`/apply-nominations` row understated ADR 0015), project-mcp SKILL.md ("12 tables"→13 + `player_pangrams`; admin wire still described the pre-ADR-0016 body-`adminSecret`/403 shape), goals.md + CONTEXT.md (**Offline Lock/Outbox were documented as shipped — no code exists**; marked designed-not-built), memory.md (coverage map was missing ~55 test files — completed; data tree), deploy runbook (13→21 commits; typed-client + stavrolekso-edit fixes now committed), engagementEpic/stats-ideas/achievements-other (achievements shipped, Πρωτιές shipped, dead handoff refs). **New issue 05:** `words-2/3.json` are dictionary-derived (Vres validation) but the ADR 0015 re-sync no-ops on len≤3 and the drift guard only covers 4–8. Verified live: 13 tables, migration history as the runbook describes, Vercel IDs/deployment healthy. Note: the 2026-07-17 00:14 commit `de4810a` (leaderboard day-strip UTC anchoring, `getLast7Dates` into `puzzleDate.ts`, vitest TZ pin, issue 04 filed + 03 updated) had no log entry — reconstructed here from the diff.
+
+## Session 92 — 2026-07-16: Executed all four DB-hardening handoffs (4 migrations live, 4 commits)
+
+**Goal:** implement the session-91 handoffs, in the operator-agreed order. All four migrations were applied via MCP `apply_migration` with committed files, because `db push` is doubly blocked: `SUPABASE_DB_URL` absent AND push would fire the deploy-coupled `20260715120100` vrestifrasi flip. Operator decisions up front: MCP path, no pre-dump (no row data touched), **PG enum over CHECK**, one commit per task.
+
+1. **`4c8f68b` transfer codes** (`20260716120000`): dropped the anon ALL policy — server-only, deny-by-default like identity_audit; both routes on the service-role client; claim is now one conditional UPDATE returning the row (atomic single-use; follow-up lookup only picks the Greek copy); `crypto.getRandomValues` replaces Math.random. Verified live: e2e generate→claim→reuse-410→bogus-404 through a dev server, plus live-DB regressions (anon SELECT sees 0 rows past a sentinel; anon INSERT errors).
+2. **`74d278e` anon RLS narrowing** (`20260716120100`): the three ALL(true) tables became per-command — achievements/pangrams SELECT+INSERT, game_state SELECT+INSERT+UPDATE. Sweep confirmed deletes were service-role-only. ADR 0013 amended (DB now enforces append-only vs anon); advisor baseline note updated in project-mcp SKILL.md. Live-DB regressions: anon DELETE = 0-row no-op ×3, upsert + DO-NOTHING insert still work.
+3. **`1660d0c` dedup backstops** (`20260716120200`): UNIQUE(nomination_id, device_id) + partial unique on pending (word, direction) — session 86's deferred Option A; pre-flight showed 0 violations. Vote route: lookup errors short-circuit (the compounding-dupes bug), lost insert race re-reads → added/switched. Nominations POST: 23505 → **409 already_pending + pendingId**; NominationModal pivots to the existing upvote banner. Verified live: second device submitting the same word got the 409+id.
+4. **status enum, committed with this log entry** (`20260716120300`): `community_puzzle_status AS ENUM ('pending','approved')` on all four community tables — enum over CHECK so the value union survives into the generated types (ADR 0017 gap closed; amendment recorded). `'rejected'` deliberately absent (reject = DELETE); divergence from nominations' `accepted` documented, not unified. Regenerated `database.types.ts` via MCP; the compiler found exactly one site — `createListHandler` fed a raw `?status=` string into `.eq()` — now validated. tsc back at the 24-error baseline.
+
+**Important for the next deploy:** MCP `apply_migration` recorded invented versions (`202607161755xx`…), not the files' `202607161203xx` versions — the runbook handoff's repair step now lists **all five** versions and notes `db push --include-all` (the pending `20260715120100` sorts before recorded ones). Live-DB tests still silently skip without env injection (ticket 03) — this session ran them with `.env.local` vars injected into the shell; all green including the 7 new invariants.
+
+## Session 91 — 2026-07-16: Full DB review (live schema × repo wiring) → 4 new handoffs, no code
+
+**Goal:** review the whole DB setup — schema, RLS, migrations, route wiring — before moving on. Everything verified live via MCP (read-only SQL, advisors, `pg_policies`) against the repo. Handoffs-only per operator; nothing changed except handoff files + this log.
+
+- **Worst finding: Stavrolekso creator edit silently no-ops in prod.** The PATCH edit route UPDATEs via the anon client, but live `pg_policies` grants `community_stavrolekso_puzzles` anon INSERT+SELECT only → RLS matches 0 rows, no error, route returns `ok:true`, edit discarded. Fix = service-role write after PIN check, never an anon UPDATE policy (RLS can't see the PIN). → `stavrolekso-edit-rls-noop-handoff.md`.
+- **Deploy coupling:** main..dev = 13 commits incl. the ADR 0014 vrestifrasi flip; live vrestifrasi rows are old-shape (2/3/6), migration `20260715120100` correctly unapplied, `20260715120000` applied-but-unrecorded (needs `migration repair` before any `db push`). Ordered runbook → `deploy-dev-to-main-db-runbook-handoff.md`.
+- **transfer_codes = device_uuid oracle:** anon ALL(true) lets the public key SELECT every active code + its device_uuid; claim is also check-then-set (race) and Math.random. → `transfer-codes-hardening-handoff.md`.
+- **ADR 0013 contradiction:** player_achievements/player_pangrams/game_state are anon ALL(true) — "immutable" fact rows are anon-DELETEable table-wide; app paths need only SELECT/INSERT(+UPDATE for state). game_scores open-write stays (recorded decision). → `narrow-anon-rls-policies-handoff.md`.
+- **No DB dedup backstops:** votes lack UNIQUE(nomination_id,device_id) (maybeSingle compounds dupes → toggle breaks), pending nominations lack the session-86-deferred partial unique index. Zero violations live today — applies cleanly. → `db-dedup-backstops-handoff.md`.
+- **Enriched** the parked status-CHECK handoff with the live go/no-go (1 pending row total; nominations vocab confirmed).
+- **Healthy, verified:** cron pruning works (state 2026-07-06.., codes 0 rows, accepted nominations all reviewed_at-stamped — first 30-day delete ~07-26); both July-15 indexes live; generated types match live schema; advisors == documented baseline, performance clean; postgres logs clean; no orphan votes; no non-ISO puzzle_dates (cron cutoff safe); identity wiring (profile token-scoped client, auth/link occupied-device guard) sound.
+- Operator FYIs: 1 pending Leksindeseis community puzzle awaits review; typed-client work still uncommitted; `npm run db:backup` still broken (ticket 02); leaderboard top-20 rank ignores ties while playerRow rank shares them (cosmetic).
+
+## Session 90 — 2026-07-16: The schema types get generated and wired into the compiler (ADR 0017)
+
+**Goal:** resolve the parked typed-client handoff. Its own framing was that a ~200-line hand-written `Database` interface, which nothing type-checked against, had silently drifted from the real schema — regenerate it or delete it, but don't leave it.
+
+**The blocker was obsolete, and re-testing it was the whole decision.** A comment claimed the `Database` generic "requires matching supabase-js internal GenericSchema exactly, which is brittle across minor versions." It had been justifying the `any` for months. On supabase-js **2.105.4 it did not reproduce** — `createClient<Database>` instantiates cleanly and writes compile with no cast. `QueryBuilder = any` is **deleted**, not narrowed.
+
+**Two facts the handoff had wrong, both found by checking rather than trusting:**
+1. Its Option B said to keep three types (`WordSuggestionInsert`/`WordSuggestionRow`/`NominationVoteInsert`) as hand-written standalones. They had **zero consumers** repo-wide — dead exports. Option B was "delete 215 lines and write nothing."
+2. Its headline evidence was the community `status` typed `"accepted"` while code writes `"approved"`. **Generated types do not fix that** — `status` generates as `string`, because CHECK constraints don't survive into TS (only PG enums do; this DB has none). Verified by compiling `status: "utter_garbage"` — it passes. The old union wasn't stale so much as **aspirational**: it encoded a constraint the DB never had. Split to `.claude/handoffs/status-check-constraint-handoff.md`.
+
+**Narrowed, not widened.** Every caller passed a literal, so params became the table-name union rather than taking a cast: `CommunityPuzzleGameConfig.table` → `CommunityPuzzleTable` (only the 4 community queues), `consumeApprovedPuzzle`/`upsertAndClean` → the union, and `auth/link`'s `db` shorthand → a generic `BoundTable` — that one line alone fixed **23 of that file's 23 errors**; they'd all cascaded from `name: string`. All new exports are **type-only**, so the 20 `vi.mock` factories needed no changes.
+
+**The compiler immediately found a real mismatch:** `.eq("id", id)` was passing URL strings into `bigint` columns in three routes; PostgREST had been coercing them. Now `Number(id)` — two tests asserted the old string and were updated to say why.
+
+**Q4 (drift guard) — decided C: none for now, and the reasoning is in the ADR so it isn't re-litigated.** I proposed a migration-parsing test on the premise it would "run free in CI." **False — vitest has never run in CI here**; `e2e.yml` runs only `npm ci` + `build` + Playwright. That killed A's only advantage. B (regenerate-and-diff vs the live DB) is the right guard, deferred to launch on two unmet prerequisites: `SUPABASE_DB_URL` in `.env.local` (genuinely absent) and a CI job that runs vitest (→ ticket 03). **No `npm run db:types` script** — verified `gen types` fails with `LegacyPlatformAuthRequiredError`, and a script that always throws is the same decorative artifact this ADR deletes. Regeneration goes through read-only MCP `generate_typescript_types`.
+
+**The durable lesson (ADR 0017):** a type nothing enforces will rot — and what fixes that is wiring it into the compiler, not bolting a checker onto it. A generated file nothing checks against would rot identically.
+
+**Also found, outside scope:** `npm run db:backup` currently throws (`scripts/backup-db.ps1` hard-requires the same missing `SUPABASE_DB_URL`).
+
+## Session 89 — 2026-07-16: One route envelope (ADR 0016) + Leksiarxeio's fold gets tested
+
+**Goal:** items 1 + 5 of the architecture review. `src/lib/apiRoute.ts` now owns what every route does before its own logic; the Leksiarxeio score fold comes out of the HTTP handler.
+
+**The envelope** — `parseJson` (body + the 400 guard, ~10 hand-copied try/catch blocks), `requireAdmin` (the admin gate), and **two error channels sharing one body shape**. `{ error: string }` is unchanged on the wire; the meaning splits: `jsonError(code, detail?)` for envelope-owned codes (`invalid_json`/`unauthorized`/`not_found`/`db_error`) with `detail` logged and dropped, `jsonMessage(text, status?)` for copy the route authors. Migrated 14 route callers + `communityPuzzleLifecycle` (which had grown private `isAdmin`/parse copies — the seam wanted to exist one layer up).
+
+**The review was wrong on two counts, both verified against the code:**
+1. *"error bodies leak implementation"* — only some do. `/api/transfer/claim` returns **Greek player-facing copy** that `useProfile.ts:88` throws and the UI renders; the Leksindeseis/VresTinFrasi submit modals render `json.error` into the form. A blanket code vocabulary would have blanked the player's explanation. Hence the message channel — the split is the design, not a compromise.
+2. *"24 routes each improvise"* — 9 community-puzzle routes already delegated to `communityPuzzleLifecycle`. Real count ~14, which the review's own leverage bullet admits.
+
+**Deliberately not migrated:** `/api/cleanup-scores`. Cron-only behind `CRON_SECRET` — its PG messages go to Vercel, not a player. Diagnostic, not leak.
+
+**Breaking change, taken on purpose:** `/api/nominations/[id]/review` moves the secret body → header and 403 → 401. Client + server ship together, no external consumers, so a compat shim would only have kept the second shape alive forever. `requireAdmin` tests assert the body-borne secret **no longer works**. `requireAdmin` also now denies everyone when `ADMIN_SECRET` is unset (the old `isAdmin` relied on an empty header failing the compare — right answer, by luck).
+
+**Item 5 — `mergeLengthScore(existing, length, points)`** in `scoreMerge.ts` (same module as `planScoreMerge`; both are folds over `game_scores`). Absorbs the old one-line `aggregateLeksiarxeioScore`. The tests now cover the branches that could actually be wrong — no row yet, `data` null, a length posting twice, a lost (0-point) length, non-mutation — one line each, no faked request or DB. **Behaviour preserved, not improved:** a re-post overwrites rather than max-wins. Safe today (a length is played once/day, so a re-post is an identical replay, and overwrite is exactly idempotent); a test documents this so allowing replays-for-a-better-result fails there first.
+
+**Two tests changed meaning rather than being fixed:** `gameScoresRoute` asserted `json.error === "DB exploded"` and `/Invalid JSON/i` — those described the defect, not a requirement.
+
+## Session 88 — 2026-07-16: One `todayISO()` — "today's puzzle date" gets a module
+
+**Goal:** ~12 re-derivations of "today" collapsed into one function. `todayISO()` now lives in `src/lib/puzzleDate.ts` beside `normalizePuzzleDate`/`resolvePuzzleDateParam`.
+
+**Removed:** 4 byte-identical `getTodayDateString` copies (leksiarxeio/vrestifrasi/leksodromia/leksoplegma data loaders — now `export { todayISO as getTodayDateString }`, so callers and tests are untouched), 4 inline `.split("T")[0]` in leksokipos (`index.ts` ×3, `puzzleIndex.ts`), a local `getTodayString` in `leksindeseis/page.tsx`, 2 in `useDayChange`, 5 Board leaderboard props, `HomeTrophyButton`. Two idioms (`.slice(0,10)` vs `.split("T")[0]`) → one.
+
+**UTC rollover preserved deliberately** (operator's call). `toISOString()` is UTC, so the daily puzzle rolls over at 02:00/03:00 Athens — Greek players between midnight and 3am get "yesterday". That is now a one-line change in one place instead of a 12-site sweep; tests pin the behaviour so a future switch to Europe/Athens is a deliberate red test, not an accident. If it's ever changed, think about already-persisted round state keyed by date.
+
+**The architecture review was wrong on two counts** (both verified against the code):
+1. *"Boards prefer the `today` prop they already receive"* — would have introduced a bug. The `today` prop is **not** today; it's the resolved puzzle date, set from `?puzzle=` via `resolvePuzzleDateParam`, so it can be any past date. The modal's `today` anchors the 7-day strip and the "Σήμερα" pill; `defaultDate` is the selection. The Boards passing `today={todayISO()} defaultDate={today}` were already correct.
+2. *`LeaderboardModal.tsx:60` is a call site* — it isn't. That line is inside `getLast7Dates`, doing arithmetic on a caller-passed `today`. Left alone.
+
+**Real bug found behind the review's "intra-module drift" flag** (right smell, wrong direction): `LeksodromiaBoard`'s **playing** branch passed `today={today}` (the puzzle date) with no `defaultDate`. Opening the leaderboard mid-game on a past puzzle anchored the strip on that date and labelled it "Σήμερα". Now matches the finished branch.
+
+**Review missed** `useDayChange.ts` (2 sites) — the one place the rollover rule has user-visible behaviour, since it's what redirects a stale tab off yesterday's puzzle. Swept.
+
+**Out of scope:** `scripts/*.ts` (Node-side, not the platform clock), `api/cleanup-scores` (a retention cutoff, not today), test fixtures deriving their own dates.
+
+## Session 87 — 2026-07-16: Premade-data re-sync registry (ADR 0015)
+
+**Goal:** an accepted nomination should keep *every* dictionary-derived game correct, not just Leksokipos. Implemented the handoff in `.claude/handoffs/resync-registry-handoff.md`.
+
+**Enabling move:** `apply-nominations.mjs` → `.ts` via `tsx`. The `.mjs` boundary was forcing the script to re-mirror game logic (`normalise`, `puzzleAcceptsWord` with a hardcoded `>= 4` instead of `LEKSOKIPOS.MIN_WORD_LENGTH`). Both mirrors deleted — adapters call the real predicates.
+
+**Seam:** `scripts/lib/resync/` — a registry of per-game adapters over one contract (`load` / pure `resync` / `write`). Orchestrators own `words-el.json` (the source) and walk the registry for everything derived from it. Vres Tin Frasi deliberately omitted (phrases, not dictionary-derived).
+
+**Gaps closed:** Leksoplegma `bonusWords` (10 boards affected on the current backlog) and Leksodromia `anagramAlternates`. Both were silently going stale on every nomination.
+
+**Drift guard:** `src/test/shared/premadeDataConsistency.test.ts` checks committed data against the committed dictionary; tiered by cost (exhaustive for stale-removal, exact for Leksiarxeio/Leksodromia, deterministic sample for the expensive full re-derivations). Verified it actually fails on injected drift. Committed data is currently clean — no backfill needed.
+
+**Handoff was wrong on four counts** (all verified, not trusted):
+1. The env-flag risk it said to resolve first was a non-issue — `tsx` forwards `--env-file-if-exists`.
+2. The Leksokipos "predicate in `@/games/leksokipos/lib`" it said to import **does not exist**. Chose to call `computeValidWords(c, o, [word])` per word rather than extract one, keeping a perf-contracted hot path untouched.
+3. `apply-proposed-words.mjs` is a **second consumer** of the re-sync with the same mirrors and the same staleness bug — unmentioned. Converted it too; the seam now has two real consumers.
+4. Leksodromia `anagramAlternates` is **not** enumerated against `words-el.json` — keys come from curated `answers-{N}.json`, values from `words-{N}.json`. Derived *transitively*. Implemented a real delta, not the planned warning-only v1.
+
+**Traps worth remembering:**
+- `package.json` has no `"type": "module"` → `tsx` compiles scripts as **CJS**: use the plain `__dirname`, no top-level `await`. Lint, build and 1600+ tests all passed while the converted script was completely broken — **only running it caught this**.
+- `words-el.json` has 3 non-normalised entries (`παλμος`, `πολεμας`, `σαλος`, final sigma ς) whose normalised forms are also present → 3 redundant duplicates. Harmless at runtime (lookups normalise) but any raw string comparison against it is a false-positive trap.
+
+**Findings for the operator (current backlog):**
+- `ιουνιοσ` is a curated Leksodromia answer that an accepted nomination removes from the dictionary → the game would keep posing a non-word. Re-curate `answers-7.json`.
+- `σταυλου` is nominated twice. The old dry-run double-counted it; membership is now tracked in a Set so the preview matches the real run.
+
+## Session 86 — 2026-07-16: Leksikastirio nomination guards (dedup normalization + name blocklist)
+Two guarantees for word reports/proposals.
+- **Duplicate hole fixed.** POST `/api/nominations` and `/api/nominations/lookup` normalized words with only `.toLowerCase().trim()`, while the platform stores accent-stripped/final-sigma-collapsed forms — so "καλός"/"καλος"/"καλοσ" were treated as distinct, letting duplicate pending nominations slip past the "vote for the existing one" flow (no DB unique constraint as backstop). Both routes + `NominationModal` now use `normalizeLetters` consistently (client `key` + `runLookup` targets + submit body), so variants collapse to one lookup key and the existing pending→upvote flow actually catches them. Stored nomination words are now normalized (matches dictionary storage; admins already see that form).
+- **Name blocklist (req: "we don't accept names").** New `src/data/nominations-blocklist.json` (16,947 entries) = the ~16.9k proper nouns/foreign words curated OUT of the dictionary (recovered by diffing `d4e1824→605a102` word lists) ∪ all 12 month forms (nominative+genitive). Dual-use common words (νίκη/ελπίδα/σοφία/αγάπη…) were deliberately kept in the dict and are NOT in the set → very low false-positive rate. New `src/lib/nominationBlocklist.ts` (`isBlockedWord`, module-scoped Set, ~60 KB gzipped — fine for edge). ADD-direction proposals for a blocked word → POST returns **422 `blocked_word`** (authoritative); lookup returns `blocked:true` (short-circuits DB); modal shows a 🚫 "Δεν δεχόμαστε κύρια ονόματα" banner + disables submit. Removal reports are unaffected (block is add-only).
+- Tests: new `nominationBlocklist.test.ts`; extended route + modal tests (422, blocked lookup, blocked banner, unblurred-submit guard, remove-allowed); fixed normalization expectations (καλος→καλοσ); registered the JSON in `deploymentReadiness.test.ts`.
+- **Burst-duplicate bug diagnosed + fixed (ΑΓΟΡΑΡΟΣ report).** Operator saw ΑΓΟΡΑΡΟΣ 5–6× and rejecting felt broken. DB shows **6 byte-identical `αγοραροσ` rows, same device, 32 ms span, all already `status='rejected'`** — *not* accent variants (operator's hypothesis) and the rejections *did* persist; nothing pending remains. Root cause: `handleSubmit` `await`s `runLookup` **before** `setStatus("submitting")`, so the button stays enabled across a held-Enter key-repeat and every handler in the burst clears the dup checks and POSTs. Fix (**Option B**, operator's call): synchronous `busyRef` re-entrancy lock guarding submit **and** upvote (state can't do this — it disables only on the next render), reset on close so a hung request can't wedge the button. Red-test verified: lock disabled → 6 POSTs (reproduces the incident exactly); lock on → 1.
+- Only 3 burst-dupe groups exist table-wide ever (`αγοραροσ`×6/32 ms, `σπατα`×2/9 s, `σταυλου`×2/3 s); zero duplicate **pending** rows now. Rejected/dupe rows left in place (retained-as-history by design, per operator).
+- **Deferred — Option A backstop:** partial unique index `(word, direction) WHERE status='pending'` + POST 23505-conflict handling. It's the only thing that stops dupes from *two devices/tabs*; applies cleanly today (no pending dupes). Declined for now to avoid a prod schema change.
+- Deferred: no dictionary-membership check for add (795k/20 MB list can't bundle into edge — pending-duplicate + blocklist cover the realistic cases). List is admin-editable JSON; not expanded further per user.
+- Gates: **build 0 · eslint 0 · tests all green (0 fail).** No schema change, no deploy performed.
+
+---
+
+## Session 85 — 2026-07-15: DB schema review follow-ups (Task A index + Vres flip + first-place count)
+Implemented the session-83 handoff after a `/grill-with-docs` design pass (handoff then deleted). Three atomic tickets.
+- **Ticket 0 — `game_scores` read indexes** (`migration 20260715120000`): `game_scores_game_date_score_idx (game_id, puzzle_date, score)` for the leaderboard top-20/rank + the new daily-MAX aggregate; `game_scores_device_id_idx (device_id)` for lifetime stats + Sign-in Restore. **APPLIED to prod 2026-07-15 + verified** (both indexes present via `pg_indexes`). Applied via MCP `execute_sql` (`apply_migration` was 502-ing; `execute_sql` write path worked) — so migration-history did NOT record version `20260715120000`; a future `db push` needs `supabase migration repair --status applied 20260715120000` (see `/project-mcp` skill, updated this session).
+- **Ticket 1 — Vres Tin Frasi → higher-is-better (ADR 0014).** Board now posts `scoreVresTinFrasi` points (6→1 win, 0 loss — already existed, was computed-but-unposted) instead of the raw attempt count; dropped the lone `sort=asc` in `GameLeaderboardModal` (labels → "Σκορ / υψηλότερο = καλύτερο"). Data migration `20260715120100` rewrites live rows (`7-score` for 1..6, `0` for 7). CONTEXT.md "Attempt Count" retired → points concept; new **ADR 0014** "every leaderboard is higher-is-better, no lower-is-better boards" (closes the per-game-direction problem for placement). **Data migration written, NOT yet applied.**
+- **Ticket 2 — Leksokipos first-place count (Πρωτιές).** New pure `countFirstPlaceFinishes(rows, deviceId)` (`src/lib/placement.ts`, data-class 2 derivation — ties share rank 1); `/api/profile/stats` gained a cross-device Leksokipos fetch + `leksokipos_first_place_count` field (index-backed; documented >10k Fluid-CPU escape hatch → RPC/view); 5th stat cell in `LifetimeStatsStrip`. New CONTEXT terms First-Place Finish / First-Place Count. **No schema change — ships without a DB push.**
+- **Parked** (per grill): Task C per-game max-score stat (until a Profile UI row exists); tiered `leksokipos-first-place-*` badges (frozen ids TBD); `player_placements` table (only if a live in-game "first!" badge is wanted).
+- Gates: **build 0 · eslint 0 · tests all green (0 fail).** ⚠️ Two migrations await a prod `db push` (shared dev/prod DB — every write is production).
+
+---
+
 ## Session 84 — 2026-07-15: Leksokipos soft cap (variable genius bar)
 Replaced the flat `MAX_SCORE_CAP: 600` hard clip on `maxScore` with a logarithmic **soft cap** so the top-rank (Απολυτότητα) bar tracks each puzzle's richness instead of pinning ~57% of days to a genius target of 480. Motivation: a player noticed the max-rank score was identical every day.
 - **Curve** (`softCap` in `games/leksokipos/lib/scoring.ts`): identity ≤ knee, then `knee + k·ln(1+(x−knee)/k)` above it — slope-1 continuous (no kink), strictly increasing, no hard ceiling. Operates on the 85%-scaled total (SCORE_SCALE unchanged).

@@ -193,13 +193,20 @@ describe("NominationCard — admin controls", () => {
     expect(screen.queryByTestId("admin-approve")).toBeNull();
   });
 
-  it("sends action=reject in the POST body for the reject button", async () => {
+  it("sends action=reject in the body and the secret in the X-Admin-Secret header", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, json: async () => ({}) } as Response);
     const { user } = setup({ isAdmin: true, adminSecret: "topsecret" });
     await user.click(screen.getByTestId("admin-reject"));
     await waitFor(() => expect(fetchSpy).toHaveBeenCalledOnce());
-    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
+
+    const init = fetchSpy.mock.calls[0][1]!;
+    const body = JSON.parse(init.body as string);
     expect(body.action).toBe("reject");
-    expect(body.adminSecret).toBe("topsecret");
+
+    // The admin secret travels in the header — the platform's one wire format
+    // (requireAdmin). It used to ride in the body, which is the second shape the
+    // route envelope removed.
+    expect((init.headers as Record<string, string>)["X-Admin-Secret"]).toBe("topsecret");
+    expect(body.adminSecret).toBeUndefined();
   });
 });

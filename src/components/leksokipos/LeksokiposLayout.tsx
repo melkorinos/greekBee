@@ -60,14 +60,12 @@ function VariantToggleButton({
 
 interface LeksokiposLayoutProps {
   puzzle: LeksokiposPuzzle;
-  recentPuzzleDates: string[];
   canonicalPath: string;
   tooFewWords: boolean;
 }
 
 export function LeksokiposLayout({
   puzzle,
-  recentPuzzleDates,
   canonicalPath,
   tooFewWords,
 }: LeksokiposLayoutProps) {
@@ -97,7 +95,7 @@ export function LeksokiposLayout({
         </div>
       )}
       <div className="flex flex-1 w-full flex-col items-center bg-background">
-        <GameBoard key={puzzle.id} puzzle={puzzle} recentPuzzleDates={recentPuzzleDates} variant={variant} />
+        <GameBoard key={puzzle.id} puzzle={puzzle} variant={variant} />
       </div>
     </>
   );

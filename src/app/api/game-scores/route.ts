@@ -5,18 +5,21 @@
 //   Leksokipos   (score = points, higher is better)
 //   Leksindeseis (score = mistakesRemaining 1–4, higher is better)
 //   Leksiarxeio  (score = sum of per-length in-game points 0–30, higher is better)
-//                 POST carries word_length + points; route does a read-modify-write
-//                 so each length result is merged into one row per player per day.
+//                 POST carries word_length + points; the route reads the day's row,
+//                 folds the length in via mergeLengthScore (pure — that fold is
+//                 tested directly, not through a faked request), and writes it back.
 //
 // RLS: anon INSERT + anon SELECT + anon UPDATE (open leaderboard).
 // Score de-duplication: unique constraint on (game_id, device_id, puzzle_date).
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { getSupabaseClient, table, type Insert } from "@/lib/supabase";
 import { isISODate } from "@/games/leksokipos/lib";
 import { upsertAndClean } from "@/lib/supabasePost";
+import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
 import { LEKSIARXEIO } from "@/config/gameRules";
+import { mergeLengthScore } from "@/lib/scoreMerge";
 import { normalizePuzzleDate } from "@/lib/puzzleDate";
 import { sanitizeDisplayName } from "@/lib/postScore";
 
@@ -46,71 +49,66 @@ interface LeksiarxeioScorePayload {
 
 type ScorePayload = StandardScorePayload | LeksiarxeioScorePayload;
 
-function aggregateLeksiarxeioScore(data: Record<string, number>): number {
-  return Object.values(data).reduce((sum, v) => sum + v, 0);
-}
-
 export async function POST(req: NextRequest) {
-  let body: ScorePayload;
-  try {
-    body = (await req.json()) as ScorePayload;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+  const parsed = await parseJson<ScorePayload>(req);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.body;
 
   const { game_id, puzzle_date: rawDate, device_id, display_name } = body;
 
   const puzzle_date = normalizePuzzleDate(rawDate);
 
   if (!game_id || !puzzle_date || !device_id) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    return jsonMessage("Missing required fields");
   }
   if (!isISODate(puzzle_date)) {
-    return NextResponse.json({ error: "Invalid puzzle_date format" }, { status: 400 });
+    return jsonMessage("Invalid puzzle_date format");
   }
 
   const name = sanitizeDisplayName(display_name);
 
-  // ── Leksiarxeio: read-modify-write one length at a time ────────────────────
+  // ── Leksiarxeio: read → fold → write, one length at a time ──────────────────
   if (game_id === "leksiarxeio") {
     const { word_length, points } = body as LeksiarxeioScorePayload;
     if (!VALID_WORD_LENGTHS.has(word_length)) {
-      return NextResponse.json({ error: "Invalid word_length" }, { status: 400 });
+      return jsonMessage("Invalid word_length");
     }
     if (typeof points !== "number" || points < 0 || points > 6) {
-      return NextResponse.json({ error: "points must be 0–6" }, { status: 400 });
+      return jsonMessage("points must be 0–6");
     }
 
     const supabase = getSupabaseClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: existing } = await (supabase.from("game_scores") as any)
+    const { data: existing } = await table(supabase, "game_scores")
       .select("data")
       .eq("game_id", "leksiarxeio")
       .eq("device_id", device_id)
       .eq("puzzle_date", puzzle_date)
       .single();
 
-    const existingData: Record<string, number> =
-      (existing as { data: Record<string, number> } | null)?.data ?? {};
-    const newData  = { ...existingData, [String(word_length)]: points };
-    const newScore = aggregateLeksiarxeioScore(newData);
+    // The fold is pure and lives in scoreMerge — no row yet, or a length posting
+    // twice, are decided there and tested there.
+    const merged = mergeLengthScore(
+      (existing as { data: Record<string, number> } | null)?.data,
+      word_length,
+      points,
+    );
 
     const err = await upsertAndClean(
       "game_scores",
       "game_id,device_id,puzzle_date",
-      { game_id, puzzle_date, device_id, display_name: name, score: newScore, data: newData },
+      { game_id, puzzle_date, device_id, display_name: name, score: merged.score, data: merged.data },
     );
-    if (err) return NextResponse.json({ error: err }, { status: 500 });
+    if (err) return jsonError("db_error", err);
     return NextResponse.json({ ok: true });
   }
 
   // ── Standard games ──────────────────────────────────────────────────────────
   const { score, is_perfect } = body as StandardScorePayload;
   if (typeof score !== "number") {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    return jsonMessage("Missing required fields");
   }
 
-  const row: Record<string, unknown> = { game_id, puzzle_date, device_id, display_name: name, score };
+  const row: Insert<"game_scores"> = { game_id, puzzle_date, device_id, display_name: name, score };
   if (is_perfect === true) row.is_perfect = true;
 
   const err = await upsertAndClean(
@@ -118,7 +116,7 @@ export async function POST(req: NextRequest) {
     "game_id,device_id,puzzle_date",
     row,
   );
-  if (err) return NextResponse.json({ error: err }, { status: 500 });
+  if (err) return jsonError("db_error", err);
   return NextResponse.json({ ok: true });
 }
 
@@ -128,17 +126,17 @@ export async function GET(req: NextRequest) {
   const gameId    = req.nextUrl.searchParams.get("game_id") ?? "";
   const puzzleDate = req.nextUrl.searchParams.get("puzzle_date") ?? "";
   const deviceId  = req.nextUrl.searchParams.get("deviceId") ?? "";
-  // sort=asc for games where lower score is better (e.g. vrestifrasi attempt count)
+  // sort=asc for lower-is-better games. No game uses it today — every leaderboard
+  // is higher-is-better and sorts desc (ADR 0014) — but the param stays generic.
   const sortAsc   = req.nextUrl.searchParams.get("sort") === "asc";
 
   if (!gameId || !puzzleDate) {
-    return NextResponse.json({ error: "game_id and puzzle_date are required" }, { status: 400 });
+    return jsonMessage("game_id and puzzle_date are required");
   }
 
   const supabase = getSupabaseClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rows, error } = await (supabase.from("game_scores") as any)
+  const { data: rows, error } = await table(supabase, "game_scores")
     .select("device_id, display_name, score, is_perfect")
     .eq("game_id", gameId)
     .eq("puzzle_date", puzzleDate)
@@ -146,7 +144,7 @@ export async function GET(req: NextRequest) {
     .limit(20);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return jsonError("db_error", error.message);
   }
 
   interface RawRow { device_id: string; display_name: string; score: number; is_perfect: boolean; }
@@ -171,8 +169,7 @@ export async function GET(req: NextRequest) {
   } | null = null;
 
   if (!playerInTop20 && deviceId) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: playerData } = await (supabase.from("game_scores") as any)
+    const { data: playerData } = await table(supabase, "game_scores")
       .select("display_name, score, is_perfect")
       .eq("game_id", gameId)
       .eq("puzzle_date", puzzleDate)
@@ -183,8 +180,7 @@ export async function GET(req: NextRequest) {
       // Count players who rank ahead of this player.
       // For ascending sort (lower=better), count those with a lower score.
       // For descending sort (higher=better), count those with a higher score.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { count } = await (supabase.from("game_scores") as any)
+      const { count } = await table(supabase, "game_scores")
         .select("*", { count: "exact", head: true })
         .eq("game_id", gameId)
         .eq("puzzle_date", puzzleDate)

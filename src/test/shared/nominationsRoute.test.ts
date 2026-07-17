@@ -9,7 +9,7 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-type ChainResult = { data?: unknown; error?: { message: string } | null; count?: number | null };
+type ChainResult = { data?: unknown; error?: { message: string; code?: string } | null; count?: number | null };
 
 let _callQueue: ChainResult[] = [];
 
@@ -38,6 +38,7 @@ vi.mock("@/lib/supabase", () => {
   // The review route uses the service-role client (RLS bypass); everything else
   // uses the anon client. Both resolve to the same queue-backed mock here.
   return {
+  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
     getSupabaseClient:      () => client,
     getServiceRoleClient:   () => client,
   };
@@ -62,11 +63,15 @@ const { POST: reviewNomination } =
 
 function enqueue(...results: ChainResult[]) { _callQueue.push(...results); }
 
-function makePost(url: string, body: unknown) {
+function makePost(url: string, body: unknown, adminSecret?: string) {
   return new NextRequest(url, {
     method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(body),
+    headers: {
+      "Content-Type": "application/json",
+      // The admin gate reads the header, never the body (requireAdmin).
+      ...(adminSecret === undefined ? {} : { "X-Admin-Secret": adminSecret }),
+    },
+    body: JSON.stringify(body),
   });
 }
 
@@ -223,6 +228,38 @@ describe("POST /api/nominations — happy path", () => {
     }));
     expect(res.status).toBe(500);
   });
+
+  it("422 when adding a blocklisted proper noun (no insert attempted)", async () => {
+    // Μαρία is one of the ~17k curated-out proper nouns. No DB row is enqueued —
+    // the route must short-circuit before touching Supabase.
+    const res = await submitNomination(makePost("http://localhost/api/nominations", {
+      word: "Μαρία", direction: "add", deviceId: "d1",
+    }));
+    expect(res.status).toBe(422);
+    expect((await res.json()).error).toBe("blocked_word");
+  });
+
+  it("allows REMOVING a blocklisted word (block is add-only)", async () => {
+    enqueue({ error: null }); // insert succeeds
+    const res = await submitNomination(makePost("http://localhost/api/nominations", {
+      word: "Μαρία", direction: "remove", deviceId: "d1",
+    }));
+    expect(res.status).toBe(201);
+  });
+
+  it("409 already_pending with the existing id when the pending-unique backstop fires", async () => {
+    // 23505 from nominations_pending_word_direction_key: an identical pending
+    // proposal landed between the client's lookup and this POST.
+    enqueue({ error: { message: "duplicate key value", code: "23505" } }); // insert conflict
+    enqueue({ data: { id: "nom-9" }, error: null });                       // existing pending row
+    const res = await submitNomination(makePost("http://localhost/api/nominations", {
+      word: "καλος", direction: "add", deviceId: "d1",
+    }));
+    expect(res.status).toBe(409);
+    const json = await res.json() as { error: string; pendingId: string | null };
+    expect(json.error).toBe("already_pending");
+    expect(json.pendingId).toBe("nom-9");
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -262,7 +299,7 @@ describe("GET /api/nominations/lookup — happy path", () => {
     expect(json.rejected).toBe(2);
     expect(json.accepted).toBe(3);
     expect(json.pending).toBe(1);
-    expect(json.word).toBe("καλος");
+    expect(json.word).toBe("καλοσ"); // normalised: final sigma ς → σ
   });
 
   it("returns the earliest pending id so the client can upvote it instead of duplicating", async () => {
@@ -290,7 +327,25 @@ describe("GET /api/nominations/lookup — happy path", () => {
     enqueue({ count: 0, error: null });
     const res  = await lookupNomination(makeReq("  Καλός  ", "remove"));
     const json = await res.json() as { word: string };
-    expect(json.word).toBe("καλός");
+    // normalizeLetters: lowercased, accents stripped, final sigma ς → σ.
+    expect(json.word).toBe("καλοσ");
+  });
+
+  it("returns blocked=true for a blocklisted add-word without querying the DB", async () => {
+    // No counts enqueued — a blocked add-word must short-circuit before Supabase.
+    const res  = await lookupNomination(makeReq("Αθήνα", "add"));
+    const json = await res.json() as { blocked: boolean; word: string };
+    expect(json.blocked).toBe(true);
+    expect(json.word).toBe("αθηνα");
+  });
+
+  it("blocked=false for a normal add-word", async () => {
+    enqueue({ count: 0, error: null }); // rejected
+    enqueue({ count: 0, error: null }); // accepted
+    enqueue({ data: [], count: 0, error: null }); // pending
+    const res  = await lookupNomination(makeReq("καλος", "add"));
+    const json = await res.json() as { blocked: boolean };
+    expect(json.blocked).toBe(false);
   });
 
   it("500 when either count query fails", async () => {
@@ -364,6 +419,34 @@ describe("POST /api/nominations/[id]/vote — happy path", () => {
     const res = await voteOnNomination(makePost(url, { deviceId: "d1", voteType: "up" }), withParams("n1"));
     expect(res.status).toBe(500);
   });
+
+  it("500 when the existing-vote lookup errors — must NOT fall through to insert", async () => {
+    // This was the compounding bug: a multiplicity error from maybeSingle left
+    // `existing` null and the route inserted a third row. If the route (wrongly)
+    // fell through, the insert would dequeue a default success and answer 201.
+    enqueue({ data: null, error: { message: "multiple rows returned" } });
+    const res = await voteOnNomination(makePost(url, { deviceId: "d1", voteType: "up" }), withParams("n1"));
+    expect(res.status).toBe(500);
+  });
+
+  it("201 added when a concurrent insert of the same voteType wins the race (23505)", async () => {
+    enqueue({ data: null, error: null });                            // no existing vote
+    enqueue({ error: { message: "duplicate key", code: "23505" } }); // insert loses the race
+    enqueue({ data: { id: "v1", vote_type: "up" }, error: null });   // re-read the raced row
+    const res = await voteOnNomination(makePost(url, { deviceId: "d1", voteType: "up" }), withParams("n1"));
+    expect(res.status).toBe(201);
+    expect((await res.json()).action).toBe("added");
+  });
+
+  it("200 switched when the raced row holds the opposite voteType (23505)", async () => {
+    enqueue({ data: null, error: null });                            // no existing vote
+    enqueue({ error: { message: "duplicate key", code: "23505" } }); // insert loses the race
+    enqueue({ data: { id: "v1", vote_type: "down" }, error: null }); // raced row is a down-vote
+    enqueue({ error: null });                                        // update to up
+    const res = await voteOnNomination(makePost(url, { deviceId: "d1", voteType: "up" }), withParams("n1"));
+    expect(res.status).toBe(200);
+    expect((await res.json()).action).toBe("switched");
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -373,35 +456,50 @@ describe("POST /api/nominations/[id]/vote — happy path", () => {
 describe("POST /api/nominations/[id]/review — auth", () => {
   const url = "http://localhost/api/nominations/n1/review";
 
-  it("403 when adminSecret is wrong", async () => {
+  // Auth is the shared envelope's (requireAdmin, exercised exhaustively in
+  // apiRoute.test.ts). What matters here is that this route is behind it, and on
+  // the platform's terms: the header, answered 401 — not the `adminSecret` body
+  // field answered 403 that it used to have.
+  it("401 when the admin secret is wrong", async () => {
     const res = await reviewNomination(
-      makePost(url, { action: "approve", adminSecret: "wrong" }),
+      makePost(url, { action: "approve" }, "wrong"),
       withParams("n1"),
     );
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
   });
 
-  it("403 when adminSecret is missing", async () => {
+  it("401 when the admin secret header is missing", async () => {
     const res = await reviewNomination(
       makePost(url, { action: "approve" }),
       withParams("n1"),
     );
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(401);
+  });
+
+  it("401 when the secret is sent the old way, in the body", async () => {
+    const res = await reviewNomination(
+      makePost(url, { action: "approve", adminSecret: "secret-admin" }),
+      withParams("n1"),
+    );
+    expect(res.status).toBe(401);
   });
 });
 
 describe("POST /api/nominations/[id]/review — validation", () => {
-  const url    = "http://localhost/api/nominations/n1/review";
-  const AUTH   = { adminSecret: "secret-admin" };
+  const url = "http://localhost/api/nominations/n1/review";
 
   it("400 on invalid JSON", async () => {
-    const req = new NextRequest(url, { method: "POST", body: "{bad", headers: { "Content-Type": "application/json" } });
+    const req = new NextRequest(url, {
+      method:  "POST",
+      body:    "{bad",
+      headers: { "Content-Type": "application/json", "X-Admin-Secret": "secret-admin" },
+    });
     expect((await reviewNomination(req, withParams("n1"))).status).toBe(400);
   });
 
   it("400 when action is not approve or reject", async () => {
     const res = await reviewNomination(
-      makePost(url, { ...AUTH, action: "delete" }),
+      makePost(url, { action: "delete" }, "secret-admin"),
       withParams("n1"),
     );
     expect(res.status).toBe(400);
@@ -409,25 +507,26 @@ describe("POST /api/nominations/[id]/review — validation", () => {
 });
 
 describe("POST /api/nominations/[id]/review — happy path", () => {
-  const url  = "http://localhost/api/nominations/n1/review";
-  const AUTH = { adminSecret: "secret-admin" };
+  const url    = "http://localhost/api/nominations/n1/review";
+  const SECRET = "secret-admin";
 
   it("200 ok on approve", async () => {
     enqueue({ error: null });
-    const res = await reviewNomination(makePost(url, { ...AUTH, action: "approve" }), withParams("n1"));
+    const res = await reviewNomination(makePost(url, { action: "approve" }, SECRET), withParams("n1"));
     expect(res.status).toBe(200);
     expect((await res.json()).ok).toBe(true);
   });
 
   it("200 ok on reject", async () => {
     enqueue({ error: null });
-    const res = await reviewNomination(makePost(url, { ...AUTH, action: "reject" }), withParams("n1"));
+    const res = await reviewNomination(makePost(url, { action: "reject" }, SECRET), withParams("n1"));
     expect(res.status).toBe(200);
   });
 
-  it("500 on DB error", async () => {
-    enqueue({ error: { message: "db error" } });
-    const res = await reviewNomination(makePost(url, { ...AUTH, action: "approve" }), withParams("n1"));
+  it("500 on DB error, without leaking the Postgres message", async () => {
+    enqueue({ error: { message: "relation \"nominations\" does not exist" } });
+    const res = await reviewNomination(makePost(url, { action: "approve" }, SECRET), withParams("n1"));
     expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "db_error" });
   });
 });

@@ -15,6 +15,7 @@
 
 import type { Language } from "@/types";
 import { greekToGreeklish } from "@/lib/greeklish";
+import { todayISO } from "@/lib/puzzleDate";
 import puzzleIndexEl from "./puzzles-index-el.json";
 
 /** A pre-built puzzle minus its validWords — enough to build its canonical URL. */
@@ -46,8 +47,7 @@ export function getPuzzleStubForDate(date: string, language: Language = "el"): L
 
 /** Slim mirror of getTodaysPuzzle (see ./index.ts). */
 export function getTodaysPuzzleStub(language: Language = "el"): LeksokiposPuzzleStub {
-  const today = new Date().toISOString().split("T")[0];
-  return getPuzzleStubForDate(today, language);
+  return getPuzzleStubForDate(todayISO(), language);
 }
 
 /**

@@ -4,15 +4,9 @@ import { btnCancel, btnModalPrimary, btnModalSubmit, inputClass, inputReadonlyCl
 
 import { Modal } from "./Modal";
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
-import { useCallback, useEffect, useState } from "react";
-
-interface LookupResult {
-  word:      string; // the lowercase+trim word this result applies to
-  rejected:  number;
-  accepted:  number; // approved but not yet released (not in the dictionary yet)
-  pending:   number;
-  pendingId: string | null; // id of the existing pending proposal, to upvote instead
-}
+import { deriveBanner, guardSubmit, pivotFor, type NominationLookup } from "@/lib/nominationDecision";
+import { normalizeLetters } from "@/lib/normalize";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface NominationModalProps {
   word: string;
@@ -56,17 +50,27 @@ export function NominationModal({
   const [playerName,   setPlayerName]   = useState("");
   const [note,         setNote]         = useState("");
   const [status,       setStatus]       = useState<"idle" | "submitting" | "success" | "error">("idle");
-  const [lookup,       setLookup]       = useState<LookupResult | null>(null);
+  const [lookup,       setLookup]       = useState<NominationLookup | null>(null);
   const [noteMissing,  setNoteMissing]  = useState(false);
   const [successMode,  setSuccessMode]  = useState<"submitted" | "upvoted">("submitted");
 
+  // Re-entrancy lock for the two mutating actions (submit / upvote). `status`
+  // can't do this job: it's React state, so it only disables the button on the
+  // NEXT render — a held Enter key or a fast double-click fires several handlers
+  // before that, and each one sails past the duplicate checks and POSTs. A ref
+  // flips synchronously, so the burst is stopped on the very first re-entry.
+  // (This is what put six identical αγοραροσ rows in the DB within 32 ms.)
+  const busyRef = useRef(false);
+
   const word = wordEditable ? editableWord : wordProp;
   const c    = copy[direction];
-  const key  = word.trim().toLowerCase();
+  // Normalise the key the same way the server does (accent-stripped, final sigma
+  // collapsed) so `lookup.word === key` matches even when the player typed accents.
+  const key  = normalizeLetters(word.trim());
 
   // Look up prior rejections / pending duplicates for `target` (lowercase+trim).
   const runLookup = useCallback(
-    async (target: string): Promise<LookupResult | null> => {
+    async (target: string): Promise<NominationLookup | null> => {
       if (target.length < 2) {
         setLookup(null);
         return null;
@@ -76,9 +80,10 @@ export function NominationModal({
           `/api/nominations/lookup?word=${encodeURIComponent(target)}&direction=${direction}`,
         );
         if (!res.ok) return null;
-        const data = (await res.json()) as { rejected?: number; accepted?: number; pending?: number; pendingId?: string | null };
-        const result: LookupResult = {
+        const data = (await res.json()) as { blocked?: boolean; rejected?: number; accepted?: number; pending?: number; pendingId?: string | null };
+        const result: NominationLookup = {
           word:      target,
+          blocked:   data.blocked   ?? false,
           rejected:  data.rejected  ?? 0,
           accepted:  data.accepted  ?? 0,
           pending:   data.pending   ?? 0,
@@ -96,46 +101,42 @@ export function NominationModal({
   // Non-editable word (e.g. in-game flag) has no blur moment — check on open.
   useEffect(() => {
     if (!isOpen || wordEditable) return;
-    const target = wordProp.trim().toLowerCase();
+    const target = normalizeLetters(wordProp.trim());
     if (target) runLookup(target);
   }, [isOpen, wordEditable, wordProp, runLookup]);
 
   if (!isOpen) return null;
 
-  // A warning applies only while the looked-up word still matches the input.
-  // Priority: rejected → accepted → pending (at most one banner shows).
-  const matches     = !!lookup && lookup.word === key;
-  const rejectedHit = matches && lookup!.rejected > 0;
-  const acceptedHit = matches && lookup!.rejected === 0 && lookup!.accepted > 0;
-  const pendingHit  = matches && lookup!.rejected === 0 && lookup!.accepted === 0 && lookup!.pending > 0;
+  const banner      = deriveBanner(lookup, key);
+  const blockedHit  = banner === "blocked";
+  const rejectedHit = banner === "rejected";
+  const acceptedHit = banner === "accepted";
+  const pendingHit  = banner === "pending";
   // Previously-rejected words require an explanation before re-submitting.
   const noteRequired = rejectedHit;
 
   async function handleSubmit() {
-    const trimmed = word.trim().toLowerCase();
+    if (busyRef.current) return; // a burst of clicks must produce one POST, not N
+    busyRef.current = true;
+    try {
+      await submitOnce();
+    } finally {
+      busyRef.current = false;
+    }
+  }
+
+  async function submitOnce() {
+    const trimmed = normalizeLetters(word.trim());
     if (!trimmed) return;
 
-    // Ensure the rejection check is current for this exact word before posting.
+    // Ensure the checks are current for this exact word before posting.
     const lk = lookup && lookup.word === trimmed ? lookup : await runLookup(trimmed);
-    if (lk && lk.rejected > 0 && !note.trim()) {
-      setNoteMissing(true); // mandatory explanation for a previously-rejected word
-      return;
-    }
-    setNoteMissing(false);
 
-    // Already approved (awaiting release) → re-proposing is pointless. Bail; the
-    // setLookup above makes `acceptedHit` true, disabling the button and showing
-    // the "already approved" banner.
-    if (lk && lk.rejected === 0 && lk.accepted > 0) {
-      return;
-    }
-
-    // An identical proposal is already pending → never insert a duplicate. Bail;
-    // the setLookup above makes `pendingHit` true, greying out this button and
-    // surfacing the "upvote the existing one" action in the info banner.
-    if (lk && lk.rejected === 0 && lk.accepted === 0 && lk.pending > 0 && lk.pendingId) {
-      return;
-    }
+    // Every refusal below is already visible: the setLookup inside runLookup
+    // surfaces the matching banner and disables the button. Bailing is enough.
+    const guard = guardSubmit(lk, note);
+    setNoteMissing(guard.ok === false && guard.reason === "note-required");
+    if (!guard.ok) return;
 
     setStatus("submitting");
     try {
@@ -150,6 +151,17 @@ export function NominationModal({
           deviceId:   getOrCreateDeviceId(),
         }),
       });
+      // A refusal the server decided (blocklist 422 / pending-uniqueness 409)
+      // becomes a lookup, so the same banner surfaces as if we had caught it.
+      if (res.status === 422 || res.status === 409) {
+        const data  = (await res.json().catch(() => null)) as { pendingId?: string | null } | null;
+        const pivot = pivotFor(res.status, trimmed, data);
+        if (pivot) {
+          setLookup(pivot);
+          setStatus("idle");
+          return;
+        }
+      }
       if (!res.ok) {
         throw new Error("server error");
       }
@@ -164,6 +176,8 @@ export function NominationModal({
   // Upvote the existing pending proposal instead of submitting a duplicate.
   async function handleUpvoteExisting(targetId: string | null) {
     if (!targetId) return;
+    if (busyRef.current) return; // same burst guard as handleSubmit
+    busyRef.current = true;
     setStatus("submitting");
     try {
       const res = await fetch(`/api/nominations/${targetId}/vote`, {
@@ -176,13 +190,16 @@ export function NominationModal({
       }
       setSuccessMode("upvoted");
       setStatus("success");
-      onSuccess(word.trim().toLowerCase());
+      onSuccess(normalizeLetters(word.trim()));
     } catch {
       setStatus("error");
+    } finally {
+      busyRef.current = false;
     }
   }
 
   function handleClose() {
+    busyRef.current = false; // never carry a stuck lock into the next open
     setEditableWord("");
     setPlayerName("");
     setNote("");
@@ -223,6 +240,21 @@ export function NominationModal({
             <p className="text-xs text-muted mb-5 leading-relaxed">
               {c.body(word.trim() || "…")}
             </p>
+
+            {blockedHit && (
+              <div
+                data-testid="nomination-blocked-warning"
+                className="mb-4 rounded-xl border border-rose-300 bg-rose-50 dark:border-rose-700 dark:bg-rose-950 px-3 py-2.5"
+              >
+                <p className="text-xs font-semibold text-rose-800 dark:text-rose-200">
+                  🚫 Δεν δεχόμαστε κύρια ονόματα.
+                </p>
+                <p className="text-xs text-rose-700 dark:text-rose-300 mt-1 leading-relaxed">
+                  Ονόματα ανθρώπων, μηνών ή τόπων —  καθώς και ξένες λέξεις — δεν προστίθενται
+                  στη λίστα. Δοκίμασε μια κοινή ελληνική λέξη.
+                </p>
+              </div>
+            )}
 
             {rejectedHit && (
               <div
@@ -287,7 +319,7 @@ export function NominationModal({
                       setLookup(null);      // word changed → drop any stale warning
                       setNoteMissing(false);
                     }}
-                    onBlur={(e) => runLookup(e.target.value.trim().toLowerCase())}
+                    onBlur={(e) => runLookup(normalizeLetters(e.target.value.trim()))}
                     placeholder="π.χ. ΑΓΑΠΗ"
                     maxLength={50}
                     data-testid="nomination-modal-word-input"
@@ -368,6 +400,7 @@ export function NominationModal({
                   status === "submitting" ||
                   (!wordEditable && !word.trim()) ||
                   (noteRequired && !note.trim()) ||
+                  blockedHit ||
                   acceptedHit ||
                   pendingHit
                 }

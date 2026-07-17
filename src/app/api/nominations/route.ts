@@ -3,7 +3,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
+import { getSupabaseClient, table } from "@/lib/supabase";
+import { isBlockedWord } from "@/lib/nominationBlocklist";
+import { normalizeLetters } from "@/lib/normalize";
 
 export const runtime = "edge";
 
@@ -15,22 +18,21 @@ export async function GET(req: NextRequest) {
   // (my_vote) so the client can highlight what the player already voted for.
   const deviceId  = req.nextUrl.searchParams.get("deviceId");
   if (direction !== "add" && direction !== "remove") {
-    return NextResponse.json({ error: "direction must be 'add' or 'remove'" }, { status: 400 });
+    return jsonMessage("direction must be 'add' or 'remove'");
   }
 
   const supabase = getSupabaseClient();
 
   // Fetch pending nominations for this direction with their vote counts.
   // Supabase doesn't do aggregates inline, so we fetch votes separately and merge.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: nominations, error: nomError } = await (supabase.from("nominations") as any)
+  const { data: nominations, error: nomError } = await table(supabase, "nominations")
     .select("id, word, player_name, note, created_at")
     .eq("direction", direction)
     .eq("status", "pending")
     .order("created_at", { ascending: false }) as { data: Array<{ id: string; word: string; player_name: string | null; note: string | null; created_at: string }> | null; error: unknown };
 
   if (nomError) {
-    return NextResponse.json({ error: "db_error" }, { status: 500 });
+    return jsonError("db_error", nomError);
   }
 
   if (!nominations || nominations.length === 0) {
@@ -39,13 +41,12 @@ export async function GET(req: NextRequest) {
 
   const ids = nominations.map((n) => n.id);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: votes, error: voteError } = await (supabase.from("nomination_votes") as any)
+  const { data: votes, error: voteError } = await table(supabase, "nomination_votes")
     .select("nomination_id, vote_type")
     .in("nomination_id", ids);
 
   if (voteError) {
-    return NextResponse.json({ error: "db_error" }, { status: 500 });
+    return jsonError("db_error", voteError);
   }
 
   // Count up/down votes per nomination.
@@ -60,8 +61,7 @@ export async function GET(req: NextRequest) {
   // client which way it already voted on each row (persists across reloads/tabs).
   const myVotes: Record<string, "up" | "down"> = {};
   if (deviceId) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: mine } = await (supabase.from("nomination_votes") as any)
+    const { data: mine } = await table(supabase, "nomination_votes")
       .select("nomination_id, vote_type")
       .eq("device_id", deviceId)
       .in("nomination_id", ids) as { data: Array<{ nomination_id: string; vote_type: string }> | null };
@@ -97,31 +97,40 @@ interface NominationPayload {
 }
 
 export async function POST(req: NextRequest) {
-  let body: NominationPayload;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
-  }
+  const parsed = await parseJson<NominationPayload>(req);
+  if (!parsed.ok) return parsed.response;
 
-  const { word, direction, playerName, note, deviceId } = body;
+  const { word, direction, playerName, note, deviceId } = parsed.body;
 
   if (!word || typeof word !== "string") {
-    return NextResponse.json({ error: "word required" }, { status: 400 });
+    return jsonMessage("word required");
   }
   if (direction !== "add" && direction !== "remove") {
-    return NextResponse.json({ error: "direction must be 'add' or 'remove'" }, { status: 400 });
+    return jsonMessage("direction must be 'add' or 'remove'");
   }
   if (!deviceId || typeof deviceId !== "string") {
-    return NextResponse.json({ error: "deviceId required" }, { status: 400 });
+    return jsonMessage("deviceId required");
   }
 
-  const normalised = word.toLowerCase().trim();
+  // Normalise the same way the dictionary is stored (accent-stripped, final
+  // sigma collapsed) so "καλός"/"καλος"/"καλοσ" all resolve to one word — this
+  // is what makes the duplicate/pending lookup actually collapse variants.
+  const normalised = normalizeLetters(word).trim();
+
+  if (!normalised) {
+    return jsonMessage("word required");
+  }
+
+  // Reject proposals to ADD a blocklisted word (proper noun / month / place /
+  // foreign word). Authoritative guard — the client warns first, but never
+  // trust the client. Removal reports are unaffected.
+  if (direction === "add" && isBlockedWord(normalised)) {
+    return jsonMessage("blocked_word", 422);
+  }
 
   const supabase = getSupabaseClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from("nominations") as any).insert({
+  const { error } = await table(supabase, "nominations").insert({
     word:        normalised,
     direction,
     player_name: playerName ?? null,
@@ -131,7 +140,25 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) {
-    return NextResponse.json({ error: "db_error" }, { status: 500 });
+    // 23505 from the partial unique index on pending (word, direction): an
+    // identical proposal is already in the queue — a concurrent submit from
+    // another tab/device that the client-side lookup couldn't see. Hand back
+    // the existing row's id so the client can offer "upvote it instead",
+    // the same pivot the lookup path drives.
+    if ((error as { code?: string }).code === "23505") {
+      const { data: pending } = await table(supabase, "nominations")
+        .select("id")
+        .eq("word", normalised)
+        .eq("direction", direction)
+        .eq("status", "pending")
+        .maybeSingle() as { data: { id: string } | null };
+
+      return NextResponse.json(
+        { error: "already_pending", pendingId: pending?.id ?? null },
+        { status: 409 },
+      );
+    }
+    return jsonError("db_error", error.message);
   }
 
   return NextResponse.json({ ok: true }, { status: 201 });

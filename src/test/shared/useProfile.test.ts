@@ -21,6 +21,7 @@ vi.mock("@/lib/reload", () => ({
 // Default: no session (anonymous) — a test overrides it to assert the auth path.
 const supa = vi.hoisted(() => ({ session: null as { access_token: string } | null }));
 vi.mock("@/lib/supabase", () => ({
+  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
   getSupabaseClient: () => ({
     auth: { getSession: async () => ({ data: { session: supa.session } }) },
   }),

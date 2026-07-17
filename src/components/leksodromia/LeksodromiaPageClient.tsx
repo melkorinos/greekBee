@@ -11,7 +11,7 @@ import { HowToPlayModal } from "./HowToPlayModal";
 import { LeksodromiaBoard } from "./LeksodromiaBoard";
 
 interface LeksodromiaPageClientProps {
-  puzzle: { date: string; words: string[]; scrambles: string[] };
+  puzzle: { date: string; words: string[]; scrambles: string[]; accepted: string[][] };
   today:  string;
 }
 

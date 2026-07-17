@@ -2,7 +2,10 @@
 //
 // Covers:
 //   POST /api/transfer          — generate a transfer code (6-char, stored in transfer_codes)
-//   POST /api/transfer/claim    — validate code, mark used, return device_uuid + display_name
+//   POST /api/transfer/claim    — atomic conditional UPDATE claims the code; on a miss,
+//                                 a follow-up lookup picks the player-facing message
+//
+// Both routes use the service-role client (transfer_codes has no anon RLS policy).
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
@@ -16,17 +19,20 @@ let _callQueue: ChainResult[] = [];
 function makeChain(result: ChainResult) {
   const chain: Record<string, unknown> = {};
   const ret = () => chain;
-  chain.select = ret;
-  chain.eq     = ret;
-  chain.update = ret;
-  chain.insert = () => Promise.resolve(result);
-  chain.single = () => Promise.resolve(result);
-  chain.then   = (resolve: (v: ChainResult) => void) => resolve(result);
+  chain.select      = ret;
+  chain.eq          = ret;
+  chain.gt          = ret;
+  chain.update      = ret;
+  chain.insert      = () => Promise.resolve(result);
+  chain.single      = () => Promise.resolve(result);
+  chain.maybeSingle = () => Promise.resolve(result);
+  chain.then        = (resolve: (v: ChainResult) => void) => resolve(result);
   return chain;
 }
 
 vi.mock("@/lib/supabase", () => ({
-  getSupabaseClient: () => ({
+  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
+  getServiceRoleClient: () => ({
     from: () => {
       const result = _callQueue.shift() ?? { data: null, error: null };
       return makeChain(result);
@@ -82,11 +88,9 @@ describe("POST /api/transfer/claim — claim transfer code", () => {
   const PAST   = new Date(Date.now() - 60 * 60 * 1000).toISOString(); // 1h ago
 
   it("returns device_uuid + display_name on a valid unused code", async () => {
-    // 1st call: lookup transfer_codes row
-    enqueue({ data: { device_uuid: "uuid-src", expires_at: FUTURE, used: false }, error: null });
-    // 2nd call: update (mark used)
-    enqueue({ data: null, error: null });
-    // 3rd call: fetch player_profiles
+    // 1st call: atomic claim UPDATE returns the claimed row
+    enqueue({ data: [{ device_uuid: "uuid-src" }], error: null });
+    // 2nd call: fetch player_profiles
     enqueue({ data: { display_name: "Νίκος" }, error: null });
 
     const res  = await claimCode(makeReq("http://localhost/api/transfer/claim", { code: "ABCDEF" }));
@@ -97,8 +101,7 @@ describe("POST /api/transfer/claim — claim transfer code", () => {
   });
 
   it("returns empty display_name when no profile row exists for the source device", async () => {
-    enqueue({ data: { device_uuid: "uuid-src", expires_at: FUTURE, used: false }, error: null });
-    enqueue({ data: null, error: null }); // mark used
+    enqueue({ data: [{ device_uuid: "uuid-src" }], error: null });
     enqueue({ data: null, error: null }); // no profile found
 
     const res  = await claimCode(makeReq("http://localhost/api/transfer/claim", { code: "ABCDEF" }));
@@ -108,19 +111,22 @@ describe("POST /api/transfer/claim — claim transfer code", () => {
   });
 
   it("returns 404 when code is not found", async () => {
-    enqueue({ data: null, error: { message: "not found" } });
+    enqueue({ data: [], error: null });   // claim matches nothing
+    enqueue({ data: null, error: null }); // lookup finds no row
     const res = await claimCode(makeReq("http://localhost/api/transfer/claim", { code: "ZZZZZZ" }));
     expect(res.status).toBe(404);
   });
 
   it("returns 410 when code has already been used", async () => {
-    enqueue({ data: { device_uuid: "uuid-src", expires_at: FUTURE, used: true }, error: null });
+    enqueue({ data: [], error: null }); // claim matches nothing
+    enqueue({ data: { used: true, expires_at: FUTURE }, error: null });
     const res = await claimCode(makeReq("http://localhost/api/transfer/claim", { code: "ABCDEF" }));
     expect(res.status).toBe(410);
   });
 
   it("returns 410 when code has expired", async () => {
-    enqueue({ data: { device_uuid: "uuid-src", expires_at: PAST, used: false }, error: null });
+    enqueue({ data: [], error: null }); // claim matches nothing
+    enqueue({ data: { used: false, expires_at: PAST }, error: null });
     const res = await claimCode(makeReq("http://localhost/api/transfer/claim", { code: "ABCDEF" }));
     expect(res.status).toBe(410);
   });
@@ -131,8 +137,7 @@ describe("POST /api/transfer/claim — claim transfer code", () => {
   });
 
   it("normalises code to uppercase before lookup", async () => {
-    enqueue({ data: { device_uuid: "uuid-src", expires_at: FUTURE, used: false }, error: null });
-    enqueue({ data: null, error: null });
+    enqueue({ data: [{ device_uuid: "uuid-src" }], error: null });
     enqueue({ data: { display_name: "Μαρία" }, error: null });
 
     const res = await claimCode(makeReq("http://localhost/api/transfer/claim", { code: "abcdef" }));

@@ -9,6 +9,7 @@
 //     substrate must survive. We assert the query succeeds (never that old rows are gone).
 
 import { createClient } from "@supabase/supabase-js";
+import { table } from "@/lib/supabase";
 import { describe, expect, it } from "vitest";
 
 import { SESSION_RETENTION_DAYS } from "@/config/retention";
@@ -28,8 +29,7 @@ describe.skipIf(!canRun)("live DB — session data pruned, scores retained", () 
     const supabase = createClient(url!, key!, { auth: { persistSession: false } });
     const cutoff = cutoffDateStr();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { count, error } = await (supabase.from("game_state") as any)
+    const { count, error } = await table(supabase, "game_state")
       .select("puzzle_date", { count: "exact", head: true })
       .lt("puzzle_date", cutoff);
 
@@ -41,8 +41,7 @@ describe.skipIf(!canRun)("live DB — session data pruned, scores retained", () 
     const supabase = createClient(url!, key!, { auth: { persistSession: false } });
     const cutoff = cutoffDateStr();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { count, error } = await (supabase.from("game_scores") as any)
+    const { count, error } = await table(supabase, "game_scores")
       .select("puzzle_date", { count: "exact", head: true })
       .lt("puzzle_date", cutoff);
 

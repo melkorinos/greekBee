@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { StavroleksoPlayer } from "./StavroleksoPlayer";
-import { getSupabaseClient } from "@/lib/supabase";
+import { getSupabaseClient, table } from "@/lib/supabase";
 import type { StavroleksoPuzzleData } from "@/games/stavrolekso/types";
 
 interface PuzzleRow {
@@ -14,13 +14,17 @@ interface PuzzleRow {
 async function getPuzzle(id: string): Promise<PuzzleRow | null> {
   try {
     const supabase = getSupabaseClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from("community_stavrolekso_puzzles") as any)
+    const { data, error } = await table(supabase, "community_stavrolekso_puzzles")
       .select("id, title, submitter_name, data, status")
-      .eq("id", id)
+      // The route param is a string; the column is a bigint.
+      .eq("id", Number(id))
       .single();
     if (error || !data) return null;
-    return data as PuzzleRow;
+    // `data` is jsonb — the DB types it as Json and knows nothing of the puzzle
+    // shape inside. StavroleksoPuzzleData is a game-level contract enforced by
+    // validateStavroleksoSubmission on the way in, so the double cast is the
+    // honest way to say "narrower than the DB can prove".
+    return data as unknown as PuzzleRow;
   } catch {
     return null;
   }

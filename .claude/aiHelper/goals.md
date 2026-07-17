@@ -42,7 +42,7 @@ Ship a polished multi-game Greek word game platform where all seven games — Le
 - **Community pipeline** — one `communityPuzzleLifecycle` owning submit → approve/reject → consume across Leksiarxeio / Leksindeseis / Vres Tin Frasi (+ never-consumed Stavrolekso); Leksikastirio review tabs.
 - **Design system** — CSS semantic tokens + per-game accent (ADR 0008/0009); recipe files; palette guard test.
 - **Cost work** — Vercel Fluid CPU mitigations (daily-combo prerender, lazy word-list, Edge routes); Vercel Pro.
-- **Leksokipos** — rank ladder + variable soft-cap genius bar; share card; offline lock + score outbox.
+- **Leksokipos** — rank ladder + variable soft-cap genius bar; share card. (**Offline Lock + Score Outbox are NOT built** — design complete only: ADR 0010 + `offlineFeature-handoff.md`; no `useOfflineLock`/outbox code exists.)
 
 ---
 
@@ -51,7 +51,7 @@ Ship a polished multi-game Greek word game platform where all seven games — Le
 No single active epic. Recent sessions have been architecture reviews, a DB-schema review, and the Leksokipos soft cap. Standing priorities / open threads:
 
 1. **Ship dev → main** — Leksodromia + Leksoplegma are the two games about to land on `main`. Manual browser play-through required before merge.
-2. **Disaster-recovery backups** — the one open tracker issue (`02`): free-tier Supabase has no PITR, single shared dev/prod project. Automate an off-site `db dump` + decide the dev/main DB split.
+2. **Open tracker issues** — `02` disaster-recovery backups (no PITR, shared dev/prod project — automate an off-site dump + decide the DB split), `03` unit tests never run in CI, `04` Stavrolekso edit PIN readable by anon (ready-for-agent), `05` words-2/3.json missed by the nomination re-sync.
 3. **E2E coverage** — Playwright is now wired (`npm run test:e2e`); grow happy-path coverage per game.
 4. **Leksindeseis static-fallback supply** — thin `puzzles-connections.json` pool, no reminder system (see `reflections.md`).
 

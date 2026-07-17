@@ -30,7 +30,11 @@ let _mockResult: ChainResult = { data: null, error: { message: "no rows" } };
 vi.mock("@/lib/supabase", () => {
   // consumeApprovedPuzzle uses the service-role client; point both at the mock.
   const client = { from: () => makeChain(_mockResult) };
-  return { getSupabaseClient: () => client, getServiceRoleClient: () => client };
+  return {
+    getSupabaseClient: () => client,
+    getServiceRoleClient: () => client,
+  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
+  };
 });
 
 // ── getTodaysVresTinFrasiPuzzle — static fallback ─────────────────────────────

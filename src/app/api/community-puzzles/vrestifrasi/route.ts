@@ -6,12 +6,19 @@
 // and is imported only here, so its word-pool imports stay out of the other
 // games' edge bundles. This file only declares the config.
 
-import { createListHandler, createSubmitHandler } from "@/lib/communityPuzzleLifecycle";
+import {
+  createListHandler,
+  createSubmitHandler,
+  type CommunityPuzzleGameConfig,
+} from "@/lib/communityPuzzleLifecycle";
 import { validateVresTinFrasiSubmission } from "@/games/vrestifrasi/lib/validateSubmission";
 
 export const runtime = "edge";
 
-const config = { table: "community_vrestifrasi_puzzles", validate: validateVresTinFrasiSubmission };
+const config: CommunityPuzzleGameConfig = {
+  table:    "community_vrestifrasi_puzzles",
+  validate: validateVresTinFrasiSubmission,
+};
 
 export const POST = createSubmitHandler(config);
 export const GET  = createListHandler(config);

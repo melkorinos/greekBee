@@ -9,8 +9,9 @@
 // reach the leaderboard; useScoreSubmission dedups). Restored state never posts.
 // All game state lives in useLeksodromiaRound (reducer + clock + persistence).
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
+import { usePhysicalKeyboard } from "@/hooks/usePhysicalKeyboard";
 import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { useLiveScorePost } from "@/hooks/useLiveScorePost";
@@ -28,6 +29,7 @@ import {
 import { computeWordPoints } from "@/games/leksodromia/lib/scoring";
 import { useLeksodromiaRound } from "@/games/leksodromia/hooks/useLeksodromiaRound";
 import { normalizeLetters } from "@/lib/normalize";
+import { todayISO } from "@/lib/puzzleDate";
 
 import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { RoundRecap } from "./RoundRecap";
@@ -35,7 +37,7 @@ import { RoundRecap } from "./RoundRecap";
 const GREEK_LETTER = /^[α-ωά-ώςΑ-ΩΆ-Ώ]$/;
 
 interface LeksodromiaBoardProps {
-  puzzle:             { date: string; words: string[]; scrambles: string[] };
+  puzzle:             { date: string; words: string[]; scrambles: string[]; accepted: string[][] };
   today:              string;
   /** True while a modal (HowToPlay) covers the board — freezes the decay clock. */
   paused:             boolean;
@@ -127,22 +129,12 @@ export function LeksodromiaBoard({
     skipWord();
   }, [skipWord]);
 
-  // Physical keyboard
-  const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
-  useLayoutEffect(() => {
-    keyHandlerRef.current = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (state.status !== "playing") return;
-      if (e.key === "Enter")     return submit();
-      if (e.key === "Backspace") return removeLetter();
-      if (GREEK_LETTER.test(e.key)) addLetter(e.key);
-    };
+  usePhysicalKeyboard((e) => {
+    if (state.status !== "playing") return;
+    if (e.key === "Enter")     return submit();
+    if (e.key === "Backspace") return removeLetter();
+    if (GREEK_LETTER.test(e.key)) addLetter(e.key);
   });
-  useEffect(() => {
-    const listener = (e: KeyboardEvent) => keyHandlerRef.current(e);
-    window.addEventListener("keydown", listener);
-    return () => window.removeEventListener("keydown", listener);
-  }, []);
 
   // ── Derived view state ──────────────────────────────────────────────────────
 
@@ -171,7 +163,7 @@ export function LeksodromiaBoard({
         <GameLeaderboardModal
           gameId="leksodromia"
           isOpen={isLeaderboardOpen}
-          today={new Date().toISOString().slice(0, 10)}
+          today={todayISO()}
           defaultDate={today}
           onClose={onCloseLeaderboard}
           {...identity.leaderboardProps}
@@ -292,7 +284,8 @@ export function LeksodromiaBoard({
       <GameLeaderboardModal
         gameId="leksodromia"
         isOpen={isLeaderboardOpen}
-        today={today}
+        today={todayISO()}
+        defaultDate={today}
         onClose={onCloseLeaderboard}
         {...identity.leaderboardProps}
       />

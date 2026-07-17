@@ -43,7 +43,9 @@ The three ideas below all **need data we do not store today.** `game_scores` hol
 
 ## 3. Times finished 1st / 2nd / 3rd on the leaderboard
 
-**Data today:** none. Leaderboard rank is computed live for display; final placement is never snapshotted.
+> **Partially resolved 2026-07-15 (session 85):** the compute-on-read route below was taken for **1st place** — `countFirstPlaceFinishes` (`src/lib/placement.ts`) derives First-Place Count (Πρωτιές) from append-forever `game_scores`, Leksokipos-only, shown in Lifetime Stats. No table, no snapshot. What remains parked here: 2nd/3rd places, per-game extension, and tiered first-place badges (frozen ids TBD).
+
+**Data today:** none beyond `game_scores` (1st place is now derived from it). Final placement is never snapshotted.
 
 **Capture design (to grill):**
 - Needs a **placement snapshot at leaderboard-close** (per game, per `puzzle_date`): record the device's final rank once the daily board settles. New lane `player_placements` (`device_uuid`, `game_id`, `puzzle_date`, `rank`), count 1st/2nd/3rd via filter.

@@ -82,7 +82,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Misplaced-Word** *(Vres Tin Frasi)* — Tile state (purple): the guessed letter appears in the answer Phrase but in a different word than the one it was guessed in. Evaluated after greens are resolved: remaining answer letters form a cross-phrase pool; a letter not in its own word's pool but present in another word's pool → misplaced-word. Keyboard priority: `correct` > `present` > `misplaced-word` > `absent`. (Not: present — that is yellow, wrong position within the same word)
 
-**Attempt Count** *(Vres Tin Frasi leaderboard)* — Number of Guesses used (1–6). Lower is better. Failed = 7 penalty. Stored in `game_scores` with `game_id = "vrestifrasi"`. API field named `score` for interface compatibility.
+**Score** *(Vres Tin Frasi leaderboard)* — Points from `scoreVresTinFrasi`: 6 pts for a 1-guess win → 1 pt for a 6-guess win; a loss is 0. **Higher is better** (same scale as Leksiarxeio In-game Points), sorted descending like every other board (ADR 0014). Stored in `game_scores` with `game_id = "vrestifrasi"`; API field named `score`. The player still sees their raw attempt count in-game; only the leaderboard currency is points. (Converted from the retired lower-is-better *Attempt Count* — ADR 0014. Not: attempt count, προσπάθειες)
 
 **Category** *(Leksindeseis)* — Label naming a Group of 4 words. Hidden until the Group is solved. (Not: theme, topic)
 
@@ -112,7 +112,11 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Trophy Case** — The full Achievement display on the Profile Page: every catalog entry rendered, earned Badges lit, locked ones greyed with their unlock hint. (Not: badge list, achievements tab)
 
-**Lifetime Stats** — Per-player aggregates over full `game_scores` history (append-forever makes them safe): total points, puzzles played, Τζιμάνι count, and pangram count (from the separate `player_pangrams` set, not `game_scores`). Streak is defined below but not yet surfaced in the strip. Keyed by DeviceId — never `auth_user_id` (Sign-in Restore makes the adopted DeviceId canonical, so one key serves anonymous and AuthLinked players alike); Daily Puzzles only (Custom Puzzles never post scores). (Not: statistics, records — records are all-time bests, a parked pillar)
+**Lifetime Stats** — Per-player aggregates over full `game_scores` history (append-forever makes them safe): total points, puzzles played, Τζιμάνι count, pangram count (from the separate `player_pangrams` set, not `game_scores`), and First-Place Count (Πρωτιές — Leksokipos only in v1). Streak is defined below but not yet surfaced in the strip. Keyed by DeviceId — never `auth_user_id` (Sign-in Restore makes the adopted DeviceId canonical, so one key serves anonymous and AuthLinked players alike); Daily Puzzles only (Custom Puzzles never post scores). (Not: statistics, records — records are all-time bests, a parked pillar)
+
+**First-Place Finish** — Being rank 1 on a Game's Daily Puzzle Leaderboard for one `puzzle_date`. Ties share rank 1 — every player who matches the day's top score finished first (consistent with the Leaderboard's count-of-better-scores rank formula). Since every Leaderboard is higher-is-better (ADR 0014), "first" is simply the day's maximum `score`. (Not: win, top score)
+
+**First-Place Count** — The lifetime tally of a player's First-Place Finishes, shown as **Πρωτιές** in Lifetime Stats. Leksokipos-only in v1; extends per-Game later (each Game contributes its own daily firsts). **Derived** from append-forever `game_scores` (data-class 2), never stored — computed by `countFirstPlaceFinishes` (`src/lib/placement.ts`) over all of a Game's rows, index-backed by `game_scores_game_date_score_idx`. Tiered First-Place Badges are a deferred follow-up (frozen `leksokipos-first-place-*` ids chosen when built). (Not: wins count)
 
 **Streak** — Consecutive calendar days on which a player scored at least one Daily Puzzle in any Game (platform-wide, not per-Game). Derived from distinct `puzzle_date`s in `game_scores`; Custom Puzzles excluded. Current and Best Streak show in Lifetime Stats. (Not: per-game streak)
 
@@ -130,7 +134,9 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Vote** — Player endorsement of a Nomination, stored as `(nomination_id, device_id)`.
 
-**Admin Mode** — `?admin=<secret>` URL param matching `ADMIN_SECRET`. Reveals Approve/Reject on Nomination Cards and Community Puzzle review tabs. Not linked from nav.
+**Admin Mode** — `?admin=<secret>` URL param matching `ADMIN_SECRET`. Reveals Approve/Reject on Nomination Cards and Community Puzzle review tabs. Not linked from nav. On the wire the secret always travels as an `X-Admin-Secret` header and a bad one is always a 401 — one shape across every admin route, enforced by `requireAdmin` in the **Route Envelope** (ADR 0016).
+
+**Route Envelope** — The three things every `/api` route does before its own logic, owned once in `src/lib/apiRoute.ts`: `parseJson` (body + the 400 guard), `requireAdmin` (the admin gate), and the error body. Error bodies stay `{ error: string }` but split into two deliberate channels: `jsonError(code)` for stable codes the envelope owns (`invalid_json`, `unauthorized`, `not_found`, `db_error`) — implementation detail is logged, never sent — and `jsonMessage(text, status)` for copy the route authors on purpose, including the Greek strings the UI renders verbatim. Choosing between them is the discipline: if you can't name the code, you're probably about to leak something. (ADR 0016)
 
 **Flag** — In-game Leksokipos action that opens NominationModal with `direction: "remove"`.
 
@@ -172,9 +178,9 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Extra Word** *(Leksoplegma)* — Any valid dictionary word (≥3 letters) traceable along the web that is not a Required Word — exhaustively precomputed per puzzle by the generator. Scores flat points, all round long (soft Collapse); never gates completion and never triggers Collapse. Never auto-submits — many Extra Words are prefixes of Required Words — so it is submitted explicitly (✓ button or drag release). UI: «Έξτρα λέξεις»; code: `bonusWords`. Briefly removed and reinstated on 2026-07-14 — the rejection of real Greek words felt wrong to players. (Not: bonus mechanic, hidden word)
 
-**Offline Lock** — A deliberate client-side state on a Leksokipos Daily Puzzle that blocks browser refresh and in-app navigation, and routes score submissions through the Offline Score Outbox instead of posting directly. Activated via a toggle inside the Leksokipos UI; released manually. Only available on Daily Puzzles. (Not: offline mode, airplane mode, offline play)
+**Offline Lock** — *(designed, not yet built — ADR 0010 + `offlineFeature-handoff.md`; no code exists)* A deliberate client-side state on a Leksokipos Daily Puzzle that blocks browser refresh and in-app navigation, and routes score submissions through the Offline Score Outbox instead of posting directly. Activated via a toggle inside the Leksokipos UI; released manually. Only available on Daily Puzzles. (Not: offline mode, airplane mode, offline play)
 
-**Offline Score Outbox** — A single-entry localStorage record holding the latest pending Leksokipos Score from a locked Session: `{ gameId, puzzleDate, deviceId, score, displayName }`. Written on every word found while Offline Lock is active; overwritten (not appended) on each subsequent word. Flushed to `game_scores` on lock release, or automatically on the next page mount if an entry exists. Kept on flush failure and retried on the next release. (Not: queue, cache, retry buffer)
+**Offline Score Outbox** — *(designed, not yet built — see Offline Lock)* A single-entry localStorage record holding the latest pending Leksokipos Score from a locked Session: `{ gameId, puzzleDate, deviceId, score, displayName }`. Written on every word found while Offline Lock is active; overwritten (not appended) on each subsequent word. Flushed to `game_scores` on lock release, or automatically on the next page mount if an entry exists. Kept on flush failure and retried on the next release. (Not: queue, cache, retry buffer)
 
 ---
 
@@ -185,18 +191,18 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 | Table | Purpose |
 |---|---|
 | `player_profiles` | Device identity: `device_uuid` → `display_name`. Optional `auth_user_id` links a Google account and is the durable identity anchor — authoritative device→account map, unique partial index on `auth_user_id` (ADR 0012; column introduced by ADR 0007). |
-| `transfer_codes` | Single-use 6-char codes for cross-device identity transfer, 24h TTL. |
+| `transfer_codes` | Single-use 6-char codes for cross-device identity transfer, 24h TTL. **Server-only**: zero anon RLS policies (migration `20260716120000`) because a code maps to a `device_uuid` — the platform's bearer credential; both `/api/transfer` routes use the service-role client, and the claim is an atomic conditional UPDATE (single-use enforced by the write). |
 | `game_scores` | Unified leaderboard for all games, keyed by `game_id` (`leksokipos`/`leksiarxeio`/`leksindeseis`/`vrestifrasi`/`leksodromia`/`leksoplegma`) + `device_id`. Leksiarxeio writes one row per `word_length`. Device-keyed only — no `auth_user_id` column; Sign-in Restore makes the adopted DeviceId canonical, so device_id serves anonymous and AuthLinked players alike (the device→account map lives in `player_profiles`). |
 | `game_state` | Serialised Session for cross-device sync (Leksokipos daily puzzles only). Blob: `{ foundWords: string[] }`. Pushed after every valid word; pulled on mount when local progress is empty. Both require ProfileLinked. |
-| `nominations` | Community word proposals (add / remove a word). |
-| `nomination_votes` | Up/down votes on nominations, one per device. |
+| `nominations` | Community word proposals (add / remove a word). One *pending* row per normalized (word, direction) — DB-enforced partial unique index (migration `20260716120200`); a duplicate POST answers `409 already_pending` + the existing id, and the client pivots to upvoting it. |
+| `nomination_votes` | Up/down votes on nominations, one per device — DB-enforced `UNIQUE(nomination_id, device_id)` (migration `20260716120200`); the toggle route resolves insert races instead of 500ing. |
 | `community_leksiarxeio_puzzles` | Player-submitted Leksiarxeio puzzles. One row = all 5 lengths (`data` jsonb `{"4":…,"8":…}`). Deleted on consumption. |
 | `community_leksindeseis_puzzles` | Player-submitted Leksindeseis puzzles (`data` jsonb 4-group array). Deleted on consumption. |
 | `community_vrestifrasi_puzzles` | Player-submitted Vres Tin Frasi phrases (`data` jsonb `{ "phrase": "…" }`). Deleted on consumption. |
 | `community_stavrolekso_puzzles` | Community-submitted crosswords (`data` jsonb slot-based; PIN-gated creator edits). **Never deleted after approval.** |
 | `identity_audit` | Append-only log of identity-mapping changes, written by `/api/auth/link` when a link establishes a mapping the profile row didn't already hold. Service-role only (RLS on, zero policies); never pruned. Backs Admin Restore (ADR 0012). |
-| `player_achievements` | Immutable earned-Achievement facts: one row = one Achievement (one-shot or tier id) a device earned. `UNIQUE(device_uuid, achievement_id)`, insert-if-absent (never revoked). Open RLS (anon writes, mirrors `game_state`). Append-forever — never swept. Unioned onto the canonical identity on Sign-in Restore (ADR 0013). |
-| `player_pangrams` | Append-only pangram find-set (Κυνηγός Πανγκράμ tier progress): one row = one pangram `word` a device found on one `puzzle_date`. `UNIQUE(device_uuid, puzzle_date, word)`, insert-if-absent. Progress = `COUNT(*)`, never a counter. Open RLS, append-forever — never swept. Unioned on Sign-in Restore via `planPangramMerge` (ADR 0013 B2). |
+| `player_achievements` | Immutable earned-Achievement facts: one row = one Achievement (one-shot or tier id) a device earned. `UNIQUE(device_uuid, achievement_id)`, insert-if-absent (never revoked). Anon RLS = SELECT+INSERT only since migration `20260716120100` — the DB itself enforces append-only against the public key; deletes/updates are service-role only (merge, cron). Append-forever — never swept. Unioned onto the canonical identity on Sign-in Restore (ADR 0013). |
+| `player_pangrams` | Append-only pangram find-set (Κυνηγός Πανγκράμ tier progress): one row = one pangram `word` a device found on one `puzzle_date`. `UNIQUE(device_uuid, puzzle_date, word)`, insert-if-absent. Progress = `COUNT(*)`, never a counter. Anon RLS = SELECT+INSERT only (`20260716120100`), append-forever — never swept. Unioned on Sign-in Restore via `planPangramMerge` (ADR 0013 B2). |
 
 ---
 
@@ -206,10 +212,13 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 No per-device rate limiting is implemented on INSERT-capable API routes. RLS policies allow unlimited anon inserts. Decision: accept the risk at current scale. A Supabase row-count alert is the only guardrail (threshold: 50 000 rows on `game_scores`, 5 000 on `nominations`). Revisit with a Redis sliding-window approach (Upstash) when DAU exceeds ~500.
 
 **Nominations retention policy (2026-07-01)**
-`pending` and `rejected` Nominations are never deleted. Rejected rows are retained permanently because `NominationModal` uses them to warn players on re-submission (by word + direction). `accepted` Nominations are deleted 30 days after `reviewed_at` is set by `apply-nominations.mjs` — at that point the word is in the JSON and deployed, and the row is pure audit trail. The `reviewed_at` column serves dual purpose: `null` = accepted but not yet applied to the word list; non-null = applied. See ADR 0011.
+`pending` and `rejected` Nominations are never deleted. Rejected rows are retained permanently because `NominationModal` uses them to warn players on re-submission (by word + direction). `accepted` Nominations are deleted 30 days after `reviewed_at` is set by `apply-nominations.ts` — at that point the word is in the JSON and deployed, and the row is pure audit trail. The `reviewed_at` column serves dual purpose: `null` = accepted but not yet applied to the word list; non-null = applied. See ADR 0011.
 
 **`game_scores` is append-forever (2026-07-02; enforced in code 2026-07-05)**
 Rows are never pruned. The 7-day leaderboard window is query-side only. Lifetime Stats, Streaks, and the derived-on-read lifetime-point Achievements all read full `game_scores` history, so deletion would silently corrupt them. (Achievements themselves are not backfilled — they start at zero at launch — but their live derivation from post-launch history still depends on nothing being pruned.) When the 50 000-row alert fires, the answer is "raise the alert / optimize storage" — never "prune history." **Until 2026-07-05 this was policy only — the daily `/api/cleanup-scores` cron still deleted `game_scores` older than 10 days (issue 03), so "Lifetime" Stats were really last-10-days stats.** The cron now prunes only the ephemeral tables (`game_state`, `transfer_codes`) governed by `SESSION_RETENTION_DAYS`; `game_scores` is untouched.
+
+**DB-enforced integrity backstops + status enum (2026-07-16)**
+Four migrations (`202607161200xx`) hardened what routes previously promised only in code: `transfer_codes` went server-only (no anon policies); the three anon `ALL (true)` policies became per-command (SELECT+INSERT, plus UPDATE only where the app upserts — `game_state`); the two check-then-act dedup flows got unique indexes (votes, pending nominations) with 23505 handling in the routes; and community `status` became the PG enum `community_puzzle_status ('pending'|'approved')` — enum over CHECK so the value union reaches TypeScript (ADR 0017 amendment). `'rejected'` is deliberately not a value (reject = DELETE); `nominations.status` keeps its different CHECK vocabulary (`accepted`, history retained) on purpose. Open anon INSERT everywhere remains the recorded accepted risk (see "API rate limiting").
 
 **`player_profiles` cleanup — deferred (2026-07-01)**
 No deletion policy is implemented. `last_active` is updated on every profile upsert (POST /api/profile) so it reflects genuine activity when cleanup is eventually designed.

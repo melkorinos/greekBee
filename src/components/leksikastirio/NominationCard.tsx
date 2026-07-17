@@ -65,8 +65,8 @@ export function NominationCard({
     try {
       const res = await fetch(`/api/nominations/${nomination.id}/review`, {
         method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ action, adminSecret }),
+        headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
+        body:    JSON.stringify({ action }),
       });
       // Only reflect success if the server actually persisted the change —
       // otherwise the row stays pending and the admin needs to know it failed.

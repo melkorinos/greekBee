@@ -15,6 +15,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
+import { parseJson } from "@/lib/apiRoute";
 import wordsEl from "@/data/words-el.json";
 
 export const runtime = "nodejs";
@@ -22,14 +23,10 @@ export const runtime = "nodejs";
 const WORD_SET = new Set((wordsEl as string[]).map((w) => w.toLowerCase()));
 
 export async function POST(req: NextRequest) {
-  let body: { words?: unknown };
-  try {
-    body = (await req.json()) as { words?: unknown };
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+  const parsed = await parseJson<{ words?: unknown }>(req);
+  if (!parsed.ok) return parsed.response;
 
-  const words = Array.isArray(body.words) ? body.words : [];
+  const words = Array.isArray(parsed.body?.words) ? parsed.body.words : [];
 
   const unique = new Set(
     words

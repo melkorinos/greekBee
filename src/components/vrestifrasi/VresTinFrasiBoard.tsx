@@ -1,14 +1,17 @@
 "use client";
 
 import type { VresTinFrasiPuzzle } from "@/games/vrestifrasi/types";
+import { usePhysicalKeyboard } from "@/hooks/usePhysicalKeyboard";
 import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { Keyboard } from "./Keyboard";
 import { PhraseGrid } from "./PhraseGrid";
 import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { normalizeLetters } from "@/lib/normalize";
+import { todayISO } from "@/lib/puzzleDate";
+import { scoreVresTinFrasi } from "@/games/vrestifrasi/lib/scoring";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { useVresTinFrasiState } from "@/games/vrestifrasi/hooks/useVresTinFrasiState";
 
@@ -43,8 +46,10 @@ export function VresTinFrasiBoard({
 
   const handleGameEnd = useCallback(
     (attempts: number, won: boolean) => {
-      const attemptCount = won ? attempts : 7;
-      postScore(attemptCount);
+      // Post points, higher-is-better (6 for a 1-guess win → 1 for a 6-guess
+      // win, 0 for a loss) — same scale as Leksiarxeio. The leaderboard sorts
+      // desc like every other game (ADR 0014); no lower-is-better boards.
+      postScore(scoreVresTinFrasi(attempts, won));
       setTimeout(() => onOpenLeaderboard(), 1500);
     },
     [postScore, onOpenLeaderboard],
@@ -64,21 +69,11 @@ export function VresTinFrasiBoard({
     clearMessage,
   } = useVresTinFrasiState(puzzle, validWords, handleGameEnd);
 
-  // Physical keyboard
-  const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
-  useLayoutEffect(() => {
-    keyHandlerRef.current = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === "Enter")     return submitGuess();
-      if (e.key === "Backspace") return deleteLetter();
-      if (GREEK_LETTER.test(e.key)) addLetter(normalizeLetters(e.key));
-    };
+  usePhysicalKeyboard((e) => {
+    if (e.key === "Enter")     return submitGuess();
+    if (e.key === "Backspace") return deleteLetter();
+    if (GREEK_LETTER.test(e.key)) addLetter(normalizeLetters(e.key));
   });
-  useEffect(() => {
-    const listener = (e: KeyboardEvent) => keyHandlerRef.current(e);
-    window.addEventListener("keydown", listener);
-    return () => window.removeEventListener("keydown", listener);
-  }, []);
 
   // Auto-clear transient messages
   useEffect(() => {
@@ -125,7 +120,7 @@ export function VresTinFrasiBoard({
       <GameLeaderboardModal
         gameId="vrestifrasi"
         isOpen={isLeaderboardOpen}
-        today={new Date().toISOString().slice(0, 10)}
+        today={todayISO()}
         defaultDate={today}
         onClose={onCloseLeaderboard}
         {...identity.leaderboardProps}

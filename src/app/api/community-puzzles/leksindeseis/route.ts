@@ -5,12 +5,19 @@
 // validation adapter lives in the game's lib (validateLeksindeseisSubmission).
 // This file only declares the config.
 
-import { createListHandler, createSubmitHandler } from "@/lib/communityPuzzleLifecycle";
+import {
+  createListHandler,
+  createSubmitHandler,
+  type CommunityPuzzleGameConfig,
+} from "@/lib/communityPuzzleLifecycle";
 import { validateLeksindeseisSubmission } from "@/games/leksindeseis/lib/validateSubmission";
 
 export const runtime = "edge";
 
-const config = { table: "community_leksindeseis_puzzles", validate: validateLeksindeseisSubmission };
+const config: CommunityPuzzleGameConfig = {
+  table:    "community_leksindeseis_puzzles",
+  validate: validateLeksindeseisSubmission,
+};
 
 export const POST = createSubmitHandler(config);
 export const GET  = createListHandler(config);

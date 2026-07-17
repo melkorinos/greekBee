@@ -42,6 +42,7 @@ vi.mock("@/lib/supabase", () => {
   // The admin/privileged paths (list, review, consume) use the service-role
   // client; the public submit path uses the anon client. Both share the queue.
   return {
+  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
     getSupabaseClient:    () => client,
     getServiceRoleClient: () => client,
   };
@@ -50,10 +51,15 @@ vi.mock("@/lib/supabase", () => {
 const { consumeApprovedPuzzle, createListHandler, createReviewHandler, createSubmitHandler } =
   await import("@/lib/communityPuzzleLifecycle");
 type SubmissionValidation = import("@/lib/communityPuzzleLifecycle").SubmissionValidation;
+type CommunityPuzzleGameConfig = import("@/lib/communityPuzzleLifecycle").CommunityPuzzleGameConfig;
 
 // ── Synthetic game config ─────────────────────────────────────────────────────
 
-const TABLE = "community_test_puzzles";
+// A real community queue rather than a synthetic name: config.table is typed to
+// CommunityPuzzleTable now, so an invented table would not compile. The Supabase
+// client is mocked wholesale below, so which of the four this is has no bearing
+// on what these tests exercise — the module stays game-agnostic.
+const TABLE = "community_vrestifrasi_puzzles";
 
 // Accepts { word: string }, rejects anything else with a 422.
 function validate(body: unknown): SubmissionValidation {
@@ -64,7 +70,7 @@ function validate(body: unknown): SubmissionValidation {
   return { ok: true, row: { data: { word: word.trim() } } };
 }
 
-const baseConfig = { table: TABLE, validate };
+const baseConfig: CommunityPuzzleGameConfig = { table: TABLE, validate };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -299,7 +305,9 @@ describe("createReviewHandler", () => {
     const update = _calls.find((c) => c.op === "update");
     expect(update?.table).toBe(TABLE);
     expect(update?.args[0]).toEqual({ status: "approved" });
-    expect(_calls.find((c) => c.op === "eq")?.args).toEqual(["id", "5"]);
+    // Number, not "5": the id column is a bigint, and the route now converts the
+    // URL param explicitly instead of leaving the coercion to PostgREST.
+    expect(_calls.find((c) => c.op === "eq")?.args).toEqual(["id", 5]);
   });
 
   it("reject → DELETE row on the configured table", async () => {
@@ -309,7 +317,7 @@ describe("createReviewHandler", () => {
     );
     expect(res.status).toBe(200);
     expect(_calls.find((c) => c.op === "delete")?.table).toBe(TABLE);
-    expect(_calls.find((c) => c.op === "eq")?.args).toEqual(["id", "7"]);
+    expect(_calls.find((c) => c.op === "eq")?.args).toEqual(["id", 7]);
   });
 
   it("returns 500 on DB error", async () => {
