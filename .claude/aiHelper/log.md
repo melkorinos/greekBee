@@ -5,6 +5,14 @@
 
 ---
 
+## Session 101 — 2026-07-17: the nominations dedup backstops are now checked against the live DB (issue 08)
+
+**The gap (same shape as the score/state/community blocks):** the two dedup DB objects from migration `20260716120200` — `nomination_votes_nomination_device_unique` UNIQUE (nomination_id, device_id) and `nominations_pending_word_direction_key` UNIQUE (word, direction) WHERE status='pending' — were only ever "tested" by unit tests that *inject* `code: "23505"` into a mocked Supabase. That proves the route branches on a violation, not that a violation occurs. Drop either object and the whole mocked suite stays green while duplicates return silently.
+
+- **A new live-DB block in `rlsInvariantsLiveDb.test.ts`** (service role throughout — RLS is not under test; a unique index binds every role, so bypassing RLS isolates the constraint as the only thing that can fail). Asserts: a second PENDING (word, direction) is rejected with `23505`; the same word in the *other* direction is allowed (the index keys on the pair); accepted/rejected duplicates coexist and pending-alongside-rejected-history still allows exactly one new pending — **the partial `WHERE status='pending'` predicate**, which is what keeps re-proposing a rejected word a feature; and the vote pair: one device twice on one nomination is `23505`, but one device across two nominations and two devices on one nomination both pass.
+- **Sentinel word is `normalizeLetters("__RLS_TEST_ΛΈΞΗΣ__")` = `__rls_test_λεξησ__`** — normalised the same way `route.ts` stores every word, because the index is built on the stored form; a raw sentinel would exercise a different key. Devices carry a `__rls_` prefix. `wipeSentinelRows` clears both tables (votes first — FK) before/after the run and before each test.
+- **Verified beyond the run:** confirmed read-only (Supabase MCP) that zero sentinel rows survive across all eight tables the whole live suite touches; `tsc --noEmit`, eslint, `npm run build`, and the full vitest run are all green with the block executing (not skipped) against the real DB.
+
 ## Session 100 — 2026-07-17: vitest+eslint+tsc now run in CI, and the live-DB suites run *at all* (issue 03)
 
 **The gap:** `e2e.yml` was the only workflow, so ~1800 unit tests and every eslint rule were green only on whoever's laptop last ran them. Worse, the two live-DB suites had **never executed anywhere** — nothing loaded `.env.local` into vitest, so `canRun` was false even with all three keys present, and they reported *skipped*, not failed. Every live-DB "lock" committed to date was inert.
