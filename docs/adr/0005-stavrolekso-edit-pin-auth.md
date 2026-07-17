@@ -24,5 +24,5 @@ Option C. Creator picks their own PIN at submission. The PIN is stored plain on 
 ## Consequences
 
 - Losing both the puzzle ID and PIN means the creator cannot edit; they'd need to resubmit from scratch.
-- The PIN is stored plain — acceptable for this content type, consistent with how TransferCode is stored.
+- The PIN is stored plain — acceptable for this content type, consistent with how TransferCode is stored. But "stored plain" only holds as long as the column is unreadable: this decision makes `edit_pin` a secret, and a secret in a column anon can `SELECT` is not one. The baseline granted anon table-wide SELECT, which made every pending puzzle's PIN readable from the public anon key until migration `20260717120000` narrowed the grant to the public browse columns. A column-level GRANT — not RLS, which cannot filter columns — is what enforces this, and only the server-side PIN check may read it.
 - If a stronger auth model is added later (e.g. email, magic link), the PIN column can be deprecated without a schema migration — it simply stops being checked.

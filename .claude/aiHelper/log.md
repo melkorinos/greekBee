@@ -5,6 +5,21 @@
 
 ---
 
+## Session 96 — 2026-07-17: Stavrolekso `edit_pin` no longer readable by the public anon key (issue 04, TDD)
+
+**The bug:** the baseline granted anon table-wide SELECT on `community_stavrolekso_puzzles`, and RLS cannot filter columns — so `?select=edit_pin` returned every pending puzzle's PIN in plaintext to the key in every page's JS bundle. The PIN *is* the creator-edit flow's whole authorisation (ADR 0005), so anyone could harvest PINs and edit any pending puzzle through the legitimate route.
+
+Red-first, both levels. The live-DB suite **ran** (env injected from `.env.local` per ticket 03) and reproduced the leak against prod before the fix; the unit lock on the route failed too. Then green.
+
+- **`20260717120000`** — `REVOKE SELECT` from anon **and `authenticated`**, re-granted over `(id, title, submitter_name, data, status, created_at)`. Column-level GRANTs are the only thing that filters columns here, and PostgREST honours them (hard 42501, not RLS's silent zero rows). Kept deliberately: the `anon select` policy (browse paths need it, now grant-bounded) and anon INSERT (the maker writes a PIN it cannot read back — INSERT is a separate privilege, and `.select("id")` RETURNING still works because `id` stayed granted).
+- **Beyond the ticket:** `authenticated` held the identical SELECT on `edit_pin`. It's just as public (anyone can sign in with Google), so it got the same treatment. No behaviour change today — it has no RLS policy on this table — but it stops the grant being a hole the moment someone adds one.
+- **Route:** the PATCH PIN lookup moved to `getServiceRoleClient()` (was anon, which would now 42501 and 403 every real creator). Read side is now as privileged as the write side; both reuse one client.
+- **Triage decision resolved:** table held **zero rows** — no PIN was ever exposed, nothing to rotate.
+- **Locks:** 5 new live-DB invariants (anon SELECT of `edit_pin` errors, `select("*")` errors, browse columns still work, submit path INSERT+RETURNING id works, RETURNING `edit_pin` errors) + 2 unit locks (PATCH never touches the anon client, on the happy *and* 404 paths). Suite left prod clean (0 rows).
+- **Docs:** ADR 0005 consequences now say the plaintext-PIN decision only holds while the column is unreadable; CONTEXT.md records the grant posture; project-mcp SKILL.md updated — **seven** versions now owed `migration repair`.
+
+**Trap re-hit:** the auto-mode classifier blocked `apply_migration` before any prompt — a bare `REVOKE` reads as destructive even when the migration is a security fix. Operator switching permission mode unblocked it; the retry succeeded first try. Recorded in project-mcp SKILL.md #3.
+
 ## Session 95 — 2026-07-17: dev→main production deploy executed (runbook session)
 
 Pre-merge verification, then the deploy itself. Verified before merge: migration history vs live DB (runbook claims all held), vrestifrasi rows still old-shape (2/3/6, all outside the 7-day window so timing risk was cosmetic), all prod env vars present incl. `SUPABASE_SERVICE_ROLE_KEY` + `ADMIN_SECRET`, dev-tip preview READY, prod 0 runtime errors/48h, tests + eslint green. Operator merged (`3614145`, READY); **immediately after**, the deploy-coupled `20260715120100` flip was applied — via the **dashboard SQL editor by the operator**, because the auto-mode classifier blocked both `execute_sql` and `apply_migration` before any prompt (trap recorded in project-mcp SKILL.md #3). Verified live: 2/3/6 → 5/4/1. ADR 0014 fully live; no pending migrations. **Remaining debt:** `migration repair` for six file versions before the next `db push` (now incl. `20260715120100` — a re-run would *un-flip* the scores); exact command in project-mcp SKILL.md (migration gotcha #2); the deploy runbook handoff was deleted as done.

@@ -1,6 +1,11 @@
 # words-2.json / words-3.json are dictionary-derived but the nomination re-sync never touches them
 
-Status: needs-triage
+Status: ready-for-agent
+
+## Triage decisions (2026-07-17)
+
+- **Adapter fix only** — do not add a minimum-length guard to the nominations POST route;
+  2–3-letter words are legitimate Vres Tin Frasi guess words, so nominating them is legitimate.
 
 ## The one-sentence version
 

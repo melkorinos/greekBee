@@ -1,5 +1,7 @@
 # The nomination dedup backstops are only ever tested against a mock, never the real DB
 
+Status: ready-for-agent
+
 Status: needs-triage
 
 ## The one-sentence version
@@ -10,6 +12,13 @@ only that the *route handles a 23505 the mock was told to throw*, which would ke
 constraints were dropped tomorrow.
 
 ## Status: currently correct (verified live 2026-07-17)
+
+## Triage decisions (2026-07-17)
+
+- **Approved:** the test may write sentinel rows to the production `nominations` tables, following
+  `rlsInvariantsLiveDb.test.ts`'s sentinel + service-role cleanup pattern exactly.
+- **Bundle the env-loading fix (issue 03) as step one** — the new live test proves nothing while
+  vitest never loads `.env.local`; hook the env up (or verify 03's fix) before writing the test.
 
 Queried `pg_indexes` on `rnfsuvhgufhbekodkmlp` — **both objects exist**:
 

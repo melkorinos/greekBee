@@ -336,6 +336,74 @@ describe.skipIf(!canRun)("live DB — community_stavrolekso_puzzles RLS invarian
     expect((data as { title: string }).title).toBe(SENTINEL_TITLE);
   });
 
+  it("blocks anon from SELECT-ing edit_pin", async () => {
+    // RLS has no column-level filtering, so this is held by a column GRANT
+    // (migration 20260717120000), not a policy. Asking for a column anon has no
+    // privilege on is a hard 42501 from Postgres — unlike the RLS traps above,
+    // this one does error rather than answer quietly.
+    const { data, error } = await table(anon, "community_stavrolekso_puzzles")
+      .select("id, edit_pin")
+      .eq("id", rowId);
+
+    expect(error).not.toBeNull();
+    expect(data).toBeNull();
+  });
+
+  it("still allows anon to SELECT the public browse columns", async () => {
+    // The other half of the grant: revoking edit_pin must not take the browse
+    // path (landing page + /stavrolekso/[id]) down with it.
+    const { data, error } = await table(anon, "community_stavrolekso_puzzles")
+      .select("id, title, submitter_name, data, status, created_at")
+      .eq("id", rowId);
+
+    expect(error).toBeNull();
+    expect(data).toHaveLength(1);
+  });
+
+  it("blocks anon from SELECT-ing every column via *", async () => {
+    // `select("*")` is the probe from the issue in its laziest form: with no
+    // grant on edit_pin, the star expansion itself is refused.
+    const { error } = await table(anon, "community_stavrolekso_puzzles").select("*").eq("id", rowId);
+    expect(error).not.toBeNull();
+  });
+
+  it("still allows the anon submit path to INSERT a puzzle and read back its id", async () => {
+    // The maker's submit path (createSubmitHandler, returnInsertedId) writes
+    // edit_pin as anon and RETURNINGs the new id for the creator's edit URL.
+    // INSERT is a separate privilege from SELECT, so revoking SELECT must not
+    // touch it — but RETURNING id does need `id` to have survived in the grant.
+    const { data, error } = await table(anon, "community_stavrolekso_puzzles")
+      .insert({
+        title:          SENTINEL_TITLE,
+        submitter_name: "rls-test",
+        edit_pin:       "0000",
+        status:         "pending",
+        data:           { slots: [] },
+      } as never)
+      .select("id")
+      .single();
+
+    expect(error).toBeNull();
+    expect((data as { id: number }).id).toBeTypeOf("number");
+  });
+
+  it("blocks the anon submit path from RETURNING the edit_pin it just wrote", async () => {
+    // Writing a column you cannot read is the intended asymmetry — otherwise
+    // RETURNING would be a way back to the PIN.
+    const { error } = await table(anon, "community_stavrolekso_puzzles")
+      .insert({
+        title:          SENTINEL_TITLE,
+        submitter_name: "rls-test",
+        edit_pin:       "0000",
+        status:         "pending",
+        data:           { slots: [] },
+      } as never)
+      .select("id, edit_pin")
+      .single();
+
+    expect(error).not.toBeNull();
+  });
+
   it("allows the service role to UPDATE a pending puzzle (the edit route's path)", async () => {
     const { data, error } = await table(service, "community_stavrolekso_puzzles")
       .update({ submitter_name: "edited" } as never)

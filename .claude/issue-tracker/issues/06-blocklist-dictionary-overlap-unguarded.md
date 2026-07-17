@@ -1,6 +1,15 @@
 # 16 words are on the nomination blocklist AND in words-el.json, with no guard test
 
-Status: needs-triage
+Status: ready-for-agent
+
+## Triage decisions (2026-07-17)
+
+- **ατλασ and ορκα: remove from the blocklist now** — treated as false-positives (common nouns);
+  they stay in the dictionary and become nominatable.
+- **The 14 month names (12 modern + αλωναρησ, τρυγητησ): defer.** Land the guard test with these
+  14 as an explicit, enumerated allowlist that may only shrink — never grow. Months stay playable;
+  the dictionary-vs-blocklist call for them remains open (matches the 2026-07-16 deferral).
+- Net effect: guard test asserts `blocklist ∩ words-el.json ⊆ {the 14 month names}`.
 
 ## The one-sentence version
 

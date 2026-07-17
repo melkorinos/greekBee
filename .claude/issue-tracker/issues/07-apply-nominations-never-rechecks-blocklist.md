@@ -1,6 +1,13 @@
 # apply-nominations writes accepted words into the dictionary without re-checking the blocklist
 
-Status: needs-triage
+Status: ready-for-agent
+
+## Triage decisions (2026-07-17)
+
+- Ticket's shape confirmed as-is: apply-time re-check via `isBlockedWord`, hit = loud failure that
+  stops the run (no silent skip), `--dry` reports identically.
+- Heads-up from issue 06's triage: the 14 month names stay in both files as a deferred allowlist,
+  so the apply-time check must use the same allowlist (or run after 06 lands) to avoid false stops.
 
 ## The one-sentence version
 
