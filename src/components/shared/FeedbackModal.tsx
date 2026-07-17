@@ -130,7 +130,7 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
           )}
 
           {status === "throttled" && (
-            <p className="text-xs text-amber-600 dark:text-amber-400 mt-2" data-testid="feedback-modal-throttled">
+            <p className="text-xs text-warning mt-2" data-testid="feedback-modal-throttled">
               Μόλις έστειλες σχόλιο. Περίμενε ένα λεπτό πριν στείλεις ξανά.
             </p>
           )}

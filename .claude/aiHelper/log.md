@@ -5,6 +5,10 @@
 
 ---
 
+## Session 104 — 2026-07-17: status tokens, shape tokens, and the accent map finished (handoff 03)
+
+The redesign's remaining raw-palette exceptions became tokens. **Status banners:** `warning`/`info` trios promoted from ADR-0008 exceptions to real tokens; `danger`/`success` gained `-surface`/`-border` companions so all four `NominationModal` banners (blocked/rejected/accepted/pending) carry **zero `dark:` pairs** — the file went from ~16 to 0. Blocked (rose) and accepted (emerald) weren't in the handoff's literal migrate list but had to move to hit the 0-`dark:` acceptance; normalised to the danger/success families (rose→red, emerald→green — ADR-0008 "nearest token", a small visible shift beyond the amber/sky the handoff spelled out). Solid info fill → new `btnInfo` recipe (`bg-info-strong`); the twice-pasted wip chip → `chipWarning` recipe (colour-only, each call site keeps its own shape/size). Also swept: `FeedbackModal` throttle text, leksiarxeio info icon (`text-blue-500`→`text-info`), and `LetterPickerModal`'s hand-rolled brand yellow → `brand`/`accent` tokens (hover/active via opacity, the platform idiom). **Shape tokens** (Part E): `--radius-card`(1rem)/`--radius-control`(0.75rem)/`--shadow-card`(=`shadow-sm`) recorded in `@theme`, adopted only in `Modal.tsx` + `recipes.ts` — verified in the built CSS to compile byte-identically (`rounded-card`==`rounded-2xl` etc.; deviated from the handoff by NOT adding a shadow to the static `cardShell`, which has none — that would have been a visible change; only `cardShellInteractive` got `shadow-card`). **Accent map** (Part F): added `stavrolekso`(sky-600) + `leksikastirio`(indigo-600) `[data-game]` rows — now all 8 registry surfaces have one; stavrolekso pages already emit `data-game` via GamePageShell, leksikastirio's wrapper `<div>` got it directly. Placeholder accents, invisible today (neither page renders accent chrome). Tests/eslint/build all green. **Docs left for the operator's doc session** (ADR 0008/0009, memory.md, the `FeedbackBanner` open question, deleting `ui-redesign-readiness.html`) per the handoff.
+
 ## Session 103 — 2026-07-17: the recipe leaks are closed — inverted buttons, the tooltip, and the card shell (handoff 02)
 
 **The seam:** `recipes.ts` exists so a button-outline redesign is a one-file edit, but ~9 primary buttons re-typed the `bg-inverted …` strings inline, one tooltip bubble was pasted byte-identical in 4 files, and the platform card was a de-facto recipe that wasn't one. All three now route through `recipes.ts`.
@@ -99,21 +103,7 @@ Everything verified live via MCP against the repo; handoffs-only per operator. *
 
 ## Session 88 — 2026-07-16: One `todayISO()` — "today's puzzle date" gets a module
 
-**Goal:** ~12 re-derivations of "today" collapsed into one function. `todayISO()` now lives in `src/lib/puzzleDate.ts` beside `normalizePuzzleDate`/`resolvePuzzleDateParam`.
-
-**Removed:** 4 byte-identical `getTodayDateString` copies (leksiarxeio/vrestifrasi/leksodromia/leksoplegma data loaders — now `export { todayISO as getTodayDateString }`, so callers and tests are untouched), 4 inline `.split("T")[0]` in leksokipos (`index.ts` ×3, `puzzleIndex.ts`), a local `getTodayString` in `leksindeseis/page.tsx`, 2 in `useDayChange`, 5 Board leaderboard props, `HomeTrophyButton`. Two idioms (`.slice(0,10)` vs `.split("T")[0]`) → one.
-
-**UTC rollover preserved deliberately** (operator's call). `toISOString()` is UTC, so the daily puzzle rolls over at 02:00/03:00 Athens — Greek players between midnight and 3am get "yesterday". That is now a one-line change in one place instead of a 12-site sweep; tests pin the behaviour so a future switch to Europe/Athens is a deliberate red test, not an accident. If it's ever changed, think about already-persisted round state keyed by date.
-
-**The architecture review was wrong on two counts** (both verified against the code):
-1. *"Boards prefer the `today` prop they already receive"* — would have introduced a bug. The `today` prop is **not** today; it's the resolved puzzle date, set from `?puzzle=` via `resolvePuzzleDateParam`, so it can be any past date. The modal's `today` anchors the 7-day strip and the "Σήμερα" pill; `defaultDate` is the selection. The Boards passing `today={todayISO()} defaultDate={today}` were already correct.
-2. *`LeaderboardModal.tsx:60` is a call site* — it isn't. That line is inside `getLast7Dates`, doing arithmetic on a caller-passed `today`. Left alone.
-
-**Real bug found behind the review's "intra-module drift" flag** (right smell, wrong direction): `LeksodromiaBoard`'s **playing** branch passed `today={today}` (the puzzle date) with no `defaultDate`. Opening the leaderboard mid-game on a past puzzle anchored the strip on that date and labelled it "Σήμερα". Now matches the finished branch.
-
-**Review missed** `useDayChange.ts` (2 sites) — the one place the rollover rule has user-visible behaviour, since it's what redirects a stale tab off yesterday's puzzle. Swept.
-
-**Out of scope:** `scripts/*.ts` (Node-side, not the platform clock), `api/cleanup-scores` (a retention cutoff, not today), test fixtures deriving their own dates.
+~12 re-derivations of "today" collapsed into `todayISO()` in `src/lib/puzzleDate.ts` (4 byte-identical `getTodayDateString` copies, 4 inline `.split("T")[0]` in leksokipos, leksindeseis, `useDayChange` ×2, 5 Board props, `HomeTrophyButton`; two idioms → one). **UTC rollover preserved deliberately** — puzzle rolls over at 02:00/03:00 Athens, Greek players 00:00–03:00 get "yesterday"; now a one-line change, pinned by test. Real bug fixed behind the review's flag: `LeksodromiaBoard`'s playing branch passed the *puzzle* date as `today` with no `defaultDate`, so a past puzzle's 7-day strip anchored wrong and was labelled "Σήμερα". Out of scope: `scripts/*` (not the platform clock), `cleanup-scores` (a retention cutoff).
 
 ## Session 87 — 2026-07-16: Premade-data re-sync registry (ADR 0015)
 

@@ -99,7 +99,7 @@ export function CommunityLeksiarxeioSubmitModal({ isOpen, onClose }: Props) {
                     <p className="text-xs text-danger">{errors[len]}</p>
                     <button
                       type="button"
-                      className="text-xs text-blue-500 underline"
+                      className="text-xs text-info underline"
                       onClick={() => setNominateWord(words[len].trim().toLowerCase())}
                     >
                       Πρότεινε τη λέξη

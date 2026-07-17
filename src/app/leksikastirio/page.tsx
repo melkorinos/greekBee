@@ -372,7 +372,7 @@ function LeksikastiríoClient() {
   const communityTabs: CommunityTab[]   = ["leksiarxeio", "leksindeseis", "vrestifrasi", "stavrolekso"];
 
   return (
-    <div className="flex-1 bg-background">
+    <div data-game="leksikastirio" className="flex-1 bg-background">
     {/* Admins review from a desktop — give them the full HD width; players keep the narrow mobile column. */}
     <main className={`${isAdmin ? "max-w-6xl" : "max-w-lg"} mx-auto px-4 py-8 space-y-6`}>
       <div>

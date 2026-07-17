@@ -59,8 +59,8 @@ export function Modal({
     : "fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4";
 
   const cardClass = isSheet
-    ? "relative bg-surface rounded-t-2xl shadow-2xl w-full max-w-game"
-    : "relative bg-surface rounded-2xl shadow-xl w-full max-w-game p-6";
+    ? "relative bg-surface rounded-t-card shadow-2xl w-full max-w-game"
+    : "relative bg-surface rounded-card shadow-xl w-full max-w-game p-6";
 
   return (
     <div

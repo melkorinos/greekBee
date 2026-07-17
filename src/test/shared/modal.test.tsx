@@ -33,7 +33,7 @@ describe("Modal — center variant (default)", () => {
   it("card is a rounded, width-capped dialog", () => {
     render(<Modal isOpen onClose={() => {}} cardTestId="card">x</Modal>);
     const card = screen.getByTestId("card");
-    expect(card.className).toContain("rounded-2xl");
+    expect(card.className).toContain("rounded-card");
     expect(card.className).toContain("w-full");
     expect(card.className).toContain("max-w-game");
     expect(card.className).toContain("p-6");
@@ -63,7 +63,7 @@ describe("Modal — sheet variant", () => {
       </Modal>,
     );
     expect(screen.getByTestId("bd").className).toContain("items-end");
-    expect(screen.getByTestId("card").className).toContain("rounded-t-2xl");
+    expect(screen.getByTestId("card").className).toContain("rounded-t-card");
     expect(screen.queryByTestId("x")).toBeNull();
   });
 });

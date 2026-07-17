@@ -13,7 +13,7 @@ import { PLATFORM_NAME } from "@/config/platform";
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
 import { HomeTrophyButton } from "@/components/shared/HomeTrophyButton";
 import { SubmitPuzzleButton } from "@/components/shared/SubmitPuzzleButton";
-import { btnHeaderIcon, btnHeaderIconSize, cardShellInteractive } from "@/styles/recipes";
+import { btnHeaderIcon, btnHeaderIconSize, cardShellInteractive, chipWarning } from "@/styles/recipes";
 import Link from "next/link";
 
 function StavroleksoMakerButton() {
@@ -157,7 +157,7 @@ function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submit
           <p className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
             {game.title}
             {game.wip && (
-              <span className="text-xs font-normal text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+              <span className={`text-xs font-normal ${chipWarning} px-1.5 py-0.5 rounded-full`}>
                 🚧 Υπό κατασκευή
               </span>
             )}

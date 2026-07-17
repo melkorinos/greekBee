@@ -25,11 +25,11 @@ export const labelOptionalClass =
 
 /** Standard editable text input — used in modals */
 export const inputClass =
-  "w-full px-3 py-2 rounded-xl border border-border bg-surface-raised text-foreground font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-border transition-shadow";
+  "w-full px-3 py-2 rounded-control border border-border bg-surface-raised text-foreground font-semibold text-sm focus:outline-none focus:ring-2 focus:ring-border transition-shadow";
 
 /** Read-only display input (e.g. the word field in SuggestWordModal) */
 export const inputReadonlyClass =
-  "w-full px-3 py-2 rounded-xl border border-border bg-surface-raised text-foreground text-sm font-mono font-semibold select-none";
+  "w-full px-3 py-2 rounded-control border border-border bg-surface-raised text-foreground text-sm font-mono font-semibold select-none";
 
 /** Compact input for tighter layouts (LeaderboardModal name + date) */
 export const inputCompactClass =
@@ -63,19 +63,19 @@ export const btnPrimaryCompact =
 
 /** Cancel / secondary modal button */
 export const btnCancel =
-  "flex-1 py-2 rounded-xl border border-border text-muted text-sm font-medium hover:bg-surface-raised active:bg-border transition-colors";
+  "flex-1 py-2 rounded-control border border-border text-muted text-sm font-medium hover:bg-surface-raised active:bg-border transition-colors";
 
 /** Primary modal submit button — solid inverted fill. Owns colour/typography/
  * radius/padding only; the call site adds layout (flex-1 when paired with
  * btnCancel in a row, w-full when standalone). */
 export const btnModalSubmit =
-  "py-2 rounded-xl bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity";
+  "py-2 rounded-control bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity";
 
 /** Standalone (auto-width) primary modal button — e.g. the "Κλείσιμο" button in a
  * success state. Unlike btnModalSubmit it isn't flex-1; add layout margin at the
  * call site. */
 export const btnModalPrimary =
-  "px-6 py-2 rounded-xl bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 transition-opacity";
+  "px-6 py-2 rounded-control bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 transition-opacity";
 
 // ── Status action buttons ─────────────────────────────────────────────────────
 // Approve/confirm (success) and reject/destructive (danger) fills — the
@@ -92,6 +92,20 @@ export const btnApprove =
 export const btnReject =
   "bg-danger text-white hover:opacity-90 disabled:opacity-50 transition-opacity";
 
+/** Info action fill — solid info blue, white text (e.g. the "upvote existing"
+ * button in a pending-status banner). Colour only; add layout at the call site. */
+export const btnInfo =
+  "bg-info-strong text-white hover:opacity-90 disabled:opacity-50 transition-opacity";
+
+// ── Status chip / note ────────────────────────────────────────────────────────
+
+/** Warning-tinted inline chip or note (the "🚧 Υπό κατασκευή" pill on the home
+ * card, the "too few words" note in Leksokipos). Owns the COLOUR trio only —
+ * add shape/size/padding at the call site, since the two uses differ (a
+ * rounded-full pill vs a rounded-lg banner). */
+export const chipWarning =
+  "text-warning bg-warning-surface border border-warning-border";
+
 // ── Tooltip ───────────────────────────────────────────────────────────────────
 
 /** Hover tooltip bubble that hangs below its trigger. The trigger must be a
@@ -106,11 +120,11 @@ export const tooltipBubble =
 
 /** Static card shell — panels that don't react to hover (profile sections). */
 export const cardShell =
-  "rounded-2xl border border-border bg-surface";
+  "rounded-card border border-border bg-surface";
 
 /** Interactive card shell — clickable cards that lift on hover (home GameCard). */
 export const cardShellInteractive =
-  "rounded-2xl border border-border bg-surface shadow-sm hover:shadow-md transition-all";
+  "rounded-card border border-border bg-surface shadow-card hover:shadow-md transition-all";
 
 // ── Leaderboard table ─────────────────────────────────────────────────────────
 
