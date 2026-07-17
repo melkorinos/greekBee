@@ -183,7 +183,7 @@ export default function HomePage() {
       <h1 className="text-3xl font-bold text-foreground mb-2">{PLATFORM_NAME}</h1>
       <p className="text-muted text-sm mb-10">Επίλεξε παιχνίδι για να ξεκινήσεις</p>
 
-      <ul className="w-full max-w-sm space-y-4">
+      <ul className="w-full max-w-game space-y-4">
         {gameList.map((game) => (
           <GameCard
             key={game.id}
@@ -193,25 +193,25 @@ export default function HomePage() {
         ))}
       </ul>
 
-      <div className="w-full max-w-sm mt-8 mb-4 flex items-center gap-3">
+      <div className="w-full max-w-game mt-8 mb-4 flex items-center gap-3">
         <hr className="flex-1 border-border" />
         <span className="text-xs font-semibold text-muted uppercase tracking-widest">Κοινότητα</span>
         <hr className="flex-1 border-border" />
       </div>
 
-      <ul className="w-full max-w-sm space-y-4">
+      <ul className="w-full max-w-game space-y-4">
         {communityList.map((game) => <GameCard key={game.id} game={game} />)}
       </ul>
 
       {wipList.length > 0 && (
         <>
-          <div className="w-full max-w-sm mt-8 mb-4 flex items-center gap-3">
+          <div className="w-full max-w-game mt-8 mb-4 flex items-center gap-3">
             <hr className="flex-1 border-border" />
             <span className="text-xs font-semibold text-muted uppercase tracking-widest">🚧 Υπό κατασκευή</span>
             <hr className="flex-1 border-border" />
           </div>
 
-          <ul className="w-full max-w-sm space-y-4">
+          <ul className="w-full max-w-game space-y-4">
             {wipList.map((game) => (
               <GameCard
                 key={game.id}

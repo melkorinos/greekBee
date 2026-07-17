@@ -6,6 +6,7 @@ import { getTodayDateString, getTodaysLeksodromiaPuzzle } from "@/data/leksodrom
 import { resolvePuzzleDateParam } from "@/lib/puzzleDate";
 
 import { LeksodromiaPageClient } from "@/components/leksodromia/LeksodromiaPageClient";
+import { GamePageShell } from "@/components/shared/GamePageShell";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +20,8 @@ export default async function LeksodromiaPage({ searchParams }: LeksodromiaPageP
   const puzzle = getTodaysLeksodromiaPuzzle(today);
 
   return (
-    <main data-game="leksodromia" className="flex flex-1 flex-col items-center gap-2 px-4 pt-4 bg-background text-foreground">
+    <GamePageShell gameId="leksodromia">
       <LeksodromiaPageClient puzzle={puzzle} today={today} />
-    </main>
+    </GamePageShell>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
+import { GameHeader } from "@/components/shared/GameHeader";
 import { GameHeaderTrophyButton } from "@/components/shared/GameHeaderTrophyButton";
 import { LeksiarxeioBoard } from "./LeksiarxeioBoard";
 import type { LeksiarxeioLength } from "@/games/leksiarxeio/types";
@@ -29,19 +30,14 @@ export function LeksiarxeioPageClient({ puzzles, wordLists, today }: Leksiarxeio
 
   return (
     <>
-      <div className="flex items-center justify-between w-full max-w-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          ✏️ Leksiarxeio
-        </h1>
-        <div className="flex items-center gap-2">
-          <GameHeaderTrophyButton onClick={() => setLbOpen(true)} />
-          <HowToPlayModal
-            title="Πώς να παίξεις — Leksiarxeio"
-            items={LEKSIARXEIO_RULES}
-            bulletIcon="▸"
-          />
-        </div>
-      </div>
+      <GameHeader title="✏️ Leksiarxeio">
+        <GameHeaderTrophyButton onClick={() => setLbOpen(true)} />
+        <HowToPlayModal
+          title="Πώς να παίξεις — Leksiarxeio"
+          items={LEKSIARXEIO_RULES}
+          bulletIcon="▸"
+        />
+      </GameHeader>
       <LeksiarxeioBoard
         puzzles={puzzles}
         wordLists={wordLists}

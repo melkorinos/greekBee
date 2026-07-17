@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { GamePageShell } from "@/components/shared/GamePageShell";
 import { StavroleksoGrid, computeHighlightedCells } from "@/games/stavrolekso/StavroleksoGrid";
 import {
   autoNumberSlots,
@@ -105,8 +106,8 @@ function ConfirmationScreen({ info, onNew }: { info: Confirmation; onNew: () => 
   }
 
   return (
-    <main className="flex flex-col items-center min-h-screen bg-background px-4 py-8">
-      <div className="w-full max-w-sm space-y-6">
+    <GamePageShell gameId="stavrolekso">
+      <div className="w-full max-w-game space-y-6">
         <div className="text-center space-y-1">
           <p className="text-3xl">✅</p>
           <h1 className="text-xl font-bold text-foreground">Το παζλ στάλθηκε!</h1>
@@ -146,7 +147,7 @@ function ConfirmationScreen({ info, onNew }: { info: Confirmation; onNew: () => 
           Δημιούργησε νέο παζλ
         </button>
       </div>
-    </main>
+    </GamePageShell>
   );
 }
 
@@ -468,8 +469,8 @@ export default function StavroleksoMakerPage() {
 
   if (phase === 1) {
     return (
-      <main className="flex flex-col items-center min-h-screen bg-background px-4 py-8">
-        <div className="w-full max-w-sm space-y-6">
+      <GamePageShell gameId="stavrolekso">
+        <div className="w-full max-w-game space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground">✏️ Maker Stavrolekso</h1>
             <p className="text-sm text-muted mt-1">Δημιούργησε το δικό σου σταυρόλεξο.</p>
@@ -514,15 +515,15 @@ export default function StavroleksoMakerPage() {
 
           <ResumeForm onLoaded={handleResumeLoaded} />
         </div>
-      </main>
+      </GamePageShell>
     );
   }
 
   // ── Phase 2 + 3 layout ────────────────────────────────────────────────────
 
   return (
-    <main className="flex flex-col items-center min-h-screen bg-background px-4 py-6">
-      <div className="w-full max-w-sm space-y-4">
+    <GamePageShell gameId="stavrolekso">
+      <div className="w-full max-w-game space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-bold text-foreground">
@@ -675,6 +676,6 @@ export default function StavroleksoMakerPage() {
           </p>
         )}
       </div>
-    </main>
+    </GamePageShell>
   );
 }

@@ -15,7 +15,7 @@ function formatSeconds(ms: number): string {
 
 export function RoundRecap({ results, totalScore }: RoundRecapProps) {
   return (
-    <div data-testid="round-recap" className="w-full max-w-sm flex flex-col gap-2">
+    <div data-testid="round-recap" className="w-full max-w-game flex flex-col gap-2">
       <h2 className="text-lg font-bold text-foreground text-center">
         Τέλος! 🏁 {totalScore} πόντοι
       </h2>

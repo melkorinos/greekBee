@@ -107,7 +107,7 @@ export function LeksoplegmaGrid({
 
   return (
     <div
-      className="relative w-full max-w-sm aspect-square touch-none select-none"
+      className="relative w-full max-w-game aspect-square touch-none select-none"
       onPointerMove={handlePointerMove}
     >
       <svg

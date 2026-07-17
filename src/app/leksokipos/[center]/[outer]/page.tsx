@@ -90,7 +90,7 @@ export default async function CustomLeksokiposPage({
   const tooFewWords = puzzle.validWords.length < 5;
 
   return (
-    <div data-game="leksokipos" className="flex flex-col flex-1 items-center justify-start bg-background font-sans min-h-screen">
+    <div data-game="leksokipos" className="flex flex-col flex-1 items-center justify-start bg-background">
       <LeksokiposLayout
         puzzle={puzzle}
         canonicalPath={canonicalPath}

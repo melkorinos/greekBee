@@ -89,6 +89,11 @@
 
   /* Shared icon size for the leaderboard 🏆 — one place to resize it everywhere. */
   --text-trophy: 1.25rem;
+
+  /* Platform column width → max-w-game. The single knob for every game page's
+     content column (header row, boards, grids, recaps, modal). Tailwind v4 reads
+     the --container-* namespace to generate the max-w-* utility. */
+  --container-game: 24rem;
 }
 
 body {

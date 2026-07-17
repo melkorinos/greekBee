@@ -4,6 +4,7 @@
 import { getTodaysVresTinFrasiPuzzle, getTodayDateString } from "@/data/vrestifrasi";
 import { resolvePuzzleDateParam } from "@/lib/puzzleDate";
 import { VresTinFrasiPageClient } from "@/components/vrestifrasi/VresTinFrasiPageClient";
+import { GamePageShell } from "@/components/shared/GamePageShell";
 import { getValidWords } from "@/data/leksiarxeio";
 import type { LeksiarxeioLength } from "@/games/leksiarxeio/types";
 import words2 from "@/data/leksiarxeio/words-2.json";
@@ -33,7 +34,7 @@ export default async function VresTinFrasiPage({ searchParams }: VresTinFrasiPag
   ];
 
   return (
-    <main data-game="vrestifrasi" className="flex flex-1 flex-col items-center gap-2 px-4 pt-4 bg-background text-foreground">
+    <GamePageShell gameId="vrestifrasi">
       {submitter_name && (
         <p className="text-xs text-muted self-center">
           Παζλ από {submitter_name}
@@ -44,6 +45,6 @@ export default async function VresTinFrasiPage({ searchParams }: VresTinFrasiPag
         validWords={allWords}
         today={today}
       />
-    </main>
+    </GamePageShell>
   );
 }

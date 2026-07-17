@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from "react";
 
 import { GameBoard } from "./GameBoard";
+import { GameHeader } from "@/components/shared/GameHeader";
 import { HowToPlayModal } from "./HowToPlayModal";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { ShareButton } from "./ShareButton";
@@ -78,17 +79,14 @@ export function LeksokiposLayout({
   return (
     <>
       <header className="w-full border-b border-border bg-surface px-4 py-3">
-        <div className="flex items-center justify-between max-w-sm mx-auto">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">🌸 Leksokipos</h1>
-          <div className="flex items-center gap-2">
-            <VariantToggleButton variant={variant} onToggle={toggleVariant} />
-            <ShareButton canonicalPath={canonicalPath} />
-            <HowToPlayModal />
-          </div>
-        </div>
+        <GameHeader title="🌸 Leksokipos" className="mx-auto">
+          <VariantToggleButton variant={variant} onToggle={toggleVariant} />
+          <ShareButton canonicalPath={canonicalPath} />
+          <HowToPlayModal />
+        </GameHeader>
       </header>
       {tooFewWords && (
-        <div className="w-full max-w-sm mx-auto mt-3 px-4">
+        <div className="w-full max-w-game mx-auto mt-3 px-4">
           <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-center">
             This letter combination has very few valid words. Try a different set!
           </p>

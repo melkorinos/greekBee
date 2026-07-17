@@ -7,6 +7,7 @@ import { getPuzzleForDate, getTodayDateString } from "@/data/leksoplegma";
 import { resolvePuzzleDateParam } from "@/lib/puzzleDate";
 
 import { LeksoplegmaPageClient } from "@/components/leksoplegma/LeksoplegmaPageClient";
+import { GamePageShell } from "@/components/shared/GamePageShell";
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +21,8 @@ export default async function LeksoplegmaPage({ searchParams }: LeksoplegmaPageP
   const puzzle = getPuzzleForDate(today);
 
   return (
-    <main data-game="leksoplegma" className="flex flex-1 flex-col items-center gap-2 px-4 pt-4 bg-background text-foreground">
+    <GamePageShell gameId="leksoplegma">
       <LeksoplegmaPageClient puzzle={puzzle} today={today} />
-    </main>
+    </GamePageShell>
   );
 }

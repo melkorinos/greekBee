@@ -175,7 +175,7 @@ export function LeksoplegmaBoard({
   }
 
   return (
-    <div className="flex flex-col items-center gap-3 py-4 w-full max-w-sm">
+    <div className="flex flex-col items-center gap-3 py-4 w-full max-w-game">
       {/* Progress + score */}
       <div className="flex items-center justify-between w-full text-sm text-muted">
         <span className="font-semibold text-foreground">

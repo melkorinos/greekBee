@@ -8,6 +8,7 @@ import { useState } from "react";
 import type { LeksoplegmaPuzzle } from "@/games/leksoplegma/types";
 
 import { HeaderIconButton } from "@/components/shared/HeaderIconButton";
+import { GameHeader } from "@/components/shared/GameHeader";
 import { GameHeaderTrophyButton } from "@/components/shared/GameHeaderTrophyButton";
 import { HowToPlayModal } from "./HowToPlayModal";
 import { LeksoplegmaBoard } from "./LeksoplegmaBoard";
@@ -24,22 +25,17 @@ export function LeksoplegmaPageClient({ puzzle, today }: LeksoplegmaPageClientPr
   return (
     <>
       {/* Header row */}
-      <div className="flex items-center justify-between w-full max-w-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          🕸️ Leksoplegma
-        </h1>
-        <div className="flex items-center gap-2">
-          <GameHeaderTrophyButton onClick={() => setLbOpen(true)} />
-          <HeaderIconButton
-            onClick={() => setHtpOpen(true)}
-            ariaLabel="Πώς να παίξεις"
-            tooltip="Κανόνες"
-            className="text-sm font-bold"
-          >
-            ?
-          </HeaderIconButton>
-        </div>
-      </div>
+      <GameHeader title="🕸️ Leksoplegma">
+        <GameHeaderTrophyButton onClick={() => setLbOpen(true)} />
+        <HeaderIconButton
+          onClick={() => setHtpOpen(true)}
+          ariaLabel="Πώς να παίξεις"
+          tooltip="Κανόνες"
+          className="text-sm font-bold"
+        >
+          ?
+        </HeaderIconButton>
+      </GameHeader>
 
       <LeksoplegmaBoard
         puzzle={puzzle}

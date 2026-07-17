@@ -35,7 +35,7 @@ describe("Modal — center variant (default)", () => {
     const card = screen.getByTestId("card");
     expect(card.className).toContain("rounded-2xl");
     expect(card.className).toContain("w-full");
-    expect(card.className).toContain("max-w-sm");
+    expect(card.className).toContain("max-w-game");
     expect(card.className).toContain("p-6");
   });
 

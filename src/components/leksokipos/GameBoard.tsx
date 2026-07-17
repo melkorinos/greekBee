@@ -171,7 +171,7 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
     }
   });
 
-  const containerClass = "flex flex-col items-center gap-6 w-full max-w-sm mx-auto px-4 py-8";
+  const containerClass = "flex flex-col items-center gap-6 w-full max-w-game mx-auto px-4 py-8";
   const buttonRowClass  = "flex items-center gap-2 w-full justify-center";
 
   return (

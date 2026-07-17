@@ -105,13 +105,13 @@ function LengthPanel({
       </div>
 
       {/*
-        Single max-w-sm column: grid + switcher + keyboard all share the same
+        Single max-w-game column: grid + switcher + keyboard all share the same
         384 px bounding box so their left/right edges always line up on any
         screen width. Without this common ancestor, the grid (w-fit) and the
-        keyboard (w-full max-w-sm) centre independently and appear offset on PC.
+        keyboard (w-full max-w-game) centre independently and appear offset on PC.
       */}
-      <div className="w-full max-w-sm flex flex-col items-center gap-4 px-2">
-        {/* Grid fills the shared max-w-sm column via flex-1 tiles — no overflow possible */}
+      <div className="w-full max-w-game flex flex-col items-center gap-4 px-2">
+        {/* Grid fills the shared max-w-game column via flex-1 tiles — no overflow possible */}
         <GuessGrid
           guesses={guesses}
           currentInput={currentInput}
@@ -142,7 +142,7 @@ function LengthPanel({
           </button>
         </div>
 
-        {/* Keyboard — w-full fills the shared max-w-sm column exactly,
+        {/* Keyboard — w-full fills the shared max-w-game column exactly,
             so its edges align with the grid rows above. */}
         <Keyboard
           letterStates={letterStates}

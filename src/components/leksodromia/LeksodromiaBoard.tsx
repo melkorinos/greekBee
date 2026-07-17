@@ -173,7 +173,7 @@ export function LeksodromiaBoard({
   }
 
   return (
-    <div className="flex flex-col items-center gap-4 py-4 w-full max-w-sm">
+    <div className="flex flex-col items-center gap-4 py-4 w-full max-w-game">
       {/* Progress + scores */}
       <div className="flex items-center justify-between w-full text-sm text-muted">
         <span className="font-semibold text-foreground flex items-center gap-1.5">

@@ -60,7 +60,7 @@ export default function ProfilePage() {
 
   if (!mounted) {
     return (
-      <div className="w-full max-w-sm mx-auto px-4 py-6 space-y-4">
+      <div className="w-full max-w-game mx-auto px-4 py-6 space-y-4">
         <h1 className="text-lg font-semibold text-foreground px-1">Το προφίλ μου</h1>
         <div className="rounded-2xl border border-border bg-surface h-48 animate-pulse" aria-hidden />
       </div>
@@ -68,7 +68,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="w-full max-w-sm mx-auto px-4 py-6 space-y-4">
+    <div className="w-full max-w-game mx-auto px-4 py-6 space-y-4">
       <h1 className="text-lg font-semibold text-foreground px-1">Το προφίλ μου</h1>
 
       <WelcomeBackBanner />

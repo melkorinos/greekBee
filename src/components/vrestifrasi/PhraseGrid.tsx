@@ -60,7 +60,7 @@ function buildLines(
  * across both lines regardless of how many tiles each line has.
  *
  * Layout constants:
- *   available = 368px (max-w-sm 384px – px-2 16px)
+ *   available = 368px (max-w-game 384px – px-2 16px)
  *   spacer    = 12px  (w-3)
  *   gap       =  4px  (gap-1, between every adjacent flex child)
  *
@@ -131,7 +131,7 @@ export function PhraseGrid({
 
   return (
     <div
-      className="flex flex-col divide-y divide-border w-full max-w-sm mx-auto"
+      className="flex flex-col divide-y divide-border w-full max-w-game mx-auto"
       role="grid"
       aria-label="Phrase guess grid"
     >

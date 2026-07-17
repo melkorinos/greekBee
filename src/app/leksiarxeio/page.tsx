@@ -7,6 +7,7 @@ import { resolvePuzzleDateParam } from "@/lib/puzzleDate";
 
 import type { LeksiarxeioLength } from "@/games/leksiarxeio/types";
 import { LeksiarxeioPageClient } from "@/components/leksiarxeio/LeksiarxeioPageClient";
+import { GamePageShell } from "@/components/shared/GamePageShell";
 
 export const dynamic = "force-dynamic";
 
@@ -23,13 +24,13 @@ export default async function LeksiarxeioPage({ searchParams }: LeksiarxeioPageP
   ) as Record<LeksiarxeioLength, string[]>;
 
   return (
-    <main data-game="leksiarxeio" className="flex flex-1 flex-col items-center gap-2 px-4 pt-4 bg-background text-foreground">
+    <GamePageShell gameId="leksiarxeio">
       {submitter_name && (
         <p className="text-xs text-muted self-center">
           Παζλ από {submitter_name}
         </p>
       )}
       <LeksiarxeioPageClient puzzles={puzzles} wordLists={wordLists} today={today} />
-    </main>
+    </GamePageShell>
   );
 }

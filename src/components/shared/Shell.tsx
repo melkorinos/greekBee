@@ -75,7 +75,7 @@ export function Shell({ children }: ShellProps) {
     <div className="min-h-screen flex flex-col">
       {/* ── Sticky header ─────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 w-full border-b border-border bg-surface px-4 py-3">
-        <div className="flex items-center justify-between max-w-sm mx-auto">
+        <div className="flex items-center justify-between max-w-game mx-auto">
           <Link
             href="/"
             className="text-sm font-semibold text-foreground hover:opacity-80 transition-colors"

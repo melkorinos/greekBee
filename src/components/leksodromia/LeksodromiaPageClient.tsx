@@ -6,6 +6,7 @@
 import { useState } from "react";
 
 import { HeaderIconButton } from "@/components/shared/HeaderIconButton";
+import { GameHeader } from "@/components/shared/GameHeader";
 import { GameHeaderTrophyButton } from "@/components/shared/GameHeaderTrophyButton";
 import { HowToPlayModal } from "./HowToPlayModal";
 import { LeksodromiaBoard } from "./LeksodromiaBoard";
@@ -22,22 +23,17 @@ export function LeksodromiaPageClient({ puzzle, today }: LeksodromiaPageClientPr
   return (
     <>
       {/* Header row */}
-      <div className="flex items-center justify-between w-full max-w-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          🏁 Leksodromia
-        </h1>
-        <div className="flex items-center gap-2">
-          <GameHeaderTrophyButton onClick={() => setLbOpen(true)} />
-          <HeaderIconButton
-            onClick={() => setHtpOpen(true)}
-            ariaLabel="Πώς να παίξεις"
-            tooltip="Κανόνες"
-            className="text-sm font-bold"
-          >
-            ?
-          </HeaderIconButton>
-        </div>
-      </div>
+      <GameHeader title="🏁 Leksodromia">
+        <GameHeaderTrophyButton onClick={() => setLbOpen(true)} />
+        <HeaderIconButton
+          onClick={() => setHtpOpen(true)}
+          ariaLabel="Πώς να παίξεις"
+          tooltip="Κανόνες"
+          className="text-sm font-bold"
+        >
+          ?
+        </HeaderIconButton>
+      </GameHeader>
 
       <LeksodromiaBoard
         puzzle={puzzle}
