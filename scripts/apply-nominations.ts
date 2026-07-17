@@ -19,6 +19,12 @@
 //   accepted + remove  →  delete word from dictionary + leksiarxeio lists + re-sync puzzles
 //   rejected (either)  →  no dataset change (already hidden from the UI; row retained)
 //
+// The blocklist is re-checked at apply time (inside applyDictionaryEdits): an
+// accepted `add` whose word is blocklisted STOPS the run and names the word,
+// on --dry-run too. The blocklist is editable without a deploy, so a word can
+// be approved while clean and blocklisted before this runs. A human decides
+// whether the blocklist or the approval is wrong.
+//
 // Routing by word length (word-list files):
 //   len ≤ 3  →  words-el.json only
 //   len 4–8  →  words-el.json  AND  src/data/leksiarxeio/words-{N}.json

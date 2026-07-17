@@ -5,6 +5,16 @@
 
 ---
 
+## Session 98 — 2026-07-17: the blocklist is now re-checked at apply time (issue 07, TDD)
+
+**The window:** the blocklist was enforced only at propose-time (the two edge nomination routes). Nothing re-checked it when an admin approved, or when the approved word was applied — and the blocklist is a version-controlled JSON file editable without a deploy, so a word could be approved while clean, blocklisted afterwards, and written into `words-el.json` anyway. Session 97's guard catches that state only *after* the bad data is committed; this closes the door instead.
+
+- **The gate lives in `scripts/lib/resync/applyDictionaryEdits.ts`, not `apply-nominations.ts`.** The ticket said the latter but named `applyDictionaryEdits.test.ts` as the test surface — those only reconcile at the orchestrator, which is also literally "before the dictionary writer". Three things fall out for free: `--dry` fails identically (the throw precedes every write, and dry-run is the run an admin actually reads), **`apply-proposed-words.ts` is covered too** (it generates morphological relatives — a proper noun could easily slip in), and the check is unit-testable without a DB.
+- **`assertNotBlocked` runs before `words-el.json` is even read**, and throws rather than skipping — a silent skip would leave the row `accepted` forever and re-trigger every run, so a human must say whether the blocklist or the approval is wrong. A blocklisted word **stops the whole batch**, holding back clean words in the same run; the operator resolves and re-runs. Compares the **normalised** form (`Μαρία` must not slip past a raw-string gate).
+- **Exempts `DEFERRED_BLOCKLIST_DICTIONARY_OVERLAP`** (session 97's 14 month names) — imported, not re-derived. They're in both files on purpose, so a naive `isBlockedWord` filter would stop runs over them. **Removes are never gated:** deleting a blocklisted word from the dictionary is the correct outcome, not an error.
+- **Verified beyond the tests:** vitest resolves `@/lib/*` through its own aliases, which proves nothing about `tsx`. Ran the real script (`apply-proposed:dry`, DB-free) — `μαρια` → exit 1 naming the word; a clean word → exit 0. `words-el.json` untouched throughout.
+- Tests: 6 new in `applyDictionaryEdits.test.ts` (blocked add stops the run + no adapter runs, message names the word, normalisation, `--dry` identical, month-name allowlist passes, remove never blocked). Red-first: exactly the 4 throw-tests failed, the 2 non-throw tests passed from the start.
+
 ## Session 97 — 2026-07-17: blocklist ∩ dictionary is now a guarded, shrink-only invariant (issue 06, TDD)
 
 **The premise the code stated but nothing enforced:** `nominationBlocklist.ts:10-13` says dual-use common nouns were deliberately KEPT in the dictionary and are NOT on the blocklist — yet 16 words were in both files, and nothing computed the intersection, so the drift was silent. The unit tests would have passed with 16,000 overlapping words just as happily as with 16.
