@@ -1,8 +1,9 @@
 "use client";
 
 import type { VresTinFrasiPuzzle } from "@/games/vrestifrasi/types";
+import { usePhysicalKeyboard } from "@/hooks/usePhysicalKeyboard";
 import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { Keyboard } from "./Keyboard";
@@ -68,21 +69,11 @@ export function VresTinFrasiBoard({
     clearMessage,
   } = useVresTinFrasiState(puzzle, validWords, handleGameEnd);
 
-  // Physical keyboard
-  const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
-  useLayoutEffect(() => {
-    keyHandlerRef.current = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === "Enter")     return submitGuess();
-      if (e.key === "Backspace") return deleteLetter();
-      if (GREEK_LETTER.test(e.key)) addLetter(normalizeLetters(e.key));
-    };
+  usePhysicalKeyboard((e) => {
+    if (e.key === "Enter")     return submitGuess();
+    if (e.key === "Backspace") return deleteLetter();
+    if (GREEK_LETTER.test(e.key)) addLetter(normalizeLetters(e.key));
   });
-  useEffect(() => {
-    const listener = (e: KeyboardEvent) => keyHandlerRef.current(e);
-    window.addEventListener("keydown", listener);
-    return () => window.removeEventListener("keydown", listener);
-  }, []);
 
   // Auto-clear transient messages
   useEffect(() => {

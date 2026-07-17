@@ -4,17 +4,9 @@ import { btnCancel, btnModalPrimary, btnModalSubmit, inputClass, inputReadonlyCl
 
 import { Modal } from "./Modal";
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
+import { deriveBanner, guardSubmit, pivotFor, type NominationLookup } from "@/lib/nominationDecision";
 import { normalizeLetters } from "@/lib/normalize";
 import { useCallback, useEffect, useRef, useState } from "react";
-
-interface LookupResult {
-  word:      string; // the normalised word this result applies to
-  blocked:   boolean; // a proper noun / month / place / foreign word we refuse
-  rejected:  number;
-  accepted:  number; // approved but not yet released (not in the dictionary yet)
-  pending:   number;
-  pendingId: string | null; // id of the existing pending proposal, to upvote instead
-}
 
 interface NominationModalProps {
   word: string;
@@ -58,7 +50,7 @@ export function NominationModal({
   const [playerName,   setPlayerName]   = useState("");
   const [note,         setNote]         = useState("");
   const [status,       setStatus]       = useState<"idle" | "submitting" | "success" | "error">("idle");
-  const [lookup,       setLookup]       = useState<LookupResult | null>(null);
+  const [lookup,       setLookup]       = useState<NominationLookup | null>(null);
   const [noteMissing,  setNoteMissing]  = useState(false);
   const [successMode,  setSuccessMode]  = useState<"submitted" | "upvoted">("submitted");
 
@@ -78,7 +70,7 @@ export function NominationModal({
 
   // Look up prior rejections / pending duplicates for `target` (lowercase+trim).
   const runLookup = useCallback(
-    async (target: string): Promise<LookupResult | null> => {
+    async (target: string): Promise<NominationLookup | null> => {
       if (target.length < 2) {
         setLookup(null);
         return null;
@@ -89,7 +81,7 @@ export function NominationModal({
         );
         if (!res.ok) return null;
         const data = (await res.json()) as { blocked?: boolean; rejected?: number; accepted?: number; pending?: number; pendingId?: string | null };
-        const result: LookupResult = {
+        const result: NominationLookup = {
           word:      target,
           blocked:   data.blocked   ?? false,
           rejected:  data.rejected  ?? 0,
@@ -115,13 +107,11 @@ export function NominationModal({
 
   if (!isOpen) return null;
 
-  // A warning applies only while the looked-up word still matches the input.
-  // Priority: blocked → rejected → accepted → pending (at most one banner shows).
-  const matches     = !!lookup && lookup.word === key;
-  const blockedHit  = matches && lookup!.blocked;
-  const rejectedHit = matches && !lookup!.blocked && lookup!.rejected > 0;
-  const acceptedHit = matches && !lookup!.blocked && lookup!.rejected === 0 && lookup!.accepted > 0;
-  const pendingHit  = matches && !lookup!.blocked && lookup!.rejected === 0 && lookup!.accepted === 0 && lookup!.pending > 0;
+  const banner      = deriveBanner(lookup, key);
+  const blockedHit  = banner === "blocked";
+  const rejectedHit = banner === "rejected";
+  const acceptedHit = banner === "accepted";
+  const pendingHit  = banner === "pending";
   // Previously-rejected words require an explanation before re-submitting.
   const noteRequired = rejectedHit;
 
@@ -142,32 +132,11 @@ export function NominationModal({
     // Ensure the checks are current for this exact word before posting.
     const lk = lookup && lookup.word === trimmed ? lookup : await runLookup(trimmed);
 
-    // Blocklisted word (proper noun / month / place / foreign word) → never post.
-    // The setLookup inside runLookup makes `blockedHit` true, surfacing the banner
-    // and disabling the button.
-    if (lk && lk.blocked) {
-      return;
-    }
-
-    if (lk && lk.rejected > 0 && !note.trim()) {
-      setNoteMissing(true); // mandatory explanation for a previously-rejected word
-      return;
-    }
-    setNoteMissing(false);
-
-    // Already approved (awaiting release) → re-proposing is pointless. Bail; the
-    // setLookup above makes `acceptedHit` true, disabling the button and showing
-    // the "already approved" banner.
-    if (lk && lk.rejected === 0 && lk.accepted > 0) {
-      return;
-    }
-
-    // An identical proposal is already pending → never insert a duplicate. Bail;
-    // the setLookup above makes `pendingHit` true, greying out this button and
-    // surfacing the "upvote the existing one" action in the info banner.
-    if (lk && lk.rejected === 0 && lk.accepted === 0 && lk.pending > 0 && lk.pendingId) {
-      return;
-    }
+    // Every refusal below is already visible: the setLookup inside runLookup
+    // surfaces the matching banner and disables the button. Bailing is enough.
+    const guard = guardSubmit(lk, note);
+    setNoteMissing(guard.ok === false && guard.reason === "note-required");
+    if (!guard.ok) return;
 
     setStatus("submitting");
     try {
@@ -182,22 +151,16 @@ export function NominationModal({
           deviceId:   getOrCreateDeviceId(),
         }),
       });
-      if (res.status === 422) {
-        // Server refused a blocklisted word the client lookup missed (e.g. the
-        // lookup request failed). Surface the block banner instead of a generic error.
-        setLookup({ word: trimmed, blocked: true, rejected: 0, accepted: 0, pending: 0, pendingId: null });
-        setStatus("idle");
-        return;
-      }
-      if (res.status === 409) {
-        // The DB's pending-uniqueness backstop fired: an identical proposal
-        // landed between our lookup and our POST. Same pivot as pendingHit —
-        // surface the "upvote the existing one" banner with the id the server
-        // returned.
-        const data = (await res.json().catch(() => null)) as { pendingId?: string | null } | null;
-        setLookup({ word: trimmed, blocked: false, rejected: 0, accepted: 0, pending: 1, pendingId: data?.pendingId ?? null });
-        setStatus("idle");
-        return;
+      // A refusal the server decided (blocklist 422 / pending-uniqueness 409)
+      // becomes a lookup, so the same banner surfaces as if we had caught it.
+      if (res.status === 422 || res.status === 409) {
+        const data  = (await res.json().catch(() => null)) as { pendingId?: string | null } | null;
+        const pivot = pivotFor(res.status, trimmed, data);
+        if (pivot) {
+          setLookup(pivot);
+          setStatus("idle");
+          return;
+        }
       }
       if (!res.ok) {
         throw new Error("server error");

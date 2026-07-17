@@ -74,34 +74,75 @@ const communityTabCopy = {
   stavrolekso:  { label: "Παζλ Stavrolekso",       emptyState: "Δεν υπάρχουν παζλ σε αναμονή." },
 } as const;
 
-// ── Community puzzle cards ────────────────────────────────────────────────────
+// ── Community queue card ──────────────────────────────────────────────────────
+// One shell owning the admin verb of the Community Puzzle Lifecycle — review a
+// pending Community Puzzle — for all four queues. Per-game variation enters as a
+// body renderer (the QUEUE_BODY registry below), the same shape the lifecycle
+// itself uses server-side: shared machine, per-game config at the seam. The
+// admin wire (URL shape, X-Admin-Secret, PATCH body) is stated once, here.
 
-function LeksiarxeioQueueCard({
-  puzzle,
+function SubmitterLine({ name }: { name: string }) {
+  if (!name) return null;
+  return <p className="text-xs text-muted">από {name}</p>;
+}
+
+function CommunityQueueCard({
+  game,
+  puzzleId,
   adminSecret,
   onReviewed,
+  children,
 }: {
-  puzzle: LeksiarxeioCommunityPuzzle;
+  game:        CommunityTab;
+  puzzleId:    number;
   adminSecret: string;
-  onReviewed: (id: number) => void;
+  onReviewed:  (id: number) => void;
+  /** The per-game body — everything above the approve/reject row. */
+  children:    React.ReactNode;
 }) {
   const [busy, setBusy] = useState(false);
 
   async function review(action: "approve" | "reject") {
     setBusy(true);
-    await fetch(`/api/community-puzzles/leksiarxeio/${puzzle.id}/review`, {
+    await fetch(`/api/community-puzzles/${game}/${puzzleId}/review`, {
       method:  "PATCH",
       headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
       body:    JSON.stringify({ action }),
     });
-    onReviewed(puzzle.id);
+    onReviewed(puzzleId);
   }
 
   return (
-    <div className="border border-border rounded-xl p-4 space-y-2">
-      {puzzle.submitter_name && (
-        <p className="text-xs text-muted">από {puzzle.submitter_name}</p>
-      )}
+    <div className="border border-border rounded-xl p-4 space-y-2" data-testid="community-queue-card">
+      {children}
+      <div className="flex gap-2 pt-1">
+        <button
+          disabled={busy}
+          onClick={() => review("approve")}
+          data-testid="community-approve"
+          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnApprove}`}
+        >
+          Έγκριση
+        </button>
+        <button
+          disabled={busy}
+          onClick={() => review("reject")}
+          data-testid="community-reject"
+          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnReject}`}
+        >
+          Απόρριψη
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Per-game bodies ───────────────────────────────────────────────────────────
+
+function LeksiarxeioBody({ puzzle }: { puzzle: LeksiarxeioCommunityPuzzle }) {
+  return (
+    <>
+      <SubmitterLine name={puzzle.submitter_name} />
       <div className="grid grid-cols-5 gap-1">
         {LEKSIARXEIO.LENGTHS.map((len) => (
           <div key={len} className="text-center">
@@ -110,99 +151,23 @@ function LeksiarxeioQueueCard({
           </div>
         ))}
       </div>
-      <div className="flex gap-2 pt-1">
-        <button
-          disabled={busy}
-          onClick={() => review("approve")}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnApprove}`}
-        >
-          Έγκριση
-        </button>
-        <button
-          disabled={busy}
-          onClick={() => review("reject")}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnReject}`}
-        >
-          Απόρριψη
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
 
-function VresTinFrasiQueueCard({
-  puzzle,
-  adminSecret,
-  onReviewed,
-}: {
-  puzzle: VresTinFrasiCommunityPuzzle;
-  adminSecret: string;
-  onReviewed: (id: number) => void;
-}) {
-  const [busy, setBusy] = useState(false);
-
-  async function review(action: "approve" | "reject") {
-    setBusy(true);
-    await fetch(`/api/community-puzzles/vrestifrasi/${puzzle.id}/review`, {
-      method:  "PATCH",
-      headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
-      body:    JSON.stringify({ action }),
-    });
-    onReviewed(puzzle.id);
-  }
-
+function VresTinFrasiBody({ puzzle }: { puzzle: VresTinFrasiCommunityPuzzle }) {
   return (
-    <div className="border border-border rounded-xl p-4 space-y-2">
-      {puzzle.submitter_name && (
-        <p className="text-xs text-muted">από {puzzle.submitter_name}</p>
-      )}
+    <>
+      <SubmitterLine name={puzzle.submitter_name} />
       <p className="text-base font-semibold text-foreground">{puzzle.data.phrase}</p>
-      <div className="flex gap-2 pt-1">
-        <button
-          disabled={busy}
-          onClick={() => review("approve")}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnApprove}`}
-        >
-          Έγκριση
-        </button>
-        <button
-          disabled={busy}
-          onClick={() => review("reject")}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnReject}`}
-        >
-          Απόρριψη
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
 
-function LeksindeseisQueueCard({
-  puzzle,
-  adminSecret,
-  onReviewed,
-}: {
-  puzzle: LeksindeseisCommunityPuzzle;
-  adminSecret: string;
-  onReviewed: (id: number) => void;
-}) {
-  const [busy, setBusy] = useState(false);
-
-  async function review(action: "approve" | "reject") {
-    setBusy(true);
-    await fetch(`/api/community-puzzles/leksindeseis/${puzzle.id}/review`, {
-      method:  "PATCH",
-      headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
-      body:    JSON.stringify({ action }),
-    });
-    onReviewed(puzzle.id);
-  }
-
+function LeksindeseisBody({ puzzle }: { puzzle: LeksindeseisCommunityPuzzle }) {
   return (
-    <div className="border border-border rounded-xl p-4 space-y-2">
-      {puzzle.submitter_name && (
-        <p className="text-xs text-muted">από {puzzle.submitter_name}</p>
-      )}
+    <>
+      <SubmitterLine name={puzzle.submitter_name} />
       <div className="space-y-2">
         {puzzle.data.map((group, i) => (
           <div key={i} className="bg-surface-raised rounded-lg px-3 py-2">
@@ -211,52 +176,16 @@ function LeksindeseisQueueCard({
           </div>
         ))}
       </div>
-      <div className="flex gap-2 pt-1">
-        <button
-          disabled={busy}
-          onClick={() => review("approve")}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnApprove}`}
-        >
-          Έγκριση
-        </button>
-        <button
-          disabled={busy}
-          onClick={() => review("reject")}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnReject}`}
-        >
-          Απόρριψη
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
 
-function StavroleksoQueueCard({
-  puzzle,
-  adminSecret,
-  onReviewed,
-}: {
-  puzzle: StavroleksoCommunityPuzzle;
-  adminSecret: string;
-  onReviewed: (id: number) => void;
-}) {
-  const [busy, setBusy] = useState(false);
-
-  async function review(action: "approve" | "reject") {
-    setBusy(true);
-    await fetch(`/api/community-puzzles/stavrolekso/${puzzle.id}/review`, {
-      method:  "PATCH",
-      headers: { "Content-Type": "application/json", "X-Admin-Secret": adminSecret },
-      body:    JSON.stringify({ action }),
-    });
-    onReviewed(puzzle.id);
-  }
-
-  const slotCount  = puzzle.data.slots.length;
-  const created    = new Date(puzzle.created_at).toLocaleDateString("el-GR");
+function StavroleksoBody({ puzzle }: { puzzle: StavroleksoCommunityPuzzle }) {
+  const slotCount = puzzle.data.slots.length;
+  const created   = new Date(puzzle.created_at).toLocaleDateString("el-GR");
 
   return (
-    <div className="border border-border rounded-xl p-4 space-y-2">
+    <>
       <div className="flex items-start justify-between gap-2">
         <div>
           {puzzle.title && (
@@ -265,47 +194,27 @@ function StavroleksoQueueCard({
           <p className="text-xs text-muted">
             {puzzle.data.width}×{puzzle.data.height} · {slotCount} slots · {created}
           </p>
-          {puzzle.submitter_name && (
-            <p className="text-xs text-muted">από {puzzle.submitter_name}</p>
-          )}
+          <SubmitterLine name={puzzle.submitter_name} />
         </div>
       </div>
       <pre className="text-[10px] text-muted bg-surface rounded-lg p-2 overflow-x-auto max-h-40">
         {JSON.stringify(puzzle.data, null, 2)}
       </pre>
-      <div className="flex gap-2 pt-1">
-        <button
-          disabled={busy}
-          onClick={() => review("approve")}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnApprove}`}
-        >
-          Έγκριση
-        </button>
-        <button
-          disabled={busy}
-          onClick={() => review("reject")}
-          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold ${btnReject}`}
-        >
-          Απόρριψη
-        </button>
-      </div>
-    </div>
+    </>
   );
 }
 
-// ── Card registry ─────────────────────────────────────────────────────────────
+// ── Body registry ─────────────────────────────────────────────────────────────
+// The cast is the seam's cost: the page holds its queues as unknown[] (one
+// QueueMap for four row shapes), so each body re-states the shape it was
+// registered for. Wrong shape → runtime, not compile — the same trade the
+// lifecycle's validate() adapters make server-side.
 
-type CardRenderer = (
-  puzzle:      unknown,
-  adminSecret: string,
-  onReviewed:  (id: number) => void,
-) => React.ReactNode;
-
-const CARD: Record<CommunityTab, CardRenderer> = {
-  leksiarxeio:  (p, as, or) => <LeksiarxeioQueueCard  puzzle={p as LeksiarxeioCommunityPuzzle}  adminSecret={as} onReviewed={or} />,
-  leksindeseis: (p, as, or) => <LeksindeseisQueueCard puzzle={p as LeksindeseisCommunityPuzzle} adminSecret={as} onReviewed={or} />,
-  vrestifrasi:  (p, as, or) => <VresTinFrasiQueueCard  puzzle={p as VresTinFrasiCommunityPuzzle}  adminSecret={as} onReviewed={or} />,
-  stavrolekso:  (p, as, or) => <StavroleksoQueueCard  puzzle={p as StavroleksoCommunityPuzzle}  adminSecret={as} onReviewed={or} />,
+const QUEUE_BODY: Record<CommunityTab, (puzzle: unknown) => React.ReactNode> = {
+  leksiarxeio:  (p) => <LeksiarxeioBody  puzzle={p as LeksiarxeioCommunityPuzzle} />,
+  leksindeseis: (p) => <LeksindeseisBody puzzle={p as LeksindeseisCommunityPuzzle} />,
+  vrestifrasi:  (p) => <VresTinFrasiBody puzzle={p as VresTinFrasiCommunityPuzzle} />,
+  stavrolekso:  (p) => <StavroleksoBody  puzzle={p as StavroleksoCommunityPuzzle} />,
 };
 
 // Rank by net score (upvotes − downvotes), highest first. The score itself is
@@ -430,8 +339,9 @@ function LeksikastiríoClient() {
   }
 
   function renderCommunityTab() {
-    const queue = queues[activeTab as CommunityTab] ?? [];
-    const copy  = communityTabCopy[activeTab as CommunityTab];
+    const game  = activeTab as CommunityTab;
+    const queue = queues[game] ?? [];
+    const copy  = communityTabCopy[game];
     if (queue.length === 0) {
       return (
         <p className="text-sm text-muted text-center py-8">{copy.emptyState}</p>
@@ -439,11 +349,20 @@ function LeksikastiríoClient() {
     }
     return (
       <div className="space-y-4">
-        {queue.map((p: unknown) => (
-          <React.Fragment key={(p as { id: number }).id}>
-            {CARD[activeTab as CommunityTab](p, adminSecret, (id) => handleCommunityReviewed(id, activeTab as CommunityTab))}
-          </React.Fragment>
-        ))}
+        {queue.map((p: unknown) => {
+          const id = (p as { id: number }).id;
+          return (
+            <CommunityQueueCard
+              key={id}
+              game={game}
+              puzzleId={id}
+              adminSecret={adminSecret}
+              onReviewed={(reviewedId) => handleCommunityReviewed(reviewedId, game)}
+            >
+              {QUEUE_BODY[game](p)}
+            </CommunityQueueCard>
+          );
+        })}
       </div>
     );
   }

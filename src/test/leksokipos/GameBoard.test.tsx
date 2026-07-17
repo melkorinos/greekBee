@@ -107,6 +107,16 @@ describe("Keyboard input", () => {
     await user.keyboard("{Backspace}");
     expect(screen.getAllByTestId("word-input-letter")).toHaveLength(2);
   });
+
+  it("ignores letters typed as a browser shortcut (Ctrl/⌘/Alt held)", async () => {
+    const { user } = setup();
+    // Each combo delivers a bare letter in e.key ("a"/"p"/"i") — without a modifier
+    // guard these land in the input as if the player had typed them.
+    await user.keyboard("{Control>}a{/Control}");
+    await user.keyboard("{Meta>}p{/Meta}");
+    await user.keyboard("{Alt>}i{/Alt}");
+    expect(screen.queryAllByTestId("word-input-letter")).toHaveLength(0);
+  });
 });
 
 // ── Word submission ────────────────────────────────────────────────────────────

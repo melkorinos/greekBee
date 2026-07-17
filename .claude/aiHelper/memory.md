@@ -1,6 +1,6 @@
 # Agent Memory — Greek Word Games Platform
 
-## ⚡ Current State (2026-07-14)
+## ⚡ Current State (2026-07-17)
 Seven live games (incl. Λεξοδρομία + Λεξόπλεγμα, graduated from wip session 77) + custom puzzle URLs + the Leksikastirio word-court. Run `npm run test -- --run` for current count.
 
 | Game | Route | Status |
@@ -48,7 +48,7 @@ src/
   app/          Routes + server components (leksokipos, leksiarxeio, leksindeseis, vres-tin-frasi, leksodromia, leksoplegma, stavrolekso, leksikastirio, api/)
   components/   shared/ · leksokipos/ · leksiarxeio/ · leksindeseis/ · vrestifrasi/ · leksodromia/ · leksoplegma/ · leksikastirio/
   games/        Pure logic: leksokipos/lib+hooks · leksiarxeio/lib+hooks · leksindeseis/hooks · vrestifrasi/lib+hooks · leksodromia/lib+hooks · leksoplegma/lib+hooks (lib incl. offline generator core) · stavrolekso/lib (note: also holds StavroleksoGrid.tsx, a React component)
-  data/         leksokipos/puzzles-el.json · leksiarxeio/words-{2..8}.json + answers-{4..8}.json (answers reused read-only by leksodromia/ + leksoplegma/) · leksindeseis/puzzles-connections.json · leksoplegma/puzzles-el.json (committed generator batch, `npm run generate-leksoplegma`) · vrestifrasi/phrases-el.json · words-el.json (~795k)
+  data/         leksokipos/puzzles-el.json · leksiarxeio/words-{2..8}.json + answers-{4..8}.json + answerPools.ts (answers reused read-only by leksodromia/ + leksoplegma/) · leksodromia/anagramAlternates.json · leksindeseis/puzzles-connections.json · leksoplegma/puzzles-el.json (committed generator batch, `npm run generate-leksoplegma`) · vrestifrasi/phrases-el.json · words-el.json (~795k)
   hooks/        useGameStore · usePlayerIdentity (bundles migrate+useGameIdentity+useProfile+useAuth for side-effect-free surfaces) · useGameIdentity · useScoreSubmission · useLiveScorePost (continuous-post + finish-once-open policy, shared by the round games; reads the spine's hasLiveActed) · useRoundPersistence · useGameStateSync · useLeaderboard · useProfileVerification · useProfile · useLeaderboardProfile · useTheme · useAuth · useDayChange
   lib/          apiRoute.ts (the route envelope) · greeklish.ts · postScore.ts · supabase.ts · communityPuzzleLifecycle.ts · scoreMerge.ts
   types/        index.ts
@@ -134,3 +134,53 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `generator.test.ts` (leksoplegma) | Offline generator core — constraint validation on real pools (coverage, adjacency, no crossing diagonals), determinism, `enumerateBonusWords` on fixture board |
 | `dataLoader.test.ts` (leksoplegma) | `getPuzzleForDate` rotation + 365-date Leksiarxeio same-day answer-leak guard + `containsSameDayLeksiarxeioAnswer` |
 | `board.test.tsx` (leksoplegma) | Board — tap-build trace seam, collapse rendering, hint chips, bonus counter, recap, single live score post + is_perfect, no re-post on restore; PageClient header + no-timer rules |
+| `achievements.test.ts` (leksokipos) | Catalog + `detectEarnedAchievements` (5 one-shots, daily gate) + `detectEarnedPointsTiers`/`detectEarnedPangramTiers` + `nextPangramTierThreshold` + `describeAchievement` |
+| `achievementToast.test.tsx` | AchievementToast render + dismiss |
+| `useAchievementSync.test.ts` | The detection lanes — posting, points tier, pangram delta-post, unlock-toast surfacing (earned-at-mount suppression), gating |
+| `useDayChange.test.ts` | Day-rollover redirect — today's puzzle, past-puzzle leaderboard nav, custom puzzles |
+| `useGameState.test.ts` | Cross-device server restore — gates, success, error handling, `restoreFromServer` |
+| `missedWordsList.test.tsx` | MissedWordsList (give-up reveal) |
+| `pangrams.test.ts` (leksokipos) | `sanitizePangramWords` shape guards (ADR 0013 B2) |
+| `puzzle.test.ts` (leksokipos) | `isDailyPuzzle`, `isISODate` |
+| `puzzleIndex.test.ts` | Slim puzzle index — drift guard vs full loader, `getPrebuiltPuzzleParams` canonical params |
+| `randomPuzzle.test.ts` | `pickRandom7` quality rules |
+| `rankDisplay.test.ts` | `rankProgress`, `getRankEmoji` |
+| `answerPools.test.ts` (leksiarxeio) | `LEKSIARXEIO_ANSWER_POOLS` + `getSameDayFallbackAnswers` — seam == pool[dateToIndex] all year |
+| `keyboardInteraction.test.tsx` (leksiarxeio) | On-screen keyboard letter/delete/enter dispatch end-to-end |
+| `NominationCard.test.tsx` / `page.test.tsx` (leksikastirio) | Card render, vote highlight, voting, admin controls; page rendering, tabs, optimistic voting |
+| `matching.test.ts` (leksindeseis) | `matchesGroup`, `isOneAway` |
+| `evaluatePhraseGuess.test.ts` / `letterState.test.ts` (vrestifrasi) | Two-pass cross-word evaluation (ADR 0004); `buildPhraseLetterStateMap` 4-state priority |
+| `lib.test.ts` (stavrolekso) | `autoNumberSlots`, `isConnected`, `normalizeAndCompare`, `getSlotLength`, `getSlotCells` |
+| `auth-link.test.ts` (api) + `authLinkRoute.test.ts` (shared) | `POST /api/auth/link` — JWT security boundary, link/restore modes, occupied-device guard, `identity_audit`, error paths |
+| `applyDictionaryEdits.test.ts` + `resync{Registry,Leksiarxeio,Leksokipos,Leksoplegma,Leksodromia}.test.ts` (scripts) | ADR 0015 re-sync — orchestrator (dictionary + registry walk), write gate, per-game adapters: additions/removals/no-ops |
+| `IdentityHeader` / `LifetimeStatsStrip` / `NameEditor` / `TrophyCase` / `WelcomeBackBanner` (profile) | The five Profile Page components |
+| `achievementMerge.test.ts` / `pangramMerge.test.ts` | `planAchievementMerge` / `planPangramMerge` — Sign-in Restore unions |
+| `achievementsRoute.test.ts` / `pangramsRoute.test.ts` | `POST/GET /api/achievements` (id whitelist) · `POST /api/pangrams` (insert-if-absent, validation, DB errors) |
+| `authCallbackRedirect.test.tsx` | `/auth/callback` redirect destination |
+| `cleanupScoresRoute.test.ts` + `cleanupScoresLiveDb.test.ts` | Cron — CRON_SECRET auth, never touches append-forever tables; live-DB twin **skips without env vars** (issue 03) |
+| `communityPuzzlesReviewRoute.test.ts` | PATCH review — auth + leksiarxeio/leksindeseis routes |
+| `feedbackModal.test.tsx` | FeedbackModal — visibility, required text, submission, 60s throttle |
+| `gameScoresRoute.test.ts` | `POST/GET /api/game-scores` — validation, locale-suffix strip, Leksiarxeio read-modify-write |
+| `gameStateRoute.test.ts` | `POST/GET /api/game-state` |
+| `lifetimeStats.test.ts` | `aggregateLifetimeStats` |
+| `nominationBlocklist.test.ts` | `isBlockedWord` (16,947-entry proper-noun blocklist) |
+| `nominationsRoute.test.ts` | Nominations GET/POST (422 blocked_word, 409 already_pending)/lookup/vote/review (header auth) |
+| `noRawPaletteClasses.test.ts` / `noRawActionButtonColors.test.ts` | ADR 0008 guards — no literal neutral palette / no hand-rolled green-red action fills |
+| `performance.test.ts` | Hotpath timing budgets — computeValidWords, buildCustomPuzzle cache, prebuilt scan |
+| `placement.test.ts` | `countFirstPlaceFinishes` (Πρωτιές, ties share rank 1) |
+| `postScore.test.ts` | `sanitizeDisplayName` |
+| `premadeDataConsistency.test.ts` | ADR 0015 drift guard — every game, both directions (stale removal + missed addition), byte-identical write path |
+| `profileSectionFunnel.test.tsx` / `profileSectionSignIn.test.tsx` | ProfileSection — /profile funnel link; Google sign-in offered whenever not AuthLinked (ADR 0012) |
+| `profileStatsRoute.test.ts` | `GET /api/profile/stats` |
+| `puzzleDate.test.ts` | `todayISO` / `getLast7Dates` (UTC anchoring) / `normalizePuzzleDate` / `resolvePuzzleDateParam` |
+| `puzzleRotation.test.ts` | `dateToIndex` |
+| `rlsInvariantsLiveDb.test.ts` | Live-DB RLS posture matrix — **skips without env vars** (issue 03) |
+| `scoreMerge.test.ts` | `planScoreMerge` (best-per-puzzle) + `mergeLengthScore` (Leksiarxeio fold; re-post overwrite documented) |
+| `stavroleksoIdRoute.test.ts` | GET/PATCH stavrolekso `[id]` — PIN auth + state guards, "the edit actually persists" (service-role write) |
+| `supabase.test.ts` | `getSupabaseClient`, `signInWithGoogle` |
+| `useAuth.test.ts` | Session on mount / from store / sign-out |
+| `useGameEndCallback.test.ts` | `useGameEndCallback` fires once |
+| `useGameStateSync.test.ts` | Backfill on link + incremental push when linked |
+| `useLeaderboard.test.ts` | Initial fetch, enabled flag, polling, manual refresh, custom buildUrl |
+| `useProfileVerification.test.ts` | Profile-still-exists check — disconnect on gone, never on network error (offline users stay) |
+| `validateWordsRoute.test.ts` | `POST /api/validate-words` |

@@ -13,14 +13,9 @@ import { scoreBarFill, scoreBarTrack } from "./styles";
 import { useEffect, useRef, useState } from "react";
 
 import type { RankName } from "@/games/leksokipos/types";
+import type { EndgameInfo } from "@/games/leksokipos/lib";
 import { getRankEmoji } from "@/games/leksokipos/lib";
 import { rankProgress } from "./rankDisplay";
-
-export interface EndgameInfo {
-  remainingTotal:    number;
-  remainingPangrams: number;
-  byLength:          { length: number; count: number }[];
-}
 
 interface ScoreBarProps {
   score:              number;

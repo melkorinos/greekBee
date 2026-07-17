@@ -9,8 +9,9 @@
 // reach the leaderboard; useScoreSubmission dedups). Restored state never posts.
 // All game state lives in useLeksodromiaRound (reducer + clock + persistence).
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
+import { usePhysicalKeyboard } from "@/hooks/usePhysicalKeyboard";
 import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { useLiveScorePost } from "@/hooks/useLiveScorePost";
@@ -128,22 +129,12 @@ export function LeksodromiaBoard({
     skipWord();
   }, [skipWord]);
 
-  // Physical keyboard
-  const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
-  useLayoutEffect(() => {
-    keyHandlerRef.current = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (state.status !== "playing") return;
-      if (e.key === "Enter")     return submit();
-      if (e.key === "Backspace") return removeLetter();
-      if (GREEK_LETTER.test(e.key)) addLetter(e.key);
-    };
+  usePhysicalKeyboard((e) => {
+    if (state.status !== "playing") return;
+    if (e.key === "Enter")     return submit();
+    if (e.key === "Backspace") return removeLetter();
+    if (GREEK_LETTER.test(e.key)) addLetter(e.key);
   });
-  useEffect(() => {
-    const listener = (e: KeyboardEvent) => keyHandlerRef.current(e);
-    window.addEventListener("keydown", listener);
-    return () => window.removeEventListener("keydown", listener);
-  }, []);
 
   // ── Derived view state ──────────────────────────────────────────────────────
 

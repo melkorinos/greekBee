@@ -13,7 +13,7 @@ This handoff bundles the three ideas that are NOT the stats page. The stats-page
 
 Awards that depend on a value **not final at end-of-game** — e.g. leaderboard **placement** (1st / 2nd / 3rd).
 
-**Pattern (designed, not built):** a **deferred server-side job at puzzle-close** reads the final leaderboard and inserts the same `player_achievements` fact rows. **No schema change** — same table, same ids. Since `game_scores` is append-forever (issue 03 fixed), the job no longer races a prune; the leaderboard source stays intact indefinitely. Not in the current catalog — adding the ids is non-breaking (frozen-id rule, ADR 0013).
+**Pattern (designed, not built):** a **deferred server-side job at puzzle-close** reads the final leaderboard and inserts the same `player_achievements` fact rows. **No schema change** — same table, same ids. Since `game_scores` is append-forever (the old prune bug was fixed 2026-07-05 — that was a *different, since-deleted* issue 03; today's issue 03 is the CI gap), the job no longer races a prune; the leaderboard source stays intact indefinitely. Note: 1st-place *counting* already shipped compute-on-read as Πρωτιές (session 85); this section is only about awarding placement *badges*. Not in the current catalog — adding the ids is non-breaking (frozen-id rule, ADR 0013).
 
 **Open questions when promoting:**
 - **Where does the "puzzle-close" job run?** There are no Supabase Edge Functions (server logic is Next.js API routes on Vercel) — so this is a scheduled/cron route or a Vercel cron, not an edge function. Decide the trigger.

@@ -5,10 +5,10 @@
 
 ## The one-sentence version
 
-Prod (`main`) is 13 commits behind `dev` and the gap contains the Vres Tin Frasi
-points flip (ADR 0014), whose **data migration must land with the deploy, not before or after** —
-and the migration pipeline itself is currently jammed by an unrecorded index migration that will
-make `npx supabase db push` fail until repaired.
+Prod (`main`) is 21 commits behind `dev` (re-counted 2026-07-17; was 13 when written) and the gap
+contains the Vres Tin Frasi points flip (ADR 0014), whose **data migration must land with the
+deploy, not before or after** — and the migration pipeline itself is currently jammed by an
+unrecorded index migration that will make `npx supabase db push` fail until repaired.
 
 ## Verified state (2026-07-16)
 
@@ -18,7 +18,7 @@ make `npx supabase db push` fail until repaired.
 | `20260715120000` (game_scores read indexes) **is applied** but **not in history** | both indexes present in `pg_indexes`; applied via MCP `execute_sql` on 2026-07-15 when `apply_migration` 502'd (session 85) |
 | `20260715120100` (vrestifrasi attempts→points flip) **is NOT applied** | history + live data: vrestifrasi rows still hold old-shape values |
 | Prod code still posts **attempt counts** for Vres Tin Frasi | `main` has neither ADR 0014 nor the flip code (`git ls-tree main docs/adr` stops at 0013) |
-| `main..dev` = 13 commits | incl. ADR 0014/0015/0016/0017 work; typed-client changes (session 90) are **still uncommitted in the working tree** |
+| `main..dev` = 21 commits (2026-07-17) | incl. ADR 0014/0015/0016/0017 work + the 2026-07-16 DB-hardening batch; typed-client work is now **committed** (`3b5f289`), as is the Stavrolekso service-role edit fix (`7acdad3`) |
 
 The current state is *consistent* — old code + old data — but it is a landmine: applying the data
 migration early corrupts the live 7-day leaderboard window; deploying the code without the
@@ -26,8 +26,7 @@ migration inverts the ranking of existing rows.
 
 ## The runbook
 
-1. **Commit the typed-client working tree first** (session 90's work: `database.types.ts` + typed
-   `supabase.ts` etc. — gates were all green at session end). A deploy from a dirty tree loses it.
+1. ~~Commit the typed-client working tree first~~ — **DONE** (`3b5f289`, 2026-07-16).
 2. **Manual browser play-through** of dev preview before merging — standing requirement
    (goals.md item 1; Leksodromia + Leksoplegma land on main with this merge).
 3. **Repair migration history** so push can work (the repo is NOT `supabase link`ed; use

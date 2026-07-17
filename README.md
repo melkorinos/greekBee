@@ -93,21 +93,18 @@ All commands live in `.claude/skills/`.
 | Command | Purpose |
 |---------|---------|
 | `/aihelper` | Full context reload — reads all `.claude/aiHelper/` files, then waits for your task |
-| `/apply-nominations` | Apply admin-accepted word Nominations to `words-el.json` + re-sync `puzzles-el.json` |
+| `/apply-nominations` | Apply admin-accepted word Nominations to `words-el.json` + re-sync every dictionary-derived data file (ADR 0015) |
 | `/project-mcp` | Canonical Supabase & Vercel MCP IDs, call recipes, and param-traps — load before any Supabase/Vercel MCP call |
 | `/improve-codebase-architecture` | Surface architectural seams and deepening opportunities |
 | `/grill-with-docs` | Relentless Q&A to stress-test a plan or design, cross-checking against domain docs (CONTEXT.md, ADRs) and updating them inline |
-| `/to-spec` | Synthesise current context into a structured spec (formerly `/to-prd`) |
 | `/to-tickets` | Break a plan or spec into independently-grabbable vertical-slice tickets on the issue tracker (formerly `/to-issues`) |
-| `/triage` | Move issues through a state machine (needs-triage → ready-for-agent / ready-for-human / wontfix) |
 | `/diagnosing-bugs` | Disciplined debugging loop — reproduce → minimise → hypothesise → instrument → fix → regression-test (formerly `/diagnose`) |
 | `/tdd` | Test-driven development with red-green-refactor vertical slices |
-| `/prototype` | Build a throwaway prototype (terminal logic harness or multi-variant UI) to answer a design question |
 | `/handoff` | Compact the current conversation into a handoff document for the next agent session |
 | `/setup-matt-pocock-skills` | One-time setup: configure issue tracker, triage labels, and domain doc layout |
 | `/writing-great-skills` | Reference for writing/editing skills well (formerly `/write-a-skill`) |
 
-`/caveman` and `/zoom-out` were dropped upstream with no replacement (removed 2026-07-14). Many more mattpocock skills are now installed beyond this table — see `.claude/skills/` for the full list.
+The skill set was pruned to this curated list on 2026-07-16 (plus three base skills with no slash command of their own: `grilling`, `domain-modeling`, `codebase-design`). `CLAUDE.md` is the authoritative copy of this table — if the two disagree, trust `CLAUDE.md`.
 
 ---
 
@@ -185,13 +182,15 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
    | Rank         | Threshold |
    |--------------|-----------|
    | Ψαράκι       | 0%        |
-   | Έτσι κιέτσι  | 6%        |
-   | Οκέι         | 12%       |
-   | Για πάμε     | 20%       |
-   | Τζάμι        | 30%       |
-   | Θηρίο        | 42%       |
-   | Γκουρού      | 55%       |
+   | Έτσι κιέτσι  | 8%        |
+   | Οκέι         | 16%       |
+   | Για πάμε     | 24%       |
+   | Θηρίο        | 35%       |
+   | Φωτιά        | 45%       |
+   | Γκουρού      | 60%       |
    | Απολυτότητα  | 80%       |
+
+   (The ladder lives in `src/games/leksokipos/lib/ranking.ts` (`RANKS`) — that array is the source of truth if this table drifts.)
 
    `rankProgress()` (pure function) derives the progress-bar fill, points-to-next and the full ladder for the UI — keeping all rank display logic out of React components.
 
@@ -272,15 +271,19 @@ src/
     useGameStateSync.ts    Cross-device sync hook — pushes Leksokipos state on valid word submit
   data/
     leksokipos/     puzzles-el.json (daily puzzles), index.ts
-    leksiarxeio/    words-2..8.json (per-length word lists from full dict), index.ts
+    leksiarxeio/    words-2..8.json (per-length guess lists), answers-4..8.json (curated answer pools), answerPools.ts (same-day-answer seam), index.ts
     leksindeseis/   puzzles-connections.json (hand-curated), index.ts
     vrestifrasi/    phrases-el.json (static phrase fallback), index.ts
     leksoplegma/    puzzles-el.json (committed generator batch, npm run generate-leksoplegma), index.ts
-    (leksodromia has no data folder — words derived deterministically from the leksiarxeio answer pools)
+    leksodromia/    anagramAlternates.json (anagram credit for curated answers), index.ts (words derived from the leksiarxeio answer pools)
     words-el.json   ~795k normalised Greek words (no accents, ς→σ)
   lib/
+    apiRoute.ts     The route envelope — parseJson, requireAdmin, jsonError/jsonMessage (ADR 0016)
     greeklish.ts    Bijective Greek↔greeklish codec for clean ASCII custom URLs
     postScore.ts    Fire-and-forget POST utility — silently swallows network errors
+    supabase.ts     Typed Supabase clients (anon / token-scoped / service-role, ADR 0017)
+    communityPuzzleLifecycle.ts  Submit → approve/reject → consume, shared by all community-puzzle games
+    puzzleDate.ts   todayISO() and friends — the platform's single clock
   types/            Shared types: Language, SliceId, PersistenceEnvelope
 scripts/            Puzzle generation & curation CLIs (batch-generate, curate-answers, …)
 ```
@@ -301,7 +304,11 @@ scripts/            Puzzle generation & curation CLIs (batch-generate, curate-an
 
 **Leksindeseis** — live. Per-puzzle leaderboard via Supabase (`game_scores` with `game_id = "leksindeseis"`). Score = mistakes remaining (1–4) when won; higher = better. Lost games do not appear on the board.
 
-**Vres Tin Frasi** — live. Per-day leaderboard via Supabase (`game_scores` with `game_id = "vrestifrasi"`). Score = attempts used (1–6); lower = better; failed = 7 (penalty).
+**Vres Tin Frasi** — live. Per-day leaderboard via Supabase (`game_scores` with `game_id = "vrestifrasi"`). Score = points from `scoreVresTinFrasi` (6 pts for a 1-guess win … 1 pt for a 6-guess win; loss = 0); higher = better (ADR 0014 — every leaderboard is higher-is-better).
+
+**Leksodromia** — live. Per-day leaderboard (`game_id = "leksodromia"`). Score = decay-scoring points across the 10-word run (perfect round = 1000); higher = better.
+
+**Leksoplegma** — live. Per-day leaderboard (`game_id = "leksoplegma"`). Score = required-word + extra-word points minus hint costs; higher = better.
 
 ---
 
@@ -312,6 +319,9 @@ Tracked as individual issues in [`.claude/issue-tracker/issues/`](.claude/issue-
 | # | Issue | Status |
 |---|-------|--------|
 | 02 | [No disaster-recovery backups](.claude/issue-tracker/issues/02-no-disaster-recovery-backups.md) | needs-triage |
+| 03 | [Unit tests never run in CI](.claude/issue-tracker/issues/03-unit-tests-never-run-in-ci.md) | needs-triage |
+| 04 | [Stavrolekso edit PIN readable by anon](.claude/issue-tracker/issues/04-stavrolekso-edit-pin-readable-by-anon.md) | ready-for-agent |
+| 05 | [words-2/3.json missed by nomination re-sync](.claude/issue-tracker/issues/05-vrestifrasi-short-word-lists-missed-by-resync.md) | needs-triage |
 
 ---
 
