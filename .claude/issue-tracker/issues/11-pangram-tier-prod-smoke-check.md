@@ -22,4 +22,4 @@ The B1 points-tier manual check (session 66) was also never done — fold it int
 ## References
 
 - ADR 0013 "B2 resolutions" — the lane shape.
-- `badges-parked.md` §6 — the related pangram threshold balance pass.
+- issue `12-badge-ideas-parked.md` §5 — the related pangram threshold balance pass.

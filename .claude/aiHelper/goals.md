@@ -38,7 +38,7 @@ Ship a polished multi-game Greek word game platform where all seven games — Le
 
 - **7 live games** — Vres Tin Frasi, Stavrolekso (community crossword browser + maker), Leksodromia (anagram sprint), and Leksoplegma (word-web) joined the original three.
 - **Cross-device identity** — device UUID + Profiles + TransferCodes; Google OAuth augments device identity (ADR 0007) and Sign-in Restore adopts the account's DeviceId + merges history (ADR 0012).
-- **Achievements** — immutable earned-fact rows (`player_achievements` / `player_pangrams`, ADR 0013); Profile Page + Trophy Case + Lifetime Stats.
+- **Achievements** — immutable earned-fact rows (`player_achievements` / `player_pangrams`, ADR 0013); Profile Page + Trophy Case + Lifetime Stats + player-selected Display Badge on leaderboards (2026-07-18 amendment; further badge ideas parked in issue 12).
 - **Community pipeline** — one `communityPuzzleLifecycle` owning submit → approve/reject → consume across Leksiarxeio / Leksindeseis / Vres Tin Frasi (+ never-consumed Stavrolekso); Leksikastirio review tabs.
 - **Design system** — CSS semantic tokens + per-game accent (ADR 0008/0009); recipe files; palette guard test.
 - **Cost work** — Vercel Fluid CPU mitigations (daily-combo prerender, lazy word-list, Edge routes); Vercel Pro.

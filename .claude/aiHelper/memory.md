@@ -134,7 +134,9 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `generator.test.ts` (leksoplegma) | Offline generator core — constraint validation on real pools (coverage, adjacency, no crossing diagonals), determinism, `enumerateBonusWords` on fixture board |
 | `dataLoader.test.ts` (leksoplegma) | `getPuzzleForDate` rotation + 365-date Leksiarxeio same-day answer-leak guard + `containsSameDayLeksiarxeioAnswer` |
 | `board.test.tsx` (leksoplegma) | Board — tap-build trace seam, collapse rendering, hint chips, bonus counter, recap, single live score post + is_perfect, no re-post on restore; PageClient header + no-timer rules |
-| `achievements.test.ts` (leksokipos) | Catalog + `detectEarnedAchievements` (4 one-shots — tzimani retired s108, daily gate) + `detectEarnedPointsTiers`/`detectEarnedPangramTiers` + `nextPangramTierThreshold` + `describeAchievement` |
+| `achievements.test.ts` (leksokipos) | Catalog + `detectEarnedAchievements` (4 one-shots — tzimani retired s108, daily gate) + `detectEarnedPointsTiers`/`detectEarnedPangramTiers` + `nextPangramTierThreshold` + `describeAchievement` + the operator-approved `glyph` map + display-badge resolution (`SELECTABLE_BADGE_IDS`, `qualifyingEarnedIds`, `resolveDisplayBadge`, `TIER_MEDALS`) |
+| `profileBadgeRoute.test.ts` | `POST/GET /api/profile/badge` — earned-id validation (400 unknown/tier id, 403 unowned), lazy profile upsert, null clears |
+| `leaderboardBadge.test.tsx` | `LeaderboardBadge` chip — glyph, medal only for tiered, distinct element after the name |
 | `achievementToast.test.tsx` | AchievementToast render + dismiss |
 | `useAchievementSync.test.ts` | The detection lanes — posting, points tier, pangram delta-post, unlock-toast surfacing (earned-at-mount suppression), gating |
 | `useDayChange.test.ts` | Day-rollover redirect — today's puzzle, past-puzzle leaderboard nav, custom puzzles |
@@ -162,7 +164,7 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `cleanupScoresRoute.test.ts` + `cleanupScoresLiveDb.test.ts` | Cron — CRON_SECRET auth, never touches append-forever tables; live-DB twin asserts the cron's **effect on seeded sentinels** (stale game_state pruned, fresh one kept, stale game_scores survives) — it invokes the real handler, so it prunes prod game_state as the nightly run does. Runs locally off `.env.local`; auto-skips in CI |
 | `communityPuzzlesReviewRoute.test.ts` | PATCH review — auth + leksiarxeio/leksindeseis routes |
 | `feedbackModal.test.tsx` | FeedbackModal — visibility, required text, submission, 60s throttle |
-| `gameScoresRoute.test.ts` | `POST/GET /api/game-scores` — validation, locale-suffix strip, Leksiarxeio read-modify-write |
+| `gameScoresRoute.test.ts` | `POST/GET /api/game-scores` — validation, locale-suffix strip, Leksiarxeio read-modify-write, per-row display-badge fan-out (highest-tier resolution, dangling → no badge) |
 | `gameStateRoute.test.ts` | `POST/GET /api/game-state` |
 | `lifetimeStats.test.ts` | `aggregateLifetimeStats` |
 | `nominationBlocklist.test.ts` | `isBlockedWord` (proper-noun blocklist) **+ the disjointness guard**: `blocklist ∩ words-el.json` must equal `DEFERRED_BLOCKLIST_DICTIONARY_OVERLAP` (the 14 month names) exactly, and that allowlist may only shrink (pinned vs a frozen ceiling) |
