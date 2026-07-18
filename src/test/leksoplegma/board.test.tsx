@@ -174,7 +174,6 @@ describe("LeksoplegmaBoard", () => {
     expect(postScore).toHaveBeenCalledTimes(1);
     const [, body] = vi.mocked(postScore).mock.calls[0];
     expect(body).toMatchObject({ game_id: "leksoplegma", puzzle_date: TODAY, score: 30 });
-    expect(body).not.toHaveProperty("is_perfect"); // perfect only latches at finish
   });
 
   it("finishing shows the recap and posts continuously, ending on the final score", async () => {
@@ -194,7 +193,6 @@ describe("LeksoplegmaBoard", () => {
       game_id:     "leksoplegma",
       puzzle_date: TODAY,
       score:       80, // 30 + 30 + 20, no hints, no extras
-      is_perfect:  true,
     });
   });
 

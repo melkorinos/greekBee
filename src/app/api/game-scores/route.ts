@@ -35,7 +35,6 @@ interface StandardScorePayload {
   device_id:    string;
   display_name: string;
   score:        number;
-  is_perfect?:  boolean;
   // Optional per-game metadata (e.g. Leksokipos { words, pangrams }) stored in the
   // row's jsonb. Counts only — never the word list (game_scores is public-read).
   data?:        Record<string, number>;
@@ -115,13 +114,12 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Standard games ──────────────────────────────────────────────────────────
-  const { score, is_perfect, data } = body as StandardScorePayload;
+  const { score, data } = body as StandardScorePayload;
   if (typeof score !== "number") {
     return jsonMessage("Missing required fields");
   }
 
   const row: Insert<"game_scores"> = { game_id, puzzle_date, device_id, display_name: name, score };
-  if (is_perfect === true) row.is_perfect = true;
   if (isCountRecord(data)) row.data = data;
 
   const err = await upsertAndClean(
@@ -150,7 +148,7 @@ export async function GET(req: NextRequest) {
   const supabase = getSupabaseClient();
 
   const { data: rows, error } = await table(supabase, "game_scores")
-    .select("device_id, display_name, score, is_perfect")
+    .select("device_id, display_name, score")
     .eq("game_id", gameId)
     .eq("puzzle_date", puzzleDate)
     .order("score", { ascending: sortAsc })
@@ -160,14 +158,13 @@ export async function GET(req: NextRequest) {
     return jsonError("db_error", error.message);
   }
 
-  interface RawRow { device_id: string; display_name: string; score: number; is_perfect: boolean; }
+  interface RawRow { device_id: string; display_name: string; score: number; }
   const rawRows: RawRow[] = (rows as RawRow[]) ?? [];
 
   const top20 = rawRows.map((r, i) => ({
     rank:         i + 1,
     display_name: r.display_name,
     score:        r.score,
-    is_perfect:   r.is_perfect ?? false,
     isPlayer:     r.device_id === deviceId,
   }));
 
@@ -177,13 +174,12 @@ export async function GET(req: NextRequest) {
     rank:         number;
     display_name: string;
     score:        number;
-    is_perfect:   boolean;
     isPlayer:     true;
   } | null = null;
 
   if (!playerInTop20 && deviceId) {
     const { data: playerData } = await table(supabase, "game_scores")
-      .select("display_name, score, is_perfect")
+      .select("display_name, score")
       .eq("game_id", gameId)
       .eq("puzzle_date", puzzleDate)
       .eq("device_id", deviceId)
@@ -203,7 +199,6 @@ export async function GET(req: NextRequest) {
         rank:         (count ?? 0) + 1,
         display_name: playerData.display_name as string,
         score:        playerData.score as number,
-        is_perfect:   (playerData.is_perfect as boolean) ?? false,
         isPlayer:     true,
       };
     }

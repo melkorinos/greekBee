@@ -16,7 +16,6 @@ export interface LeaderboardRow {
   rank:         number;
   display_name: string;
   score:        number;
-  is_perfect?:  boolean;
   isPlayer:     boolean;
 }
 

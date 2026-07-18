@@ -18,6 +18,7 @@ import { maxScore, scoreWord } from "./lib/scoring";
 const ENDPOINT = "/api/game-state";
 const ACHIEVEMENTS_ENDPOINT = "/api/achievements";
 const PANGRAMS_ENDPOINT = "/api/pangrams";
+const WORDS_ENDPOINT = "/api/words";
 const STATS_ENDPOINT = "/api/profile/stats";
 const GAME_ID = "leksokipos";
 
@@ -67,6 +68,34 @@ export async function postPangrams(params: {
   const { deviceUuid, puzzleDate, words } = params;
   try {
     const res = await fetch(PANGRAMS_ENDPOINT, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ device_uuid: deviceUuid, puzzle_date: puzzleDate, words }),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { count?: number };
+    return typeof data.count === "number" ? data.count : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Delta-post the valid words a device just found and return its fresh lifetime
+ * count (COUNT(*) over player_words). Insert-if-absent server-side, so posting an
+ * already-recorded find is a no-op. The count is returned only for symmetry with
+ * postPangrams; the words-capture lane is display-only (no tier), so the caller
+ * ignores it. Returns null on any network/parse error — capture never affects
+ * gameplay. Never throws.
+ */
+export async function postWords(params: {
+  deviceUuid: string;
+  puzzleDate: string;
+  words:      string[];
+}): Promise<number | null> {
+  const { deviceUuid, puzzleDate, words } = params;
+  try {
+    const res = await fetch(WORDS_ENDPOINT, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
       body:    JSON.stringify({ device_uuid: deviceUuid, puzzle_date: puzzleDate, words }),

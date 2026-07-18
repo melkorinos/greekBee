@@ -38,7 +38,6 @@ describe("LEKSOKIPOS_ACHIEVEMENTS catalog", () => {
       expect.arrayContaining([
         "leksokipos-first-daily",
         "leksokipos-stin-korifi",
-        "leksokipos-tzimani",
         "leksokipos-sidirodromos",
         "leksokipos-theristis",
       ]),
@@ -97,24 +96,6 @@ describe("detectEarnedAchievements — Θεριστής (≥ 80% of words found)
       validWordCount: 20, // 15 / 20 = 0.75
     });
     expect(detectEarnedAchievements(ctx)).not.toContain("leksokipos-theristis");
-  });
-});
-
-describe("detectEarnedAchievements — Τζιμάνι (perfect game)", () => {
-  it("earns when every valid word is found", () => {
-    const ctx = makeCtx({
-      foundWords:     Array.from({ length: 20 }, (_, i) => `word${i}`),
-      validWordCount: 20,
-    });
-    expect(detectEarnedAchievements(ctx)).toContain("leksokipos-tzimani");
-  });
-
-  it("does not earn when a word is still missing", () => {
-    const ctx = makeCtx({
-      foundWords:     Array.from({ length: 19 }, (_, i) => `word${i}`),
-      validWordCount: 20,
-    });
-    expect(detectEarnedAchievements(ctx)).not.toContain("leksokipos-tzimani");
   });
 });
 

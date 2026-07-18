@@ -132,6 +132,7 @@ describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/pangr
   async function wipeSentinelRows() {
     await table(service, "player_achievements").delete().like("device_uuid", "__rls_%");
     await table(service, "player_pangrams").delete().like("device_uuid", "__rls_%");
+    await table(service, "player_words").delete().like("device_uuid", "__rls_%");
     await table(service, "game_state").delete().like("device_uuid", "__rls_%");
   }
 
@@ -166,6 +167,19 @@ describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/pangr
     await table(anon, "player_pangrams").delete().eq("device_uuid", DEVICE);
 
     const { count } = await table(service, "player_pangrams")
+      .select("id", { count: "exact", head: true })
+      .eq("device_uuid", DEVICE);
+    expect(count).toBe(1);
+  });
+
+  it("blocks anon from DELETE-ing player_words rows", async () => {
+    const { error: seedErr } = await table(service, "player_words")
+      .insert({ device_uuid: DEVICE, puzzle_date: PUZZLE_DATE, word: "__rls_test__", length: 11 });
+    expect(seedErr).toBeNull();
+
+    await table(anon, "player_words").delete().eq("device_uuid", DEVICE);
+
+    const { count } = await table(service, "player_words")
       .select("id", { count: "exact", head: true })
       .eq("device_uuid", DEVICE);
     expect(count).toBe(1);
@@ -223,6 +237,39 @@ describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/pangr
       [row], { onConflict: "device_uuid,achievement_id", ignoreDuplicates: true },
     );
     expect(second.error).toBeNull();
+  });
+
+  it("still allows the anon insert-if-absent write on player_words", async () => {
+    const device = `__rls_${crypto.randomUUID()}`;
+    const row    = { device_uuid: device, puzzle_date: PUZZLE_DATE, word: "__rls_test__", length: 11 };
+
+    const first = await table(anon, "player_words").upsert(
+      [row], { onConflict: "device_uuid,puzzle_date,word", ignoreDuplicates: true },
+    );
+    expect(first.error).toBeNull();
+
+    // Re-submitting the same find is a no-op, not an error (DO NOTHING).
+    const second = await table(anon, "player_words").upsert(
+      [row], { onConflict: "device_uuid,puzzle_date,word", ignoreDuplicates: true },
+    );
+    expect(second.error).toBeNull();
+  });
+
+  it("lets anon call the player_words_by_length aggregate (invoker-rights RPC)", async () => {
+    const device = `__rls_${crypto.randomUUID()}`;
+    await table(service, "player_words").insert([
+      { device_uuid: device, puzzle_date: PUZZLE_DATE, word: "__rls_a__", length: 9 },
+      { device_uuid: device, puzzle_date: PUZZLE_DATE, word: "__rls_b__", length: 9 },
+      { device_uuid: device, puzzle_date: PUZZLE_DATE, word: "__rls_c__", length: 11 },
+    ]);
+
+    const { data, error } = await anon.rpc("player_words_by_length", { p_device_uuid: device });
+    expect(error).toBeNull();
+    const byLen = Object.fromEntries(
+      ((data as { length: number; count: number }[]) ?? []).map((r) => [r.length, Number(r.count)]),
+    );
+    expect(byLen[9]).toBe(2);
+    expect(byLen[11]).toBe(1);
   });
 });
 

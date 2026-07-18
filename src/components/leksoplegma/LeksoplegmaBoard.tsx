@@ -22,7 +22,6 @@ import { LEKSOPLEGMA } from "@/config/gameRules";
 import type { LeksoplegmaPuzzle } from "@/games/leksoplegma/types";
 import { edgeKey, edgesOf, liveEdges, liveTiles } from "@/games/leksoplegma/lib/graph";
 import { getRoundScore } from "@/games/leksoplegma/lib/leksoplegmaReducer";
-import { isPerfectRound } from "@/games/leksoplegma/lib/scoring";
 import { useLeksoplegmaRound } from "@/games/leksoplegma/hooks/useLeksoplegmaRound";
 
 import { todayISO } from "@/lib/puzzleDate";
@@ -59,7 +58,6 @@ export function LeksoplegmaBoard({
     puzzleDate:  today,
     deviceId,
     displayName,
-    isPerfect:   state.status === "finished" && isPerfectRound(state.hintsUsed),
   });
 
   // ── Trace (tap-built or dragged) ────────────────────────────────────────────

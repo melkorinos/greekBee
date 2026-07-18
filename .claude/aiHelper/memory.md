@@ -134,7 +134,7 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `generator.test.ts` (leksoplegma) | Offline generator core — constraint validation on real pools (coverage, adjacency, no crossing diagonals), determinism, `enumerateBonusWords` on fixture board |
 | `dataLoader.test.ts` (leksoplegma) | `getPuzzleForDate` rotation + 365-date Leksiarxeio same-day answer-leak guard + `containsSameDayLeksiarxeioAnswer` |
 | `board.test.tsx` (leksoplegma) | Board — tap-build trace seam, collapse rendering, hint chips, bonus counter, recap, single live score post + is_perfect, no re-post on restore; PageClient header + no-timer rules |
-| `achievements.test.ts` (leksokipos) | Catalog + `detectEarnedAchievements` (5 one-shots, daily gate) + `detectEarnedPointsTiers`/`detectEarnedPangramTiers` + `nextPangramTierThreshold` + `describeAchievement` |
+| `achievements.test.ts` (leksokipos) | Catalog + `detectEarnedAchievements` (4 one-shots — tzimani retired s108, daily gate) + `detectEarnedPointsTiers`/`detectEarnedPangramTiers` + `nextPangramTierThreshold` + `describeAchievement` |
 | `achievementToast.test.tsx` | AchievementToast render + dismiss |
 | `useAchievementSync.test.ts` | The detection lanes — posting, points tier, pangram delta-post, unlock-toast surfacing (earned-at-mount suppression), gating |
 | `useDayChange.test.ts` | Day-rollover redirect — today's puzzle, past-puzzle leaderboard nav, custom puzzles |
@@ -153,7 +153,9 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `lib.test.ts` (stavrolekso) | `autoNumberSlots`, `isConnected`, `normalizeAndCompare`, `getSlotLength`, `getSlotCells` |
 | `auth-link.test.ts` (api) + `authLinkRoute.test.ts` (shared) | `POST /api/auth/link` — JWT security boundary, link/restore modes, occupied-device guard, `identity_audit`, error paths |
 | `applyDictionaryEdits.test.ts` + `resync{Registry,Leksiarxeio,Leksokipos,Leksoplegma,Leksodromia}.test.ts` (scripts) | ADR 0015 re-sync — orchestrator (dictionary + registry walk), write gate, per-game adapters: additions/removals/no-ops |
-| `IdentityHeader` / `LifetimeStatsStrip` / `NameEditor` / `TrophyCase` / `WelcomeBackBanner` (profile) | The five Profile Page components |
+| `IdentityHeader` / `LifetimeStatsStrip` / `NameEditor` / `TrophyCase` / `WelcomeBackBanner` / `WordsByLengthCard` (profile) | The six Profile Page components |
+| `words.test.ts` (leksokipos) / `wordsByLength.test.ts` / `wordsMerge.test.ts` | `sanitizeFoundWords` shape guards · `bucketWordsByLength` (sparse RPC rows → 4…9/"10+") · `planWordsMerge` Restore union |
+| `wordsRoute.test.ts` / `profileWordsRoute.test.ts` | `POST /api/words` (insert-if-absent, server-side `length`) · `GET /api/profile/words` (RPC → buckets) |
 | `achievementMerge.test.ts` / `pangramMerge.test.ts` | `planAchievementMerge` / `planPangramMerge` — Sign-in Restore unions |
 | `achievementsRoute.test.ts` / `pangramsRoute.test.ts` | `POST/GET /api/achievements` (id whitelist) · `POST /api/pangrams` (insert-if-absent, validation, DB errors) |
 | `authCallbackRedirect.test.tsx` | `/auth/callback` redirect destination |
@@ -168,7 +170,7 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 | `noRawPaletteClasses.test.ts` / `noRawActionButtonColors.test.ts` | ADR 0008 guards — no literal neutral palette / no hand-rolled green-red action fills |
 | `noLiteralColumnWidth.test.ts` | Column-width guard — no literal `max-w-sm` in shipped `.tsx`; the platform column is `max-w-game` (`--container-game`), no allowlist |
 | `performance.test.ts` | Hotpath timing budgets — computeValidWords, buildCustomPuzzle cache, prebuilt scan |
-| `placement.test.ts` | `countFirstPlaceFinishes` (Πρωτιές, ties share rank 1) |
+| `placement.test.ts` | `countPodiumFinishes` (`{first,second,third}`, competition ranking — 90/90/80 ⇒ no 2nd) + `countFirstPlaceFinishes` wrapper |
 | `postScore.test.ts` | `sanitizeDisplayName` |
 | `premadeDataConsistency.test.ts` | ADR 0015 drift guard — every game, both directions (stale removal + missed addition), byte-identical write path |
 | `profileSectionFunnel.test.tsx` / `profileSectionSignIn.test.tsx` | ProfileSection — /profile funnel link; Google sign-in offered whenever not AuthLinked (ADR 0012) |

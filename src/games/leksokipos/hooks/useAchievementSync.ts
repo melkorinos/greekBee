@@ -34,6 +34,7 @@ import {
   fetchLifetimeStats,
   postAchievements,
   postPangrams,
+  postWords,
 } from "@/games/leksokipos/sync";
 
 interface UseAchievementSyncOptions {
@@ -75,6 +76,8 @@ export function useAchievementSync({
   const postedRef = useRef<Set<string>>(new Set());
   // Pangram words already delta-posted this session — per-word, so each find posts once.
   const postedPangramWordsRef = useRef<Set<string>>(new Set());
+  // Valid words already delta-posted this session — per-word, so each find posts once.
+  const postedWordsRef = useRef<Set<string>>(new Set());
   // Ids earned before this session (server truth at mount). null = not loaded yet.
   const earnedAtMountRef = useRef<Set<string> | null>(null);
   // Ids detected but not yet decidable for the toast (earned set still loading).
@@ -170,4 +173,21 @@ export function useAchievementSync({
     });
     return () => { cancelled = true; };
   }, [enabled, foundPangrams, puzzleDate, isDaily, isGodMode, deviceId, commitEarned]);
+
+  // Words-capture lane (Λέξεις ανά μήκος) — delta-post the valid words found this
+  // session that we haven't posted yet, so player_words accrues one row per find.
+  // Display-only: no tier is derived from word finds, so the returned count is
+  // ignored (postWords returns it only for symmetry with postPangrams). A failed
+  // POST is re-derived from foundWords on a later mount of the still-current puzzle
+  // — the per-word ref starts empty each mount, so the whole found set re-posts and
+  // insert-if-absent makes the overlap a no-op (the mount self-heal). Same gates as
+  // the pangram lane; foundWords is the store's referentially-stable found list.
+  useEffect(() => {
+    if (!enabled || !isDaily || isGodMode || !deviceId) return;
+    const unposted = foundWords.filter((w) => !postedWordsRef.current.has(w));
+    if (unposted.length === 0) return;
+    for (const w of unposted) postedWordsRef.current.add(w);
+
+    postWords({ deviceUuid: deviceId, puzzleDate, words: unposted });
+  }, [enabled, foundWords, puzzleDate, isDaily, isGodMode, deviceId]);
 }

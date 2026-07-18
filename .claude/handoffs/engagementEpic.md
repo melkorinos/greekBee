@@ -23,7 +23,7 @@ Durable identity  (PREREQUISITE — ✅ DONE 2026-07-03, ADR 0012; handoff delet
 
 **Decided:** identity comes first (achievements are worthless if losable). **✅ Satisfied 2026-07-03:** Sign-in Restore / Disconnect / `identity_audit` all shipped; merge semantics live in **ADR 0012** (auth account = anchor, device adopts canonical `device_uuid`, best score per puzzle wins). The identity handoff is deleted — cite ADR 0012.
 
-**Display surface — ✅ SHIPPED 2026-07-03 (Profile Page epic; its handoff `profilePageAndAchievements.md` is retired):** `/profile` is live — identity header, three entry points, a **v1 lifetime-stats strip**, and the **Trophy Case**. The Trophy Case renders the frozen Leksokipos catalog (`src/games/leksokipos/lib/achievements.ts`) and lights earned badges (earned-state wiring shipped with Epics A/B1/B2). The B1/B2 manual prod smoke-check is still pending — see `achievements-future-parked.md`.
+**Display surface — ✅ SHIPPED 2026-07-03 (Profile Page epic; its handoff `profilePageAndAchievements.md` is retired):** `/profile` is live — identity header, three entry points, a **v1 lifetime-stats strip**, and the **Trophy Case**. The Trophy Case renders the frozen Leksokipos catalog (`src/games/leksokipos/lib/achievements.ts`) and lights earned badges (earned-state wiring shipped with Epics A/B1/B2). The B1/B2 manual prod smoke-check is still pending — see issue `11-pangram-tier-prod-smoke-check.md`.
 
 ---
 
@@ -31,11 +31,11 @@ Durable identity  (PREREQUISITE — ✅ DONE 2026-07-03, ADR 0012; handoff delet
 
 | Pillar | What it is | Data exists today? | Handoff |
 |---|---|---|---|
-| Achievements | One-shot + tiered badges (Leksokipos v1) | **✅ SHIPPED** — Epic A one-shots + B1 points tier + B2 pangram tier (`player_achievements`/`player_pangrams`, ADR 0013); toasts + lit Trophy Case live | done — remaining ideas in `achievements-other-ideas.md` (its old handoff `achievementsLeksokipos.md` is retired) |
+| Achievements | One-shot + tiered badges (Leksokipos v1) | **✅ SHIPPED** — Epic A one-shots + B1 points tier + B2 pangram tier (`player_achievements`/`player_pangrams`, ADR 0013); toasts + lit Trophy Case live | done — remaining badge ideas in `badges-parked.md` (2026-07-18 close-out; ⚠️ Τζιμάνι badge being removed by `pickup-01`, re-award parked) |
 | Nemesis / taunts | Notification when overtaken on a Leaderboard | No — needs `notifications` table | parked (details below) |
 | Weekly leaderboard | Sum of daily scores per week per player | **Yes** — aggregate `game_scores` by `puzzle_date` range | parked |
 | Records / Hall of Fame | Highest score ever, most words in a day, etc. | Partially — per-day rows exist, no all-time views | parked |
-| Lifetime stats | Pangrams found, Τζιμάνι count, totals per player | **SHIPPED** — `/profile` strip (`GET /api/profile/stats`): total points, puzzles played, Τζιμάνι, pangram count (`player_pangrams`), Πρωτιές (First-Place Count, session 85). **Still parked:** streak display | Profile Page (done); new-capture ideas in `stats-new-capture-ideas.md` |
+| Lifetime stats | Pangrams found, totals, podium, words-by-length per player | **SHIPPED** — `/profile` strip: total points, puzzles played, pangram count, 🥇🥈🥉 Βάθρο (podium counts, s109); `WordsByLengthCard` (s110, dark behind `FEATURE_FLAGS.achievements`). Τζιμάνι cell removed s108. **Still parked:** streak display | done (words migration pending — `pickup-03-words-by-length.md`) |
 | Streaks | Consecutive days played — strongest retention mechanic in daily games | Derivable from `game_scores` dates | parked |
 | Live head-to-head sessions | Two players agree to start together, race to find most words in a fixed window (e.g. 10 min) | No — needs realtime session/matchmaking state | parked (details below) |
 | Friends / private leagues leaderboard | Scope the leaderboard to people you know, not the whole global top 20 | No — needs a friendship/league membership model | parked (details below) |
@@ -91,7 +91,7 @@ At scale, global top-20 stops being meaningful to most players — want to see r
 ## Sequencing recommendation
 
 1. ~~Durable identity~~ — ✅ DONE 2026-07-03 (ADR 0012)
-2. ~~Achievements (Leksokipos v1)~~ — ✅ DONE (Epic A + B1 + B2; leftovers in `achievements-other-ideas.md`)
+2. ~~Achievements (Leksokipos v1)~~ — ✅ DONE (Epic A + B1 + B2; leftovers in `badges-parked.md`)
 3. Weekly leaderboard — cheap, visible, competitive
 4. Streaks → Records → Nemesis (nemesis last: most moving parts, benefits from all prior data existing)
 

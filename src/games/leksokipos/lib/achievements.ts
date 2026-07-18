@@ -24,7 +24,6 @@ const TOP_RANK: RankName = RANKS[RANKS.length - 1].name;
 export const LEKSOKIPOS_ONESHOT_IDS = {
   firstDaily:   "leksokipos-first-daily",
   stinKorifi:   "leksokipos-stin-korifi",
-  tzimani:      "leksokipos-tzimani",
   sidirodromos: "leksokipos-sidirodromos",
   theristis:    "leksokipos-theristis",
 } as const;
@@ -96,10 +95,6 @@ export function detectEarnedAchievements(ctx: AchievementContext): OneShotAchiev
     earned.push(LEKSOKIPOS_ONESHOT_IDS.theristis);
   }
 
-  if (ctx.validWordCount > 0 && ctx.foundWords.length >= ctx.validWordCount) {
-    earned.push(LEKSOKIPOS_ONESHOT_IDS.tzimani);
-  }
-
   if (ctx.rank === TOP_RANK) {
     earned.push(LEKSOKIPOS_ONESHOT_IDS.stinKorifi);
   }
@@ -124,12 +119,6 @@ export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
     id:   LEKSOKIPOS_ONESHOT_IDS.stinKorifi,
     name: "Στην Κορυφή",
     hint: "Φτάσε στην κατάταξη Απολυτότητα σε ένα ημερήσιο παζλ.",
-    kind: "oneshot",
-  },
-  {
-    id:   LEKSOKIPOS_ONESHOT_IDS.tzimani,
-    name: "Τζιμάνι",
-    hint: "Βρες όλες τις λέξεις ενός ημερήσιου παζλ.",
     kind: "oneshot",
   },
   {

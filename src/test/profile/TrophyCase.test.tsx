@@ -74,7 +74,7 @@ describe("TrophyCase", () => {
     await waitFor(() =>
       expect(tileFor("Πρώτα Βήματα")).toHaveAttribute("data-earned", "true"),
     );
-    expect(tileFor("Τζιμάνι")).toHaveAttribute("data-earned", "false");
+    expect(tileFor("Σιδηρόδρομος")).toHaveAttribute("data-earned", "false");
   });
 
   it("keeps every tile locked when the device has earned nothing", async () => {

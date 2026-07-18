@@ -1,12 +1,11 @@
 // Leksoplegma scoring — points math per the grilled spec:
 // total = Σ(required length × POINTS_PER_LETTER) + extras × BONUS_WORD_POINTS
 //         − hints × HINT_COST_POINTS, floored at SCORE_FLOOR.
-// is_perfect = zero hints (evaluated at completion, when all required are found).
 
 import { describe, it, expect } from "vitest";
 
 import { LEKSOPLEGMA } from "@/config/gameRules";
-import { computeScore, isPerfectRound } from "@/games/leksoplegma/lib/scoring";
+import { computeScore } from "@/games/leksoplegma/lib/scoring";
 
 describe("LEKSOPLEGMA config", () => {
   it("holds the grilled constants", () => {
@@ -44,15 +43,5 @@ describe("computeScore", () => {
 
   it("is 0 when nothing was found", () => {
     expect(computeScore([], [], [])).toBe(0);
-  });
-});
-
-describe("isPerfectRound", () => {
-  it("is perfect with zero hints", () => {
-    expect(isPerfectRound([])).toBe(true);
-  });
-
-  it("is not perfect once any hint was used", () => {
-    expect(isPerfectRound(["λεξη"])).toBe(false);
   });
 });

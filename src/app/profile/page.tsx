@@ -16,6 +16,7 @@ import { IdentityHeader } from "@/components/profile/IdentityHeader";
 import { NameEditor } from "@/components/profile/NameEditor";
 import { WelcomeBackBanner } from "@/components/profile/WelcomeBackBanner";
 import { LifetimeStatsStrip } from "@/components/profile/LifetimeStatsStrip";
+import { WordsByLengthCard } from "@/components/profile/WordsByLengthCard";
 import { TrophyCase } from "@/components/profile/TrophyCase";
 import { FEATURE_FLAGS } from "@/config/featureFlags";
 import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
@@ -102,11 +103,17 @@ export default function ProfilePage() {
         <LifetimeStatsStrip deviceId={deviceId} />
       </section>
 
-      {/* Trophy Case hidden until achievements ship — feature not launch-ready. */}
+      {/* Words-by-length + Trophy Case hidden until achievements ship — word capture
+          rides the same flag, so before launch there is no data to show. */}
       {FEATURE_FLAGS.achievements && (
-        <section className={`${cardShell} overflow-hidden`}>
-          <TrophyCase deviceId={deviceId} />
-        </section>
+        <>
+          <section className={`${cardShell} overflow-hidden`}>
+            <WordsByLengthCard deviceId={deviceId} />
+          </section>
+          <section className={`${cardShell} overflow-hidden`}>
+            <TrophyCase deviceId={deviceId} />
+          </section>
+        </>
       )}
     </div>
   );

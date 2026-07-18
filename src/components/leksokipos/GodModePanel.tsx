@@ -1,6 +1,6 @@
 "use client";
 
-// GodModePanel — dev-only right-side drawer for testing Endgame Zone and Τζιμάνι.
+// GodModePanel — dev-only right-side drawer for testing Endgame Zone and full completion.
 // Activated by ?godmode=zzkdgr3 in the URL. Never renders in production without
 // the secret param. Score submissions are disabled while god mode is active.
 
@@ -83,7 +83,7 @@ export function GodModePanel({
             className={actionBtn}
             onClick={() => onInject([...puzzle.validWords])}
           >
-            🏛️ Βρες Όλες (Τζιμάνι)
+            🏆 Βρες Όλες
           </button>
           <button
             className={`${actionBtn} text-muted`}

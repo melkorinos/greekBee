@@ -2,17 +2,18 @@
 //
 // Read-only aggregate over game_scores (RLS: anon SELECT is open), plus a parallel
 // COUNT(*) over the separate player_pangrams table and a cross-device Leksokipos
-// fetch for the first-place-finish count. Returns { total_points, puzzles_played,
-// tzimani_count, leksokipos_points, pangram_count, leksokipos_first_place_count }.
-// Points and puzzle count are cross-game; Τζιμάνι and leksokipos_points are
-// leksokipos-only (see lifetimeStats); pangram_count is the size of the append-only
-// pangram set (B2, ADR 0013 lane C). first_place_count is DERIVED from game_scores
-// (data-class 2), never stored: "was I the day's top Leksokipos score?" needs
-// everyone's rows for those dates, not just this device's, so it is a sibling
-// query + a pure reduce (countFirstPlaceFinishes), NOT part of the device-scoped
+// fetch for the podium (1st/2nd/3rd) finish counts. Returns { total_points,
+// puzzles_played, leksokipos_points, pangram_count, leksokipos_first_place_count,
+// leksokipos_second_place_count, leksokipos_third_place_count }.
+// Points and puzzle count are cross-game; leksokipos_points is leksokipos-only
+// (see lifetimeStats); pangram_count is the size of the append-only
+// pangram set (B2, ADR 0013 lane C). The podium counts are DERIVED from game_scores
+// (data-class 2), never stored: "where did I rank on the day's Leksokipos board?"
+// needs everyone's rows for those dates, not just this device's, so it is a sibling
+// query + a pure reduce (countPodiumFinishes), NOT part of the device-scoped
 // aggregateLifetimeStats reduce.
 //
-// Caching / scale: the first-place query fetches ALL Leksokipos rows (one per
+// Caching / scale: the podium query fetches ALL Leksokipos rows (one per
 // device per day), index-backed by game_scores_game_date_score_idx (game_id
 // prefix). Bounded and cheap at current scale (hundreds of rows); the 60s private
 // cache absorbs profile-page reloads. If Leksokipos rows ever approach the >10k
@@ -27,7 +28,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError, jsonMessage } from "@/lib/apiRoute";
 import { getSupabaseClient, table } from "@/lib/supabase";
 import { aggregateLifetimeStats, type LifetimeStatRow } from "@/lib/lifetimeStats";
-import { countFirstPlaceFinishes, type PlacementRow } from "@/lib/placement";
+import { countPodiumFinishes, type PlacementRow } from "@/lib/placement";
 
 export const runtime = "edge";
 
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest) {
   const supabase = getSupabaseClient();
   const [scoresRes, pangramRes, leksokiposRes] = await Promise.all([
     table(supabase, "game_scores")
-      .select("game_id, score, is_perfect")
+      .select("game_id, score")
       .eq("device_id", deviceId),
     table(supabase, "player_pangrams")
       .select("*", { count: "exact", head: true })
@@ -62,13 +63,19 @@ export async function GET(req: NextRequest) {
   }
 
   const stats = aggregateLifetimeStats((scoresRes.data as LifetimeStatRow[]) ?? []);
-  const leksokipos_first_place_count = countFirstPlaceFinishes(
+  const podium = countPodiumFinishes(
     (leksokiposRes.data as PlacementRow[]) ?? [],
     deviceId,
   );
 
   return NextResponse.json(
-    { ...stats, pangram_count: pangramRes.count ?? 0, leksokipos_first_place_count },
+    {
+      ...stats,
+      pangram_count: pangramRes.count ?? 0,
+      leksokipos_first_place_count:  podium.first,
+      leksokipos_second_place_count: podium.second,
+      leksokipos_third_place_count:  podium.third,
+    },
     { headers: { "Cache-Control": "private, max-age=60" } },
   );
 }

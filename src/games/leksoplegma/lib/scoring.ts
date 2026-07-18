@@ -24,8 +24,3 @@ export function computeScore(
   const total = required + bonus - hintsUsed.length * LEKSOPLEGMA.HINT_COST_POINTS;
   return Math.max(LEKSOPLEGMA.SCORE_FLOOR, total);
 }
-
-/** is_perfect: the round used zero hints (all required words are found at completion). */
-export function isPerfectRound(hintsUsed: readonly string[]): boolean {
-  return hintsUsed.length === 0;
-}

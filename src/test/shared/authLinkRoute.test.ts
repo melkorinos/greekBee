@@ -319,7 +319,7 @@ describe("POST /api/auth/link — restore mode", () => {
     signedInAs("auth-abc");
     _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
     _db.achievementsByDevice = {
-      d1:    [{ id: 1, achievement_id: "leksokipos-tzimani" },
+      d1:    [{ id: 1, achievement_id: "leksokipos-theristis" },
               { id: 2, achievement_id: "leksokipos-sidirodromos" }],
       canon: [{ id: 9, achievement_id: "leksokipos-first-daily" }],
     };
@@ -337,8 +337,8 @@ describe("POST /api/auth/link — restore mode", () => {
     signedInAs("auth-abc");
     _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
     _db.achievementsByDevice = {
-      d1:    [{ id: 1, achievement_id: "leksokipos-tzimani" }],
-      canon: [{ id: 9, achievement_id: "leksokipos-tzimani" }], // already earned
+      d1:    [{ id: 1, achievement_id: "leksokipos-theristis" }],
+      canon: [{ id: 9, achievement_id: "leksokipos-theristis" }], // already earned
     };
     await POST(makePostReq(BASE));
 
@@ -399,7 +399,7 @@ describe("POST /api/auth/link — occupied-device guard", () => {
     _db.profileByDevice = { d1: { display_name: "PlayerA", auth_user_id: "auth-A" } };
     // Resident history present — the bug would merge it into the caller.
     _db.scoresByDevice       = { d1: [{ id: 1, game_id: "leksokipos", puzzle_date: "2026-07-01", score: 40 }] };
-    _db.achievementsByDevice = { d1: [{ id: 7, achievement_id: "leksokipos-tzimani" }] };
+    _db.achievementsByDevice = { d1: [{ id: 7, achievement_id: "leksokipos-theristis" }] };
     _db.pangramsByDevice     = { d1: [{ id: 8, puzzle_date: "2026-07-01", word: "διακοπτησ" }] };
 
     const res = await POST(makePostReq(BASE));
