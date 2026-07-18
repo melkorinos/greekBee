@@ -48,6 +48,8 @@ export interface Achievement {
   id:     string;
   name:   string;
   hint:   string;
+  /** Single-emoji badge art — interim, swappable to icons later without a schema change. */
+  glyph:  string;
   kind:   AchievementKind;
   tiers?: AchievementTier[];
 }
@@ -113,30 +115,35 @@ export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
     id:   LEKSOKIPOS_ONESHOT_IDS.firstDaily,
     name: "Πρώτα Βήματα",
     hint: "Παίξε το πρώτο σου ημερήσιο παζλ.",
+    glyph: "🌱",
     kind: "oneshot",
   },
   {
     id:   LEKSOKIPOS_ONESHOT_IDS.stinKorifi,
     name: "Στην Κορυφή",
     hint: "Φτάσε στην κατάταξη Απολυτότητα σε ένα ημερήσιο παζλ.",
+    glyph: "👑",
     kind: "oneshot",
   },
   {
     id:   LEKSOKIPOS_ONESHOT_IDS.sidirodromos,
     name: "Σιδηρόδρομος",
     hint: `Βρες μια λέξη με ${TUNING.sidirodromosMinLetters}+ γράμματα.`,
+    glyph: "🚂",
     kind: "oneshot",
   },
   {
     id:   LEKSOKIPOS_ONESHOT_IDS.theristis,
     name: "Θεριστής",
     hint: `Βρες το ${Math.round(TUNING.theristisFoundRatio * 100)}% των λέξεων ενός ημερήσιου παζλ.`,
+    glyph: "🌾",
     kind: "oneshot",
   },
   {
     id:   "leksokipos-kynigos-pangram",
     name: "Κυνηγός Πανγκράμ",
     hint: "Βρες πανγκράμ σε ημερήσια παζλ.",
+    glyph: "✍️",
     kind: "tiered",
     tiers: [
       { id: "leksokipos-kynigos-pangram-chalkino", tier: "chalkino", threshold: TUNING.pangramTierThresholds.chalkino, label: "Χάλκινο" },
@@ -148,6 +155,7 @@ export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
     id:   SYLLEKTIS_PONTON_ID,
     name: "Συλλέκτης Πόντων",
     hint: "Μάζεψε πόντους συνολικά.",
+    glyph: "💎",
     kind: "tiered",
     tiers: [
       { id: "leksokipos-syllektis-ponton-chalkino", tier: "chalkino", threshold: TUNING.pointsTierThresholds.chalkino, label: "Χάλκινο" },
@@ -242,4 +250,77 @@ export function describeAchievement(id: string): EarnedDisplay | null {
     if (tier) return { name: a.name, tierLabel: tier.label };
   }
   return null;
+}
+
+// ─── Player-selected display badge (Handoff B) ────────────────────────────────
+//
+// A player picks ONE earned achievement in the Trophy Case; that badge renders
+// beside their name on every leaderboard. What is STORED is the BASE achievement
+// id (never a tier id); the displayed tier is resolved at READ time from the
+// device's earned tier rows, so a later tier upgrade needs no write-back.
+
+/** Podium medal for each tier — shown beside the glyph for a tiered display badge. */
+export const TIER_MEDALS: Record<TierName, string> = {
+  chalkino: "🥉",
+  asimenio: "🥈",
+  chryso:   "🥇",
+};
+
+/**
+ * The base ids a player may select as their display badge — every catalog entry,
+ * never a per-tier id (tiers are resolved at read time, not selected directly).
+ * The write endpoint rejects anything outside this set.
+ */
+export const SELECTABLE_BADGE_IDS: ReadonlySet<string> = new Set(
+  LEKSOKIPOS_ACHIEVEMENTS.map((a) => a.id),
+);
+
+/** The catalog entry with this base id, or undefined. */
+export function achievementById(id: string): Achievement | undefined {
+  return LEKSOKIPOS_ACHIEVEMENTS.find((a) => a.id === id);
+}
+
+/**
+ * The earned `player_achievements.achievement_id`s that prove ownership of the
+ * badge with this base id — its own id for a one-shot, any of its tier ids for a
+ * tiered badge. Empty for an unknown id. The write endpoint uses this to reject a
+ * selection the device has not actually earned.
+ */
+export function qualifyingEarnedIds(baseId: string): string[] {
+  const a = achievementById(baseId);
+  if (!a) return [];
+  return a.tiers ? a.tiers.map((t) => t.id) : [a.id];
+}
+
+/** A resolved display badge: the base id + the highest earned tier (null for one-shots). */
+export interface DisplayBadge {
+  achievementId: string;
+  tier:          TierName | null;
+}
+
+/**
+ * Resolve a stored `selected_badge_id` against a device's earned ids into the
+ * badge to render, at read time (ADR 0013 self-healing — a tier upgrade needs no
+ * write-back). Null when there is nothing to show:
+ *   - no selection, or an unknown selected id;
+ *   - a tiered selection with no earned tier rows (a dangling selection, e.g. after
+ *     a launch trophy reset). A one-shot trusts its stored id (validated at write).
+ */
+export function resolveDisplayBadge(
+  selectedBadgeId: string | null,
+  earnedIds:       readonly string[],
+): DisplayBadge | null {
+  if (!selectedBadgeId) return null;
+  const a = achievementById(selectedBadgeId);
+  if (!a) return null;
+
+  if (!a.tiers) return { achievementId: a.id, tier: null };
+
+  // Highest earned tier wins — walk ascending, keep the last one held.
+  const owned = new Set(earnedIds);
+  let highest: TierName | null = null;
+  for (const t of a.tiers) {
+    if (owned.has(t.id)) highest = t.tier;
+  }
+  return highest ? { achievementId: a.id, tier: highest } : null;
 }

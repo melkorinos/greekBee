@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import Link from "next/link";
 import { Modal } from "./Modal";
+import { LeaderboardBadge } from "./LeaderboardBadge";
 import type { LeaderboardUrlBuilder } from "@/hooks/useLeaderboard";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import {
@@ -276,6 +277,7 @@ export function LeaderboardModalBase({
                     <td className={lbTdRank}>{row.rank}</td>
                     <td className={lbTdName}>
                       {row.display_name}
+                      {row.badge && <LeaderboardBadge badge={row.badge} />}
                       {row.isPlayer && (
                         <span className="text-game-accent ml-1 text-xs">(εσύ)</span>
                       )}
@@ -296,6 +298,7 @@ export function LeaderboardModalBase({
                     <td className={lbTdRank}>{playerRow.rank}</td>
                     <td className={lbTdName}>
                       {playerRow.display_name}
+                      {playerRow.badge && <LeaderboardBadge badge={playerRow.badge} />}
                       <span className="text-game-accent ml-1 text-xs">(εσύ)</span>
                     </td>
                     <td className={lbTdScore}>{formatScore(playerRow.score)}</td>

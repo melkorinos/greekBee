@@ -6,7 +6,7 @@
 // live values (leksokipos_points for Συλλέκτης Πόντων, pangram_count for Κυνηγός
 // Πανγκράμ) come from /api/profile/stats; earned ids from /api/achievements.
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TrophyCase } from "@/components/profile/TrophyCase";
@@ -29,14 +29,23 @@ function tierChip(tierId: string): HTMLElement {
  * { leksokipos_points, pangram_count }. Both share the ok flag so an error case
  * fails both reads.
  */
-function mockData({ earned = [] as string[], points = 0, pangrams = 0, ok = true } = {}) {
+function mockData({ earned = [] as string[], points = 0, pangrams = 0, selected = null as string | null, ok = true } = {}) {
   return vi.spyOn(globalThis, "fetch").mockImplementation((input: RequestInfo | URL) => {
     const url = String(input);
-    const body = url.includes("/api/profile/stats")
-      ? { leksokipos_points: points, pangram_count: pangrams }
-      : { earned };
+    let body: unknown = { earned };
+    if (url.includes("/api/profile/stats")) body = { leksokipos_points: points, pangram_count: pangrams };
+    else if (url.includes("/api/profile/badge")) body = { selected_badge_id: selected };
     return Promise.resolve({ ok, json: async () => body } as Response);
   });
+}
+
+/** The most recent POST to /api/profile/badge, parsed, or null if none fired. */
+function lastBadgePost(spy: ReturnType<typeof vi.spyOn>): { device_uuid: string; selected_badge_id: string | null } | null {
+  const calls = spy.mock.calls as [RequestInfo | URL, RequestInit?][];
+  const post = [...calls].reverse().find(
+    ([url, init]) => String(url).includes("/api/profile/badge") && init?.method === "POST",
+  );
+  return post ? JSON.parse(String(post[1]!.body)) : null;
 }
 
 /** Back-compat shorthand for the earned-only cases. */
@@ -75,6 +84,21 @@ describe("TrophyCase", () => {
       expect(tileFor("Πρώτα Βήματα")).toHaveAttribute("data-earned", "true"),
     );
     expect(tileFor("Σιδηρόδρομος")).toHaveAttribute("data-earned", "false");
+  });
+
+  it("shows an earned tile's own glyph instead of the generic trophy", async () => {
+    mockEarned(["leksokipos-first-daily"]);
+    render(<TrophyCase deviceId="dev-A" />);
+
+    await waitFor(() =>
+      expect(tileFor("Πρώτα Βήματα")).toHaveAttribute("data-earned", "true"),
+    );
+    expect(tileFor("Πρώτα Βήματα")).toHaveTextContent("🌱");
+  });
+
+  it("shows the lock glyph on a tile the device has not earned", () => {
+    render(<TrophyCase deviceId="" />);
+    expect(tileFor("Σιδηρόδρομος")).toHaveTextContent("🔒");
   });
 
   it("keeps every tile locked when the device has earned nothing", async () => {
@@ -181,5 +205,65 @@ describe("TrophyCase", () => {
     await waitFor(() =>
       expect(screen.getByTestId("tier-progress-leksokipos-kynigos-pangram")).toHaveTextContent("7 / 10"),
     );
+  });
+});
+
+// ── Badge picker (Handoff B) ──────────────────────────────────────────────────
+
+describe("TrophyCase — display-badge picker", () => {
+  it("tapping an earned tile selects it, POSTing the base achievement id", async () => {
+    const spy = mockData({ earned: ["leksokipos-first-daily"] });
+    render(<TrophyCase deviceId="dev-A" />);
+
+    await waitFor(() =>
+      expect(tileFor("Πρώτα Βήματα")).toHaveAttribute("data-earned", "true"),
+    );
+    fireEvent.click(tileFor("Πρώτα Βήματα"));
+
+    await waitFor(() =>
+      expect(lastBadgePost(spy)).toEqual({ device_uuid: "dev-A", selected_badge_id: "leksokipos-first-daily" }),
+    );
+    expect(tileFor("Πρώτα Βήματα")).toHaveAttribute("data-selected", "true");
+  });
+
+  it("selects a tiered tile by its BASE id (never a tier id)", async () => {
+    const spy = mockData({ earned: ["leksokipos-kynigos-pangram-chalkino"] });
+    render(<TrophyCase deviceId="dev-A" />);
+
+    await waitFor(() =>
+      expect(tileFor("Κυνηγός Πανγκράμ")).toHaveAttribute("data-earned", "true"),
+    );
+    fireEvent.click(tileFor("Κυνηγός Πανγκράμ"));
+
+    await waitFor(() =>
+      expect(lastBadgePost(spy)?.selected_badge_id).toBe("leksokipos-kynigos-pangram"),
+    );
+  });
+
+  it("tapping the already-selected tile clears it, POSTing null", async () => {
+    const spy = mockData({ earned: ["leksokipos-first-daily"], selected: "leksokipos-first-daily" });
+    render(<TrophyCase deviceId="dev-A" />);
+
+    await waitFor(() =>
+      expect(tileFor("Πρώτα Βήματα")).toHaveAttribute("data-selected", "true"),
+    );
+    fireEvent.click(tileFor("Πρώτα Βήματα"));
+
+    await waitFor(() =>
+      expect(lastBadgePost(spy)).toEqual({ device_uuid: "dev-A", selected_badge_id: null }),
+    );
+    expect(tileFor("Πρώτα Βήματα")).toHaveAttribute("data-selected", "false");
+  });
+
+  it("a locked tile is inert — tapping it fires no badge POST", async () => {
+    const spy = mockData({ earned: [] });
+    render(<TrophyCase deviceId="dev-A" />);
+
+    await waitFor(() =>
+      expect(tileFor("Σιδηρόδρομος")).toHaveAttribute("data-earned", "false"),
+    );
+    fireEvent.click(tileFor("Σιδηρόδρομος"));
+
+    expect(lastBadgePost(spy)).toBeNull();
   });
 });

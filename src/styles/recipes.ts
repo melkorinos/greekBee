@@ -142,3 +142,14 @@ export const lbTdName  = "py-1.5 text-foreground";
 
 /** Score cell */
 export const lbTdScore = "py-1.5 text-right font-mono text-foreground pl-4";
+
+/** Display-badge chip beside a leaderboard name (Handoff B). A distinct element
+ * from the name text — the left border/padding is the divider between name and
+ * badge; a tiered badge adds an inner divider before the medal (see lbBadgeMedal).
+ * Owns colour/spacing/radius only; the row cell owns layout. */
+export const lbBadgeChip =
+  "inline-flex items-center gap-1 ml-1.5 pl-1.5 border-l border-border align-middle text-xs leading-none";
+
+/** The medal segment of a tiered badge chip — sits after the glyph, its own
+ * divider between glyph and medal (the second `|` in the operator's sketch). */
+export const lbBadgeMedal = "pl-1 border-l border-border";

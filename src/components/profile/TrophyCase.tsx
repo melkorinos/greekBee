@@ -59,10 +59,16 @@ function TrophyTile({
   achievement,
   earned,
   liveValue,
+  selected,
+  onSelect,
 }: {
   achievement: Achievement;
   earned:      ReadonlySet<string>;
   liveValue:   number | undefined;
+  /** Whether this tile is the player's chosen display badge. */
+  selected:    boolean;
+  /** Select/deselect this badge — only wired when the tile is earned. */
+  onSelect:    (id: string) => void;
 }) {
   const tiers = achievement.tiers;
   // For a one-shot the tile keys on its own id; for a tiered badge, any lit tier
@@ -70,6 +76,9 @@ function TrophyTile({
   const tileEarned = tiers
     ? tiers.some((t) => earned.has(t.id) || (liveValue !== undefined && liveValue >= t.threshold))
     : earned.has(achievement.id);
+
+  // Only earned tiles are pickable as the display badge; locked ones are inert.
+  const selectable = tileEarned;
 
   // Progress line only when there's a live source and a next goal remaining.
   const nextThreshold =
@@ -79,15 +88,32 @@ function TrophyTile({
     <div
       data-testid="trophy-tile"
       data-earned={tileEarned}
+      data-selected={selected}
+      role={selectable ? "button" : undefined}
+      tabIndex={selectable ? 0 : undefined}
+      aria-pressed={selectable ? selected : undefined}
+      onClick={selectable ? () => onSelect(achievement.id) : undefined}
+      onKeyDown={
+        selectable
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onSelect(achievement.id);
+              }
+            }
+          : undefined
+      }
       className={
-        "flex flex-col items-center gap-1 rounded-xl border px-3 py-4 text-center " +
+        "flex flex-col items-center gap-1 rounded-xl border px-3 py-4 text-center transition-shadow " +
+        (selectable ? "cursor-pointer " : "") +
+        (selected ? "ring-2 ring-game-accent " : "") +
         (tileEarned
           ? "border-border bg-surface-raised"
           : "border-border bg-surface-raised opacity-60")
       }
     >
       <span className={tileEarned ? "text-2xl" : "text-2xl grayscale"} aria-hidden="true">
-        {tileEarned ? "🏆" : "🔒"}
+        {tileEarned ? achievement.glyph : "🔒"}
       </span>
       <span className="text-xs font-semibold text-foreground">{achievement.name}</span>
       <span className="text-[11px] leading-tight text-muted">{achievement.hint}</span>
@@ -108,6 +134,7 @@ export function TrophyCase({ deviceId = "" }: { deviceId?: string }) {
   const [earned, setEarned] = useState<ReadonlySet<string>>(() => new Set());
   const [points, setPoints] = useState<number | undefined>(undefined);
   const [pangrams, setPangrams] = useState<number | undefined>(undefined);
+  const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => {
     if (!deviceId) return;
@@ -130,8 +157,31 @@ export function TrophyCase({ deviceId = "" }: { deviceId?: string }) {
       })
       .catch(() => { /* no live progress — tiers still light from earned facts */ });
 
+    fetch(`/api/profile/badge?device_uuid=${id}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("badge fetch failed"))))
+      .then((d: { selected_badge_id?: string | null }) => {
+        if (!cancelled) setSelected(d.selected_badge_id ?? null);
+      })
+      .catch(() => { /* no selection to show — leave the picker unselected */ });
+
     return () => { cancelled = true; };
   }, [deviceId]);
+
+  // Pick a badge (or clear it by tapping the currently-selected tile again).
+  // Optimistic: the tile updates immediately; a failed write rolls back.
+  function handleSelect(id: string) {
+    if (!deviceId) return;
+    const next = selected === id ? null : id;
+    const previous = selected;
+    setSelected(next);
+    fetch(`/api/profile/badge`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ device_uuid: deviceId, selected_badge_id: next }),
+    })
+      .then((r) => { if (!r.ok) throw new Error("badge save failed"); })
+      .catch(() => { setSelected(previous); });
+  }
 
   return (
     <div className="px-5 py-4">
@@ -150,6 +200,8 @@ export function TrophyCase({ deviceId = "" }: { deviceId?: string }) {
             key={a.id}
             achievement={a}
             earned={earned}
+            selected={selected === a.id}
+            onSelect={handleSelect}
             // Each tiered badge reads its own live value; one-shots have none.
             liveValue={
               a.id === SYLLEKTIS_PONTON_ID ? points

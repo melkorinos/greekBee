@@ -318,6 +318,7 @@ export type Database = {
           display_name: string
           id: number
           last_active: string
+          selected_badge_id: string | null
         }
         Insert: {
           auth_user_id?: string | null
@@ -326,6 +327,7 @@ export type Database = {
           display_name: string
           id?: number
           last_active?: string
+          selected_badge_id?: string | null
         }
         Update: {
           auth_user_id?: string | null
@@ -334,6 +336,7 @@ export type Database = {
           display_name?: string
           id?: number
           last_active?: string
+          selected_badge_id?: string | null
         }
         Relationships: []
       }

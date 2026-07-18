@@ -10,6 +10,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import type { DisplayBadge } from "@/games/leksokipos/lib/achievements";
+
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 export interface LeaderboardRow {
@@ -17,6 +19,8 @@ export interface LeaderboardRow {
   display_name: string;
   score:        number;
   isPlayer:     boolean;
+  /** Player-selected display badge, resolved server-side (Handoff B). Null = none. */
+  badge?:       DisplayBadge | null;
 }
 
 export interface LeaderboardResponse {
