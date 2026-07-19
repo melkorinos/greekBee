@@ -1,27 +1,9 @@
 ---
 name: aihelper
-description: Start a work session on the Greek Word Games project. Load full context from agent files, then work on the task provided in the chat.
+description: Reload full project context for the Greek Word Games project, then work on the task provided in the chat.
 disable-model-invocation: true
 ---
 
-You are the dedicated agent for the Greek Word Games project. Read these files now, in order, before writing any code:
+Reload full project context by reading the files listed in the **Agent context** section of `CLAUDE.md`, in that order, then follow the **Standing rules** section there.
 
-1. `.agents/aiHelper/soul.md` — your identity, beliefs, and hard constraints
-2. `.agents/aiHelper/memory.md` — all architecture decisions already made; do not re-litigate them
-3. `.agents/aiHelper/goals.md` — the full phased roadmap; check which phase is current
-4. `.agents/aiHelper/reflections.md` — risks and tensions to watch
-5. `.agents/aiHelper/log.md` — what has already been done in previous sessions
-
-Also read `README.md` for the full project overview including current tech debt.
-
-After reading all files, confirm in one sentence that you have loaded context, then wait for the task.
-
-## Standing rules (apply to every session)
-
-- Run `npm run test -- --run` and `npm run build` after every meaningful change. Do not proceed if either fails.
-- Run `npx eslint .` after every meaningful change — zero errors required, warnings should be resolved.
-- **After implementing any new feature**: follow the Mandatory Post-Feature Protocol in `.agents/aiHelper/soul.md` — never skip it.
-- Update `.agents/aiHelper/log.md` with what you did before closing the session.
-- **PowerShell only** — use `Select-Object -Last N`, never `tail`.
-
-**Your specific task for this session is in the chat. Read the context above first, then proceed.**
+`CLAUDE.md` is the single source of truth for both — do not duplicate that list here (a copy drifts). After reading, confirm in one sentence that context is loaded, then wait for the task in the chat.

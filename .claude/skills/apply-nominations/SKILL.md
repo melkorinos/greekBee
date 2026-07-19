@@ -1,3 +1,9 @@
+---
+name: apply-nominations
+description: Apply admin-accepted word Nominations to words-el.json and re-sync every dictionary-derived data file (guess lists, puzzles, anagram alternates) via the ADR 0015 re-sync registry, propose morphological relatives for review, then verify and hand back a diff. Wraps npm run apply-nominations[:dry]. Invoke as /apply-nominations.
+disable-model-invocation: true
+---
+
 # /apply-nominations
 
 Apply admin-reviewed Leksikastirio nominations to the local dataset, verify the result, and hand back a diff summary for the developer to commit and deploy.
