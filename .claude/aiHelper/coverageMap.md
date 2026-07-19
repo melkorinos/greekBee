@@ -15,6 +15,7 @@
 | `gameLogic.test.ts` (leksokipos) | `isPangram`, `scoreWord`, `maxScore`, `calculateRank`, `validateWord` — Greek fixture (production alphabet; absorbed the former `greekLogic.test.ts` 2026-07-02) |
 | `gameReducer.test.ts` | All reducer actions incl. SUBMIT_WORD, RESTORE_STATE |
 | `GameBoard.test.tsx` | Rendering, keyboard, hex clicks, word submission, feedback |
+| `ScoreBar.test.tsx` (leksokipos) | Endgame "new content" cue on the ladder icon — pulses while unseen (`data-endgame-cue`), clears on first panel open, never below top rank |
 | `LeksokiposLayout.test.tsx` | Variant toggle (pie↔flower), localStorage save/restore, tooFewWords |
 | `greeklish.test.ts` | Bijective Greek↔greeklish codec round-trip |
 | `leksokiposDataLoader.test.ts` | `getPuzzleForDate`, `getPuzzleById`, `getRandomPuzzle`, `getNextPuzzle` |

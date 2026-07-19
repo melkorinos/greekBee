@@ -10,6 +10,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { TrophyCase } from "@/components/profile/TrophyCase";
+import { GAME_REGISTRY } from "@/config/games";
 import { LEKSOKIPOS_ACHIEVEMENTS } from "@/games/leksokipos/lib/achievements";
 
 afterEach(() => vi.restoreAllMocks());
@@ -69,11 +70,12 @@ describe("TrophyCase", () => {
     expect(screen.getByText(/Χρυσό · 25\.000/)).toBeInTheDocument();
   });
 
-  it("shows a beta notice that trophies may reset on launch", () => {
+  it("shows a beta notice that names the first game and warns trophies may reset on launch", () => {
     render(<TrophyCase />);
     const notice = screen.getByTestId("trophy-beta-notice");
     expect(notice).toHaveTextContent(/beta/i);
     expect(notice).toHaveTextContent("μηδενιστούν");
+    expect(notice).toHaveTextContent(GAME_REGISTRY.leksokipos.label);
   });
 
   it("lights tiles whose achievement id has been earned, leaving the rest locked", async () => {

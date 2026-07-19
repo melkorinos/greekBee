@@ -19,6 +19,7 @@ import { LifetimeStatsStrip } from "@/components/profile/LifetimeStatsStrip";
 import { WordsByLengthCard } from "@/components/profile/WordsByLengthCard";
 import { TrophyCase } from "@/components/profile/TrophyCase";
 import { FEATURE_FLAGS } from "@/config/featureFlags";
+import { GAME_REGISTRY } from "@/config/games";
 import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
 import { cardShell } from "@/styles/recipes";
 import { useSyncExternalStore } from "react";
@@ -98,6 +99,17 @@ export default function ProfilePage() {
           showProfileLink={false}
         />
       </section>
+
+      {/* Scope clarifier — every stat and trophy below currently tracks only the
+          first game (Leksokipos); other games have no engagement surface yet. The
+          beta "may reset on launch" caveat lives on in the Trophy Case notice. */}
+      <p
+        data-testid="scope-notice"
+        className="rounded-lg border border-border bg-surface-raised px-3 py-2 text-[11px] leading-snug text-muted"
+      >
+        📊 Τα στατιστικά{FEATURE_FLAGS.achievements ? " και τα επιτεύγματα" : ""} παρακάτω
+        αφορούν προς το παρόν μόνο το {GAME_REGISTRY.leksokipos.label}, το πρώτο παιχνίδι.
+      </p>
 
       <section className={`${cardShell} overflow-hidden`}>
         <LifetimeStatsStrip deviceId={deviceId} />
