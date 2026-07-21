@@ -19,11 +19,12 @@
 //   • Municipality→regional-unit was resolved by spatial nearest-match of each
 //     ADM3 polygon centroid to a Wikidata municipality point (74 RUs, 2 hand
 //     fixes below). Not a hand-typed table.
-//   • Athens: the 4 «Τομείς Αθηνών» regional units are MERGED into one `athina`
-//     silhouette (the urban sectors are not recognizable individually). East/West
-//     Attica and Piraeus stay separate. This is a v1 call, not in the signoff.
-//   • Island peels/defers follow the signed-off list exactly; deferred islets
-//     ride inside their parent because they share its regional unit.
+//   • Attica: ALL of mainland Attica (the 4 Athens sectors + Piraeus + East +
+//     West Attica) is MERGED into one `attica` peninsula silhouette — the urban
+//     units don't read as individual shapes. The Attica ISLANDS stay separate.
+//   • Some island answers are DEFERRED (confirmedSplits.DEFERRED_ANSWER_IDS): their
+//     OSM silhouette isn't high-fidelity enough yet, so they're excluded from
+//     emission (their ANSWER_META / peel mappings stay, to re-add after refining).
 
 import type { LngLat } from "../../../src/games/topothesies/types";
 
@@ -119,20 +120,82 @@ export const RU_TO_ID: Readonly<Record<string, string>> = {
   "Περιφερειακή Ενότητα Κέας - Κύθνου": "__split__", "Περιφερειακή Ενότητα Μήλου": "__split__",
   "Περιφερειακή Ενότητα Πάρου": "__split__", "Περιφερειακή Ενότητα Σποράδων": "__split__",
   "Περιφερειακή Ενότητα Νήσων": "__split__",
-  "Περιφερειακή Ενότητα Ανατολικής Αττικής": "east-attica",
-  "Περιφερειακή Ενότητα Δυτικής Αττικής": "west-attica",
-  "Περιφερειακή Ενότητα Πειραιώς": "piraeus",
+  // All of mainland Attica dissolves into ONE «Αττική» peninsula silhouette:
+  // the urban units (Athens sectors via isAthensSector, Piraeus) don't read as
+  // individual shapes, so East + West Attica + Piraeus + the Athens sectors are
+  // merged. The Attica ISLANDS (Νήσων RU) stay their own answers via ISLAND_PEEL_WD.
+  "Περιφερειακή Ενότητα Ανατολικής Αττικής": "attica",
+  "Περιφερειακή Ενότητα Δυτικής Αττικής": "attica",
+  "Περιφερειακή Ενότητα Πειραιώς": "attica",
 };
 
 /**
  * Assign a geoBoundaries municipality to its answer id (or null = dropped).
  * Order: drop wins, then an island peel, then the Athens merge, then the RU.
+ * Retained for the per-id geoBoundaries FALLBACK path (see GEOBOUNDARIES_FALLBACK_IDS
+ * in generateTopothesies.ts) — the primary feed is now OSM (assignOsm below).
  */
 export function assignTarget(shapeName: string, matchedRuEl: string | null): string | null {
   if (DROPS.has(shapeName)) return null;
   if (ISLAND_OVERRIDES[shapeName]) return ISLAND_OVERRIDES[shapeName];
   const ru = RU_FIX[shapeName] ?? matchedRuEl;
-  if (ru && isAthensSector(ru)) return "athina";
+  if (ru && isAthensSector(ru)) return "attica";
+  const id = ru ? RU_TO_ID[ru] : undefined;
+  if (!id || id === "__split__") return null;
+  return id;
+}
+
+// ── OSM (admin_level=7 δήμοι) assignment — the primary geometry feed ──────────
+//
+// The join is keyed on the OSM relation's own Wikidata QID (immutable, unlike
+// the Greek name variants), resolved once against the committed adm7 dump:
+//   • ISLAND_PEEL_WD — δήμοι that PEEL from their regional unit into their own
+//     answer (islands). QID → answer id. Comments carry the δήμος name.
+//   • DROP_WD — δήμοι excluded from every answer (a non-island inside an island RU).
+//   • MUNI_RU_FIX_WD — δήμοι whose Wikidata parent skips the regional unit (points
+//     at the region/metro), pinned straight to their answer id.
+// Everything else resolves via its municipality's regional unit (parentEl in
+// wd-munis.json, matched by QID) → RU_TO_ID, with the Athens sectors merged.
+
+/** OSM δήμος Wikidata QID → island-peel answer id. */
+export const ISLAND_PEEL_WD: Readonly<Record<string, string>> = {
+  Q12875764: "salamis", Q25162122: "aegina", Q20917269: "agistri", Q16642582: "hydra",
+  Q1493246: "kythira", Q21573016: "spetses", Q217214: "serifos", Q212029: "sifnos",
+  Q919194: "kimolos", Q203979: "milos", Q647941: "alonnisos", Q25162005: "skiathos",
+  Q25162028: "skopelos", Q214109: "kea", Q739779: "kythnos", Q201272: "paros",
+  Q216985: "antiparos", Q208587: "amorgos", Q747935: "sikinos", Q213902: "folegandros",
+  Q217253: "anafi", Q216993: "ios", Q767528: "nisyros", Q20379364: "symi",
+  Q212096: "kastellorizo", Q12875738: "oinousses", Q16330107: "psara", Q11874074: "kasos",
+  Q426893: "leros", Q3897657: "patmos", Q20030234: "astypalaia", Q719518: "paxi",
+  Q208566: "skyros", Q25413502: "samothrace",
+  Q3908531: "poros", // returned in the OSM swap — its silhouette reads correctly
+};
+
+/** OSM δήμος QIDs excluded from every answer (non-island inside an island RU). */
+export const DROP_WD: ReadonlySet<string> = new Set([
+  "Q1536340", // Δήμος Τροιζηνίας - Μεθάνων (mainland peninsula in Attica's Νήσων RU)
+]);
+
+/** OSM δήμος QIDs whose Wikidata parent isn't the regional unit — pinned by id. */
+export const MUNI_RU_FIX_WD: Readonly<Record<string, string>> = {
+  Q6627746: "thessaloniki", // Δήμος Θεσσαλονίκης — parent is the region, not the RU
+  Q992450: "lakonia",       // Δήμος Σπάρτης
+  Q2232240: "attica",      // Δήμος Νίκαιας - Αγίου Ιωάννη Ρέντη (Piraeus RU -> Attica)
+};
+
+/**
+ * Assign an OSM δήμος to its answer id (or null = dropped/foreign).
+ * `ru` is the municipality's regional-unit label (wd-munis.json parentEl, joined
+ * by QID; spatial-nearest fallback for the few δήμοι missing from that dump).
+ * Order: QID drop → QID peel → QID RU-fix → Athens merge → regional unit.
+ */
+export function assignOsm(wikidata: string | null, ru: string | null): string | null {
+  if (wikidata) {
+    if (DROP_WD.has(wikidata)) return null;
+    if (ISLAND_PEEL_WD[wikidata]) return ISLAND_PEEL_WD[wikidata];
+    if (MUNI_RU_FIX_WD[wikidata]) return MUNI_RU_FIX_WD[wikidata];
+  }
+  if (ru && isAthensSector(ru)) return "attica";
   const id = ru ? RU_TO_ID[ru] : undefined;
   if (!id || id === "__split__") return null;
   return id;
@@ -152,13 +215,12 @@ export const ANSWER_META: Readonly<Record<string, CuratedAnswerMeta>> = {
   "arkadia": { name: "Αρκαδία", capital: "Τρίπολη", capitalCoord: [22.375, 37.508333], region: "Πελοποννήσου", isIsland: false, aliases: [] },
   "arta": { name: "Άρτα", capital: "Άρτα", capitalCoord: [20.9875, 39.165], region: "Ηπείρου", isIsland: false, aliases: [] },
   "astypalaia": { name: "Αστυπάλαια", capital: "Χώρα Αστυπάλαιας", capitalCoord: [26.35, 36.55], region: "Νοτίου Αιγαίου", isIsland: true, aliases: [] },
-  "athina": { name: "Αθήνα", capital: "Αθήνα", capitalCoord: [23.727539, 37.983917], region: "Αττικής", isIsland: false, aliases: ["αθηνα"] },
+  "attica": { name: "Αττική", capital: "Αθήνα", capitalCoord: [23.727539, 37.983917], region: "Αττικής", isIsland: false, aliases: ["αττικη"] },
   "chalkidiki": { name: "Χαλκιδική", capital: "Πολύγυρος", capitalCoord: [23.668611, 40.222778], region: "Κεντρικής Μακεδονίας", isIsland: false, aliases: [] },
   "chania": { name: "Χανιά", capital: "Χανιά", capitalCoord: [24.016667, 35.516667], region: "Κρήτης", isIsland: false, aliases: [] },
   "chios": { name: "Χίος", capital: "Χίος", capitalCoord: [26.1375, 38.3725], region: "Βορείου Αιγαίου", isIsland: true, aliases: [] },
   "corfu": { name: "Κέρκυρα", capital: "Κέρκυρα", capitalCoord: [19.921389, 39.623889], region: "Ιονίων Νήσων", isIsland: true, aliases: ["κερκυρα"] },
   "drama": { name: "Δράμα", capital: "Δράμα", capitalCoord: [24.139167, 41.151389], region: "Ανατολικής Μακεδονίας και Θράκης", isIsland: false, aliases: [] },
-  "east-attica": { name: "Ανατολική Αττική", capital: "Παλλήνη", capitalCoord: [23.87, 38.0], region: "Αττικής", isIsland: false, aliases: [] },
   "euboea": { name: "Εύβοια", capital: "Χαλκίδα", capitalCoord: [23.595, 38.4625], region: "Στερεάς Ελλάδας", isIsland: true, aliases: ["ευβοια"] },
   "evros": { name: "Έβρος", capital: "Αλεξανδρούπολη", capitalCoord: [25.866667, 40.85], region: "Ανατολικής Μακεδονίας και Θράκης", isIsland: false, aliases: [] },
   "evrytania": { name: "Ευρυτανία", capital: "Καρπενήσι", capitalCoord: [21.795, 38.9121], region: "Στερεάς Ελλάδας", isIsland: false, aliases: [] },
@@ -210,7 +272,7 @@ export const ANSWER_META: Readonly<Record<string, CuratedAnswerMeta>> = {
   "paxi": { name: "Παξοί", capital: "Γάιος", capitalCoord: [20.161389, 39.2075], region: "Ιονίων Νήσων", isIsland: true, aliases: ["παξοσ"] },
   "pella": { name: "Πέλλα", capital: "Έδεσσα", capitalCoord: [22.05, 40.8], region: "Κεντρικής Μακεδονίας", isIsland: false, aliases: [] },
   "pieria": { name: "Πιερία", capital: "Κατερίνη", capitalCoord: [22.5084, 40.2711], region: "Κεντρικής Μακεδονίας", isIsland: false, aliases: [] },
-  "piraeus": { name: "Πειραιάς", capital: "Πειραιάς", capitalCoord: [23.64616, 37.98505], region: "Αττικής", isIsland: false, aliases: [] },
+  "poros": { name: "Πόρος", capital: "Πόρος", capitalCoord: [23.458889, 37.500556], region: "Αττικής", isIsland: true, aliases: [] },
   "preveza": { name: "Πρέβεζα", capital: "Πρέβεζα", capitalCoord: [20.751667, 38.9575], region: "Ηπείρου", isIsland: false, aliases: [] },
   "psara": { name: "Ψαρά", capital: "Ψαρά", capitalCoord: [25.56287, 38.54097], region: "Βορείου Αιγαίου", isIsland: true, aliases: [] },
   "rethymno": { name: "Ρέθυμνο", capital: "Ρέθυμνο", capitalCoord: [24.473889, 35.368889], region: "Κρήτης", isIsland: false, aliases: [] },
@@ -232,11 +294,10 @@ export const ANSWER_META: Readonly<Record<string, CuratedAnswerMeta>> = {
   "thasos": { name: "Θάσος", capital: "Λιμένας Θάσου", capitalCoord: [24.709444, 40.778056], region: "Ανατολικής Μακεδονίας και Θράκης", isIsland: true, aliases: [] },
   "thesprotia": { name: "Θεσπρωτία", capital: "Ηγουμενίτσα", capitalCoord: [20.263611, 39.500278], region: "Ηπείρου", isIsland: false, aliases: [] },
   "thessaloniki": { name: "Θεσσαλονίκη", capital: "Θεσσαλονίκη", capitalCoord: [22.935556, 40.640278], region: "Κεντρικής Μακεδονίας", isIsland: false, aliases: [] },
-  "thira": { name: "Θήρα", capital: "Φηρά", capitalCoord: [25.431667, 36.42], region: "Νοτίου Αιγαίου", isIsland: true, aliases: ["σαντορινη"] },
+  "thira": { name: "Σαντορίνη", capital: "Φηρά", capitalCoord: [25.431667, 36.42], region: "Νοτίου Αιγαίου", isIsland: true, aliases: ["θηρα"] },
   "tinos": { name: "Τήνος", capital: "Τήνος", capitalCoord: [25.134, 37.6013], region: "Νοτίου Αιγαίου", isIsland: true, aliases: [] },
   "trikala": { name: "Τρίκαλα", capital: "Τρίκαλα", capitalCoord: [21.7675, 39.5548], region: "Θεσσαλίας", isIsland: false, aliases: [] },
   "viotia": { name: "Βοιωτία", capital: "Λιβαδειά", capitalCoord: [22.875, 38.436111], region: "Στερεάς Ελλάδας", isIsland: false, aliases: [] },
-  "west-attica": { name: "Δυτική Αττική", capital: "Ελευσίνα", capitalCoord: [23.3423, 37.9949], region: "Αττικής", isIsland: false, aliases: [] },
   "xanthi": { name: "Ξάνθη", capital: "Ξάνθη", capitalCoord: [24.883333, 41.133333], region: "Ανατολικής Μακεδονίας και Θράκης", isIsland: false, aliases: [] },
   "zakynthos": { name: "Ζάκυνθος", capital: "Ζάκυνθος", capitalCoord: [20.75, 37.8], region: "Ιονίων Νήσων", isIsland: true, aliases: ["ζακυνθοσ"] },
 };

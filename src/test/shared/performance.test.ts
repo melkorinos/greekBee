@@ -148,12 +148,13 @@ describe("performance: Topothesies client payload stays small", () => {
 
   /**
    * One day ships one path (ADR 0018), so this is a per-shape / worst-case
-   * ceiling, never a whole-file budget. Raised from 6 KB when the outline
-   * fidelity pass bumped Visvalingam retention to 70% + precision to 4 dp for
-   * recognizable islands; the largest mainland silhouette (Euboea) is ~8 KB and
-   * gzips to a couple KB, so 12 KB leaves generous headroom for a single inline.
+   * ceiling, never a whole-file budget. Raised to 20 KB when the geometry source
+   * swapped to OpenStreetMap admin_level=7 (real coastlines, far denser than the
+   * generalised geoBoundaries feed): simplification is now an absolute 200 m
+   * coastal tolerance, under which the largest silhouette (Εύβοια) is ~12 KB and
+   * gzips to a couple KB, so 20 KB leaves generous headroom for a single inline.
    */
-  const MAX_SHAPE_PATH_BYTES = 12_000;
+  const MAX_SHAPE_PATH_BYTES = 20_000;
   /** answers.json (all metadata, no geometry) ships whole to the client. */
   const MAX_ANSWERS_BYTES = 60_000;
 

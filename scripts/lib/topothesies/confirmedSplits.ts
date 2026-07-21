@@ -17,35 +17,26 @@
  * listed here — only the peels are the thing a regression could silently lose.
  */
 export const CONFIRMED_SPLIT_IDS = [
-  // Attica "Islands" (Νήσων) → 7 island peels (no unit remainder)
+  // Attica "Islands" (Νήσων) → island peels (no unit remainder). agistri/hydra/
+  // poros/spetses are currently DEFERRED (low OSM fidelity) — see below.
   "aegina",
-  "agistri",
-  "hydra",
   "kythira",
-  // poros deferred (v2) — geoBoundaries silhouette doesn't read as the real
-  // island; see DEFERRED_ISLANDS.
   "salamis",
-  "spetses",
   // Euboea → whole island + Skyros
   "skyros",
-  // Milos unit → Kimolos, Milos, Serifos, Sifnos
-  "kimolos",
+  // Milos unit → Milos, Sifnos (kimolos/serifos DEFERRED)
   "milos",
-  "serifos",
   "sifnos",
   // Kea-Kythnos → Kea, Kythnos
   "kea",
   "kythnos",
   // Naxos → Naxos (+deferred Lesser Cyclades) + Amorgos
   "amorgos",
-  // Magnesia (mainland) → +Sporades
-  "skiathos",
-  "skopelos",
+  // Magnesia (mainland) → +Sporades (skiathos/skopelos DEFERRED)
   "alonnisos",
   // Kavala (mainland) → Thasos
   "thasos",
-  // Evros (mainland) → Samothrace
-  "samothrace",
+  // Evros → Samothrace is DEFERRED
 ] as const;
 
 /**
@@ -60,37 +51,25 @@ export const DROPPED_MUNICIPALITIES = [
 ] as const;
 
 /**
- * Islands whose emitted shape must keep only its N largest polygons by area,
- * dropping the smaller satellite islets that share the municipality. The intent
- * is recognisability: a cluster of tiny detached blobs makes the map read as a
- * scatter and, because the silhouette self-frames, forces the main island to
- * render small. Keeping just the main body (N=1) — or the two real islands for
- * Alonnisos (Alonnisos + Peristera; N=2) — lets the shape zoom in.
+ * How many of an island answer's largest polygons to keep, dropping the smaller
+ * satellite islets that share its municipality. The intent is recognisability: a
+ * cluster of tiny detached blobs makes the map read as a scatter and, because the
+ * silhouette self-frames, forces the main island to render small.
  *
- * This is a DISPLAY + centroid decision only; the dropped islets were never
- * their own answers. Ids not listed here keep every polygon (e.g. Thira, Poros).
- * Applied in generateTopothesies.ts before both the path and the centroid so the
- * drawn shape and the proximity centroid stay the same geometry.
+ * With the OSM feed EVERY island answer defaults to its main landmass alone (N=1,
+ * applied in generateTopothesies.ts for `meta.isIsland`); this map is the small
+ * OVERRIDE list of answers that are genuinely more than one comparable island and
+ * must keep several. Non-island (mainland) answers keep all polygons.
+ *
+ * This is a DISPLAY + centroid decision only; the dropped islets were never their
+ * own answers. Applied before both the path and the centroid so the drawn shape
+ * and the proximity centroid stay the same geometry. Operator-tunable from the
+ * preview gallery — the most likely thing to want per-island tweaks.
  */
 export const MAIN_ISLAND_POLYGONS: Readonly<Record<string, number>> = {
-  alonnisos: 2,
-  antiparos: 1,
-  astypalaia: 1,
-  chania: 1,
-  corfu: 1,
-  hydra: 1,
-  ikaria: 1,
-  kalymnos: 1,
-  kea: 1,
-  kimolos: 1,
-  kythira: 1,
-  lemnos: 1,
-  leros: 1,
-  naxos: 1,
-  nisyros: 1,
-  psara: 1,
-  rhodes: 1,
-  syros: 1,
+  alonnisos: 2, // Αλόννησος + Περιστέρα
+  paxi: 2, // Παξοί = Παξός + Αντίπαξος
+  thira: 2, // Θήρα + Θηρασία (the caldera crescent)
 };
 
 /**
@@ -109,9 +88,19 @@ export const DEFERRED_ISLANDS: ReadonlyArray<{
     parkedInside: "naxos",
     why: "share the Naxos municipality — no attribute peel possible in v1",
   },
-  {
-    islands: "Poros",
-    parkedInside: "(dropped — no parent)",
-    why: "own municipality, but its geoBoundaries silhouette doesn't read as the real island; deferred for a higher-res source (handoff #3)",
-  },
 ];
+
+/**
+ * Island answer ids EXCLUDED from emission (generateTopothesies drops any feature
+ * assigned to one of these). Their OSM admin_level=7 silhouette is still not
+ * high-fidelity enough to be a fair guess (operator review, 2026-07-21). Unlike a
+ * hard removal, everything about them is retained — ANSWER_META, the ISLAND_PEEL_WD
+ * mapping — so re-adding one is just deleting its id here, once a higher-fidelity
+ * geometry is found for it. Tracked for refinement in the deferred-places doc.
+ */
+export const DEFERRED_ANSWER_IDS: ReadonlySet<string> = new Set([
+  "agistri", "anafi", "antiparos", "folegandros", "hydra", "ikaria", "kasos",
+  "kastellorizo", "kimolos", "nisyros", "oinousses", "patmos", "poros", "psara",
+  "samothrace", "serifos", "sikinos", "skiathos", "skopelos", "spetses", "symi",
+  "syros",
+]);

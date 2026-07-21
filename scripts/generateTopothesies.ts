@@ -1,14 +1,24 @@
 // generateTopothesies.ts — the one-time, local data generator for Topothesies.
 //
 // Like `generate-leksoplegma`, this is run by hand and its OUTPUT is committed
-// (src/data/topothesies/{answers,shapes}.json); the raw geoBoundaries shapefile
-// and Wikidata dumps it reads stay gitignored in scripts/lib/topothesies/source/
-// (ADR 0018 — builds stay hermetic, no route depends on geodata being reachable).
+// (src/data/topothesies/{answers,shapes}.json); the raw OSM / Wikidata dumps it
+// reads stay gitignored in scripts/lib/topothesies/source/ (ADR 0018 — builds
+// stay hermetic, no route depends on the geometry source being reachable).
 //
-// Pipeline: assign each ADM3 municipality to an answer id (curation.ts) →
-// mapshaper dissolve2 + simplify → project to precomputed SVG paths + area-
-// weighted centroids (project.ts) → emit the two files → validateEmitted gate,
-// and print the max pairwise centroid km for gameRules.TOPOTHESIES.PROXIMITY_MAX_KM.
+// Geometry source = OpenStreetMap admin_level=7 δήμοι (Overpass `out geom`,
+// ODbL). Each δήμος is assembled into a polygon (osmPolygons.ts), assigned to an
+// answer id by its Wikidata QID (curation.assignOsm — peels/drops/RU-fix by QID,
+// regional unit from wd-munis.json parentEl), then dissolved to one shape/answer.
+//
+// A per-id FALLBACK to the old geoBoundaries source is available for any answer
+// whose OSM silhouette the operator rejects: list its id in
+// GEOBOUNDARIES_FALLBACK_IDS below and it is sourced from geoBoundaries instead
+// (and its second attribution line must be restored in attribution.ts).
+//
+// Pipeline: assign OSM δήμοι → mapshaper dissolve2 + simplify → project to
+// precomputed SVG paths + area-weighted centroids (project.ts) → emit the two
+// files → validateEmitted gate, and print the max pairwise centroid km for
+// gameRules.TOPOTHESIES.PROXIMITY_MAX_KM.
 //
 //   npx tsx scripts/generateTopothesies.ts
 
@@ -18,7 +28,15 @@ import path from "node:path";
 
 import { normalizeLetters } from "../src/lib/normalize";
 import type { LngLat, TopothesiesAnswer, TopothesiesShape } from "../src/games/topothesies/types";
-import { ANSWER_META, assignTarget } from "./lib/topothesies/curation";
+import {
+  ANSWER_META,
+  assignOsm,
+  assignTarget,
+  DROP_WD,
+  ISLAND_PEEL_WD,
+  MUNI_RU_FIX_WD,
+} from "./lib/topothesies/curation";
+import { assembleOverpass } from "./lib/topothesies/osmPolygons";
 import {
   centroidLngLat,
   computeViewBox,
@@ -28,25 +46,41 @@ import {
   ringToPath,
 } from "./lib/topothesies/project";
 import { validateEmitted } from "./lib/topothesies/validateEmitted";
-import { CONFIRMED_SPLIT_IDS, MAIN_ISLAND_POLYGONS } from "./lib/topothesies/confirmedSplits";
+import {
+  CONFIRMED_SPLIT_IDS,
+  DEFERRED_ANSWER_IDS,
+  MAIN_ISLAND_POLYGONS,
+} from "./lib/topothesies/confirmedSplits";
 
 const SRC = path.join(__dirname, "lib/topothesies/source");
 const OUT = path.join(__dirname, "../src/data/topothesies");
 const TMP = path.join(__dirname, "lib/topothesies/source/_tagged.geojson");
 const DISSOLVED = path.join(__dirname, "lib/topothesies/source/_dissolved.geojson");
-// Visvalingam retention (mapshaper default is Visvalingam weighted). Default is
-// 100% = keep every source vertex: tiny Aegean islands must retain all the
-// detail geoBoundaries has to stay recognizable (at 25% agistri was a 6-pt blob;
-// at 70% still only 17; at 100% it reaches its 37-vertex source ceiling). The
-// client only ever ships one shape/day (ADR 0018), so even the densest mainland
-// path costs no per-visit bytes; the only real ceiling is the per-shape byte
-// budget in performance.test.ts. Islands that stay coarse at 100% (e.g.
-// Καστελλόριζο, 11 source vertices) are capped by geoBoundaries itself and can
-// only improve via a higher-res source (handoff #3). Override with TOPO_SIMPLIFY.
-const SIMPLIFY = process.env.TOPO_SIMPLIFY ?? "100%";
+
+// Answer ids to source from the old geoBoundaries feed instead of OSM (per-id
+// fallback for any silhouette the operator judges worse under OSM). Empty = pure
+// OSM (single ODbL credit). Any id added here must have its geoBoundaries
+// attribution line restored in src/games/topothesies/attribution.ts.
+const GEOBOUNDARIES_FALLBACK_IDS: ReadonlySet<string> = new Set([]);
+
+// Simplification. OSM coastlines are dense (a δήμος can carry thousands of
+// vertices), so unlike the sparse geoBoundaries feed we simplify DOWN. An
+// absolute ground-distance tolerance (interval, metres) — not a percentage —
+// gives every coast the same resolution: it trims the dense mainland hard while
+// preserving small-island form, so the largest single silhouette (Εύβοια, ~15.6
+// KB at 200 m) stays under the per-shape byte budget in performance.test.ts
+// while Καστελλόριζο keeps ~33 vertices (was 11 at the geoBoundaries ceiling).
+// `keep-shapes` stops small islands from collapsing. Only one shape ships per
+// day (ADR 0018), so the budget is a per-shape worst case, never a whole-file
+// cost. Override with TOPO_SIMPLIFY (e.g. "interval=300", or a "12%").
+const SIMPLIFY = process.env.TOPO_SIMPLIFY ?? "interval=200";
+
+// Distance (in degrees) beyond which an OSM δήμος's nearest wd-muni is treated as
+// a foreign border municipality inside the bbox and dropped.
+const FOREIGN_DEG = 0.12;
 
 interface Muni {
-  el: string | null;
+  q: string;
   coord: LngLat | null;
   parentEl: string | null;
 }
@@ -76,32 +110,83 @@ function polygonsOf(f: Feature): Polygon[] {
   return f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
 }
 
-function main() {
-  const geo = JSON.parse(fs.readFileSync(path.join(SRC, "geoBoundaries-GRC-ADM3.geojson"), "utf8"));
-  const munis: Muni[] = JSON.parse(fs.readFileSync(path.join(SRC, "wd-munis.json"), "utf8")).filter(
-    (m: Muni) => m.coord,
-  );
-
-  // ── 1. Assign each municipality to an answer id (spatial muni→RU + curation) ─
-  const tagged: Feature[] = [];
-  let dropped = 0;
-  for (const f of geo.features as Feature[]) {
-    const c = roughCentroid(f);
-    let best: Muni | null = null;
-    let bd = Infinity;
-    for (const m of munis) {
-      const dx = c[0] - m.coord![0];
-      const dy = c[1] - m.coord![1];
-      const dd = dx * dx + dy * dy;
-      if (dd < bd) { bd = dd; best = m; }
-    }
-    const id = assignTarget(f.properties.shapeName, best?.parentEl ?? null);
-    if (!id) { dropped++; continue; }
-    f.properties.ansid = id;
-    tagged.push(f);
+/** Nearest wd-muni regional unit to a point (spatial fallback + foreign filter). */
+function nearestMuniRu(c: LngLat, munis: Muni[]): { parentEl: string | null; dist: number } {
+  let best: Muni | null = null;
+  let bd = Infinity;
+  for (const m of munis) {
+    if (!m.coord) continue;
+    const dx = c[0] - m.coord[0];
+    const dy = c[1] - m.coord[1];
+    const dd = dx * dx + dy * dy;
+    if (dd < bd) { bd = dd; best = m; }
   }
-  fs.writeFileSync(TMP, JSON.stringify({ type: "FeatureCollection", features: tagged }));
-  console.log(`assigned ${tagged.length} municipalities, dropped ${dropped}`);
+  return { parentEl: best?.parentEl ?? null, dist: Math.sqrt(bd) };
+}
+
+/** OSM δήμοι tagged with their answer id (ansid), foreign/dropped removed. */
+function taggedFromOsm(munis: Muni[], byQ: Map<string, Muni>, skip: ReadonlySet<string>): Feature[] {
+  const json = JSON.parse(fs.readFileSync(path.join(SRC, "osm-adm7.geojson"), "utf8"));
+  const out: Feature[] = [];
+  let dropped = 0;
+  let foreign = 0;
+  for (const feat of assembleOverpass(json)) {
+    const wd = feat.properties.wikidata;
+    // Peels / drops / RU-fixes resolve from the QID alone — settle them before
+    // any regional-unit lookup so a remote peel (e.g. Καστελλόριζο) is never
+    // foreign-dropped for having no nearby wd-muni.
+    const qidDirect = wd != null && (DROP_WD.has(wd) || wd in ISLAND_PEEL_WD || wd in MUNI_RU_FIX_WD);
+    let ru: string | null = null;
+    if (!qidDirect) {
+      if (wd && byQ.has(wd)) ru = byQ.get(wd)!.parentEl;
+      else {
+        const nm = nearestMuniRu(roughCentroid({ properties: {}, geometry: feat.geometry }), munis);
+        if (nm.dist > FOREIGN_DEG) { foreign++; continue; }
+        ru = nm.parentEl;
+      }
+    }
+    const id = assignOsm(wd, ru);
+    if (!id) { dropped++; continue; }
+    if (DEFERRED_ANSWER_IDS.has(id)) { dropped++; continue; } // low-fidelity, excluded for now
+    if (skip.has(id)) continue; // sourced from geoBoundaries fallback instead
+    out.push({ properties: { ansid: id }, geometry: feat.geometry });
+  }
+  console.log(`OSM: tagged ${out.length}, dropped ${dropped}, foreign ${foreign}`);
+  return out;
+}
+
+/** geoBoundaries features tagged for the fallback ids only (old spatial join). */
+function taggedFromGeoBoundaries(ids: ReadonlySet<string>, munis: Muni[]): Feature[] {
+  if (ids.size === 0) return [];
+  const geo = JSON.parse(
+    fs.readFileSync(path.join(SRC, "geoBoundaries-GRC-ADM3.geojson"), "utf8"),
+  );
+  const out: Feature[] = [];
+  for (const f of geo.features as Feature[]) {
+    const nm = nearestMuniRu(roughCentroid(f), munis);
+    const id = assignTarget(f.properties.shapeName, nm.parentEl);
+    if (id && ids.has(id)) out.push({ properties: { ansid: id }, geometry: f.geometry });
+  }
+  return out;
+}
+
+function main() {
+  const munis: Muni[] = JSON.parse(fs.readFileSync(path.join(SRC, "wd-munis.json"), "utf8"));
+  const byQ = new Map(munis.filter((m) => m.q).map((m) => [m.q, m]));
+
+  // ── 1. Assign each municipality to an answer id (OSM primary + fallback) ─────
+  const tagged: Feature[] = [
+    ...taggedFromOsm(munis, byQ, GEOBOUNDARIES_FALLBACK_IDS),
+    ...taggedFromGeoBoundaries(GEOBOUNDARIES_FALLBACK_IDS, munis),
+  ];
+  fs.writeFileSync(
+    TMP,
+    JSON.stringify({
+      type: "FeatureCollection",
+      features: tagged.map((f) => ({ type: "Feature", properties: f.properties, geometry: f.geometry })),
+    }),
+  );
+  console.log(`total tagged municipalities: ${tagged.length}`);
 
   // ── 2. Dissolve by answer id + simplify (mapshaper via npx, no saved dep) ────
   execSync(
@@ -120,10 +205,11 @@ function main() {
     const meta = ANSWER_META[id];
     if (!meta) { console.warn(`no ANSWER_META for dissolved id "${id}" — skipped`); continue; }
 
-    // Keep only the N largest polygons for islands that should drop their
-    // satellite islets (confirmedSplits.MAIN_ISLAND_POLYGONS) — a display +
-    // centroid decision, so it happens before both the path and the centroid.
-    const keep = MAIN_ISLAND_POLYGONS[id];
+    // Island answers show their main landmass alone (drop satellite islets so the
+    // self-framing shape zooms in); MAIN_ISLAND_POLYGONS overrides the few that
+    // are genuinely several comparable islands. A display + centroid decision, so
+    // it happens before both the path and the centroid.
+    const keep = MAIN_ISLAND_POLYGONS[id] ?? (meta.isIsland ? 1 : undefined);
     const polygons =
       keep === undefined
         ? polygonsOf(f)
@@ -169,10 +255,12 @@ function main() {
 
   const errors = validateEmitted({ answers, shapes }, { requiredIds: [...CONFIRMED_SPLIT_IDS] });
   const maxKm = maxPairwiseCentroidKm(answers.map((a) => a.centroid));
+  const maxPath = Math.max(...shapes.map((s) => s.path.length));
+  const biggest = shapes.find((s) => s.path.length === maxPath);
 
   console.log(`\nemitted ${answers.length} answers / ${shapes.length} shapes`);
   console.log(`shapes.json = ${(fs.statSync(path.join(OUT, "shapes.json")).size / 1024).toFixed(1)} KB`);
-  console.log(`max path length = ${Math.max(...shapes.map((s) => s.path.length))} chars`);
+  console.log(`max path length = ${maxPath} chars (${biggest?.id})`);
   console.log(`PROXIMITY_MAX_KM should be set to ${Math.round(maxKm)}`);
   if (errors.length) {
     console.error(`\n❌ validateEmitted found ${errors.length} problem(s):`);
