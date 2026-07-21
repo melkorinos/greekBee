@@ -28,6 +28,10 @@ Modern messaging apps (WhatsApp, Telegram, iMessage) and all mainstream browsers
 All INSERT-capable API routes write to Supabase with no per-device throttle. RLS policies allow unlimited anon inserts. At current scale this is acceptable — the most likely abuse vector is an accidental client bug, not coordinated attack. Decision: **accept risk and monitor** (Option C). Set a Supabase row-count alert on `game_scores` at 50 000 rows and `nominations` at 5 000 rows; revisit with Redis sliding-window rate limiting when DAU exceeds ~500. Alert must be configured in the Supabase dashboard by the operator.
 *Scope sharpened 2026-07-16: this accepted risk is now **INSERT spam only**. The adjacent-but-different exposure — anon UPDATE/DELETE table-wide via the old `ALL (true)` policies (erasable trophies/pangrams/state, the `transfer_codes` device_uuid oracle) — was never part of this decision and is closed (migrations `20260716120000`/`120100`). Dedup spam via double-submit is also DB-bounded now (`120200`).*
 
+### 🟡 Topothesies emission is gated on two external inputs (handoff-01)
+
+The foundation (config + pure `planDissolve`/`validateEmitted` logic + types + ADR 0018) shipped session 114, but the real `shapes.json`/`answers.json` **cannot** be emitted until: (1) the geodata.gov.gr Kallikratis shapefile is acquired — operator was **unsure** whether they'll provide the file or I add a fetch step; **re-ask at the emission session**; and (2) the operator signs off the DRAFT per-cluster island splits **line by line** (Cyclades/Dodecanese/NE-Aegean/Ionian). Until then the confirmed splits are the only locked answers, and `PROXIMITY_MAX_KM` stays `0` (TODO). The pure logic is fully tested against fixtures, so emission is "wire real data through gates that already pass" — not new logic. mapshaper is still an un-installed dep (use `npx`; get approval before saving it).
+
 ---
 
 ## ✅ Resolved Tensions (archive)

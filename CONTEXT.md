@@ -8,7 +8,16 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Platform** — The entire application: shell, navigation, persistence, and all games. Named **Leksarxeia** (the brand shown in the Shell header and picker). (Not: app, site)
 
-**Game** — A distinct word-game mode. Currently: Leksokipos, Leksiarxeio, Leksindeseis, Vres Tin Frasi, Stavrolekso, Leksodromia, Leksoplegma.
+**Game** — A distinct word-game mode. Currently: Leksokipos, Leksiarxeio, Leksindeseis, Vres Tin Frasi, Stavrolekso, Leksodromia, Leksoplegma. In progress (wip): Topothesies. The platform's scope widens from "Greek word games" to "Greek **games**" with Topothesies (ADR 0018).
+
+**Regional unit** *(Topothesies)* — Greek περιφερειακή ενότητα; the admin level a Topothesies answer identifies. Some island-cluster units are split into per-island entries (municipality-clean peels only in v1); see ADR 0018. (Not: prefecture, νομός — retired admin level.)
+
+**Silhouette** *(Topothesies)* — The precomputed SVG outline of a regional unit shown as the Stage-1 prompt. Rendered from a static `path` string, never a client-side projection (ADR 0018). (Not: shape, map.)
+
+**Capital stage** *(Topothesies)* — Stage 2: after the unit is guessed, the player guesses its capital/chief town for bonus points. Island entries keep the capital stage. (Not: bonus round.)
+
+<!-- Topothesies glossary is a stub; the 03 UI handoff finalises it + the north-star. -->
+
 
 **Session** — One continuous play of a Puzzle on a given device. Persists across refreshes until the Puzzle changes. Each game persists different fields (Leksokipos: score + found words; Leksiarxeio: guesses per length; Leksindeseis: solved groups + mistakes; Vres Tin Frasi: guesses + status; Stavrolekso: typed cells + solved slots per puzzle ID). Leksokipos daily Sessions are also synced to the server (see `game_state` table) for cross-device restore via TransferCode.
 

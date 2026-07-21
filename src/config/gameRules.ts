@@ -56,6 +56,22 @@ export const LEKSOPLEGMA = {
   SCORE_FLOOR:        0,    // hints can never take the total below 0
 } as const;
 
+export const TOPOTHESIES = {
+  // Stage 1: guess the regional unit from its silhouette.
+  SHAPE_GUESSES:   4,
+  // Stage 2 (bonus): guess that unit's capital.
+  CAPITAL_GUESSES: 3,
+  // Scoring: points scale with guesses remaining at the moment of the correct
+  // guess. Shape stage is the main event; capital stage is a smaller bonus.
+  POINTS_PER_SHAPE_GUESS_LEFT:   100,  // ×(SHAPE_GUESSES − wrongShapeGuesses)
+  POINTS_PER_CAPITAL_GUESS_LEFT: 40,   // ×(CAPITAL_GUESSES − wrongCapitalGuesses)
+  // Proximity hint scaling: distance/proximity% are scaled to the dataset's
+  // real max pairwise centroid distance, NOT the globe. Computed by the data
+  // pipeline (step 6) once answers.json exists.
+  // TODO(pipeline): set from the emitted dataset's max pairwise centroid km.
+  PROXIMITY_MAX_KM: 0,
+} as const;
+
 export const LEKSODROMIA = {
   WORDS_PER_LENGTH:   2,
   LENGTHS:            [4, 5, 6, 7, 8] as const,   // mirrors LEKSIARXEIO.LENGTHS

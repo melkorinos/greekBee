@@ -127,3 +127,11 @@
 | `useProfileVerification.test.ts` | Profile-still-exists check — disconnect on gone, never on network error (offline users stay) |
 | `validateWordsRoute.test.ts` | `POST /api/validate-words` |
 | `everyPuzzleHasPangram.test.ts` | Leksokipos drift guard — every board has ≥1 pangram vs the current dictionary; the two legacy dates (2026-06-20, 06-30) are the only allowlisted exceptions |
+| `topothesiesPlanDissolve.test.ts` (scripts) | Topothesies pipeline seam (a) — `planDissolve` split-mapping: override peels islands, un-overridden → regional-unit target (Deferred islands stay in parent), drops excluded (Troizinia-Methana), drop wins over override |
+| `topothesiesValidateEmitted.test.ts` (scripts) | Topothesies pipeline seam (b) — `validateEmitted` gate: answer↔shape id parity both ways, confirmed-split ids present, coords in `GREECE_BBOX`, no accents in `*Normalized`/aliases, duplicate-id detection |
+| `topothesies/geo.test.ts` | Topothesies hint math — `haversineKm` (known GR arcs), `bearingToArrow` (8 compass buckets), `proximityPct` (scaled 0–100, guards `maxKm<=0`) |
+| `topothesies/selectDailyPuzzle.test.ts` | `selectDailyPuzzle` — deterministic uniform daily pick via `dateToIndex`, id-sorted (order-independent), throws on empty set |
+| `topothesies/evaluateGuess.test.ts` | `resolveAnswerId` (accent-insensitive name/alias→id), `evaluateShapeGuess`/`evaluateCapitalGuess` (correct→no hint; wrong→distance/arrow/proximity; unknown→no hint) |
+| `topothesies/scoring.test.ts` | `computeScore` — shape points + capital bonus scaling with guesses-left (gameRules knobs), failed-stage zero, independent-stage educational path |
+| `topothesies/topothesiesReducer.test.ts` | State machine — shape→capital→finished transitions, 4/3 guess exhaustion, typo/unknown no-op, failed-shape still enters capital, finished inert, `RESTORE_STATE` replay |
+| `topothesies/shareText.test.ts` | `buildShareText` — spoiler-free (no name/capital/id), accent-free, one square per guess with arrows, includes score |

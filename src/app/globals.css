@@ -91,6 +91,8 @@
 [data-game="leksoplegma"]  { --game-accent: var(--color-teal-600);   --game-accent-foreground: #ffffff; }
 [data-game="stavrolekso"]  { --game-accent: var(--color-sky-600);    --game-accent-foreground: #ffffff; }
 [data-game="leksikastirio"]{ --game-accent: var(--color-indigo-600); --game-accent-foreground: #ffffff; }
+/* topothesies: placeholder earthy-green — real colour is a redesign-epic decision. */
+[data-game="topothesies"]  { --game-accent: var(--color-lime-700);   --game-accent-foreground: #ffffff; }
 
 @theme inline {
   --color-background: var(--background);

@@ -122,6 +122,16 @@ const GAME_RULES = {
       "Μπορείς να αναφέρεις λέξεις και μέσα από το παιχνίδι Leksokipos!",
     ],
   },
+  // WIP placeholder — gameplay copy is finalised with the 03 UI handoff.
+  topothesies: {
+    rulesTitle: "Πώς να παίξεις — Topothesies",
+    bulletIcon: "🗺️",
+    rules: [
+      "Δες τη **σιλουέτα** μιας περιφερειακής ενότητας και μάντεψέ την σε **4 προσπάθειες**.",
+      "Μετά από κάθε λάθος παίρνεις **απόσταση, κατεύθυνση** και ποσοστό **εγγύτητας**.",
+      "Αν τη βρεις, μάντεψε και την **πρωτεύουσά** της σε **3 προσπάθειες** για bonus.",
+    ],
+  },
 } as const satisfies Record<keyof typeof GAME_REGISTRY, { rulesTitle: string; bulletIcon: string; rules: readonly string[] }>;
 
 const GAMES = (Object.keys(GAME_REGISTRY) as Array<keyof typeof GAME_REGISTRY>).map(

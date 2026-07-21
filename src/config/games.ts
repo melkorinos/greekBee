@@ -68,6 +68,17 @@ export const GAME_REGISTRY = {
     href:        "/leksikastirio",
     wip:         false,
   },
+  // WIP — Worldle-style Greek geography game (guess the regional unit from its
+  // silhouette, then its capital). Display name TBD; `topothesies` is the
+  // permanent internal id (routes/types/dirs). Ships wip:true until 02/03 land.
+  topothesies: {
+    label:       "🗺️ Topothesies",
+    emoji:       "🗺️",
+    title:       "Topothesies",
+    description: "Μάντεψε την περιφερειακή ενότητα από το σχήμα της.",
+    href:        "/topothesies",
+    wip:         true,
+  },
 } as const;
 
 /** The ID of any registered Game. */
