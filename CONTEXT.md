@@ -12,11 +12,11 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Regional unit** *(Topothesies)* — Greek περιφερειακή ενότητα; the admin level a Topothesies answer identifies. Some island-cluster units are split into per-island entries (municipality-clean peels only in v1); see ADR 0018. (Not: prefecture, νομός — retired admin level.)
 
-**Silhouette** *(Topothesies)* — The precomputed SVG outline of a regional unit shown as the Stage-1 prompt. Rendered from a static `path` string, never a client-side projection (ADR 0018). (Not: shape, map.)
+**Silhouette** *(Topothesies)* — The precomputed SVG outline of an answer shown as the Stage-1 prompt. Rendered from a static `path` string + self-framing `viewBox`, never a client-side projection (ADR 0018). (Not: shape, map.)
 
-**Capital stage** *(Topothesies)* — Stage 2: after the unit is guessed, the player guesses its capital/chief town for bonus points. Island entries keep the capital stage. (Not: bonus round.)
+**Island entry / split** *(Topothesies)* — A Topothesies answer is a place that is *either* a regional unit *or* a single recognizable island peeled off one (municipality-clean peels only in v1; sub-island islets stay inside their parent — the signoff in `topothesies-island-signoff.md`). Both kinds carry a silhouette and a capital stage. (Not: prefecture.)
 
-<!-- Topothesies glossary is a stub; the 03 UI handoff finalises it + the north-star. -->
+**Capital stage** *(Topothesies)* — Stage 2: after the unit is guessed (or its guesses exhausted), the player guesses its capital/chief town for bonus points. Every entry keeps the capital stage. (Not: bonus round.)
 
 
 **Session** — One continuous play of a Puzzle on a given device. Persists across refreshes until the Puzzle changes. Each game persists different fields (Leksokipos: score + found words; Leksiarxeio: guesses per length; Leksindeseis: solved groups + mistakes; Vres Tin Frasi: guesses + status; Stavrolekso: typed cells + solved slots per puzzle ID). Leksokipos daily Sessions are also synced to the server (see `game_state` table) for cross-device restore via TransferCode.

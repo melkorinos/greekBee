@@ -67,9 +67,8 @@ export const TOPOTHESIES = {
   POINTS_PER_CAPITAL_GUESS_LEFT: 40,   // ×(CAPITAL_GUESSES − wrongCapitalGuesses)
   // Proximity hint scaling: distance/proximity% are scaled to the dataset's
   // real max pairwise centroid distance, NOT the globe. Computed by the data
-  // pipeline (step 6) once answers.json exists.
-  // TODO(pipeline): set from the emitted dataset's max pairwise centroid km.
-  PROXIMITY_MAX_KM: 0,
+  // pipeline (scripts/generateTopothesies.ts) from the emitted answers.json.
+  PROXIMITY_MAX_KM: 938,
 } as const;
 
 export const LEKSODROMIA = {

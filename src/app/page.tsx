@@ -122,7 +122,8 @@ const GAME_RULES = {
       "Μπορείς να αναφέρεις λέξεις και μέσα από το παιχνίδι Leksokipos!",
     ],
   },
-  // WIP placeholder — gameplay copy is finalised with the 03 UI handoff.
+  // Stays under "wip" in the picker until the operator flips the registry flag
+  // after a play-through; the gameplay copy below is final.
   topothesies: {
     rulesTitle: "Πώς να παίξεις — Topothesies",
     bulletIcon: "🗺️",

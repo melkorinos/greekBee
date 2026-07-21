@@ -14,6 +14,74 @@ Produces the real `src/data/topothesies/` data everything else renders. It's a *
 - **Final island list signed off** — confirmed splits are locked; operator supplies the vetted DRAFT-cluster list (Cyclades / Dodecanese / NE-Aegean / Ionian) so the agent never pauses to ask. Un-peelable / too-small islands go to the Deferred list (handoff 01), not `answers.json`.
 - **Raw shapefile available** — operator drops the geodata.gov.gr Kallikratis municipality shapefile into a local source dir, **or** the agent fetches it during the local run (geodata.gov.gr was flaky / `ECONNREFUSED` in testing — if the fetch fails, operator provides the file). The raw source is **not** committed to the build path; only the emitted JSON is.
 
+---
+
+## Section 0 — operator gates RESOLVED (2026-07-21). **Fresh agent: start here.**
+
+Both preconditions are cleared. This block records everything the 2026-07-21 operator session
+settled, so you skip all the re-derivation.
+
+**SOURCE — LOCKED = geoBoundaries GRC-ADM3.**
+- File in hand: `scripts/lib/topothesies/source/geoBoundaries-GRC-ADM3.geojson` (**gitignored** — raw
+  source never enters the build path, ADR 0018). 326 municipalities, EPSG:4326 lon/lat (**no
+  reprojection**), ~1.7 MB, CC0/public-domain.
+- **geodata.gov.gr is dead** — `ECONNREFUSED`/timeout for both operator and agent. Do NOT retry it.
+- **GISCO/Eurostat was evaluated and REJECTED** (verified against live data): Greek NUTS3 = 52 units
+  at the wrong granularity — it lumps ALL Cyclades into one feature (`"Andros, Thira, Kea, Milos,
+  Mykonos, Naxos, Paros, Syros, Tinos"`) and MERGES units we split (`"Thasos, Kavala"`, `"Magnisia,
+  Sporades"`). NUTS3 ≠ regional unit for Greece. Don't reopen the source question.
+- geoBoundaries ADM levels: ADM1=8, ADM2=**14** (≈ the 13 regions/περιφέρειες), ADM3=**326**
+  (municipalities). **There is NO regional-unit (~74) layer** — and that IS our answer level. It is
+  neither ADM2 (too coarse) nor ADM3 (too fine).
+
+**⚠ THE ONE NEW SUB-PROBLEM Section 0 must solve: a municipality→regional-unit map.**
+- `planDissolve` needs `MunicipalityRecord{name, regionalUnit}`, but geoBoundaries ADM3 properties are
+  only `shapeName`/`shapeID` — **no parent RU attribute**. So you must supply muni→RU for the ~280
+  mainland/large-island municipalities. (Island answers map 1:1 municipality→id — no dissolve.)
+- **Open decision (settle with operator before building the map):** source it from **(a)** an
+  authoritative reachable dataset — Wikidata `P131` (muni → περιφερειακή ενότητα) via SPARQL, or
+  Wikipedia's per-regional-unit municipality lists — committed as a checked-in table; or **(b)**
+  hand-curate. **Recommend (a)** — hand-typing ~280 rows from memory is error-prone. Whatever the
+  source, commit it as data and let `validateEmitted` + the operator's final answer-list review guard
+  correctness. This is the biggest remaining unknown; the handoff originally assumed the (dead)
+  geodata.gov.gr file carried RU natively, so this map is genuinely new work.
+
+**NAME RECONCILIATION (geoBoundaries shapeName → our id).** Mostly clean Latin, direct matches
+verified present: Aegina, Poros, Spetses, Kythira, Kimolos, Milos, Serifos, Sifnos, Amorgos, Anafi,
+Kea, Skiathos, Skopelos, Alonnisos, Skyros, Antiparos, Folegandros, Sikinos, Psara, Oinousses, Leros,
+Astypalaia, Patmos, Kasos, Nisyros, Symi, Kastellorizo, Meganisi, Troizinia-Methana (the drop). **4
+irregular** need an explicit map: `Ydra`→hydra, `Samothrakis`→samothrace, `Thassou`→thasos,
+`Paxos`→paxi. **Ios**: confirm its exact ADM3 shapeName at ingest — it did NOT exact-match "Ios"
+(Δ. Ιητών may be labelled differently).
+
+**ISLAND SPLITS — FINAL, signed off.** Full record + rationale: `.claude/aiHelper/topothesies-island-signoff.md`.
+Beyond the already-locked `confirmedSplits.ts`:
+- **PEEL** (own answer entry, keeps capital stage): Antiparos, Ios, Folegandros, Sikinos, Anafi
+  (Cyclades) · Leros, Astypalaia, Patmos, Kasos, Nisyros, Symi, Kastellorizo (Dodecanese) · Psara,
+  Oinousses (NE Aegean) · Paxi (Ionian).
+- **DEFER** (islets inside parent — append to `DEFERRED_ISLANDS`, note for v2): Lipsi, Agathonisi
+  (Kalymnos) · Tilos, Chalki (Rhodes) · Fournoi (Ikaria) · Agios Efstratios (Lemnos) · Diapontia
+  (Corfu) · Meganisi (Lefkada) · **Delos** (part of Δ. Μυκόνου + uninhabited → no capital) ·
+  **Kalamos/Kastos** (part of Δ. Λευκάδας). **No polygon splitting in v1** — operator confirmed.
+
+**TOOLING.** mapshaper works via `npx --yes mapshaper` (v0.7.46) — **no dep install, no approval
+needed**. Use it for `-dissolve` (keyed by the `planDissolve` assignments) and `-simplify`.
+
+**AGREED TDD SEAMS (pre-confirmed, per the /tdd skill):** (a) `planDissolve` against the real
+geoBoundaries municipality-name set → exactly the target answer set (all peels present, drops
+excluded, mainland grouped via the muni→RU map); (b) a new pure `scripts/lib/topothesies/project.ts`
+— `projectPoint` (equirectangular, cos(refLat) x-scale, SVG y-down), `ringToPath`, `computeViewBox`
+(per-shape self-framing so a tiny island fills its viewBox), area-weighted `centroidLngLat`,
+`maxPairwiseCentroidKm` (reuse the game's `haversineKm`, don't re-roll); (c) `validateEmitted` green
+on the emitted files; (d) `performance.test.ts` byte budget on today's inlined path. The hint math
+(`haversineKm`/`bearingToArrow`/`proximityPct`) already lives in `src/games/topothesies/lib/geo.ts`.
+
+**RESIDUE from the 2026-07-21 session (clean — nothing half-built):** `.gitignore` now ignores
+`scripts/lib/topothesies/source/`; `topothesies-island-signoff.md` is the decision record. No pipeline
+code was written — the build starts fresh at the seams above.
+
+---
+
 **Steps:**
 1. Ingest the shapefile → GeoJSON.
 2. **Dissolve** to the target entries via **01's `planDissolve`** override map (drops Troizinia-Methana; Deferred islands stay inside their parent). No polygon splitting.

@@ -20,7 +20,7 @@ import { postScore, sanitizeDisplayName } from "@/lib/postScore";
 
 interface UseScoreSubmissionOptions {
   /** Which game's leaderboard to post to. */
-  gameId:      "leksokipos" | "leksindeseis" | "vrestifrasi" | "leksodromia" | "leksoplegma";
+  gameId:      "leksokipos" | "leksindeseis" | "vrestifrasi" | "leksodromia" | "leksoplegma" | "topothesies";
   /** The puzzle date (YYYY-MM-DD) — used as the leaderboard partition key. */
   puzzleDate:  string;
   /** Stable anonymous device identifier. Empty string = skip posting. */
