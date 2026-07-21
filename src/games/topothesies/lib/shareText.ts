@@ -11,11 +11,16 @@ import { computeScore } from "./scoring";
 const MAP = "🗺️";
 const CAPITAL = "🏛️";
 
-/** One glyph per guess: 🟩 for the correct one, ⬛+arrow for each miss. */
-function row(guesses: { correct: boolean; hint: { arrow: string } | null }[]): string {
+/** Shape row: 🟩 for the correct one, ⬛+direction arrow for each miss. */
+function shapeRow(guesses: { correct: boolean; hint: { arrow: string } | null }[]): string {
   return guesses
     .map((g) => (g.correct ? "🟩" : `⬛${g.hint ? g.hint.arrow : ""}`))
     .join(" ");
+}
+
+/** Capital row: plain right/wrong squares — the capital stage has no hint. */
+function capitalRow(guesses: { correct: boolean }[]): string {
+  return guesses.map((g) => (g.correct ? "🟩" : "⬛")).join(" ");
 }
 
 /** Shareable, spoiler-free summary of the round. */
@@ -23,10 +28,10 @@ export function buildShareText(state: TopothesiesState): string {
   const lines: string[] = [MAP];
 
   if (state.shapeGuesses.length > 0) {
-    lines.push(row(state.shapeGuesses));
+    lines.push(shapeRow(state.shapeGuesses));
   }
   if (state.capitalGuesses.length > 0) {
-    lines.push(`${CAPITAL} ${row(state.capitalGuesses)}`);
+    lines.push(`${CAPITAL} ${capitalRow(state.capitalGuesses)}`);
   }
 
   lines.push(`Σκορ: ${computeScore(state)}`);

@@ -7,7 +7,7 @@
 // (which reads centroids/capitalCoords — never geometry). Score posts CONTINUOUSLY
 // on every live increase, like the other round games; restored rounds never post.
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
@@ -24,6 +24,7 @@ import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { GuessAutocomplete, type GuessCandidate } from "./GuessAutocomplete";
 import { TopothesiesSilhouette } from "./TopothesiesSilhouette";
 import { TopothesiesResult } from "./TopothesiesResult";
+import { TopothesiesGiveUpModal } from "./TopothesiesGiveUpModal";
 
 interface TopothesiesBoardProps {
   answers:            TopothesiesAnswer[];
@@ -62,6 +63,7 @@ export function TopothesiesBoard({
 
   const { state, dispatch, hasLiveActed } = useTopothesiesRound(target, answers, maxKm, today);
   const score = computeScore(state);
+  const [giveUpOpen, setGiveUpOpen] = useState(false);
 
   const { submit: postScore } = useScoreSubmission({
     gameId:     "topothesies",
@@ -114,10 +116,14 @@ export function TopothesiesBoard({
           {state.shapeGuesses.map((g, i) => (
             <li
               key={i}
-              className="flex items-center justify-between gap-2 px-3 py-2 rounded-control border border-border bg-surface"
+              className={`flex items-center justify-between gap-2 px-3 py-2 rounded-control border ${
+                g.correct
+                  ? "border-success-border bg-success-surface"
+                  : "border-border bg-surface"
+              }`}
             >
-              <span className="font-semibold text-foreground">
-                {g.correct ? "🟩 " : ""}{g.guessId ? nameById.get(g.guessId) : "—"}
+              <span className={`font-semibold ${g.correct ? "text-success" : "text-foreground"}`}>
+                {g.guessId ? nameById.get(g.guessId) : "—"}
               </span>
               {g.hint && <HintChips hint={g.hint} />}
             </li>
@@ -141,8 +147,9 @@ export function TopothesiesBoard({
         <div className="w-full flex flex-col gap-2 items-center">
           <p className="text-center text-sm">
             <span className="text-muted">Η περιοχή: </span>
-            <span className="font-bold text-foreground">{target.name}</span>
-            {state.shapeSolved ? " ✅" : " ❌"}
+            <span className={`font-bold ${state.shapeSolved ? "text-success" : "text-danger"}`}>
+              {target.name}
+            </span>
           </p>
         </div>
       )}
@@ -152,12 +159,15 @@ export function TopothesiesBoard({
           {state.capitalGuesses.map((g, i) => (
             <li
               key={i}
-              className="flex items-center justify-between gap-2 px-3 py-2 rounded-control border border-border bg-surface"
+              className={`flex items-center justify-center gap-2 px-3 py-2 rounded-control border ${
+                g.correct
+                  ? "border-success-border bg-success-surface"
+                  : "border-border bg-surface"
+              }`}
             >
-              <span className="font-semibold text-foreground">
-                {g.correct ? "🏛️ " : ""}{capitalLabelFor(g.guessNormalized)}
+              <span className={`font-semibold ${g.correct ? "text-success" : "text-foreground"}`}>
+                {capitalLabelFor(g.guessNormalized)}
               </span>
-              {g.hint && <HintChips hint={g.hint} />}
             </li>
           ))}
         </ul>
@@ -174,6 +184,16 @@ export function TopothesiesBoard({
         </div>
       )}
 
+      {state.stage !== "finished" && (
+        <button
+          data-testid="btn-give-up"
+          onClick={() => setGiveUpOpen(true)}
+          className="text-sm text-muted underline hover:text-foreground transition-colors"
+        >
+          Παραίτηση
+        </button>
+      )}
+
       {state.stage === "finished" && (
         <TopothesiesResult
           target={target}
@@ -182,6 +202,15 @@ export function TopothesiesBoard({
           onOpenLeaderboard={onOpenLeaderboard}
         />
       )}
+
+      <TopothesiesGiveUpModal
+        isOpen={giveUpOpen}
+        onClose={() => setGiveUpOpen(false)}
+        onConfirm={() => {
+          dispatch({ type: "GIVE_UP" });
+          setGiveUpOpen(false);
+        }}
+      />
 
       <GameLeaderboardModal
         gameId="topothesies"

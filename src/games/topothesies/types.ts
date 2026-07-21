@@ -81,14 +81,16 @@ export interface ShapeGuessRecord {
   hint: GeoHint | null;
 }
 
-/** A single Stage-2 (bonus → capital) guess and its hint. */
+/**
+ * A single Stage-2 (bonus → capital) guess. Unlike the shape stage, the capital
+ * stage carries NO distance hint — it is a plain right/wrong bonus round — so no
+ * `hint` field here (product decision, 2026-07-21).
+ */
 export interface CapitalGuessRecord {
   /** Accent-normalised guessed capital. */
   guessNormalized: string;
   /** True when the guess matched the target's capital. */
   correct: boolean;
-  /** Distance/arrow/proximity hint (vs capital coords), or null if correct. */
-  hint: GeoHint | null;
 }
 
 /** Which stage the round is in. "finished" = both stages resolved. */
@@ -120,4 +122,6 @@ export interface TopothesiesState {
   capitalSolved: boolean;
   /** Stage 2 ended by exhausting all guesses without solving. */
   capitalFailed: boolean;
+  /** The player gave up: both stages are forced failed and the round finishes. */
+  gaveUp: boolean;
 }

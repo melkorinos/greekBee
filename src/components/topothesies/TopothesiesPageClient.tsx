@@ -27,7 +27,7 @@ export function TopothesiesPageClient({ answers, target, shape, today, maxKm }: 
 
   return (
     <>
-      <GameHeader title="🗺️ Topothesies">
+      <GameHeader title="Topothesies">
         <GameHeaderTrophyButton onClick={() => setLbOpen(true)} />
         <HeaderIconButton
           onClick={() => setHtpOpen(true)}

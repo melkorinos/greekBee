@@ -95,22 +95,22 @@ describe("evaluateShapeGuess", () => {
 });
 
 describe("evaluateCapitalGuess", () => {
-  it("marks the matching capital correct (accent-insensitive) with no hint", () => {
-    const r = evaluateCapitalGuess("Χώρα", TARGET, ANSWERS, MAX_KM);
+  it("marks the matching capital correct (accent-insensitive), no distance hint in this stage", () => {
+    const r = evaluateCapitalGuess("Χώρα", TARGET, ANSWERS);
     expect(r.correct).toBe(true);
-    expect(r.hint).toBeNull();
+    expect(r.known).toBe(true);
+    expect(r).not.toHaveProperty("hint");
   });
 
-  it("marks a wrong known capital incorrect with a hint toward the target capital", () => {
-    const r = evaluateCapitalGuess("Πλάκα", TARGET, ANSWERS, MAX_KM);
+  it("marks a wrong-but-known capital incorrect but known (no distance hint)", () => {
+    const r = evaluateCapitalGuess("Πλάκα", TARGET, ANSWERS);
     expect(r.correct).toBe(false);
-    expect(r.hint).not.toBeNull();
-    expect(r.hint!.distanceKm).toBeGreaterThan(0);
+    expect(r.known).toBe(true);
   });
 
-  it("marks an unknown capital incorrect with no locatable hint", () => {
-    const r = evaluateCapitalGuess("Ουτοπία", TARGET, ANSWERS, MAX_KM);
+  it("marks an unknown capital incorrect and not known (a typo that no-ops)", () => {
+    const r = evaluateCapitalGuess("Ουτοπία", TARGET, ANSWERS);
     expect(r.correct).toBe(false);
-    expect(r.hint).toBeNull();
+    expect(r.known).toBe(false);
   });
 });

@@ -72,8 +72,8 @@ describe("TopothesiesBoard", () => {
     await guess("Βητα");      // wrong shape
     await guess("Αλφα");      // correct shape → capital stage
 
-    // Unit revealed, capital input now available.
-    expect(screen.getByText("Αλφα")).toBeInTheDocument();
+    // Unit revealed (in the reveal line and the solved guess row), capital input now available.
+    expect(screen.getAllByText("Αλφα").length).toBeGreaterThan(0);
     await guess("Πρωτη");     // correct capital → finished
 
     const result = screen.getByTestId("topothesies-result");
@@ -87,5 +87,24 @@ describe("TopothesiesBoard", () => {
     renderBoard();
     await guess("ζζζζ"); // matches no candidate
     expect(screen.queryByTestId("shape-guesses")).not.toBeInTheDocument();
+  });
+
+  it("shows no distance hint on a wrong capital guess (right/wrong only)", async () => {
+    renderBoard();
+    await guess("Αλφα");   // correct shape → capital stage
+    await guess("Δευτερη"); // wrong-but-known capital
+    const rows = screen.getByTestId("capital-guesses");
+    expect(rows).toHaveTextContent("Δευτερη");
+    expect(rows).not.toHaveTextContent("χλμ"); // no distance chip in the capital stage
+  });
+
+  it("give-up reveals the answer and ends the round", async () => {
+    renderBoard();
+    await userEvent.click(screen.getByTestId("btn-give-up"));
+    await userEvent.click(screen.getByTestId("btn-give-up-confirm"));
+    const result = screen.getByTestId("topothesies-result");
+    expect(result).toBeInTheDocument();
+    expect(result).toHaveTextContent("Αλφα");   // the unit is revealed
+    expect(result).toHaveTextContent("Πρωτη");  // and its capital
   });
 });

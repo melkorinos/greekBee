@@ -27,6 +27,7 @@ interface RoundSnapshot {
   puzzleId:       string;
   shapeGuesses:   ShapeGuessRecord[];
   capitalGuesses: CapitalGuessRecord[];
+  gaveUp:         boolean;
 }
 
 interface TopothesiesRound {
@@ -62,6 +63,7 @@ export function useTopothesiesRound(
       type:           "RESTORE_STATE",
       shapeGuesses:   saved.shapeGuesses ?? [],
       capitalGuesses: saved.capitalGuesses ?? [],
+      gaveUp:         saved.gaveUp ?? false,
     });
   }, []);
 
@@ -69,7 +71,8 @@ export function useTopothesiesRound(
     puzzleId:       state.puzzleId,
     shapeGuesses:   state.shapeGuesses,
     capitalGuesses: state.capitalGuesses,
-  }), [state.puzzleId, state.shapeGuesses, state.capitalGuesses]);
+    gaveUp:         state.gaveUp,
+  }), [state.puzzleId, state.shapeGuesses, state.capitalGuesses, state.gaveUp]);
 
   useRoundPersistence<RoundSnapshot>(
     "topothesies",
@@ -77,7 +80,7 @@ export function useTopothesiesRound(
     snapshot,
     onRestore,
     // Never clobber a saved round with the pristine pre-hydration state.
-    (snap) => snap.shapeGuesses.length > 0 || snap.capitalGuesses.length > 0,
+    (snap) => snap.shapeGuesses.length > 0 || snap.capitalGuesses.length > 0 || Boolean(snap.gaveUp),
   );
 
   return { state, dispatch, hasLiveActed };

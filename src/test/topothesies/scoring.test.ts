@@ -22,8 +22,8 @@ const {
 
 const wrongShape: ShapeGuessRecord = { guessId: "x", correct: false, hint: null };
 const rightShape: ShapeGuessRecord = { guessId: "t", correct: true, hint: null };
-const wrongCap: CapitalGuessRecord = { guessNormalized: "x", correct: false, hint: null };
-const rightCap: CapitalGuessRecord = { guessNormalized: "t", correct: true, hint: null };
+const wrongCap: CapitalGuessRecord = { guessNormalized: "x", correct: false };
+const rightCap: CapitalGuessRecord = { guessNormalized: "t", correct: true };
 
 function state(over: Partial<TopothesiesState>): TopothesiesState {
   return {
@@ -39,6 +39,7 @@ function state(over: Partial<TopothesiesState>): TopothesiesState {
     shapeFailed: false,
     capitalSolved: false,
     capitalFailed: false,
+    gaveUp: false,
     ...over,
   };
 }

@@ -128,14 +128,13 @@ describe("capital stage", () => {
     expect(s.capitalSolved).toBe(true);
     expect(s.stage).toBe("finished");
     expect(s.capitalGuesses[0].correct).toBe(true);
-    expect(s.capitalGuesses[0].hint).toBeNull();
   });
 
-  it("records a wrong-but-known capital with a hint and stays in the capital stage", () => {
+  it("records a wrong-but-known capital (no distance hint) and stays in the capital stage", () => {
     const s = topothesiesReducer(solvedShape(), { type: "GUESS_CAPITAL", text: "Πλάκα" });
     expect(s.capitalGuesses).toHaveLength(1);
     expect(s.capitalGuesses[0].correct).toBe(false);
-    expect(s.capitalGuesses[0].hint).not.toBeNull();
+    expect(s.capitalGuesses[0]).not.toHaveProperty("hint");
     expect(s.stage).toBe("capital");
   });
 
@@ -178,6 +177,35 @@ describe("finished state is inert", () => {
   });
 });
 
+describe("GIVE_UP", () => {
+  it("from the shape stage: fails both stages and finishes the round", () => {
+    const s = topothesiesReducer(init(), { type: "GIVE_UP" });
+    expect(s.gaveUp).toBe(true);
+    expect(s.stage).toBe("finished");
+    expect(s.shapeSolved).toBe(false);
+    expect(s.shapeFailed).toBe(true);
+    expect(s.capitalSolved).toBe(false);
+    expect(s.capitalFailed).toBe(true);
+  });
+
+  it("keeps a solved shape stage but fails the capital stage", () => {
+    let s = topothesiesReducer(init(), { type: "GUESS_SHAPE", text: "Νάξος" });
+    s = topothesiesReducer(s, { type: "GIVE_UP" });
+    expect(s.stage).toBe("finished");
+    expect(s.shapeSolved).toBe(true);
+    expect(s.shapeFailed).toBe(false);
+    expect(s.capitalFailed).toBe(true);
+  });
+
+  it("is inert once the round is already finished", () => {
+    let s = topothesiesReducer(init(), { type: "GUESS_SHAPE", text: "Νάξος" });
+    s = topothesiesReducer(s, { type: "GUESS_CAPITAL", text: "Χώρα" });
+    expect(s.stage).toBe("finished");
+    const after = topothesiesReducer(s, { type: "GIVE_UP" });
+    expect(after).toBe(s);
+  });
+});
+
 describe("RESTORE_STATE", () => {
   it("rebuilds stage and flags from a saved guess history", () => {
     // Replay two wrong shapes + a solve, then a wrong capital, into a fresh state.
@@ -195,5 +223,18 @@ describe("RESTORE_STATE", () => {
     expect(restored.stage).toBe("capital");
     expect(restored.shapeGuesses).toHaveLength(2);
     expect(restored.capitalGuesses).toHaveLength(1);
+  });
+
+  it("restores a gave-up round as finished", () => {
+    const restored = topothesiesReducer(init(), {
+      type: "RESTORE_STATE",
+      shapeGuesses: [],
+      capitalGuesses: [],
+      gaveUp: true,
+    });
+    expect(restored.gaveUp).toBe(true);
+    expect(restored.stage).toBe("finished");
+    expect(restored.shapeFailed).toBe(true);
+    expect(restored.capitalFailed).toBe(true);
   });
 });

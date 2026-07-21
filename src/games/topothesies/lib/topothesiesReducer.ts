@@ -25,24 +25,36 @@ import { evaluateCapitalGuess, evaluateShapeGuess, resolveAnswerId } from "./eva
 export type TopothesiesAction =
   | { type: "GUESS_SHAPE"; text: string }
   | { type: "GUESS_CAPITAL"; text: string }
-  | { type: "RESTORE_STATE"; shapeGuesses: ShapeGuessRecord[]; capitalGuesses: CapitalGuessRecord[] };
+  | { type: "GIVE_UP" }
+  | {
+      type: "RESTORE_STATE";
+      shapeGuesses: ShapeGuessRecord[];
+      capitalGuesses: CapitalGuessRecord[];
+      gaveUp?: boolean;
+    };
 
 // ─── Flag derivation ──────────────────────────────────────────────────────────
 
-/** Recompute every stage flag + the current stage purely from the histories. */
+/**
+ * Recompute every stage flag + the current stage purely from the histories and
+ * the `gaveUp` marker. Giving up forces any un-solved stage to failed, which
+ * makes both stages "done" and drives `stage` to "finished".
+ */
 function derive(
   shapeGuesses: ShapeGuessRecord[],
   capitalGuesses: CapitalGuessRecord[],
+  gaveUp: boolean,
 ): Pick<
   TopothesiesState,
   "stage" | "shapeSolved" | "shapeFailed" | "capitalSolved" | "capitalFailed"
 > {
   const shapeSolved = shapeGuesses.some((g) => g.correct);
-  const shapeFailed = !shapeSolved && shapeGuesses.length >= TOPOTHESIES.SHAPE_GUESSES;
+  const shapeFailed = !shapeSolved && (gaveUp || shapeGuesses.length >= TOPOTHESIES.SHAPE_GUESSES);
   const shapeDone = shapeSolved || shapeFailed;
 
   const capitalSolved = capitalGuesses.some((g) => g.correct);
-  const capitalFailed = !capitalSolved && capitalGuesses.length >= TOPOTHESIES.CAPITAL_GUESSES;
+  const capitalFailed =
+    !capitalSolved && (gaveUp || capitalGuesses.length >= TOPOTHESIES.CAPITAL_GUESSES);
   const capitalDone = capitalSolved || capitalFailed;
 
   const stage = !shapeDone ? "shape" : !capitalDone ? "capital" : "finished";
@@ -63,28 +75,35 @@ export function topothesiesReducer(
       if (guessId === null) return state; // typo / not a unit — no guess consumed
       const { correct, hint } = evaluateShapeGuess(guessId, state.target, state.answers, state.maxKm);
       const shapeGuesses = [...state.shapeGuesses, { guessId, correct, hint }];
-      return { ...state, shapeGuesses, ...derive(shapeGuesses, state.capitalGuesses) };
+      return { ...state, shapeGuesses, ...derive(shapeGuesses, state.capitalGuesses, state.gaveUp) };
     }
 
     case "GUESS_CAPITAL": {
       if (state.stage !== "capital") return state;
-      const { correct, hint } = evaluateCapitalGuess(action.text, state.target, state.answers, state.maxKm);
-      // Consume only a valid guess: the right capital, or a wrong-but-known one
-      // (which carries a hint). An unknown capital (no match, no hint) no-ops.
-      if (!correct && hint === null) return state;
+      const { correct, known } = evaluateCapitalGuess(action.text, state.target, state.answers);
+      // Consume only a valid guess: the right capital, or a wrong-but-known one.
+      // An unknown capital (a typo, no match) no-ops. No distance hint in this stage.
+      if (!correct && !known) return state;
       const capitalGuesses = [
         ...state.capitalGuesses,
-        { guessNormalized: normalizeLetters(action.text), correct, hint },
+        { guessNormalized: normalizeLetters(action.text), correct },
       ];
-      return { ...state, capitalGuesses, ...derive(state.shapeGuesses, capitalGuesses) };
+      return { ...state, capitalGuesses, ...derive(state.shapeGuesses, capitalGuesses, state.gaveUp) };
+    }
+
+    case "GIVE_UP": {
+      if (state.stage === "finished") return state;
+      return { ...state, gaveUp: true, ...derive(state.shapeGuesses, state.capitalGuesses, true) };
     }
 
     case "RESTORE_STATE": {
+      const gaveUp = action.gaveUp ?? false;
       return {
         ...state,
         shapeGuesses: action.shapeGuesses,
         capitalGuesses: action.capitalGuesses,
-        ...derive(action.shapeGuesses, action.capitalGuesses),
+        gaveUp,
+        ...derive(action.shapeGuesses, action.capitalGuesses, gaveUp),
       };
     }
 
@@ -117,5 +136,6 @@ export function makeInitialTopothesiesState(
     shapeFailed: false,
     capitalSolved: false,
     capitalFailed: false,
+    gaveUp: false,
   };
 }

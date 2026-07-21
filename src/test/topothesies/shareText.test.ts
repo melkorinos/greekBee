@@ -92,6 +92,15 @@ describe("buildShareText", () => {
     expect(shapeLine).not.toContain("🟩");
   });
 
+  it("emits no direction arrows on the capital line (capital stage has no distance hint)", () => {
+    let s = topothesiesReducer(init(), { type: "GUESS_SHAPE", text: "Νάξος" }); // solve shape
+    s = topothesiesReducer(s, { type: "GUESS_CAPITAL", text: "Πλάκα" }); // wrong-but-known capital
+    s = topothesiesReducer(s, { type: "GUESS_CAPITAL", text: "Χώρα" }); // correct capital
+    const capitalLine = buildShareText(s).split("\n").find((l) => l.startsWith("🏛️"))!;
+    expect(capitalLine).toMatch(/⬛/u); // has the wrong-guess square
+    expect(capitalLine).not.toMatch(/[↑↗→↘↓↙←↖]/u); // but no arrow
+  });
+
   it("includes the numeric score", () => {
     let s = topothesiesReducer(init(), { type: "GUESS_SHAPE", text: "Νάξος" });
     s = topothesiesReducer(s, { type: "GUESS_CAPITAL", text: "Χώρα" });

@@ -58,19 +58,18 @@ export function evaluateShapeGuess(
 
 /**
  * Stage 2 (bonus): evaluate a typed capital against the target's capital.
- * Candidate capitals are the answer set's capitals, so a wrong-but-known
- * capital is located by its owning entry's capitalCoord for the hint; an
- * unknown capital is incorrect with no locatable hint.
+ * This stage carries NO distance hint — it is a plain right/wrong bonus round —
+ * so the result reports only whether the guess is correct and whether it is a
+ * `known` capital (one of the candidate answers). The reducer consumes a guess
+ * only when it is known; an unknown capital (a typo) no-ops.
  */
 export function evaluateCapitalGuess(
   guessText: string,
   target: TopothesiesAnswer,
   answers: readonly TopothesiesAnswer[],
-  maxKm: number,
-): { correct: boolean; hint: GeoHint | null } {
+): { correct: boolean; known: boolean } {
   const needle = normalizeLetters(guessText);
-  if (needle === target.capitalNormalized) return { correct: true, hint: null };
-  const known = answers.find((a) => a.capitalNormalized === needle);
-  if (!known) return { correct: false, hint: null };
-  return { correct: false, hint: hintBetween(known.capitalCoord, target.capitalCoord, maxKm) };
+  if (needle === target.capitalNormalized) return { correct: true, known: true };
+  const known = answers.some((a) => a.capitalNormalized === needle);
+  return { correct: false, known };
 }

@@ -30,7 +30,7 @@ export function TopothesiesResult({ target, score, shareText, onOpenLeaderboard 
   return (
     <div data-testid="topothesies-result" className="w-full flex flex-col items-center gap-3 py-2">
       <h2 className="text-lg font-bold text-foreground text-center">
-        Τέλος! 🗺️ {score} πόντοι
+        Τέλος! {score} πόντοι
       </h2>
 
       <p className="text-center text-foreground">
