@@ -146,8 +146,14 @@ describe("performance: getPrebuiltPuzzleByLetters (pre-built puzzle scan)", () =
 describe("performance: Topothesies client payload stays small", () => {
   const shapes = topothesiesShapes as TopothesiesShape[];
 
-  /** One day ships one path. 6 KB is ~2× today's largest mainland silhouette. */
-  const MAX_SHAPE_PATH_BYTES = 6_000;
+  /**
+   * One day ships one path (ADR 0018), so this is a per-shape / worst-case
+   * ceiling, never a whole-file budget. Raised from 6 KB when the outline
+   * fidelity pass bumped Visvalingam retention to 70% + precision to 4 dp for
+   * recognizable islands; the largest mainland silhouette (Euboea) is ~8 KB and
+   * gzips to a couple KB, so 12 KB leaves generous headroom for a single inline.
+   */
+  const MAX_SHAPE_PATH_BYTES = 12_000;
   /** answers.json (all metadata, no geometry) ships whole to the client. */
   const MAX_ANSWERS_BYTES = 60_000;
 

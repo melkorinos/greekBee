@@ -29,7 +29,7 @@ const round = (n: number, precision: number): number => {
  * `precision` decimals. Coordinates are space-separated; consecutive commands
  * abut (SVG allows `M0 0L2 0`), keeping the string compact.
  */
-export function ringToPath(ring: LngLat[], refLat: number, precision = 3): string {
+export function ringToPath(ring: LngLat[], refLat: number, precision = 4): string {
   const cmds = ring.map(([lng, lat], i) => {
     const [x, y] = projectPoint([lng, lat], refLat);
     return `${i === 0 ? "M" : "L"}${round(x, precision)} ${round(y, precision)}`;

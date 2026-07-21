@@ -24,20 +24,26 @@ import {
   computeViewBox,
   maxPairwiseCentroidKm,
   projectPoint,
+  ringArea,
   ringToPath,
 } from "./lib/topothesies/project";
 import { validateEmitted } from "./lib/topothesies/validateEmitted";
-import { CONFIRMED_SPLIT_IDS } from "./lib/topothesies/confirmedSplits";
+import { CONFIRMED_SPLIT_IDS, MAIN_ISLAND_POLYGONS } from "./lib/topothesies/confirmedSplits";
 
 const SRC = path.join(__dirname, "lib/topothesies/source");
 const OUT = path.join(__dirname, "../src/data/topothesies");
 const TMP = path.join(__dirname, "lib/topothesies/source/_tagged.geojson");
 const DISSOLVED = path.join(__dirname, "lib/topothesies/source/_dissolved.geojson");
-// Visvalingam retention. Higher than a mainland-only map would need because
-// tiny Aegean islands must keep enough vertices to stay recognizable (they have
-// few to begin with); the client only ever ships one shape/day, so a detailed
-// mainland path costs no per-visit bytes. Override with TOPO_SIMPLIFY.
-const SIMPLIFY = process.env.TOPO_SIMPLIFY ?? "25%";
+// Visvalingam retention (mapshaper default is Visvalingam weighted). Default is
+// 100% = keep every source vertex: tiny Aegean islands must retain all the
+// detail geoBoundaries has to stay recognizable (at 25% agistri was a 6-pt blob;
+// at 70% still only 17; at 100% it reaches its 37-vertex source ceiling). The
+// client only ever ships one shape/day (ADR 0018), so even the densest mainland
+// path costs no per-visit bytes; the only real ceiling is the per-shape byte
+// budget in performance.test.ts. Islands that stay coarse at 100% (e.g.
+// Καστελλόριζο, 11 source vertices) are capped by geoBoundaries itself and can
+// only improve via a higher-res source (handoff #3). Override with TOPO_SIMPLIFY.
+const SIMPLIFY = process.env.TOPO_SIMPLIFY ?? "100%";
 
 interface Muni {
   el: string | null;
@@ -114,7 +120,17 @@ function main() {
     const meta = ANSWER_META[id];
     if (!meta) { console.warn(`no ANSWER_META for dissolved id "${id}" — skipped`); continue; }
 
-    const polygons = polygonsOf(f);
+    // Keep only the N largest polygons for islands that should drop their
+    // satellite islets (confirmedSplits.MAIN_ISLAND_POLYGONS) — a display +
+    // centroid decision, so it happens before both the path and the centroid.
+    const keep = MAIN_ISLAND_POLYGONS[id];
+    const polygons =
+      keep === undefined
+        ? polygonsOf(f)
+        : polygonsOf(f)
+            .slice()
+            .sort((a, b) => Math.abs(ringArea(b[0])) - Math.abs(ringArea(a[0])))
+            .slice(0, keep);
     const allPts = polygons.flat(2) as LngLat[];
     const refLat = allPts.reduce((s, p) => s + p[1], 0) / allPts.length;
 

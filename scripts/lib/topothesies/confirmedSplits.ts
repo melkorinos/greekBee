@@ -22,7 +22,8 @@ export const CONFIRMED_SPLIT_IDS = [
   "agistri",
   "hydra",
   "kythira",
-  "poros",
+  // poros deferred (v2) — geoBoundaries silhouette doesn't read as the real
+  // island; see DEFERRED_ISLANDS.
   "salamis",
   "spetses",
   // Euboea → whole island + Skyros
@@ -59,6 +60,40 @@ export const DROPPED_MUNICIPALITIES = [
 ] as const;
 
 /**
+ * Islands whose emitted shape must keep only its N largest polygons by area,
+ * dropping the smaller satellite islets that share the municipality. The intent
+ * is recognisability: a cluster of tiny detached blobs makes the map read as a
+ * scatter and, because the silhouette self-frames, forces the main island to
+ * render small. Keeping just the main body (N=1) — or the two real islands for
+ * Alonnisos (Alonnisos + Peristera; N=2) — lets the shape zoom in.
+ *
+ * This is a DISPLAY + centroid decision only; the dropped islets were never
+ * their own answers. Ids not listed here keep every polygon (e.g. Thira, Poros).
+ * Applied in generateTopothesies.ts before both the path and the centroid so the
+ * drawn shape and the proximity centroid stay the same geometry.
+ */
+export const MAIN_ISLAND_POLYGONS: Readonly<Record<string, number>> = {
+  alonnisos: 2,
+  antiparos: 1,
+  astypalaia: 1,
+  chania: 1,
+  corfu: 1,
+  hydra: 1,
+  ikaria: 1,
+  kalymnos: 1,
+  kea: 1,
+  kimolos: 1,
+  kythira: 1,
+  lemnos: 1,
+  leros: 1,
+  naxos: 1,
+  nisyros: 1,
+  psara: 1,
+  rhodes: 1,
+  syros: 1,
+};
+
+/**
  * Islands knowingly PARKED (not in v1 answers.json): they can't be peeled by a
  * municipality attribute (they share a municipality with a larger island) or
  * are too small to be a fair guess. They stay as islets inside their parent
@@ -73,5 +108,10 @@ export const DEFERRED_ISLANDS: ReadonlyArray<{
     islands: "Lesser Cyclades (Koufonisia, Schoinoussa, Iraklia, Donousa)",
     parkedInside: "naxos",
     why: "share the Naxos municipality — no attribute peel possible in v1",
+  },
+  {
+    islands: "Poros",
+    parkedInside: "(dropped — no parent)",
+    why: "own municipality, but its geoBoundaries silhouette doesn't read as the real island; deferred for a higher-res source (handoff #3)",
   },
 ];

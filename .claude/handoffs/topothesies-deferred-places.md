@@ -26,6 +26,11 @@ island (or judged too small / no real capital) rides along as islets inside its 
 | Diapontia | Corfu |
 | Meganisi | Lefkada |
 
+## Deferred because the silhouette is wrong (revisit with a higher-res source)
+| Deferred | Was | Why |
+|---|---|---|
+| **Πόρος** | its own municipality (a confirmed Attica-Islands peel) | The geoBoundaries ADM3 outline doesn't read as the real island (operator: "looks completely wrong — the real island looks like a maple leaf"). Even at 100% simplify the source geometry is too coarse/misshapen. Removed from v1 answers 2026-07-21; promote once we swap the muni geometry to a higher-res source (OSM / GISCO LAU — handoff-outline-fidelity #3). Curation home: dropped from `ISLAND_OVERRIDES` + `ANSWER_META`; recorded in `DEFERRED_ISLANDS`. |
+
 ## Also parked (not islands)
 - **Troizinia-Methana** — dropped entirely (mainland peninsula, not read as an island). Not an answer, not deferred; recorded here so we remember it was intentionally excluded.
 

@@ -46,7 +46,10 @@ export const DROPS: ReadonlySet<string> = new Set(["Troizinia-Methana"]);
  */
 export const ISLAND_OVERRIDES: Readonly<Record<string, string>> = {
   Salamina: "salamis", Aegina: "aegina", Agistri: "agistri", Ydra: "hydra",
-  Kythira: "kythira", Spetses: "spetses", Poros: "poros",
+  Kythira: "kythira", Spetses: "spetses",
+  // Poros deferred (v2): its geoBoundaries silhouette doesn't read as the real
+  // island. Dropping the override lets its municipality fall into Νήσων (a
+  // __split__ unit with no remainder) → dropped. See DEFERRED_ISLANDS.
   Serifos: "serifos", Sifnos: "sifnos", Kimolos: "kimolos", Milos: "milos",
   Alonnisos: "alonnisos", Skiathos: "skiathos", Skopelos: "skopelos",
   Kea: "kea", Kithnos: "kythnos", Paros: "paros", Antiparos: "antiparos",
@@ -208,7 +211,6 @@ export const ANSWER_META: Readonly<Record<string, CuratedAnswerMeta>> = {
   "pella": { name: "Πέλλα", capital: "Έδεσσα", capitalCoord: [22.05, 40.8], region: "Κεντρικής Μακεδονίας", isIsland: false, aliases: [] },
   "pieria": { name: "Πιερία", capital: "Κατερίνη", capitalCoord: [22.5084, 40.2711], region: "Κεντρικής Μακεδονίας", isIsland: false, aliases: [] },
   "piraeus": { name: "Πειραιάς", capital: "Πειραιάς", capitalCoord: [23.64616, 37.98505], region: "Αττικής", isIsland: false, aliases: [] },
-  "poros": { name: "Πόρος", capital: "Πόρος", capitalCoord: [23.453611, 37.499444], region: "Αττικής", isIsland: true, aliases: [] },
   "preveza": { name: "Πρέβεζα", capital: "Πρέβεζα", capitalCoord: [20.751667, 38.9575], region: "Ηπείρου", isIsland: false, aliases: [] },
   "psara": { name: "Ψαρά", capital: "Ψαρά", capitalCoord: [25.56287, 38.54097], region: "Βορείου Αιγαίου", isIsland: true, aliases: [] },
   "rethymno": { name: "Ρέθυμνο", capital: "Ρέθυμνο", capitalCoord: [24.473889, 35.368889], region: "Κρήτης", isIsland: false, aliases: [] },
