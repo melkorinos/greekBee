@@ -122,8 +122,8 @@ const GAME_RULES = {
       "Μπορείς να αναφέρεις λέξεις και μέσα από το παιχνίδι Leksokipos!",
     ],
   },
-  // Stays under "wip" in the picker until the operator flips the registry flag
-  // after a play-through; the gameplay copy below is final.
+  // Published (session 121) after the operator play-through; the gameplay copy
+  // below is final.
   topothesies: {
     rulesTitle: "Πώς να παίξεις — Topothesies",
     bulletIcon: "🗺️",
@@ -153,7 +153,7 @@ function submitButtonFor(id: (typeof GAMES)[number]["id"]): React.ReactNode {
     return <><SubmitPuzzleButton game={id} /><HomeTrophyButton gameId={id} /></>;
   }
   if (id === "stavrolekso") return <StavroleksoMakerButton />;
-  if (id === "leksokipos" || id === "leksodromia" || id === "leksoplegma") {
+  if (id === "leksokipos" || id === "leksodromia" || id === "leksoplegma" || id === "topothesies") {
     return <HomeTrophyButton gameId={id} />;
   }
   return undefined;
