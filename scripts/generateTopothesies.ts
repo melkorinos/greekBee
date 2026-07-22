@@ -47,10 +47,19 @@ import {
 } from "./lib/topothesies/project";
 import { validateEmitted } from "./lib/topothesies/validateEmitted";
 import {
+  CANT_PEEL_PLACEHOLDERS,
   CONFIRMED_SPLIT_IDS,
   DEFERRED_ANSWER_IDS,
   MAIN_ISLAND_POLYGONS,
 } from "./lib/topothesies/confirmedSplits";
+
+// Preview build (TOPO_PREVIEW=1): emit EVERY answer — including the deferred
+// islands normally excluded from the live game — into a single self-contained
+// preview-cards.json (gitignored, in source/) so preview-outlines.mjs can render
+// the whole «Νομοί & Νησιά» list with each shape's real (low-fidelity) outline,
+// its capital, and a live/deferred/placeholder status. It does NOT touch the
+// committed answers.json / shapes.json and skips the validateEmitted gate.
+const PREVIEW = process.env.TOPO_PREVIEW === "1";
 
 const SRC = path.join(__dirname, "lib/topothesies/source");
 const OUT = path.join(__dirname, "../src/data/topothesies");
@@ -147,7 +156,9 @@ function taggedFromOsm(munis: Muni[], byQ: Map<string, Muni>, skip: ReadonlySet<
     }
     const id = assignOsm(wd, ru);
     if (!id) { dropped++; continue; }
-    if (DEFERRED_ANSWER_IDS.has(id)) { dropped++; continue; } // low-fidelity, excluded for now
+    // Deferred islands are excluded from the live game, but the preview build
+    // keeps them so their outline can be judged and improved.
+    if (!PREVIEW && DEFERRED_ANSWER_IDS.has(id)) { dropped++; continue; }
     if (skip.has(id)) continue; // sourced from geoBoundaries fallback instead
     out.push({ properties: { ansid: id }, geometry: feat.geometry });
   }
@@ -247,6 +258,44 @@ function main() {
 
   answers.sort((a, b) => a.id.localeCompare(b.id));
   shapes.sort((a, b) => a.id.localeCompare(b.id));
+
+  // ── 4a. Preview build: write one self-contained cards file, then stop ─────────
+  if (PREVIEW) {
+    const pathById = new Map(shapes.map((s) => [s.id, s]));
+    const cards = answers.map((a) => {
+      const s = pathById.get(a.id)!;
+      return {
+        id: a.id,
+        name: a.name,
+        capital: a.capital,
+        isIsland: a.isIsland,
+        status: DEFERRED_ANSWER_IDS.has(a.id) ? "deferred" : "live",
+        path: s.path,
+        viewBox: s.viewBox,
+      };
+    });
+    // Can't-peel promotions (share a δήμος with a bigger island) have no geometry:
+    // emit them as placeholder cards so the list is complete and the polygon-split
+    // work is visible.
+    for (const p of CANT_PEEL_PLACEHOLDERS) {
+      cards.push({
+        id: p.id, name: p.name, capital: p.capital, isIsland: true,
+        status: "placeholder", path: "", viewBox: "",
+      });
+    }
+    cards.sort((a, b) => a.name.localeCompare(b.name, "el"));
+    const previewOut = path.join(SRC, "preview-cards.json");
+    fs.writeFileSync(previewOut, JSON.stringify(cards, null, 0) + "\n");
+    const live = cards.filter((c) => c.status === "live").length;
+    const deferred = cards.filter((c) => c.status === "deferred").length;
+    console.log(
+      `preview: wrote ${cards.length} cards (${live} live, ${deferred} deferred, ` +
+        `${CANT_PEEL_PLACEHOLDERS.length} placeholder) → ${previewOut}`,
+    );
+    fs.rmSync(TMP, { force: true });
+    fs.rmSync(DISSOLVED, { force: true });
+    return;
+  }
 
   // ── 4. Emit + gate ──────────────────────────────────────────────────────────
   fs.mkdirSync(OUT, { recursive: true });

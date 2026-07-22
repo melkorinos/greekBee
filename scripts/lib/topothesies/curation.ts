@@ -86,7 +86,11 @@ export function isAthensSector(ruEl: string): boolean {
  */
 export const RU_TO_ID: Readonly<Record<string, string>> = {
   "Περιφερειακή Ενότητα Ημαθίας": "imathia", "Περιφερειακή Ενότητα Κιλκίς": "kilkis",
-  "Περιφερειακή Ενότητα Θεσσαλονίκης": "thessaloniki", "Περιφερειακή Ενότητα Σερρών": "serres",
+  // Θεσσαλονίκη MERGED into Χαλκιδική (2026-07-22): the whole Π.Ε. Θεσσαλονίκης
+  // dissolves into the `chalkidiki` answer — the dense metro doesn't read as its
+  // own silhouette, mirroring the Αθήνα/Πειραιάς → Αττική merge. `thessaloniki`
+  // is no longer an answer id.
+  "Περιφερειακή Ενότητα Θεσσαλονίκης": "chalkidiki", "Περιφερειακή Ενότητα Σερρών": "serres",
   "Περιφερειακή Ενότητα Πέλλας": "pella", "Περιφερειακή Ενότητα Πιερίας": "pieria",
   "Περιφερειακή Ενότητα Αιτωλοακαρνανίας": "aetolia-acarnania", "Περιφερειακή Ενότητα Ηλείας": "ilia",
   "Περιφερειακή ενότητα Αχαΐας": "achaia", "Περιφερειακή Ενότητα Γρεβενών": "grevena",
@@ -169,6 +173,11 @@ export const ISLAND_PEEL_WD: Readonly<Record<string, string>> = {
   Q426893: "leros", Q3897657: "patmos", Q20030234: "astypalaia", Q719518: "paxi",
   Q208566: "skyros", Q25413502: "samothrace",
   Q3908531: "poros", // returned in the OSM swap — its silhouette reads correctly
+  // Promoted from backlog → deferred (2026-07-22): own-δήμος islands peelable by
+  // QID, added so their real OSM outline can be previewed and refined. Kept OUT of
+  // the live game via DEFERRED_ANSWER_IDS until the fidelity work lands.
+  Q18215267: "meganisi", Q12875609: "agios-efstratios", Q16523376: "fournoi",
+  Q898718: "tilos", Q917162: "chalki", Q548524: "lipsi", Q18073276: "agathonisi",
 };
 
 /** OSM δήμος QIDs excluded from every answer (non-island inside an island RU). */
@@ -178,7 +187,7 @@ export const DROP_WD: ReadonlySet<string> = new Set([
 
 /** OSM δήμος QIDs whose Wikidata parent isn't the regional unit — pinned by id. */
 export const MUNI_RU_FIX_WD: Readonly<Record<string, string>> = {
-  Q6627746: "thessaloniki", // Δήμος Θεσσαλονίκης — parent is the region, not the RU
+  Q6627746: "chalkidiki", // Δήμος Θεσσαλονίκης — merged into Χαλκιδική (2026-07-22); parent is the region, not the RU
   Q992450: "lakonia",       // Δήμος Σπάρτης
   Q2232240: "attica",      // Δήμος Νίκαιας - Αγίου Ιωάννη Ρέντη (Piraeus RU -> Attica)
 };
@@ -293,11 +302,20 @@ export const ANSWER_META: Readonly<Record<string, CuratedAnswerMeta>> = {
   "syros": { name: "Σύρος", capital: "Ερμούπολη", capitalCoord: [24.9381, 37.4395], region: "Νοτίου Αιγαίου", isIsland: true, aliases: ["ερμουπολη"] },
   "thasos": { name: "Θάσος", capital: "Λιμένας Θάσου", capitalCoord: [24.709444, 40.778056], region: "Ανατολικής Μακεδονίας και Θράκης", isIsland: true, aliases: [] },
   "thesprotia": { name: "Θεσπρωτία", capital: "Ηγουμενίτσα", capitalCoord: [20.263611, 39.500278], region: "Ηπείρου", isIsland: false, aliases: [] },
-  "thessaloniki": { name: "Θεσσαλονίκη", capital: "Θεσσαλονίκη", capitalCoord: [22.935556, 40.640278], region: "Κεντρικής Μακεδονίας", isIsland: false, aliases: [] },
+  // Θεσσαλονίκη merged into Χαλκιδική (2026-07-22) — no longer its own answer.
   "thira": { name: "Σαντορίνη", capital: "Φηρά", capitalCoord: [25.431667, 36.42], region: "Νοτίου Αιγαίου", isIsland: true, aliases: ["θηρα"] },
   "tinos": { name: "Τήνος", capital: "Τήνος", capitalCoord: [25.134, 37.6013], region: "Νοτίου Αιγαίου", isIsland: true, aliases: [] },
   "trikala": { name: "Τρίκαλα", capital: "Τρίκαλα", capitalCoord: [21.7675, 39.5548], region: "Θεσσαλίας", isIsland: false, aliases: [] },
   "viotia": { name: "Βοιωτία", capital: "Λιβαδειά", capitalCoord: [22.875, 38.436111], region: "Στερεάς Ελλάδας", isIsland: false, aliases: [] },
   "xanthi": { name: "Ξάνθη", capital: "Ξάνθη", capitalCoord: [24.883333, 41.133333], region: "Ανατολικής Μακεδονίας και Θράκης", isIsland: false, aliases: [] },
   "zakynthos": { name: "Ζάκυνθος", capital: "Ζάκυνθος", capitalCoord: [20.75, 37.8], region: "Ιονίων Νήσων", isIsland: true, aliases: ["ζακυνθοσ"] },
+  // ── Promoted backlog → deferred (2026-07-22): own-δήμος islands, previewed for
+  //    fidelity work, excluded from live via DEFERRED_ANSWER_IDS. ──
+  "meganisi": { name: "Μεγανήσι", capital: "Κατωμέρι", capitalCoord: [20.7717, 38.652], region: "Ιονίων Νήσων", isIsland: true, aliases: [] },
+  "agios-efstratios": { name: "Άγιος Ευστράτιος", capital: "Άγιος Ευστράτιος", capitalCoord: [25.0022, 39.5245], region: "Βορείου Αιγαίου", isIsland: true, aliases: [] },
+  "fournoi": { name: "Φούρνοι", capital: "Φούρνοι", capitalCoord: [26.4586, 37.5936], region: "Βορείου Αιγαίου", isIsland: true, aliases: ["φουρνοι κορσεων"] },
+  "tilos": { name: "Τήλος", capital: "Μεγάλο Χωριό", capitalCoord: [27.35, 36.4578], region: "Νοτίου Αιγαίου", isIsland: true, aliases: [] },
+  "chalki": { name: "Χάλκη", capital: "Εμπορειός", capitalCoord: [27.6053, 36.2258], region: "Νοτίου Αιγαίου", isIsland: true, aliases: [] },
+  "lipsi": { name: "Λειψοί", capital: "Λειψοί", capitalCoord: [26.7636, 37.2969], region: "Νοτίου Αιγαίου", isIsland: true, aliases: [] },
+  "agathonisi": { name: "Αγαθονήσι", capital: "Άγιος Γεώργιος", capitalCoord: [26.9639, 37.4617], region: "Νοτίου Αιγαίου", isIsland: true, aliases: [] },
 };

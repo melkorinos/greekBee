@@ -103,4 +103,28 @@ export const DEFERRED_ANSWER_IDS: ReadonlySet<string> = new Set([
   "kastellorizo", "kimolos", "nisyros", "oinousses", "patmos", "poros", "psara",
   "samothrace", "serifos", "sikinos", "skiathos", "skopelos", "spetses", "symi",
   "syros",
+  // Promoted from backlog 2026-07-22 (own-δήμος, peelable) — deferred for fidelity
+  // work; ANSWER_META + ISLAND_PEEL_WD added, excluded from live emission here.
+  "meganisi", "agios-efstratios", "fournoi", "tilos", "chalki", "lipsi", "agathonisi",
 ]);
+
+/**
+ * Islands promoted to deferred but NOT peelable in v1 — they share a δήμος with a
+ * larger island, so an attribute peel can't produce them; they need connected-
+ * component polygon splitting the pipeline doesn't have yet. They have no
+ * ANSWER_META / geometry: the preview renders them as flagged placeholder cards so
+ * the final list is complete and the polygon-split work is visible. (2026-07-22)
+ */
+export const CANT_PEEL_PLACEHOLDERS: ReadonlyArray<{
+  readonly id: string;
+  readonly name: string;
+  readonly capital: string;
+  readonly parkedInside: string;
+}> = [
+  { id: "koufonisia", name: "Κουφονήσια", capital: "Άνω Κουφονήσι", parkedInside: "naxos" },
+  { id: "schoinoussa", name: "Σχοινούσα", capital: "Χώρα Σχοινούσας", parkedInside: "naxos" },
+  { id: "iraklia", name: "Ηρακλειά", capital: "Άγιος Γεώργιος", parkedInside: "naxos" },
+  { id: "donousa", name: "Δονούσα", capital: "Σταυρός", parkedInside: "naxos" },
+  { id: "delos", name: "Δήλος", capital: "—", parkedInside: "mykonos" },
+  { id: "kalamos", name: "Κάλαμος", capital: "Κάλαμος", parkedInside: "lefkada" },
+];
