@@ -28,6 +28,14 @@ Modern messaging apps (WhatsApp, Telegram, iMessage) and all mainstream browsers
 All INSERT-capable API routes write to Supabase with no per-device throttle. RLS policies allow unlimited anon inserts. At current scale this is acceptable — the most likely abuse vector is an accidental client bug, not coordinated attack. Decision: **accept risk and monitor** (Option C). Set a Supabase row-count alert on `game_scores` at 50 000 rows and `nominations` at 5 000 rows; revisit with Redis sliding-window rate limiting when DAU exceeds ~500. Alert must be configured in the Supabase dashboard by the operator.
 *Scope sharpened 2026-07-16: this accepted risk is now **INSERT spam only**. The adjacent-but-different exposure — anon UPDATE/DELETE table-wide via the old `ALL (true)` policies (erasable trophies/pangrams/state, the `transfer_codes` device_uuid oracle) — was never part of this decision and is closed (migrations `20260716120000`/`120100`). Dedup spam via double-submit is also DB-bounded now (`120200`).*
 
+### 🟡 Topothesies — OSM swap done (s119), awaiting operator play-through
+
+Geometry now comes from OpenStreetMap admin_level=7 (fidelity handoff CLOSED, s119); 76 answers. The only thing between here and go-live is the manual browser play-through + flipping `topothesies.wip:false` (curation is the operator's, ADR 0018 step 7). Open threads:
+- **22 islands are deferred** (`DEFERRED_ANSWER_IDS`) because their OSM silhouette still isn't good enough — this is the live backlog (deferred handoff). Raising their fidelity needs a denser OSM extract, a physical `place=island` outline, or a manual trace. Re-add = delete the id.
+- **Final answer set is not settled**: the target is «Νομοί και Νησιά της Ελλάδας» — reconcile against the Greek-Wikipedia νομοί list and split island collections into their own units, then label it so in the help screen. Current 76 (regional units + `attica` + islands) is a waypoint, not the destination.
+- Preview gallery (`source/outlines-preview.html`) regenerated at 76 shapes for the operator's eyeball.
+- Do NOT "fix": the **share card keeps its Worldle emoji grid on purpose** (renders when players paste results into messaging apps); only the on-screen surface is de-emoji'd (s118).
+
 ---
 
 ## ✅ Resolved Tensions (archive)

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { StavroleksoPlayer } from "./StavroleksoPlayer";
 import { getSupabaseClient, table } from "@/lib/supabase";
+import { GamePageShell } from "@/components/shared/GamePageShell";
 import type { StavroleksoPuzzleData } from "@/games/stavrolekso/types";
 
 interface PuzzleRow {
@@ -41,8 +42,8 @@ export default async function StavroleksoPuzzlePage({
   if (!puzzle || puzzle.status !== "approved") notFound();
 
   return (
-    <main className="flex flex-col items-center min-h-screen bg-background px-4 py-6">
-      <div className="w-full max-w-sm space-y-3 mb-4">
+    <GamePageShell gameId="stavrolekso">
+      <div className="w-full max-w-game space-y-3 mb-4">
         <h1 className="text-xl font-bold text-foreground">
           {puzzle.title ?? `Stavrolekso #${puzzle.id}`}
         </h1>
@@ -55,6 +56,6 @@ export default async function StavroleksoPuzzlePage({
         id={puzzle.id}
         puzzle={{ ...puzzle.data, title: puzzle.title, submitter_name: puzzle.submitter_name }}
       />
-    </main>
+    </GamePageShell>
   );
 }

@@ -16,9 +16,12 @@ import { IdentityHeader } from "@/components/profile/IdentityHeader";
 import { NameEditor } from "@/components/profile/NameEditor";
 import { WelcomeBackBanner } from "@/components/profile/WelcomeBackBanner";
 import { LifetimeStatsStrip } from "@/components/profile/LifetimeStatsStrip";
+import { WordsByLengthCard } from "@/components/profile/WordsByLengthCard";
 import { TrophyCase } from "@/components/profile/TrophyCase";
 import { FEATURE_FLAGS } from "@/config/featureFlags";
+import { GAME_REGISTRY } from "@/config/games";
 import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
+import { cardShell } from "@/styles/recipes";
 import { useSyncExternalStore } from "react";
 
 // Server and first client paint both read `false`; after hydration the client
@@ -60,20 +63,20 @@ export default function ProfilePage() {
 
   if (!mounted) {
     return (
-      <div className="w-full max-w-sm mx-auto px-4 py-6 space-y-4">
+      <div className="w-full max-w-game mx-auto px-4 py-6 space-y-4">
         <h1 className="text-lg font-semibold text-foreground px-1">Το προφίλ μου</h1>
-        <div className="rounded-2xl border border-border bg-surface h-48 animate-pulse" aria-hidden />
+        <div className={`${cardShell} h-48 animate-pulse`} aria-hidden />
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-sm mx-auto px-4 py-6 space-y-4">
+    <div className="w-full max-w-game mx-auto px-4 py-6 space-y-4">
       <h1 className="text-lg font-semibold text-foreground px-1">Το προφίλ μου</h1>
 
       <WelcomeBackBanner />
 
-      <section className="rounded-2xl border border-border bg-surface overflow-hidden">
+      <section className={`${cardShell} overflow-hidden`}>
         <IdentityHeader
           authLinked={authLinked}
           profileLinked={profileLinked}
@@ -97,15 +100,32 @@ export default function ProfilePage() {
         />
       </section>
 
-      <section className="rounded-2xl border border-border bg-surface overflow-hidden">
+      {/* Scope clarifier — every stat and trophy below currently tracks only the
+          first game (Leksokipos); other games have no engagement surface yet. The
+          beta "may reset on launch" caveat lives on in the Trophy Case notice. */}
+      <p
+        data-testid="scope-notice"
+        className="rounded-lg border border-border bg-surface-raised px-3 py-2 text-[11px] leading-snug text-muted"
+      >
+        📊 Τα στατιστικά{FEATURE_FLAGS.achievements ? " και τα επιτεύγματα" : ""} παρακάτω
+        αφορούν προς το παρόν μόνο το {GAME_REGISTRY.leksokipos.label}, το πρώτο παιχνίδι.
+      </p>
+
+      <section className={`${cardShell} overflow-hidden`}>
         <LifetimeStatsStrip deviceId={deviceId} />
       </section>
 
-      {/* Trophy Case hidden until achievements ship — feature not launch-ready. */}
+      {/* Words-by-length + Trophy Case hidden until achievements ship — word capture
+          rides the same flag, so before launch there is no data to show. */}
       {FEATURE_FLAGS.achievements && (
-        <section className="rounded-2xl border border-border bg-surface overflow-hidden">
-          <TrophyCase deviceId={deviceId} />
-        </section>
+        <>
+          <section className={`${cardShell} overflow-hidden`}>
+            <WordsByLengthCard deviceId={deviceId} />
+          </section>
+          <section className={`${cardShell} overflow-hidden`}>
+            <TrophyCase deviceId={deviceId} />
+          </section>
+        </>
       )}
     </div>
   );

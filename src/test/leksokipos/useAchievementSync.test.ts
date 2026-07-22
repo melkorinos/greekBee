@@ -8,20 +8,38 @@ import { renderHook, waitFor } from "@testing-library/react";
 interface StatsRead { leksokipos_points: number | null; pangram_count: number | null }
 const NO_STATS: StatsRead = { leksokipos_points: null, pangram_count: null };
 
-const postAchievements = vi.fn();
-const fetchLifetimeStats = vi.fn(async (): Promise<StatsRead | null> => NO_STATS);
-const postPangrams = vi.fn(async (): Promise<number | null> => null);
-const fetchEarnedAchievementIds = vi.fn(async (): Promise<string[]> => []);
+// Each mock carries its real signature from @/games/leksokipos/sync. Typing them
+// as zero-arg fns made `mock.calls[0][0]` an index into an empty tuple, so the
+// call-shape assertions below were only ever checked at runtime.
+type PostAchievementsArgs = { deviceUuid: string; achievementIds: string[] };
+type PostPangramsArgs = { deviceUuid: string; puzzleDate: string; words: string[] };
+type PostWordsArgs = { deviceUuid: string; puzzleDate: string; words: string[] };
+
+const postAchievements = vi.fn<(params: PostAchievementsArgs) => void>();
+const fetchLifetimeStats = vi.fn<(deviceUuid: string) => Promise<StatsRead | null>>(
+  async () => NO_STATS,
+);
+const postPangrams = vi.fn<(params: PostPangramsArgs) => Promise<number | null>>(
+  async () => null,
+);
+const postWords = vi.fn<(params: PostWordsArgs) => Promise<number | null>>(
+  async () => null,
+);
+const fetchEarnedAchievementIds = vi.fn<(deviceUuid: string) => Promise<string[]>>(
+  async () => [],
+);
 vi.mock("@/games/leksokipos/sync", () => ({
-  postAchievements: (...args: unknown[]) => postAchievements(...args),
-  fetchLifetimeStats: (...args: unknown[]) => fetchLifetimeStats(...args),
-  postPangrams: (...args: unknown[]) => postPangrams(...args),
-  fetchEarnedAchievementIds: (...args: unknown[]) => fetchEarnedAchievementIds(...args),
+  postAchievements: (...args: Parameters<typeof postAchievements>) => postAchievements(...args),
+  fetchLifetimeStats: (...args: Parameters<typeof fetchLifetimeStats>) => fetchLifetimeStats(...args),
+  postPangrams: (...args: Parameters<typeof postPangrams>) => postPangrams(...args),
+  postWords: (...args: Parameters<typeof postWords>) => postWords(...args),
+  fetchEarnedAchievementIds: (...args: Parameters<typeof fetchEarnedAchievementIds>) =>
+    fetchEarnedAchievementIds(...args),
 }));
 
 /** The achievementIds of every postAchievements call flattened into one array. */
 function allPostedIds(): string[] {
-  return postAchievements.mock.calls.flatMap((c) => c[0].achievementIds as string[]);
+  return postAchievements.mock.calls.flatMap((c) => c[0].achievementIds);
 }
 
 const { useAchievementSync } = await import("@/games/leksokipos/hooks/useAchievementSync");
@@ -58,6 +76,8 @@ afterEach(() => {
   fetchLifetimeStats.mockResolvedValue(NO_STATS);
   postPangrams.mockClear();
   postPangrams.mockResolvedValue(null);
+  postWords.mockClear();
+  postWords.mockResolvedValue(null);
   fetchEarnedAchievementIds.mockClear();
   fetchEarnedAchievementIds.mockResolvedValue([]);
 });
@@ -210,6 +230,37 @@ describe("useAchievementSync — pangram-tier lane (delta-post)", () => {
   });
 });
 
+describe("useAchievementSync — words-capture lane (delta-post)", () => {
+  it("delta-posts the valid words found this session (display-only, no tier)", async () => {
+    renderHook(() => useAchievementSync({
+      ...BASE, foundWords: ["γατα", "σκυλος"], foundPangrams: [],
+    }));
+
+    await waitFor(() => expect(postWords).toHaveBeenCalled());
+    expect(postWords.mock.calls[0][0]).toEqual({
+      deviceUuid: "device-1", puzzleDate: "2026-07-06", words: ["γατα", "σκυλος"],
+    });
+  });
+
+  it("posts only the not-yet-posted words on a later render (per-word dedup)", async () => {
+    const { rerender } = renderHook((props: Props) => useAchievementSync(props), {
+      initialProps: { ...BASE, foundWords: ["γατα"], foundPangrams: [] },
+    });
+    await waitFor(() => expect(postWords).toHaveBeenCalledTimes(1));
+    postWords.mockClear();
+
+    rerender({ ...BASE, foundWords: ["γατα", "σκυλος"], foundPangrams: [] });
+    await waitFor(() => expect(postWords).toHaveBeenCalledTimes(1));
+    expect(postWords.mock.calls[0][0].words).toEqual(["σκυλος"]);
+  });
+
+  it("posts nothing when there are no words to send", async () => {
+    renderHook(() => useAchievementSync({ ...BASE, foundWords: [], foundPangrams: [] }));
+    await waitFor(() => expect(fetchLifetimeStats).toHaveBeenCalled());
+    expect(postWords).not.toHaveBeenCalled();
+  });
+});
+
 describe("useAchievementSync — unlock toast surfacing", () => {
   it("surfaces a genuinely-new one-shot badge to the toast callback", async () => {
     fetchEarnedAchievementIds.mockResolvedValue([]); // nothing earned before
@@ -282,6 +333,7 @@ describe("useAchievementSync — gating", () => {
     expect(postAchievements).not.toHaveBeenCalled();
     expect(fetchLifetimeStats).not.toHaveBeenCalled();
     expect(postPangrams).not.toHaveBeenCalled();
+    expect(postWords).not.toHaveBeenCalled();
   });
 
   it("does nothing in god mode", () => {
@@ -289,6 +341,7 @@ describe("useAchievementSync — gating", () => {
     expect(postAchievements).not.toHaveBeenCalled();
     expect(fetchLifetimeStats).not.toHaveBeenCalled();
     expect(postPangrams).not.toHaveBeenCalled();
+    expect(postWords).not.toHaveBeenCalled();
   });
 
   it("does nothing without a device id", () => {
@@ -296,6 +349,7 @@ describe("useAchievementSync — gating", () => {
     expect(postAchievements).not.toHaveBeenCalled();
     expect(fetchLifetimeStats).not.toHaveBeenCalled();
     expect(postPangrams).not.toHaveBeenCalled();
+    expect(postWords).not.toHaveBeenCalled();
   });
 
   it("is fully inert when disabled — no detection, no reads, no writes", () => {
@@ -310,6 +364,7 @@ describe("useAchievementSync — gating", () => {
     expect(postAchievements).not.toHaveBeenCalled();
     expect(fetchLifetimeStats).not.toHaveBeenCalled();
     expect(postPangrams).not.toHaveBeenCalled();
+    expect(postWords).not.toHaveBeenCalled();
     expect(fetchEarnedAchievementIds).not.toHaveBeenCalled();
     expect(onAchievementEarned).not.toHaveBeenCalled();
   });

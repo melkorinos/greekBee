@@ -81,7 +81,8 @@ export type LeaderboardGameId =
   | "leksindeseis"
   | "vrestifrasi"
   | "leksodromia"
-  | "leksoplegma";
+  | "leksoplegma"
+  | "topothesies";
 
 // Leksindeseis is excluded: still wip, its board doesn't yet thread a puzzle
 // date through a route param, and its day-strip is deliberately single-date
@@ -123,6 +124,12 @@ const GAME_LEADERBOARD_CONFIG: Record<LeaderboardGameId, LeaderboardViewConfig> 
     subtitle:   "Πόντοι ημέρας · υψηλότερο = καλύτερο",
     scoreLabel: "Πόντοι",
     ...playLinkSlots("/leksoplegma"),
+  },
+  topothesies: {
+    buildUrl:   buildLeaderboardUrl("topothesies"),
+    subtitle:   "Πόντοι ημέρας · υψηλότερο = καλύτερο",
+    scoreLabel: "Πόντοι",
+    ...playLinkSlots("/topothesies"),
   },
 };
 

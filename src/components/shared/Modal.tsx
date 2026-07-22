@@ -8,7 +8,7 @@
 // so changing the backdrop opacity / radius / animation is a one-place edit.
 //
 // Variants:
-//   center — vertically-centred dialog card (max-w-sm). The default.
+//   center — vertically-centred dialog card (max-w-game). The default.
 //   sheet  — full-width bottom sheet with a rounded top (leaderboards). Renders
 //            no built-in close button; sheet callers place close in their own
 //            header row.
@@ -17,6 +17,8 @@
 // (e.g. "max-h-[90vh] overflow-y-auto" or "flex flex-col").
 
 import type { ReactNode } from "react";
+
+import { btnHeaderIcon, btnHeaderIconSize } from "@/styles/recipes";
 
 interface ModalProps {
   isOpen:   boolean;
@@ -59,8 +61,8 @@ export function Modal({
     : "fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4";
 
   const cardClass = isSheet
-    ? "relative bg-surface rounded-t-2xl shadow-2xl w-full max-w-sm"
-    : "relative bg-surface rounded-2xl shadow-xl w-full max-w-sm p-6";
+    ? "relative bg-surface rounded-t-card shadow-2xl w-full max-w-game"
+    : "relative bg-surface rounded-card shadow-xl w-full max-w-game p-6";
 
   return (
     <div
@@ -81,7 +83,7 @@ export function Modal({
             onClick={onClose}
             aria-label={closeLabel}
             data-testid={closeTestId}
-            className="absolute top-4 right-4 text-muted hover:text-foreground text-xl leading-none z-10"
+            className={`absolute top-4 right-4 z-10 ${btnHeaderIconSize} ${btnHeaderIcon} text-sm leading-none`}
           >
             ✕
           </button>

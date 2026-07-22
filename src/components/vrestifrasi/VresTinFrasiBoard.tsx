@@ -92,7 +92,7 @@ export function VresTinFrasiBoard({
           />
         </div>
 
-        <div className="w-full max-w-sm flex flex-col items-center gap-4 px-2">
+        <div className="w-full max-w-game flex flex-col items-center gap-4 px-2">
           <PhraseGrid
             guesses={guesses}
             currentWords={currentWords}

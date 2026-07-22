@@ -410,9 +410,9 @@ describe("Endgame Zone", () => {
   });
 });
 
-// ── Τζιμάνι (all words found) ─────────────────────────────────────────────────
+// ── All words found (completion state) ────────────────────────────────────────
 
-describe("Τζιμάνι — all words found", () => {
+describe("All words found — completion state", () => {
   const allWords = ["anti", "paid", "paint", "painted", "panted", "patina"];
 
   it("shows ΤΟ ΠΕΘΑΝΕΣ message after finding every word", async () => {
@@ -423,7 +423,7 @@ describe("Τζιμάνι — all words found", () => {
     expect(screen.getByTestId("perfect-message")).toHaveTextContent("ΤΟ ΠΕΘΑΝΕΣ");
   });
 
-  it("hides WordInput and action buttons after Τζιμάνι", async () => {
+  it("hides WordInput and action buttons after finding all words", async () => {
     const user = userEvent.setup();
     render(<GameBoard puzzle={dailyPuzzle} />);
     await submitWords(user, allWords);
@@ -432,7 +432,7 @@ describe("Τζιμάνι — all words found", () => {
     expect(screen.queryByTestId("btn-shuffle")).toBeNull();
   });
 
-  it("keyboard input is ignored after Τζιμάνι", async () => {
+  it("keyboard input is ignored after finding all words", async () => {
     const user = userEvent.setup();
     render(<GameBoard puzzle={dailyPuzzle} />);
     await submitWords(user, allWords);
@@ -440,14 +440,14 @@ describe("Τζιμάνι — all words found", () => {
     expect(screen.queryByTestId("word-input-letter")).toBeNull();
   });
 
-  it("give-up button is absent after Τζιμάνι", async () => {
+  it("give-up button is absent after finding all words", async () => {
     const user = userEvent.setup();
     render(<GameBoard puzzle={dailyPuzzle} />);
     await submitWords(user, allWords);
     expect(screen.queryByTestId("btn-give-up")).toBeNull();
   });
 
-  it("endgame panel shows 0 remaining words after Τζιμάνι", async () => {
+  it("endgame panel shows 0 remaining words after finding all words", async () => {
     const user = userEvent.setup();
     render(<GameBoard puzzle={dailyPuzzle} />);
     await submitWords(user, allWords);
@@ -501,15 +501,15 @@ describe("God Mode", () => {
       expect(document.querySelector(".fixed.inset-0.bg-black\\/20")).toBeInTheDocument();
     });
 
-    it("'Βρες Όλες' injects all words and triggers Τζιμάνι", async () => {
+    it("'Βρες Όλες' injects all words and triggers completion", async () => {
       const user = userEvent.setup();
       render(<GameBoard puzzle={dailyPuzzle} />);
       await user.click(screen.getByTestId("btn-god-mode"));
-      await user.click(screen.getByText(/βρες Όλες \(Τζιμάνι\)/i));
+      await user.click(screen.getByRole("button", { name: /Βρες Όλες$/ }));
       expect(screen.getByTestId("perfect-message")).toBeInTheDocument();
     });
 
-    it("'Βρες Όλες-1' injects all-but-last words and does not trigger Τζιμάνι", async () => {
+    it("'Βρες Όλες-1' injects all-but-last words and does not trigger completion", async () => {
       const user = userEvent.setup();
       render(<GameBoard puzzle={dailyPuzzle} />);
       await user.click(screen.getByTestId("btn-god-mode"));

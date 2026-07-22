@@ -9,7 +9,8 @@ Several games ship **premade data derived from `words-el.json`**, precomputed of
 | Game | Derived data | Derived how |
 |---|---|---|
 | Leksokipos | `puzzles-el.json` → `validWords` | every dictionary word the puzzle's 7 letters accept |
-| Leksiarxeio | `words-{N}.json` | the dictionary sliced by length |
+| Leksiarxeio | `words-{4..8}.json` | the dictionary sliced by length |
+| Vres Tin Frasi | `words-{2,3}.json` | the dictionary sliced by length — its short-word guess pool |
 | Leksoplegma | `puzzles-el.json` → `bonusWords` | every dictionary word traceable on the board's edge web |
 | Leksodromia | `anagramAlternates.json` | anagrams of each curated answer, drawn from `words-{N}.json` |
 
@@ -54,7 +55,15 @@ This was first written with the missed-addition direction *sampled* (3 of ~1000 
 
 The cost that forced the sampling was an artifact. Re-deriving a Leksokipos puzzle by asking the real predicate about all 795k words is ~1s; but every word `computeValidWords` can accept is spelled only from the puzzle's letters, so grouping the dictionary by each word's letter-set bitmask turns "everything this puzzle could possibly accept" into ≤ 2^7 = 128 map lookups. All ~1000 puzzles now re-derive in **~350 ms**. The index is a *prefilter*, not a second implementation of the rules — the real predicate still makes every accept/reject decision, and a too-narrow prefilter would drop a word and turn the test **red**, never green. Leksoplegma is deliberately left un-indexed (`enumerateBonusWords` compares raw strings, so indexing it would change what the real generator sees rather than narrow it) and simply pays ~40 s for all 200 boards.
 
-**Vres Tin Frasi is deliberately absent** from the registry: its phrases are not dictionary-derived, so no Nomination can make them stale. The omission is recorded in `registry.ts` so it reads as a decision.
+**Vres Tin Frasi is in the registry for its guess pools, not its phrases.** The two must be named separately, because conflating them is what caused a real bug.
+
+Its **phrases** (`phrases-el.json`) are authored content — not dictionary-derived — so no Nomination can make them stale, and no adapter covers them. That part was always correct.
+
+Its **guess-validation pools** (`words-{2,3}.json`) are the opposite: pure dictionary slices, exactly like Leksiarxeio's 4–8 lists, ever since ADR 0006's 2026-05-29 revision made `words-el.json` the single source for every length. They were originally overlooked because "Vres Tin Frasi is deliberately absent" was reasoning about the phrases and quietly generalised to the whole game, and because the files sit in `src/data/leksiarxeio/` — so they read as Leksiarxeio's, while Leksiarxeio is never played below 4 letters and never touches them. The `leksiarxeio` adapter's own header asserted that words of length ≤ 3 "live in words-el.json and nowhere else", which was simply false.
+
+The slicing rule is identical for both games, so it lives once in `lengthSlicedWords.ts` and each game binds it to the lengths it owns: `LEKSIARXEIO.LENGTHS` (4–8) and `VRESTIFRASI.SHORT_WORD_LENGTHS` (2–3). The two sets must stay **disjoint** — both write into the same directory, so an overlap would mean two adapters owning one file and the second clobbering the first. A guard test pins it.
+
+**Known drift, deferred (2026-07-17).** By the time the gap was found, the pools had already drifted: 118 words (7 at length 2, 111 at length 3) are listed in the pools but absent from `words-el.json`. All 118 are on the proper-noun blocklist — acronyms and names (ΗΠΑ, ΚΚΕ, ΟΤΕ, ΦΠΑ…) curated out of the dictionary while the pools never heard about it. The missed-addition direction is clean; only stale removals accumulated. They are **pinned in `premadeDataConsistency.test.ts` as a shrink-only ratchet rather than purged**, because purging is a gameplay decision: dropping `ρει` makes the committed phrase "Τα πάντα ρει" unwinnable, since the reducer refuses to submit a guess word absent from the pool. A *new* stale word still turns the guard red, so the adapter's work is guarded from here on.
 
 ## Consequences
 

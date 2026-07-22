@@ -33,6 +33,7 @@ type Db = BoundTable;
 import { planScoreMerge, type MergeRow } from "@/lib/scoreMerge";
 import { planAchievementMerge, type AchievementMergeRow } from "@/lib/achievementMerge";
 import { planPangramMerge, type PangramMergeRow } from "@/lib/pangramMerge";
+import { planWordsMerge, type WordsMergeRow } from "@/lib/wordsMerge";
 
 export const runtime = "edge";
 
@@ -255,6 +256,25 @@ async function restore(db: Db, oldDevice: string, anchor: Anchor) {
   }
   if (panPlan.deleteOld.length) {
     await db("player_pangrams").delete().in("id", panPlan.deleteOld);
+  }
+
+  // Merge the word find-set too (ADR 0013 lane C sibling): union onto the canonical
+  // identity, identical shape to the pangram merge (dedup key (puzzle_date, word)).
+  // Carry over what canonical lacks; drop duplicates the
+  // UNIQUE(device_uuid, puzzle_date, word) constraint would otherwise reject.
+  const { data: oldWords }   = await db("player_words")
+    .select("id, puzzle_date, word").eq("device_uuid", oldDevice) as { data: WordsMergeRow[] | null };
+  const { data: canonWords } = await db("player_words")
+    .select("id, puzzle_date, word").eq("device_uuid", canonical) as { data: WordsMergeRow[] | null };
+
+  const wordsPlan = planWordsMerge(oldWords ?? [], canonWords ?? []);
+  if (wordsPlan.repoint.length) {
+    await db("player_words")
+      .update({ device_uuid: canonical })
+      .in("id", wordsPlan.repoint);
+  }
+  if (wordsPlan.deleteOld.length) {
+    await db("player_words").delete().in("id", wordsPlan.deleteOld);
   }
 
   // Drop this device's now-merged profile row (unique device_uuid index).

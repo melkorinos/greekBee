@@ -60,7 +60,7 @@ afterEach(()  => { _callQueue = []; _lastUpsert = null; });
 
 const VALID_POST = {
   device_uuid:     "device-1",
-  achievement_ids: ["leksokipos-tzimani"],
+  achievement_ids: ["leksokipos-theristis"],
 };
 
 // ── POST — happy path ─────────────────────────────────────────────────────────
@@ -77,7 +77,7 @@ describe("POST /api/achievements — happy path", () => {
       ignoreDuplicates: true,
     });
     expect(_lastUpsert?.rows).toEqual([
-      { device_uuid: "device-1", achievement_id: "leksokipos-tzimani" },
+      { device_uuid: "device-1", achievement_id: "leksokipos-theristis" },
     ]);
   });
 
@@ -85,11 +85,11 @@ describe("POST /api/achievements — happy path", () => {
     enqueue({ error: null });
     const res = await POST(makePostReq({
       device_uuid:     "device-1",
-      achievement_ids: ["leksokipos-tzimani", "leksokipos-tzimani", "leksokipos-first-daily"],
+      achievement_ids: ["leksokipos-theristis", "leksokipos-theristis", "leksokipos-first-daily"],
     }));
     expect(res.status).toBe(200);
     expect(_lastUpsert?.rows).toEqual([
-      { device_uuid: "device-1", achievement_id: "leksokipos-tzimani" },
+      { device_uuid: "device-1", achievement_id: "leksokipos-theristis" },
       { device_uuid: "device-1", achievement_id: "leksokipos-first-daily" },
     ]);
   });
@@ -137,7 +137,7 @@ describe("POST /api/achievements — validation", () => {
   });
 
   it("400 when achievement_ids is not an array", async () => {
-    const res = await POST(makePostReq({ device_uuid: "device-1", achievement_ids: "leksokipos-tzimani" }));
+    const res = await POST(makePostReq({ device_uuid: "device-1", achievement_ids: "leksokipos-theristis" }));
     expect(res.status).toBe(400);
   });
 
@@ -159,12 +159,12 @@ describe("GET /api/achievements", () => {
 
   it("returns the device's earned achievement_ids", async () => {
     enqueue({ data: [
-      { achievement_id: "leksokipos-tzimani" },
+      { achievement_id: "leksokipos-theristis" },
       { achievement_id: "leksokipos-first-daily" },
     ], error: null });
     const res = await GET(makeGetReq({ device_uuid: "device-1" }));
     expect(res.status).toBe(200);
-    expect((await res.json()).earned).toEqual(["leksokipos-tzimani", "leksokipos-first-daily"]);
+    expect((await res.json()).earned).toEqual(["leksokipos-theristis", "leksokipos-first-daily"]);
   });
 
   it("returns an empty list when the device has earned nothing", async () => {

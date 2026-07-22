@@ -1,7 +1,9 @@
 # Agent Memory — Greek Word Games Platform
 
-## ⚡ Current State (2026-07-17)
-Seven live games (incl. Λεξοδρομία + Λεξόπλεγμα, graduated from wip session 77) + custom puzzle URLs + the Leksikastirio word-court. Run `npm run test -- --run` for current count.
+> **Rule (2026-07-18):** keep this file under **120 lines** — decisions and pointers, never narrative. Long prose belongs in an ADR with a pointer here. Maintained by the end-of-session Dream (soul.md).
+
+## ⚡ Current State (2026-07-22)
+Eight live games (incl. Λεξοδρομία + Λεξόπλεγμα, and **Topothesies** geography — published s121) + custom puzzle URLs + the Leksikastirio word-court. Run `npm run test -- --run` for current count.
 
 | Game | Route | Status |
 |------|-------|--------|
@@ -13,6 +15,7 @@ Seven live games (incl. Λεξοδρομία + Λεξόπλεγμα, graduated f
 | Leksikastirio | `/leksikastirio` | Live — community word-court (voting + admin review) |
 | Λεξοδρομία | `/leksodromia` | Live — daily anagram sprint, decay-to-floor scoring |
 | Λεξόπλεγμα | `/leksoplegma` | Live — daily word-web (zanagrams-style), points scoring, no timer/bonus |
+| Topothesies | `/topothesies` | Live (s121) — Worldle-style geography: guess the regional unit from its silhouette, then its capital |
 
 ---
 
@@ -23,8 +26,8 @@ Seven live games (incl. Λεξοδρομία + Λεξόπλεγμα, graduated f
 | **Routing** | `/leksokipos`, `/leksiarxeio`, `/leksindeseis`, `/vres-tin-frasi`, `/leksodromia`, `/leksoplegma`, `/stavrolekso` (+ `/[id]`, `/maker`), `/leksikastirio`, `/` picker. Custom: `/leksokipos/[center]/[outer]` |
 | **Persistence** | Single `wordgames:state` key. `useGameStore` is the ONLY localStorage writer. Exception: `leksokipos-variant` standalone key (display pref, not game state). |
 | **Types** | Root `src/types/index.ts` = `Language`, `SliceId`, `PersistenceEnvelope` only. Game types in `src/games/*/types.ts`. (`SliceId` is the **persistence-slice** union, incl. `suggestions`/`reports`, `leksodromia`, `leksoplegma`; it is NOT the game registry — `stavrolekso`/`leksikastirio` have no store slice so they're absent by design. For "every registered game" use `RegistryGameId` from `@/config/games`.) |
-| **Config / single sources of truth** | `src/config/` holds the platform's tuning knobs — never hardcode a value that lives here, import it. `games.ts` = `GAME_REGISTRY` + `RegistryGameId` (nav/picker/titles derive from it). `gameRules.ts` = every numeric knob per game (`LEKSOKIPOS.MIN_WORD_LENGTH/PANGRAM_BONUS/SCORE_SCALE/SOFT_CAP_KNEE/SOFT_CAP_K`, `LEKSIARXEIO.MAX_GUESSES/LENGTHS`, `VRESTIFRASI.MAX_GUESSES`, `LEKSINDESEIS.MAX_MISTAKES`, `STAVROLEKSO.VALID_GRID_SIZES`, `LEKSODROMIA.*` decay-scoring knobs, `LEKSOPLEGMA.*` word-web points knobs). `platform.ts` = brand name + derived SEO description. `retention.ts` = DB retention windows (cron). `LeksiarxeioLength` type must track `LEKSIARXEIO.LENGTHS`. |
-| **Theming** | All pages = white/light mode by default. Manual dark/light toggle in Shell header (☀️/🌙). `.dark` class on `<html>` drives all dark styles — `prefers-color-scheme` NOT used. `dark:` Tailwind prefix is enabled via `@custom-variant dark` in `globals.css` (see ADR 0002). Preference stored in `localStorage` key `"theme-preference"`. **Semantic design tokens** are the single source for the palette: defined in `globals.css`, light on `:root` + dark under `.dark` (ADR 0008) — components reference tokens (`bg-surface`, `text-muted`), never `dark:` pairs. Feedback colours (green/yellow tile states, difficulty colours) are tokens too. **Per-game brand accent** (ADR 0009): `--game-accent` / `--game-accent-foreground`, set per game via `[data-game="…"]` in `globals.css`, on the game's root wrapper. Class recipes: platform-shared in `src/styles/recipes.ts`; Leksokipos-only in `src/components/leksokipos/styles.ts`. Shared modal shell = `src/components/shared/Modal.tsx` (`center`|`sheet`). **Deliberate raw-palette exceptions (do NOT "tokenise" — they'd regress):** `StavroleksoGrid` (functional crossword cells, black/white, already dark-handled — like tile colours), `Shell` slide-out drawer (intentionally always-dark `zinc-*`, no always-dark token), `FeedbackBanner` (explicit `theme` prop so games force their own look; no success/error surface-tint tokens exist), `FlowerGridPlayground` (dev-only tool), and the fixed-yellow chip `text-stone-900` in leksokipos `styles.ts`. |
+| **Config / single sources of truth** | `src/config/` holds the platform's tuning knobs — never hardcode a value that lives here, import it. `games.ts` = `GAME_REGISTRY` + `RegistryGameId` (nav/picker/titles derive from it). `gameRules.ts` = every numeric knob per game (`LEKSOKIPOS.MIN_WORD_LENGTH/PANGRAM_BONUS/SCORE_SCALE/SOFT_CAP_KNEE/SOFT_CAP_K`, `LEKSIARXEIO.MAX_GUESSES/LENGTHS`, `VRESTIFRASI.MAX_GUESSES`, `LEKSINDESEIS.MAX_MISTAKES`, `STAVROLEKSO.VALID_GRID_SIZES`, `LEKSODROMIA.*` decay-scoring knobs, `LEKSOPLEGMA.*` word-web points knobs). `achievementTuning.ts` = achievement trigger thresholds/scales/rates (balance knobs). `platform.ts` = brand name + derived SEO description. `retention.ts` = DB retention windows (cron). `LeksiarxeioLength` type must track `LEKSIARXEIO.LENGTHS`. |
+| **Theming** | Light default + manual ☀️/🌙 toggle — `.dark` class on `<html>` (never `prefers-color-scheme`), pref in `localStorage["theme-preference"]` (ADR 0002). **Semantic tokens only** (ADR 0008): components use tokens (`bg-surface`, `text-muted`, status trios, shape tokens), never `dark:` pairs or literal palette classes; the deliberate raw-palette exceptions are enumerated in ADR 0008 — do NOT tokenise them. Column = `max-w-game` (`--container-game`). Page frame = `GamePageShell` + `GameHeader` (Leksokipos keeps a bespoke full-bleed wrapper — open redesign decision). Per-game accent via `[data-game]` rows, all 8 surfaces (ADR 0009). Recipes own colour/typography/radius, call sites own layout: `src/styles/recipes.ts` (platform) / `src/components/leksokipos/styles.ts` (Leksokipos-only); shared modal shell `Modal.tsx`. Guards: `noRawPaletteClasses` / `noRawActionButtonColors` / `noLiteralColumnWidth`. **Full posture lives in ADR 0008 + 0009 — read those before styling work.** |
 | **Route envelope** | `src/lib/apiRoute.ts` owns what every `/api` route does before its own logic (ADR 0016). New routes use `parseJson` (never a hand-rolled `req.json()` try/catch) and `requireAdmin` (the `x-admin-secret` header is the **one** admin wire format; a bad secret is **401**, never 403). Error bodies stay `{ error: string }` but the string comes from one of two channels: `jsonError(code, detail?)` for envelope-owned codes — detail is logged, never sent, so **no route returns a raw Postgres message** — or `jsonMessage(text, status?)` for copy the route authors (validation, domain codes like `blocked_word`, and the Greek strings the UI renders verbatim). Deliberate exception: `/api/cleanup-scores` keeps raw messages — cron-only behind `CRON_SECRET`, so they're a diagnostic, not a leak. |
 | **Game logic** | Pure functions in `src/games/*/lib/` — zero React imports. |
 | **Shared components** | Graduate to `src/components/shared/` only when 2 games genuinely need it. |
@@ -32,12 +35,13 @@ Seven live games (incl. Λεξοδρομία + Λεξόπλεγμα, graduated f
 | **Custom puzzle ID** | `custom-{center}-{sortedOuter}` — not date-scoped. |
 | **No Greek accents** | Zero accents in URLs, stored state, puzzle letters, valid-word output. `normalizeLetters()` is the single normalisation point. |
 | **Custom URL** | Greeklish bijective codec (`src/lib/greeklish.ts`). Canonical 301 redirect on unnormalised params. |
-| **Supabase** | Singleton in `src/lib/supabase.ts`. `getOrCreateDeviceId()` generates stable UUID stored under `deviceId` in the envelope. **Schema is version-controlled** in `supabase/migrations/` (authoritative DDL + RLS); change it via a new migration + `npx supabase db push` (no Docker), never via dashboard/MCP alone or it drifts. When push is blocked (missing `SUPABASE_DB_URL`, or a deploy-coupled migration pending), the sanctioned fallback is MCP `apply_migration` **with the matching file committed** — but it records an invented history version, so the file's version must be `migration repair`ed at the next push (list lives in the deploy runbook handoff). `CONTEXT.md` documents table *purpose* only. |
+| **Supabase** | Singleton in `src/lib/supabase.ts`. `getOrCreateDeviceId()` generates stable UUID stored under `deviceId` in the envelope. **Schema is version-controlled** in `supabase/migrations/` (authoritative DDL + RLS); change it via a new migration + `npx supabase db push --db-url "$SUPABASE_DB_URL"` (no Docker; URL in `.env.local` since 2026-07-18, history matches files exactly since session 111 — plain push is safe), never via dashboard/MCP alone or it drifts. Emergency fallback only: MCP `apply_migration` **with the matching file committed** — it records an invented history version needing a double `migration repair` later (`applied` for the file version + `reverted` for the invented row), so prefer push now that the URL exists. `CONTEXT.md` documents table *purpose* only. |
 | **Profile identity** | No PIN. Profile = device_uuid row in `player_profiles`. Cross-device: generate 6-char transfer code via `POST /api/transfer`, claim on other device via `POST /api/transfer/claim`. `useProfile` hook shared across games. `ProfileSection` component shared in `src/components/shared/`. Google OAuth links device identity to an `auth_user_id` on `player_profiles`, which is the durable identity anchor; Sign-in Restore adopts the account's device_uuid and merges history. `/api/auth/link` derives `auth_user_id` from the verified JWT and writes `identity_audit`; it no longer stamps `game_scores` (column dropped). See ADR 0012 (supersedes 0007). |
 | **Leaderboard** | Per-puzzle daily only. Silent upsert on score increase. 7-day rolling window. Custom puzzles excluded. |
 | **Leaderboard navigation** | Rolling 7-day pill strip. `getRecentPuzzleDates(7)` server-side. |
 | **Future renames** | UI strings only — never directories, types, or routes. |
 | **FlowerGrid themes** | `DEFAULT_PIE_CONFIG` + `DEFAULT_FLOWER_CONFIG` presets. Toggle in `LeksokiposLayout` header. |
+| **Topothesies (wip)** | Worldle-style Greek geography game — guess the regional unit from its silhouette (4), then its capital (3 bonus). Static OSM ODbL boundaries; build-time mapshaper dissolve→**precomputed SVG paths** (no client projection); daily static render inlines only today's path; autocomplete = names only. Answers = regional units, island-cluster units split per-island (municipality-clean peels only in v1; sub-island shares → Deferred, never merged). Foundation ships wip:true; gameplay = handoffs 02/03. **Pipeline lib**: `scripts/lib/topothesies/` (`planDissolve` split-mapping, `validateEmitted` gate, `confirmedSplits` locked ids). **Game logic** (handoff-02, done): pure `src/games/topothesies/lib/` — `geo` (haversine/8-way arrow/proximity, guards `maxKm<=0`), `selectDailyPuzzle` (id-sorted `dateToIndex`), `evaluateGuess` (accent-insensitive resolve + hint), `scoring`, `topothesiesReducer` (flags DERIVED from guess history → RESTORE = replay; valid-only guesses consumed; failed shape still enters capital stage), `shareText` (spoiler-free). Hint fns take `maxKm` as a param (tests inject; placeholder config `PROXIMITY_MAX_KM:0`). Types in `src/games/topothesies/types.ts`. See **ADR 0018**. **EMISSION + UI DONE (2026-07-21, handoff-03, s117) — functionally complete, still `wip:true` pending operator play-through + flag flip.** **Source = OpenStreetMap admin_level=7 δήμοι** (ODbL; **full swap from geoBoundaries in s119** — geoBoundaries retained only for the empty per-id fallback `GEOBOUNDARIES_FALLBACK_IDS`). Raw dump gitignored via `fetchOsmBoundaries.ts` (private.coffee mirror — main Overpass 504s on the country query). **Join = Wikidata QID** (OSM `wikidata` → `wd-munis.json` `q` → `parentEl` RU → `RU_TO_ID`; `ISLAND_PEEL_WD`/`DROP_WD`/`MUNI_RU_FIX_WD`/`assignOsm` in `curation.ts`; **0 unassigned**; foreign bbox munis dropped by nearest-RU distance). `osmPolygons.ts` assembles Overpass `out geom` → GeoJSON polygons (ring-stitch + hole-nest, **zero deps**). **All mainland Attica → one `attica`** (Αθήνα+Πειραιάς removed forever); **Θεσσαλονίκη→Χαλκιδική** (whole Π.Ε. merged, s120 — dense metro; `thessaloniki` id retired); **Θήρα→Σαντορίνη** (id frozen, UI-name only). **29 islands DEFERRED** (`confirmedSplits.DEFERRED_ANSWER_IDS` — low OSM fidelity; ANSWER_META + peel mapping kept so re-add = delete the id) → **75 answers**. Fidelity work + a preview build (`TOPO_PREVIEW=1` emits deferred too → `preview-cards.json` → `preview-outlines.mjs` → `.claude/aiHelper/outlines-preview.html`, shows capital+status+pts) tracked in handoff `topothesies-deferred-places.md`. Simplify = absolute **200 m** coastal tolerance (Εύβοια ~12 KB; per-shape byte budget 20 KB in performance.test); `shapes.json` server-only, one path/day inlined. `PROXIMITY_MAX_KM` = **807**. Final-list target: reconcile to **«Νομοί και Νησιά της Ελλάδας»** (Greek-Wiki νομοί + islands split out) — tracked in deferred handoff `.claude/handoffs/topothesies-deferred-places.md`. **UI:** `/topothesies` (force-dynamic) · `TopothesiesSilhouette` (self-framing SVG, `fill-game-accent`) · `GuessAutocomplete` (accent-insensitive, list-constrained) · `TopothesiesBoard` (both stages + hint chips + `useLiveScorePost`) · `useTopothesiesRound` (saves guesses+puzzleId → RESTORE replay) · `TopothesiesResult` (reveal + copy-share) · HowToPlay w/ **ODbL attribution** (`attribution.ts`) · leaderboard row. **s118 UX corrections:** capital stage has **no distance hint** (plain right/wrong; `CapitalGuessRecord` has no `hint`, `evaluateCapitalGuess`→`{correct,known}`); **give-up** = `GIVE_UP` action + `gaveUp` flag (threaded through `derive`, persisted/restored) + `TopothesiesGiveUpModal`; **on-screen decorative emoji stripped** (🗺️/🟩/🏛️/✅❌ → success/danger tokens). **s121 UX corrections:** `GuessAutocomplete` opens the FULL candidate list on focus (empty query→all, scrollable) for both inputs; accent `lime-700`→**ultramarine `blue-700`**; each stage ends with a **`StageReveal` overlay drawn on top of the silhouette** (correct answer + success/danger tone + an explicit «Συνέχεια»/«Δες το σκορ» the player must accept before the next stage) — acks are UI-only local state gated on `hasLiveActed()` (folded into derived `show*` flags, NOT an effect — `set-state-in-effect` is a lint error), give-up bypasses via `gaveUp`; **end screen shows just «{score} πόντοι» + answer line** — the on-screen Worldle emoji `<pre>` grid is GONE (the share BUTTON still copies the emoji card for external sharing; only the on-screen preview was removed); dropdown sorts alphabetically (Greek collation); shared `Modal` ✕ now uses the `btnHeaderIcon` circle recipe (platform-wide). **PUBLISHED s121 — `wip:false`, LIVE.** Required adding `topothesies` to `Shell.tsx GAME_IDS` (was absent → flag flip alone wouldn't have shown it in the sidebar) + to `HomeTrophyButton` branch in `page.tsx`. **Known debt (operator to handle):** accent-filled buttons (share / StageReveal continue / give-up+leaderboard links) are hand-rolled `bg-game-accent` strings — no recipe exists for accent fills (recipes use `bg-inverted`); guards don't catch it. |
 
 ---
 
@@ -65,122 +69,4 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 
 ## 🧪 Test Coverage Map
 
-> Before writing a new test, grep the `describe` column. If the function appears, read that file first.
-
-| File | What is tested |
-|------|----------------|
-| `evaluateGuess.test.ts` | Two-pass Wordle evaluation — correct/present/absent/duplicate |
-| `leksiarxeioReducer.test.ts` | ADD_LETTER, DELETE_LETTER, SUBMIT_GUESS (win/loss/invalid), RESTORE_STATE |
-| `gameLogic.test.ts` (leksiarxeio) | `scoreLeksiarxeio`, `buildLetterStateMap` |
-| `guessGrid.test.tsx` | Tile rendering, max-width per length |
-| `header.test.tsx` | LeksiarxeioPageClient — 🏆, HowToPlay, scoring note |
-| `theme.test.tsx` | Tile + Keyboard **light** theme classes (empty/pending/unknown states) |
-| `dataLoader.test.ts` (leksiarxeio) | `getTodaysLeksiarxeioPuzzle`, `getAllTodaysLeksiarxeioPuzzles`, `getValidWords` |
-| `gameLogic.test.ts` (leksokipos) | `isPangram`, `scoreWord`, `maxScore`, `calculateRank`, `validateWord` — Greek fixture (production alphabet; absorbed the former `greekLogic.test.ts` 2026-07-02) |
-| `gameReducer.test.ts` | All reducer actions incl. SUBMIT_WORD, RESTORE_STATE |
-| `GameBoard.test.tsx` | Rendering, keyboard, hex clicks, word submission, feedback |
-| `LeksokiposLayout.test.tsx` | Variant toggle (pie↔flower), localStorage save/restore, tooFewWords |
-| `greeklish.test.ts` | Bijective Greek↔greeklish codec round-trip |
-| `leksokiposDataLoader.test.ts` | `getPuzzleForDate`, `getPuzzleById`, `getRandomPuzzle`, `getNextPuzzle` |
-| `leksokiposRouting.test.ts` | Canonical URL round-trip for all pre-built puzzles |
-| `computeValidWords.test.ts` | `computeValidWords` — inclusion, too-short, missing center, normalisation |
-| `customPuzzle.test.tsx` | `buildCustomPuzzle` + `ShareButton` |
-| `parseCustomUrl.test.ts` | `parseCustomUrl` — valid, invalid center/outer, uniqueness |
-| `normalize.test.ts` | `normalizeLetters` — accents, ς→σ, edge cases |
-| `noAccents.test.ts` | Accent-free invariant across puzzles, reducer, URL params |
-| `leksindeseisReducer.test.ts` | SELECT_WORD, SUBMIT_GUESS (correct/wrong/one-away), terminal guard |
-| `groupGrid.test.tsx` | Render, solved groups, selection, disabled |
-| `dataLoader.test.ts` (leksindeseis) | `getTodaysLeksindeseisPuzzle` — date match, fallback, shape |
-| `persistence.test.ts` | `useRoundPersistence` — hydration, saving, clear(), shouldSave |
-| `useScoreSubmission.test.ts` | Unified hook — submit/submitWithName (Leksokipos, Leksindeseis, Vres Tin Frasi): dedup guard, enabled gate, is_perfect latch |
-| `useLiveScorePost.test.ts` | Shared round-game posting policy — restored/untouched never posts (+never opens leaderboard), posts live score on every change, opens leaderboard once after delay on finish, custom delay |
-| `useLeksiarxeioScoreSubmission.test.ts` | Leksiarxeio per-length posting — attempts→points mapping, deviceId gate, name ref |
-| `useGuessRound.test.ts` | Shared guess-game spine — score-only-on-end, onGameEnd once, persist `{guesses,status}` + restore, save guard, per-puzzle sessions |
-| `communityPuzzleLifecycle.test.ts` | submit/list/review handlers **+ `consumeApprovedPuzzle`** (claim oldest approved, delete by id, null on empty/error) |
-| `apiRoute.test.ts` | The route envelope (ADR 0016), tested once instead of per route — `jsonError` code→status + detail logged-not-leaked, `jsonMessage` verbatim copy (incl. Greek at a chosen status), `parseJson` ok/invalid_json, `requireAdmin` header match, body-borne secret rejected, never fails open on unset `ADMIN_SECRET` |
-| `leksokiposSync.test.ts` | `pushFoundWords` (wire shape, never throws) + `pullSnapshot` (rebuild snapshot+score, params, null on empty/null/error) — the cross-device sync wire |
-| `useGameIdentity.test.ts` | SSR-safe DeviceId + DisplayName init, setter state updates |
-| `usePlayerIdentity.test.ts` | Bundled identity module — migration-runs-before-device-read ordering, scalar fields from store, complete `leaderboardProps` bundle + wiring, `saveName` persists |
-| `useGameStore.test.ts` | readSlice, writeSlice, clearSlice, deviceId, displayName, profileLinked, migration |
-| `Shell.test.tsx` | Hamburger open/close/Escape, nav links, theme toggle (aria-label, `.dark` class on `documentElement`) |
-| `letterPickerModal.test.tsx` | Center/outer selection, quality rules (vowel center, ≥2 vowels, consonants) |
-| `feedbackMessage.test.tsx` | Valid/pangram/error statuses, suggest button |
-| `nominationModal.test.tsx` | NominationModal — visibility, word field (readonly + editable), direction copy, close, POST payload, success/error states |
-| `suggestions.test.ts` | `getSuggestedWords`, `markSuggested`, `isSuggested` |
-| `wordInput.test.tsx` | Letter display, center-letter highlight, inline submit visibility |
-| `deploymentReadiness.test.ts` | Statically imported data files exist and are not gitignored |
-| `profileRoute.test.ts` | `GET /api/profile?device_uuid=` (exists/not/error) + `POST /api/profile` (upsert, 400 missing uuid) |
-| `transferRoute.test.ts` | `POST /api/transfer` (code format, 400, 500) + `POST /api/transfer/claim` (valid, 404/410 used/expired, empty profile) |
-| `leaderboardModal.test.tsx` (leksokipos) | Day strip, play link, ProfileSection (idle/claiming/linked/transfer), name editor |
-| `useProfile.test.ts` | Cross-device profile hook — createProfile (payload/Ανώνυμος/failure), transfer generate+claim (deviceId adoption, restore flag, error surface), disconnect |
-| `useLeaderboardProfile.test.ts` | Profile-aware save (unlinked→create+createError, linked→save) + `useLeaderboardProfileSlot` bundle (ProfileSection wiring, saveButtonAlwaysActive) |
-| `dataLoader.test.ts` (vrestifrasi) | `getTodaysVresTinFrasiPuzzle` — community consume, static rotation fallback, `buildPuzzle` accent normalisation + wordLengths |
-| `scoring.test.ts` (vrestifrasi) | `scoreVresTinFrasi` — 6→1 by attempts, 0 on loss, floor guard |
-| `mobileLayout.test.tsx` | HowToPlayModal-specific overflow contracts only (list max-height/scroll, card clipping) — modal *shell* contracts live in `modal.test.tsx` |
-| `modal.test.tsx` (shared) | Modal primitive — open/close gating, center/sheet variants, overlay-click + stopPropagation, close button, testid/aria pass-through (ADR 0009) |
-| `recipes.test.ts` (shared) | Platform recipes — non-empty, button/leaderboard token contracts, no `dark:` pairs |
-| `styles.test.ts` (leksokipos) | Leksokipos-local recipes — feedback/found-word/score-bar/give-up token contracts, no `dark:` pairs (ADR 0009) |
-| `validateSubmission.test.ts` (×4: leksiarxeio, leksindeseis, vrestifrasi, stavrolekso) | Community Puzzle validation adapters as pure functions — per-game submission invariants; stavrolekso also `EDIT_PIN_PATTERN` + `validateStavroleksoData` (shared with PATCH edit route + maker) |
-| `scoring.test.ts` (leksodromia) | `computeWordPoints` — decay-to-floor, hint costs, MIN clamp, perfect round = MAX_SCORE |
-| `selectDailyWords.test.ts` | Deterministic 2×(4–8) selection; **never Leksiarxeio's same-day fallback answer** (cross-game leak guard) |
-| `scrambleWord.test.ts` | Deterministic seeded scramble — multiset-preserving, never identity |
-| `leksodromiaReducer.test.ts` | PICK_TILE/ADD_LETTER/REMOVE_LETTER/SUBMIT_WORD/USE_HINT (cap+prefix lock)/SKIP_WORD/RESTORE_STATE + selectors |
-| `useLeksodromiaRound.test.ts` | `useElapsedClock` (visibility pause, reset/seed) + round spine (persist snapshot, refresh restores clock, post-restore reset, **hasLiveActed** false-on-restore/flips-on-live) |
-| `board.test.tsx` (leksodromia) | Board — rack→answer row, wrong-submit feedback, hint reveal, two-phase skip, recap, single live score post (no re-post on restored finish); PageClient header + rules |
-| `dataLoader.test.ts` (leksodromia) | `getTodaysLeksodromiaPuzzle` — 10 ascending words + parallel non-identity scrambles, deterministic, curated-pool membership |
-| `graph.test.ts` (leksoplegma) | `edgeKey`/`edgesOf`/`liveTiles`/`liveEdges`/`isTraceValid` — undirected edge union, collapse rule, trace validation |
-| `scoring.test.ts` (leksoplegma) | `computeScore` (length×10 + flat bonus − hints, floor) + `isPerfectRound` + LEKSOPLEGMA constants |
-| `leksoplegmaReducer.test.ts` | TRACE_WORD required/bonus/miss/dup (incl. collapsed-bonus tension), USE_HINT auto-target + per-word cap, terminal state, RESTORE_STATE filtering |
-| `generator.test.ts` (leksoplegma) | Offline generator core — constraint validation on real pools (coverage, adjacency, no crossing diagonals), determinism, `enumerateBonusWords` on fixture board |
-| `dataLoader.test.ts` (leksoplegma) | `getPuzzleForDate` rotation + 365-date Leksiarxeio same-day answer-leak guard + `containsSameDayLeksiarxeioAnswer` |
-| `board.test.tsx` (leksoplegma) | Board — tap-build trace seam, collapse rendering, hint chips, bonus counter, recap, single live score post + is_perfect, no re-post on restore; PageClient header + no-timer rules |
-| `achievements.test.ts` (leksokipos) | Catalog + `detectEarnedAchievements` (5 one-shots, daily gate) + `detectEarnedPointsTiers`/`detectEarnedPangramTiers` + `nextPangramTierThreshold` + `describeAchievement` |
-| `achievementToast.test.tsx` | AchievementToast render + dismiss |
-| `useAchievementSync.test.ts` | The detection lanes — posting, points tier, pangram delta-post, unlock-toast surfacing (earned-at-mount suppression), gating |
-| `useDayChange.test.ts` | Day-rollover redirect — today's puzzle, past-puzzle leaderboard nav, custom puzzles |
-| `useGameState.test.ts` | Cross-device server restore — gates, success, error handling, `restoreFromServer` |
-| `missedWordsList.test.tsx` | MissedWordsList (give-up reveal) |
-| `pangrams.test.ts` (leksokipos) | `sanitizePangramWords` shape guards (ADR 0013 B2) |
-| `puzzle.test.ts` (leksokipos) | `isDailyPuzzle`, `isISODate` |
-| `puzzleIndex.test.ts` | Slim puzzle index — drift guard vs full loader, `getPrebuiltPuzzleParams` canonical params |
-| `randomPuzzle.test.ts` | `pickRandom7` quality rules |
-| `rankDisplay.test.ts` | `rankProgress`, `getRankEmoji` |
-| `answerPools.test.ts` (leksiarxeio) | `LEKSIARXEIO_ANSWER_POOLS` + `getSameDayFallbackAnswers` — seam == pool[dateToIndex] all year |
-| `keyboardInteraction.test.tsx` (leksiarxeio) | On-screen keyboard letter/delete/enter dispatch end-to-end |
-| `NominationCard.test.tsx` / `page.test.tsx` (leksikastirio) | Card render, vote highlight, voting, admin controls; page rendering, tabs, optimistic voting |
-| `matching.test.ts` (leksindeseis) | `matchesGroup`, `isOneAway` |
-| `evaluatePhraseGuess.test.ts` / `letterState.test.ts` (vrestifrasi) | Two-pass cross-word evaluation (ADR 0004); `buildPhraseLetterStateMap` 4-state priority |
-| `lib.test.ts` (stavrolekso) | `autoNumberSlots`, `isConnected`, `normalizeAndCompare`, `getSlotLength`, `getSlotCells` |
-| `auth-link.test.ts` (api) + `authLinkRoute.test.ts` (shared) | `POST /api/auth/link` — JWT security boundary, link/restore modes, occupied-device guard, `identity_audit`, error paths |
-| `applyDictionaryEdits.test.ts` + `resync{Registry,Leksiarxeio,Leksokipos,Leksoplegma,Leksodromia}.test.ts` (scripts) | ADR 0015 re-sync — orchestrator (dictionary + registry walk), write gate, per-game adapters: additions/removals/no-ops |
-| `IdentityHeader` / `LifetimeStatsStrip` / `NameEditor` / `TrophyCase` / `WelcomeBackBanner` (profile) | The five Profile Page components |
-| `achievementMerge.test.ts` / `pangramMerge.test.ts` | `planAchievementMerge` / `planPangramMerge` — Sign-in Restore unions |
-| `achievementsRoute.test.ts` / `pangramsRoute.test.ts` | `POST/GET /api/achievements` (id whitelist) · `POST /api/pangrams` (insert-if-absent, validation, DB errors) |
-| `authCallbackRedirect.test.tsx` | `/auth/callback` redirect destination |
-| `cleanupScoresRoute.test.ts` + `cleanupScoresLiveDb.test.ts` | Cron — CRON_SECRET auth, never touches append-forever tables; live-DB twin **skips without env vars** (issue 03) |
-| `communityPuzzlesReviewRoute.test.ts` | PATCH review — auth + leksiarxeio/leksindeseis routes |
-| `feedbackModal.test.tsx` | FeedbackModal — visibility, required text, submission, 60s throttle |
-| `gameScoresRoute.test.ts` | `POST/GET /api/game-scores` — validation, locale-suffix strip, Leksiarxeio read-modify-write |
-| `gameStateRoute.test.ts` | `POST/GET /api/game-state` |
-| `lifetimeStats.test.ts` | `aggregateLifetimeStats` |
-| `nominationBlocklist.test.ts` | `isBlockedWord` (16,947-entry proper-noun blocklist) |
-| `nominationsRoute.test.ts` | Nominations GET/POST (422 blocked_word, 409 already_pending)/lookup/vote/review (header auth) |
-| `noRawPaletteClasses.test.ts` / `noRawActionButtonColors.test.ts` | ADR 0008 guards — no literal neutral palette / no hand-rolled green-red action fills |
-| `performance.test.ts` | Hotpath timing budgets — computeValidWords, buildCustomPuzzle cache, prebuilt scan |
-| `placement.test.ts` | `countFirstPlaceFinishes` (Πρωτιές, ties share rank 1) |
-| `postScore.test.ts` | `sanitizeDisplayName` |
-| `premadeDataConsistency.test.ts` | ADR 0015 drift guard — every game, both directions (stale removal + missed addition), byte-identical write path |
-| `profileSectionFunnel.test.tsx` / `profileSectionSignIn.test.tsx` | ProfileSection — /profile funnel link; Google sign-in offered whenever not AuthLinked (ADR 0012) |
-| `profileStatsRoute.test.ts` | `GET /api/profile/stats` |
-| `puzzleDate.test.ts` | `todayISO` / `getLast7Dates` (UTC anchoring) / `normalizePuzzleDate` / `resolvePuzzleDateParam` |
-| `puzzleRotation.test.ts` | `dateToIndex` |
-| `rlsInvariantsLiveDb.test.ts` | Live-DB RLS posture matrix — **skips without env vars** (issue 03) |
-| `scoreMerge.test.ts` | `planScoreMerge` (best-per-puzzle) + `mergeLengthScore` (Leksiarxeio fold; re-post overwrite documented) |
-| `stavroleksoIdRoute.test.ts` | GET/PATCH stavrolekso `[id]` — PIN auth + state guards, "the edit actually persists" (service-role write) |
-| `supabase.test.ts` | `getSupabaseClient`, `signInWithGoogle` |
-| `useAuth.test.ts` | Session on mount / from store / sign-out |
-| `useGameEndCallback.test.ts` | `useGameEndCallback` fires once |
-| `useGameStateSync.test.ts` | Backfill on link + incremental push when linked |
-| `useLeaderboard.test.ts` | Initial fetch, enabled flag, polling, manual refresh, custom buildUrl |
-| `useProfileVerification.test.ts` | Profile-still-exists check — disconnect on gone, never on network error (offline users stay) |
-| `validateWordsRoute.test.ts` | `POST /api/validate-words` |
+Moved to **`.claude/aiHelper/coverageMap.md`** (2026-07-18). Not loaded at session start — grep it before writing any new test (if the function already appears, read that test file first) and update it in the end-of-session Dream (soul.md).

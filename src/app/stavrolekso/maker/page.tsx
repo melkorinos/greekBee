@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { GamePageShell } from "@/components/shared/GamePageShell";
 import { StavroleksoGrid, computeHighlightedCells } from "@/games/stavrolekso/StavroleksoGrid";
 import {
   autoNumberSlots,
@@ -13,6 +14,7 @@ import {
   validateStavroleksoData,
 } from "@/games/stavrolekso/lib";
 import type { Direction, SlotDef } from "@/games/stavrolekso/types";
+import { btnModalSubmit, btnPrimaryCompact } from "@/styles/recipes";
 
 type Phase = 1 | 2 | 3;
 type GridSize = 9 | 13 | 15;
@@ -83,7 +85,7 @@ function ResumeForm({ onLoaded }: {
       <button
         disabled={!puzzleId.trim() || !pin || loading}
         onClick={handleResume}
-        className="w-full py-2 rounded-lg bg-inverted text-inverted-foreground text-sm font-semibold disabled:opacity-40 hover:opacity-90 transition-colors"
+        className={`w-full ${btnModalSubmit}`}
       >
         {loading ? "Φόρτωση…" : "Φόρτωσε"}
       </button>
@@ -105,8 +107,8 @@ function ConfirmationScreen({ info, onNew }: { info: Confirmation; onNew: () => 
   }
 
   return (
-    <main className="flex flex-col items-center min-h-screen bg-background px-4 py-8">
-      <div className="w-full max-w-sm space-y-6">
+    <GamePageShell gameId="stavrolekso">
+      <div className="w-full max-w-game space-y-6">
         <div className="text-center space-y-1">
           <p className="text-3xl">✅</p>
           <h1 className="text-xl font-bold text-foreground">Το παζλ στάλθηκε!</h1>
@@ -146,7 +148,7 @@ function ConfirmationScreen({ info, onNew }: { info: Confirmation; onNew: () => 
           Δημιούργησε νέο παζλ
         </button>
       </div>
-    </main>
+    </GamePageShell>
   );
 }
 
@@ -468,8 +470,8 @@ export default function StavroleksoMakerPage() {
 
   if (phase === 1) {
     return (
-      <main className="flex flex-col items-center min-h-screen bg-background px-4 py-8">
-        <div className="w-full max-w-sm space-y-6">
+      <GamePageShell gameId="stavrolekso">
+        <div className="w-full max-w-game space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground">✏️ Maker Stavrolekso</h1>
             <p className="text-sm text-muted mt-1">Δημιούργησε το δικό σου σταυρόλεξο.</p>
@@ -507,22 +509,22 @@ export default function StavroleksoMakerPage() {
 
           <button
             onClick={() => setPhase(2)}
-            className="w-full py-3 rounded-xl bg-inverted text-inverted-foreground font-semibold disabled:opacity-40 hover:opacity-90 transition-colors"
+            className={`w-full ${btnModalSubmit}`}
           >
             Δημιούργησε πλέγμα →
           </button>
 
           <ResumeForm onLoaded={handleResumeLoaded} />
         </div>
-      </main>
+      </GamePageShell>
     );
   }
 
   // ── Phase 2 + 3 layout ────────────────────────────────────────────────────
 
   return (
-    <main className="flex flex-col items-center min-h-screen bg-background px-4 py-6">
-      <div className="w-full max-w-sm space-y-4">
+    <GamePageShell gameId="stavrolekso">
+      <div className="w-full max-w-game space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-bold text-foreground">
@@ -539,7 +541,7 @@ export default function StavroleksoMakerPage() {
                 const first = slots[0];
                 if (first) setSelectedSlot({ number: first.number, direction: first.direction });
               }}
-                className="text-xs px-3 py-1.5 rounded-lg bg-inverted text-inverted-foreground font-semibold hover:opacity-90 transition-colors">
+                className={btnPrimaryCompact}>
                 Λέξεις →
               </button>
             )}
@@ -660,7 +662,7 @@ export default function StavroleksoMakerPage() {
             <button
               disabled={submitting}
               onClick={handleSubmit}
-              className="w-full py-3 rounded-xl bg-inverted text-inverted-foreground font-semibold disabled:opacity-40 hover:opacity-90 transition-colors"
+              className={`w-full ${btnModalSubmit}`}
             >
               {submitting ? "Αποστολή…" : resumeId !== null ? "Ενημέρωσε παζλ" : "Υποβολή παζλ"}
             </button>
@@ -675,6 +677,6 @@ export default function StavroleksoMakerPage() {
           </p>
         )}
       </div>
-    </main>
+    </GamePageShell>
   );
 }

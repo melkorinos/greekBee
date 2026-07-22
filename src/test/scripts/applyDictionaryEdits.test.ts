@@ -136,6 +136,109 @@ describe("applyDictionaryEdits — the dictionary", () => {
   });
 });
 
+// ── The apply-time blocklist gate ────────────────────────────────────────────
+//
+// The blocklist is a version-controlled JSON file, editable without a deploy —
+// so a word can be approved while clean and blocklisted before the apply runs.
+// Propose-time checks (the two edge routes) cannot see that window. This gate
+// re-checks at the moment of the write, treating the blocklist as authoritative.
+//
+// A hit STOPS the run rather than skipping the word: a silent skip would leave
+// the row `accepted` forever and re-trigger on every subsequent run.
+
+describe("applyDictionaryEdits — the blocklist gate", () => {
+  it("refuses a blocklisted add: nothing written, no adapter run, run fails", () => {
+    const { registry, calls } = spyRegistry();
+
+    // μαρια is a real blocklist entry (a person name curated out of the dictionary).
+    expect(() =>
+      applyDictionaryEdits(
+        [
+          { word: "γαμα", direction: "add" },
+          { word: "μαρια", direction: "add" },
+        ],
+        { dryRun: false, registry, wordsElPath, log: vi.fn() },
+      ),
+    ).toThrow(/μαρια/);
+
+    // The gate runs before any write, so the clean word in the same batch is
+    // held back too — the operator resolves the conflict and re-runs the batch.
+    expect(dictionary()).toEqual(["αλφα", "βητα"]);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("names the word and says nothing was written", () => {
+    const { registry } = spyRegistry();
+
+    expect(() =>
+      applyDictionaryEdits([{ word: "γιωργοσ", direction: "add" }], {
+        dryRun: false,
+        registry,
+        wordsElPath,
+        log: vi.fn(),
+      }),
+    ).toThrow(/γιωργοσ[\s\S]*nothing was written/i);
+  });
+
+  it("checks the normalised form, not the raw input", () => {
+    const { registry } = spyRegistry();
+
+    // Accented input must not slip past a gate that compares raw strings.
+    expect(() =>
+      applyDictionaryEdits([{ word: "Μαρία", direction: "add" }], {
+        dryRun: false,
+        registry,
+        wordsElPath,
+        log: vi.fn(),
+      }),
+    ).toThrow(/μαρια/);
+  });
+
+  it("fails a dry run identically — that is the run an admin actually reads", () => {
+    const { registry } = spyRegistry();
+
+    expect(() =>
+      applyDictionaryEdits([{ word: "μαρια", direction: "add" }], {
+        dryRun: true,
+        registry,
+        wordsElPath,
+        log: vi.fn(),
+      }),
+    ).toThrow(/μαρια/);
+  });
+
+  it("does not stop over a deferred month name — they are in both files on purpose", () => {
+    const { registry } = spyRegistry();
+
+    // ιανουαριοσ is blocklisted AND in words-el.json by deliberate deferral
+    // (DEFERRED_BLOCKLIST_DICTIONARY_OVERLAP). A naive isBlockedWord filter
+    // would stop a run over it.
+    const result = applyDictionaryEdits([{ word: "ιανουαριοσ", direction: "add" }], {
+      dryRun: false,
+      registry,
+      wordsElPath,
+      log: vi.fn(),
+    });
+
+    expect(result.added).toEqual(["ιανουαριοσ"]);
+  });
+
+  it("never blocks a remove — deleting a blocklisted word is the correct outcome", () => {
+    writeFileSync(wordsElPath, JSON.stringify(["αλφα", "μαρια"]), "utf8");
+    const { registry } = spyRegistry();
+
+    const result = applyDictionaryEdits([{ word: "μαρια", direction: "remove" }], {
+      dryRun: false,
+      registry,
+      wordsElPath,
+      log: vi.fn(),
+    });
+
+    expect(result.removed).toEqual(["μαρια"]);
+    expect(dictionary()).toEqual(["αλφα"]);
+  });
+});
+
 describe("applyDictionaryEdits — the registry walk", () => {
   it("hands every adapter the landed edits, skips excluded", () => {
     const { registry, calls } = spyRegistry();

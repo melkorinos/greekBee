@@ -108,6 +108,8 @@ describe("Drawer game links", () => {
     expect(hrefs).toContain("/leksokipos");
     expect(hrefs).toContain("/leksiarxeio");
     expect(hrefs).toContain("/leksindeseis");
+    expect(hrefs).toContain("/leksodromia");
+    expect(hrefs).toContain("/leksoplegma");
     expect(hrefs).toContain("/stavrolekso");
   });
 

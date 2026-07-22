@@ -152,7 +152,8 @@ describe("useAuth — sign-out", () => {
   beforeEach(() => {
     mockIsAuthLinked.mockReturnValue(false);
     stubNoSession();
-    mockSignOutFn.mockResolvedValue({});
+    // signOut resolves to void — mockResolvedValue({}) was a type error.
+    mockSignOutFn.mockResolvedValue(undefined);
   });
 
   it("clears authLinked and authUserName after calling signOut", async () => {

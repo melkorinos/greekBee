@@ -2,6 +2,8 @@
 
 import { ConnectionsBoard }            from "./ConnectionsBoard";
 import { HowToPlayModal }              from "@/components/shared/HowToPlayModal";
+import { GamePageShell }               from "@/components/shared/GamePageShell";
+import { GameHeader }                  from "@/components/shared/GameHeader";
 import { getTodaysLeksindeseisPuzzle } from "@/data/leksindeseis";
 import { todayISO }                    from "@/lib/puzzleDate";
 
@@ -21,20 +23,19 @@ export default async function LeksindeseisPage() {
   const { puzzle, submitter_name } = await getTodaysLeksindeseisPuzzle(today);
 
   return (
-    <main data-game="leksindeseis" className="flex flex-col items-center min-h-screen bg-background px-4 py-6">
-      <div className="flex items-center justify-between w-full max-w-sm mb-1">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">🔗 Leksindeseis</h1>
+    <GamePageShell gameId="leksindeseis">
+      <GameHeader title="🔗 Leksindeseis" className="mb-1">
         <HowToPlayModal
           title="Πώς να παίξεις — Leksindeseis"
           items={CONNECTIONS_RULES}
           bulletIcon="🔗"
         />
-      </div>
-      <p className="text-muted text-xs mb-1 self-start max-w-sm">
+      </GameHeader>
+      <p className="text-muted text-xs mb-1 self-start max-w-game">
         Ομαδοποίησε 16 λέξεις σε 4 κατηγορίες των 4
       </p>
       {submitter_name && (
-        <p className="text-xs text-muted self-start max-w-sm mb-5">
+        <p className="text-xs text-muted self-start max-w-game mb-5">
           Παζλ από {submitter_name}
         </p>
       )}
@@ -45,6 +46,6 @@ export default async function LeksindeseisPage() {
           Δεν υπάρχει παζλ σήμερα.
         </p>
       )}
-    </main>
+    </GamePageShell>
   );
 }

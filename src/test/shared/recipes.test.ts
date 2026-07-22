@@ -24,6 +24,13 @@ import {
   // Status action buttons
   btnApprove,
   btnReject,
+  btnInfo,
+  // Status chip
+  chipWarning,
+  // Tooltip + card shells
+  tooltipBubble,
+  cardShell,
+  cardShellInteractive,
   // Inputs
   inputClass,
   inputCompactClass,
@@ -61,6 +68,11 @@ const ALL_TOKENS: [string, string][] = [
   [btnHeaderIcon, "btnHeaderIcon"],
   [btnApprove, "btnApprove"],
   [btnReject, "btnReject"],
+  [btnInfo, "btnInfo"],
+  [chipWarning, "chipWarning"],
+  [tooltipBubble, "tooltipBubble"],
+  [cardShell, "cardShell"],
+  [cardShellInteractive, "cardShellInteractive"],
   [lbRowBase, "lbRowBase"],
   [lbRowPlayer, "lbRowPlayer"],
   [lbTdRank, "lbTdRank"],
@@ -83,8 +95,8 @@ describe("recipes.ts — visual design contracts", () => {
     it("btnSecondary is a pill", () => expect(btnSecondary).toContain("rounded-full"));
     it("btnPrimary is a pill", () => expect(btnPrimary).toContain("rounded-full"));
     it("btnHeaderIcon is a pill", () => expect(btnHeaderIcon).toContain("rounded-full"));
-    it("btnCancel is rounded-xl", () => expect(btnCancel).toContain("rounded-xl"));
-    it("btnModalSubmit is rounded-xl", () => expect(btnModalSubmit).toContain("rounded-xl"));
+    it("btnCancel is rounded-control", () => expect(btnCancel).toContain("rounded-control"));
+    it("btnModalSubmit is rounded-control", () => expect(btnModalSubmit).toContain("rounded-control"));
   });
 
   describe("primary buttons use the inverted fill token", () => {
@@ -98,6 +110,13 @@ describe("recipes.ts — visual design contracts", () => {
     it("btnReject uses bg-danger", () => expect(btnReject).toContain("bg-danger"));
     it("btnApprove has no literal green", () => expect(btnApprove).not.toMatch(/green-\d/));
     it("btnReject has no literal red", () => expect(btnReject).not.toMatch(/red-\d/));
+    it("btnInfo uses bg-info-strong", () => expect(btnInfo).toContain("bg-info-strong"));
+    it("btnInfo has no literal sky", () => expect(btnInfo).not.toMatch(/sky-\d/));
+  });
+
+  describe("status chip uses warning tokens, not literal amber", () => {
+    it("chipWarning uses the warning surface token", () => expect(chipWarning).toContain("bg-warning-surface"));
+    it("chipWarning has no literal amber", () => expect(chipWarning).not.toMatch(/amber-\d/));
   });
 
   describe("interactive elements animate", () => {
@@ -105,6 +124,26 @@ describe("recipes.ts — visual design contracts", () => {
     it("btnPrimary", () => expect(btnPrimary).toContain("transition-opacity"));
     it("btnCancel", () => expect(btnCancel).toContain("transition-colors"));
     it("btnModalSubmit", () => expect(btnModalSubmit).toContain("transition-opacity"));
+  });
+
+  describe("tooltip bubble", () => {
+    it("uses the inverted fill token", () => expect(tooltipBubble).toContain("bg-inverted"));
+    it("reveals on group-hover", () => expect(tooltipBubble).toContain("group-hover:opacity-100"));
+    it("is absolutely positioned", () => expect(tooltipBubble).toContain("absolute"));
+  });
+
+  describe("card shells", () => {
+    it("cardShell is a rounded surface panel", () => {
+      expect(cardShell).toContain("rounded-card");
+      expect(cardShell).toContain("border-border");
+      expect(cardShell).toContain("bg-surface");
+    });
+    it("cardShellInteractive lifts on hover", () => {
+      expect(cardShellInteractive).toContain("bg-surface");
+      expect(cardShellInteractive).toContain("shadow-card");
+      expect(cardShellInteractive).toContain("hover:shadow-md");
+      expect(cardShellInteractive).toContain("transition-all");
+    });
   });
 
   describe("leaderboard player row is visually distinct", () => {

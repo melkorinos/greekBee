@@ -42,7 +42,10 @@ interface DbState {
 
 interface RecordedWrite {
   table:   string;
-  op:      "upsert" | "update" | "delete" | "insert";
+  /** A chain starts in "select" and is promoted by the first write verb it sees.
+   *  "select" is a real state of the mock's state machine — the tests below filter
+   *  it out with `op !== "select"` — so the union has to admit it. */
+  op:      "select" | "upsert" | "update" | "delete" | "insert";
   payload?: unknown;
   eqs:     [string, unknown][];
   ins:     [string, unknown[]][];
@@ -93,9 +96,7 @@ function resolveWrite(w: RecordedWrite) {
 }
 
 function makeChain(table: string) {
-  const st: RecordedWrite & { op: RecordedWrite["op"] | "select" } = {
-    table, op: "select", eqs: [], ins: [],
-  };
+  const st: RecordedWrite = { table, op: "select", eqs: [], ins: [] };
   const chain: Record<string, unknown> = {};
   chain.select = () => chain;
   chain.update = (p: unknown) => { st.op = "update"; st.payload = p; return chain; };
@@ -105,20 +106,20 @@ function makeChain(table: string) {
   chain.in = (c: string, v: unknown[]) => { st.ins.push([c, v]); return chain; };
   chain.upsert = (p: unknown) => {
     st.op = "upsert"; st.payload = p;
-    _writes.push(st as RecordedWrite);
-    return Promise.resolve(resolveWrite(st as RecordedWrite));
+    _writes.push(st);
+    return Promise.resolve(resolveWrite(st));
   };
   chain.insert = (p: unknown) => {
     st.op = "insert"; st.payload = p;
-    _writes.push(st as RecordedWrite);
-    return Promise.resolve(resolveWrite(st as RecordedWrite));
+    _writes.push(st);
+    return Promise.resolve(resolveWrite(st));
   };
   chain.maybeSingle = () => Promise.resolve(resolveRead(table, st.eqs));
   chain.single      = () => Promise.resolve(resolveRead(table, st.eqs));
   chain.then = (resolve: (v: unknown) => void) => {
     if (st.op === "select") return resolve(resolveRead(table, st.eqs));
-    _writes.push(st as RecordedWrite);
-    return resolve(resolveWrite(st as RecordedWrite));
+    _writes.push(st);
+    return resolve(resolveWrite(st));
   };
   return chain;
 }
@@ -318,7 +319,7 @@ describe("POST /api/auth/link — restore mode", () => {
     signedInAs("auth-abc");
     _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
     _db.achievementsByDevice = {
-      d1:    [{ id: 1, achievement_id: "leksokipos-tzimani" },
+      d1:    [{ id: 1, achievement_id: "leksokipos-theristis" },
               { id: 2, achievement_id: "leksokipos-sidirodromos" }],
       canon: [{ id: 9, achievement_id: "leksokipos-first-daily" }],
     };
@@ -336,8 +337,8 @@ describe("POST /api/auth/link — restore mode", () => {
     signedInAs("auth-abc");
     _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
     _db.achievementsByDevice = {
-      d1:    [{ id: 1, achievement_id: "leksokipos-tzimani" }],
-      canon: [{ id: 9, achievement_id: "leksokipos-tzimani" }], // already earned
+      d1:    [{ id: 1, achievement_id: "leksokipos-theristis" }],
+      canon: [{ id: 9, achievement_id: "leksokipos-theristis" }], // already earned
     };
     await POST(makePostReq(BASE));
 
@@ -398,7 +399,7 @@ describe("POST /api/auth/link — occupied-device guard", () => {
     _db.profileByDevice = { d1: { display_name: "PlayerA", auth_user_id: "auth-A" } };
     // Resident history present — the bug would merge it into the caller.
     _db.scoresByDevice       = { d1: [{ id: 1, game_id: "leksokipos", puzzle_date: "2026-07-01", score: 40 }] };
-    _db.achievementsByDevice = { d1: [{ id: 7, achievement_id: "leksokipos-tzimani" }] };
+    _db.achievementsByDevice = { d1: [{ id: 7, achievement_id: "leksokipos-theristis" }] };
     _db.pangramsByDevice     = { d1: [{ id: 8, puzzle_date: "2026-07-01", word: "διακοπτησ" }] };
 
     const res = await POST(makePostReq(BASE));

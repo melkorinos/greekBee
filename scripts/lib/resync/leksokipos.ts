@@ -44,6 +44,20 @@ function puzzleAcceptsWord(puzzle: LeksokiposPuzzle, normWord: string): boolean 
   return computeValidWords(puzzle.centerLetter, puzzle.outerLetters, [normWord]).length > 0;
 }
 
+/**
+ * True when at least one word in `words` uses all 7 of the puzzle's letters.
+ * A daily board is expected to always have one (issue 09) — losing the last one
+ * to a dictionary removal breaks the genre invariant and can't be auto-fixed
+ * (the letter set may have no other pangram in the dictionary), so it's a warning.
+ */
+function hasPangram(puzzle: LeksokiposPuzzle, words: string[]): boolean {
+  const letters = [puzzle.centerLetter, ...puzzle.outerLetters].map(normalizeLetters);
+  return words.some((w) => {
+    const n = normalizeLetters(w);
+    return letters.every((l) => n.includes(l));
+  });
+}
+
 function resync(
   puzzles: LeksokiposResyncContent,
   { added, removed }: DictionaryEdits,
@@ -52,6 +66,7 @@ function resync(
   const removedNorm = new Set(removed.map(normalizeLetters));
 
   const changed: ResyncChange[] = [];
+  const warnings: string[] = [];
 
   const next = puzzles.map((puzzle) => {
     const current = puzzle.validWords;
@@ -88,13 +103,25 @@ function resync(
       return puzzle; // untouched — preserve identity so the writer can skip it
     }
 
+    // A removal that strips this board's last pangram can't be auto-fixed here
+    // (this adapter only patches the listed words; it never re-rolls the letter
+    // set), and the letter set may have no other pangram in the dictionary. Flag
+    // it so a human regenerates the board (issue 09). Only worth checking when a
+    // removal happened and the board had a pangram before.
+    if (removedHere.length > 0 && hasPangram(puzzle, current) && !hasPangram(puzzle, kept)) {
+      warnings.push(
+        `${puzzle.id ?? "(unknown puzzle)"}: removal left this board with no pangram — regenerate its letter set (issue 09).`,
+      );
+    }
+
     changed.push({ id: puzzle.id, added: addedHere, removed: removedHere });
     return { ...puzzle, validWords: kept };
   });
 
-  // Every Leksokipos edit is auto-fixable: validWords is derived data with no
-  // curated geometry behind it, so there is nothing a human needs to action.
-  return { content: next, report: { changed, warnings: [] } };
+  // validWords is derived data with no curated geometry, so word-level edits are
+  // auto-fixed. The one thing that isn't: a removal stripping a board's last
+  // pangram (see warnings above) needs a human to re-roll the letter set.
+  return { content: next, report: { changed, warnings } };
 }
 
 export const leksokiposAdapter: ResyncAdapter<LeksokiposResyncContent> = {

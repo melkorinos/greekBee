@@ -9,12 +9,12 @@ import type { GuessResult, TileState } from "@/games/leksiarxeio/types";
 import { Tile } from "./Tile";
 
 // Grid width is capped per word length so tiles stay naturally square (aspect-square).
-// Formula: N×48px tiles + (N-1)×6px gaps (gap-1.5). The keyboard stays full max-w-sm
+// Formula: N×48px tiles + (N-1)×6px gaps (gap-1.5). The keyboard stays full max-w-game
 // width — the grid centres inside it, so no horizontal offset occurs.
 const TILE_TEXT = "text-base";
 
 // Max-width of the tile grid for each word length, computed as N*48 + (N-1)*6 px.
-// Level 8 exceeds max-w-sm so the container simply fills the keyboard width there.
+// Level 8 exceeds max-w-game so the container simply fills the keyboard width there.
 const GRID_MAX_WIDTH: Record<number, string> = {
   4: "max-w-[210px]",
   5: "max-w-[264px]",

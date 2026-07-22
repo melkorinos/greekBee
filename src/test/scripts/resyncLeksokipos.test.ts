@@ -95,9 +95,40 @@ describe("leksokiposAdapter.resync", () => {
     expect(report.changed).toHaveLength(0);
   });
 
-  it("reports no warnings — every Leksokipos edit is auto-fixable", () => {
+  it("reports no warnings for ordinary word-level edits", () => {
     const before = puzzles();
     const { report } = resync(before, ["αμπελοσ"], ["αλμα"]);
+    expect(report.warnings).toEqual([]);
+  });
+
+  it("warns when a removal strips a board's last pangram (issue 09)", () => {
+    // αμπελοσ is the only pangram (uses all 7 of {α,π,ο,λ,ε,μ,σ}); removing it
+    // leaves the board with no pangram and no other listed word can cover.
+    const before: LeksokiposResyncContent = [
+      {
+        id: "2027-01-01-el",
+        centerLetter: "α",
+        outerLetters: ["π", "ο", "λ", "ε", "μ", "σ"],
+        validWords: ["αμπελοσ", "αλμα", "λαμπα"],
+      },
+    ];
+    const { report } = resync(before, [], ["αμπελοσ"]);
+    expect(report.warnings).toHaveLength(1);
+    expect(report.warnings[0]).toContain("2027-01-01-el");
+    expect(report.warnings[0]).toContain("no pangram");
+  });
+
+  it("does not warn when a removed word was not the last pangram", () => {
+    // Two pangrams present; removing one leaves the other.
+    const before: LeksokiposResyncContent = [
+      {
+        id: "2027-01-02-el",
+        centerLetter: "α",
+        outerLetters: ["π", "ο", "λ", "ε", "μ", "σ"],
+        validWords: ["αμπελοσ", "σαμπλεο"],
+      },
+    ];
+    const { report } = resync(before, [], ["αμπελοσ"]);
     expect(report.warnings).toEqual([]);
   });
 });

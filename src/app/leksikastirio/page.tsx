@@ -4,10 +4,11 @@ import React, { Suspense, useCallback, useEffect, useState } from "react";
 
 import { NominationCard, type Nomination } from "@/components/leksikastirio/NominationCard";
 import { NominationModal } from "@/components/shared/NominationModal";
+import { GameHeader } from "@/components/shared/GameHeader";
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
 import { markSuggested } from "@/hooks/suggestions";
 import { LEKSIARXEIO } from "@/config/gameRules";
-import { btnApprove, btnReject } from "@/styles/recipes";
+import { btnApprove, btnPrimary, btnReject } from "@/styles/recipes";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -371,11 +372,11 @@ function LeksikastiríoClient() {
   const communityTabs: CommunityTab[]   = ["leksiarxeio", "leksindeseis", "vrestifrasi", "stavrolekso"];
 
   return (
-    <div className="flex-1 bg-background">
+    <div data-game="leksikastirio" className="flex-1 bg-background">
     {/* Admins review from a desktop — give them the full HD width; players keep the narrow mobile column. */}
     <main className={`${isAdmin ? "max-w-6xl" : "max-w-lg"} mx-auto px-4 py-8 space-y-6`}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">⚖️ Leksikastirio</h1>
+        <GameHeader title="⚖️ Leksikastirio" />
         <p className="text-sm text-muted mt-1">
           Ψηφίστε λέξεις που πιστεύετε ότι πρέπει να προστεθούν ή να αφαιρεθούν.
         </p>
@@ -429,7 +430,7 @@ function LeksikastiríoClient() {
           <button
             onClick={() => setModalOpen(true)}
             data-testid="open-nomination-modal"
-            className="px-4 py-2 rounded-full bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 transition-colors"
+            className={btnPrimary}
           >
             {nominationTabCopy[activeTab].buttonLabel}
           </button>

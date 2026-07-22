@@ -18,5 +18,5 @@ export interface FeatureFlags {
 }
 
 export const FEATURE_FLAGS: FeatureFlags = {
-  achievements: false,
+  achievements: true,
 };

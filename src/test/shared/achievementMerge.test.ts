@@ -9,7 +9,7 @@ const row = (id: number, achievement_id: string): AchievementMergeRow => ({ id, 
 describe("planAchievementMerge", () => {
   it("re-points old achievements the canonical identity doesn't already have", () => {
     const plan = planAchievementMerge(
-      [row(1, "leksokipos-tzimani"), row(2, "leksokipos-sidirodromos")],
+      [row(1, "leksokipos-stin-korifi"), row(2, "leksokipos-sidirodromos")],
       [row(9, "leksokipos-first-daily")],
     );
     expect(plan.repoint.sort()).toEqual([1, 2]);
@@ -18,8 +18,8 @@ describe("planAchievementMerge", () => {
 
   it("deletes old duplicates the canonical already earned (unique constraint)", () => {
     const plan = planAchievementMerge(
-      [row(1, "leksokipos-tzimani")],
-      [row(9, "leksokipos-tzimani")], // canonical already has it
+      [row(1, "leksokipos-stin-korifi")],
+      [row(9, "leksokipos-stin-korifi")], // canonical already has it
     );
     expect(plan.repoint).toEqual([]);
     expect(plan.deleteOld).toEqual([1]);
@@ -27,7 +27,7 @@ describe("planAchievementMerge", () => {
 
   it("produces the union: carry-overs re-pointed, overlaps dropped", () => {
     const plan = planAchievementMerge(
-      [row(1, "leksokipos-tzimani"), row(2, "leksokipos-first-daily"), row(3, "leksokipos-theristis")],
+      [row(1, "leksokipos-stin-korifi"), row(2, "leksokipos-first-daily"), row(3, "leksokipos-theristis")],
       [row(9, "leksokipos-first-daily")], // overlap on first-daily
     );
     expect(plan.repoint.sort()).toEqual([1, 3]);
@@ -35,7 +35,7 @@ describe("planAchievementMerge", () => {
   });
 
   it("is a no-op when the old device earned nothing", () => {
-    const plan = planAchievementMerge([], [row(9, "leksokipos-tzimani")]);
+    const plan = planAchievementMerge([], [row(9, "leksokipos-stin-korifi")]);
     expect(plan).toEqual({ repoint: [], deleteOld: [] });
   });
 });

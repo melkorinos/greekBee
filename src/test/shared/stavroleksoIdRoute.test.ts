@@ -36,10 +36,11 @@ const fromQueue = () => ({
 });
 
 const getServiceRoleClient = vi.fn(fromQueue);
+const getSupabaseClient    = vi.fn(fromQueue);
 
 vi.mock("@/lib/supabase", () => ({
   table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
-  getSupabaseClient: () => fromQueue(),
+  getSupabaseClient: () => getSupabaseClient(),
   getServiceRoleClient: () => getServiceRoleClient(),
 }));
 
@@ -77,7 +78,11 @@ const PUZZLE_DATA = {
   cells: {},
 };
 
-beforeEach(() => { _callQueue = []; getServiceRoleClient.mockClear(); });
+beforeEach(() => {
+  _callQueue = [];
+  getServiceRoleClient.mockClear();
+  getSupabaseClient.mockClear();
+});
 afterEach(()  => { _callQueue = []; });
 
 // ── GET ───────────────────────────────────────────────────────────────────────
@@ -195,5 +200,24 @@ describe("PATCH /api/community-puzzles/stavrolekso/[id] — the edit actually pe
     const res = await PATCH(makePatch("p1", { edit_pin: "pin123", data: PUZZLE_DATA }), withParams("p1"));
     expect(res.status).toBe(500);
     expect((await res.json()).ok).toBeUndefined();
+  });
+});
+
+// anon no longer holds a column grant on edit_pin (migration 20260717120000), so a
+// PIN lookup on the anon client comes back with the column missing — the PIN check
+// would compare against undefined and 403 every real creator. The read side of this
+// route is as privileged as the write side; neither may touch the anon client.
+describe("PATCH /api/community-puzzles/stavrolekso/[id] — never reads through anon", () => {
+  it("looks the PIN up with the service-role client", async () => {
+    enqueue({ data: { status: "pending", edit_pin: "pin123" }, error: null });
+    enqueue({ data: [{ id: 1 }], error: null });
+    await PATCH(makePatch("p1", { edit_pin: "pin123", data: PUZZLE_DATA }), withParams("p1"));
+    expect(getSupabaseClient).not.toHaveBeenCalled();
+  });
+
+  it("never touches the anon client on the 404 path either", async () => {
+    enqueue({ data: null, error: { message: "no rows" } });
+    await PATCH(makePatch("p1", { edit_pin: "pin123", data: PUZZLE_DATA }), withParams("p1"));
+    expect(getSupabaseClient).not.toHaveBeenCalled();
   });
 });

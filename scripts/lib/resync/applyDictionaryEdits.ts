@@ -13,6 +13,10 @@ import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 
 import { normalizeLetters } from "@/lib/normalize";
+import {
+  DEFERRED_BLOCKLIST_DICTIONARY_OVERLAP,
+  isBlockedWord,
+} from "@/lib/nominationBlocklist";
 
 import { RESYNC_REGISTRY, type RegisteredResync } from "./registry";
 
@@ -44,6 +48,42 @@ export interface ApplyDictionaryEditsResult {
 
 const defaultWordsElPath = join(__dirname, "../../../src/data/words-el.json");
 
+const DEFERRED_OVERLAP = new Set(DEFERRED_BLOCKLIST_DICTIONARY_OVERLAP);
+
+/**
+ * Re-check the blocklist at apply time and stop the run on a hit.
+ *
+ * The blocklist is only enforced at propose-time (the two edge nomination
+ * routes), and it is a version-controlled JSON file editable without a deploy —
+ * so a word can be approved while clean, blocklisted afterwards, and applied
+ * anyway. That window ends here: the blocklist is authoritative at the moment
+ * of the write.
+ *
+ * Throwing, not skipping, is the point. A silent skip would leave the row
+ * `accepted` forever and re-trigger on every subsequent run; a human has to say
+ * whether the blocklist or the approval is wrong. Applying is the last
+ * irreversible step before every dictionary-derived file is re-synced (ADR
+ * 0015), so this runs before ANY write — including on a dry run, which is the
+ * run an admin actually reads.
+ *
+ * The deferred month names live in both the blocklist and words-el.json on
+ * purpose, so they are exempt or every run would stop on one.
+ */
+function assertNotBlocked(words: string[]): void {
+  const blocked = words.filter(
+    (word) => isBlockedWord(word) && !DEFERRED_OVERLAP.has(word),
+  );
+  if (blocked.length === 0) return;
+
+  throw new Error(
+    `Blocklisted word(s) in an accepted add: ${blocked.join(", ")}\n` +
+      `These are on the nomination blocklist but were approved for adding to the ` +
+      `dictionary — the blocklist changed after approval, or the approval was a ` +
+      `mistake. Resolve it by hand: either reject the nomination row, or remove ` +
+      `the word from src/data/nominations-blocklist.json. Nothing was written.`,
+  );
+}
+
 export function applyDictionaryEdits(
   requests: DictionaryEditRequest[],
   {
@@ -56,6 +96,14 @@ export function applyDictionaryEdits(
   // words-el.json is the dictionary itself — the source every adapter derives
   // from — so the orchestrator owns it directly. Everything downstream of it is
   // an adapter in the re-sync registry.
+  // Gate first, before the dictionary is even read: a blocklisted add must stop
+  // the run whole, never half-apply the clean words alongside it.
+  assertNotBlocked(
+    requests
+      .filter((r) => r.direction === "add")
+      .map((r) => normalizeLetters(r.word)),
+  );
+
   let wordsEl = JSON.parse(readFileSync(wordsElPath, "utf8")) as string[];
   const wordsElSet = new Set(wordsEl);
 

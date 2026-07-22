@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/shared/Modal";
-import { btnCancel, btnModalSubmit, inputClass, labelClass, labelOptionalClass } from "@/styles/recipes";
+import { btnCancel, btnModalPrimary, btnModalSubmit, inputClass, labelClass, labelOptionalClass } from "@/styles/recipes";
 
 interface Props {
   isOpen:  boolean;
@@ -61,7 +61,7 @@ export function CommunityVresTinFrasiSubmitModal({ isOpen, onClose }: Props) {
           <p className="text-3xl mb-3">🙏</p>
           <p className="font-semibold text-foreground mb-1">Ευχαριστούμε!</p>
           <p className="text-sm text-muted">Η φράση σου στάλθηκε για έλεγχο.</p>
-          <button onClick={handleClose} className="mt-5 px-6 py-2 rounded-xl bg-inverted text-inverted-foreground text-sm font-semibold hover:opacity-90 transition-opacity">
+          <button onClick={handleClose} className={`mt-5 ${btnModalPrimary}`}>
             Κλείσιμο
           </button>
         </div>
@@ -115,7 +115,7 @@ export function CommunityVresTinFrasiSubmitModal({ isOpen, onClose }: Props) {
 
         <div className="flex gap-2 mt-5">
           <button onClick={handleClose} className={btnCancel}>Ακύρωση</button>
-          <button onClick={handleSubmit} disabled={status === "submitting"} className={btnModalSubmit}>
+          <button onClick={handleSubmit} disabled={status === "submitting"} className={`flex-1 ${btnModalSubmit}`}>
             {status === "submitting" ? "…" : "Αποστολή"}
           </button>
         </div>

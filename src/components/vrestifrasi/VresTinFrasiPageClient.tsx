@@ -5,6 +5,7 @@ import { HowToPlayModal } from "./HowToPlayModal";
 import type { VresTinFrasiPuzzle } from "@/games/vrestifrasi/types";
 import { useState } from "react";
 import { HeaderIconButton } from "@/components/shared/HeaderIconButton";
+import { GameHeader } from "@/components/shared/GameHeader";
 import { GameHeaderTrophyButton } from "@/components/shared/GameHeaderTrophyButton";
 
 interface VresTinFrasiPageClientProps {
@@ -24,22 +25,17 @@ export function VresTinFrasiPageClient({
   return (
     <>
       {/* Header row */}
-      <div className="flex items-center justify-between w-full max-w-sm">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          💬 Vres Tin Frasi
-        </h1>
-        <div className="flex items-center gap-2">
-          <GameHeaderTrophyButton onClick={() => setLbOpen(true)} />
-          <HeaderIconButton
-            onClick={() => setHtpOpen(true)}
-            ariaLabel="Πώς να παίξεις"
-            tooltip="Κανόνες"
-            className="text-sm font-bold"
-          >
-            ?
-          </HeaderIconButton>
-        </div>
-      </div>
+      <GameHeader title="💬 Vres Tin Frasi">
+        <GameHeaderTrophyButton onClick={() => setLbOpen(true)} />
+        <HeaderIconButton
+          onClick={() => setHtpOpen(true)}
+          ariaLabel="Πώς να παίξεις"
+          tooltip="Κανόνες"
+          className="text-sm font-bold"
+        >
+          ?
+        </HeaderIconButton>
+      </GameHeader>
 
       <VresTinFrasiBoard
         puzzle={puzzle}

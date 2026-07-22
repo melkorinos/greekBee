@@ -28,6 +28,14 @@ export const LEKSIARXEIO = {
 
 export const VRESTIFRASI = {
   MAX_GUESSES: 6,
+  // Guess-word pool lengths this game owns. A phrase guess is validated word by
+  // word against pools covering 2–8 letters: 4–8 are Leksiarxeio's guess lists
+  // (LEKSIARXEIO.LENGTHS), reused read-only, while these two exist only for Vres
+  // Tin Frasi — its phrases are full of short function words (δες, πες, ντε,
+  // βρε) that Leksiarxeio is never played at. Must stay DISJOINT from
+  // LEKSIARXEIO.LENGTHS: each length has exactly one owning re-sync adapter
+  // (ADR 0015), and resyncVrestifrasi.test.ts pins that.
+  SHORT_WORD_LENGTHS: [2, 3] as const,
 } as const;
 
 export const LEKSINDESEIS = {
@@ -46,6 +54,21 @@ export const LEKSOPLEGMA = {
   HINT_COST_POINTS:   25,
   MAX_HINTS_PER_WORD: 1,    // hint = reveal a word's start tile + length
   SCORE_FLOOR:        0,    // hints can never take the total below 0
+} as const;
+
+export const TOPOTHESIES = {
+  // Stage 1: guess the regional unit from its silhouette.
+  SHAPE_GUESSES:   4,
+  // Stage 2 (bonus): guess that unit's capital.
+  CAPITAL_GUESSES: 3,
+  // Scoring: points scale with guesses remaining at the moment of the correct
+  // guess. Shape stage is the main event; capital stage is a smaller bonus.
+  POINTS_PER_SHAPE_GUESS_LEFT:   100,  // ×(SHAPE_GUESSES − wrongShapeGuesses)
+  POINTS_PER_CAPITAL_GUESS_LEFT: 40,   // ×(CAPITAL_GUESSES − wrongCapitalGuesses)
+  // Proximity hint scaling: distance/proximity% are scaled to the dataset's
+  // real max pairwise centroid distance, NOT the globe. Computed by the data
+  // pipeline (scripts/generateTopothesies.ts) from the emitted answers.json.
+  PROXIMITY_MAX_KM: 938,
 } as const;
 
 export const LEKSODROMIA = {

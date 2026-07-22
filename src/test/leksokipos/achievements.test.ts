@@ -9,6 +9,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   LEKSOKIPOS_ACHIEVEMENTS,
+  SELECTABLE_BADGE_IDS,
+  TIER_MEDALS,
+  qualifyingEarnedIds,
+  resolveDisplayBadge,
   detectEarnedAchievements,
   detectEarnedPointsTiers,
   detectEarnedPangramTiers,
@@ -38,7 +42,6 @@ describe("LEKSOKIPOS_ACHIEVEMENTS catalog", () => {
       expect.arrayContaining([
         "leksokipos-first-daily",
         "leksokipos-stin-korifi",
-        "leksokipos-tzimani",
         "leksokipos-sidirodromos",
         "leksokipos-theristis",
       ]),
@@ -67,6 +70,27 @@ describe("LEKSOKIPOS_ACHIEVEMENTS catalog", () => {
       for (const t of a.tiers ?? []) all.push(t.id);
     }
     expect(new Set(all).size).toBe(all.length);
+  });
+
+  it("gives every entry a non-empty glyph", () => {
+    for (const a of LEKSOKIPOS_ACHIEVEMENTS) {
+      expect(a.glyph).toBeTruthy();
+    }
+  });
+
+  it("assigns the operator-approved glyph to each badge", () => {
+    // Glyphs are display copy the operator signed off on — a silent change should fail.
+    const glyphByName = Object.fromEntries(
+      LEKSOKIPOS_ACHIEVEMENTS.map((a) => [a.name, a.glyph]),
+    );
+    expect(glyphByName).toMatchObject({
+      "Πρώτα Βήματα":     "🌱",
+      "Στην Κορυφή":      "👑",
+      "Σιδηρόδρομος":     "🚂",
+      "Θεριστής":        "🌾",
+      "Κυνηγός Πανγκράμ": "✍️",
+      "Συλλέκτης Πόντων": "💎",
+    });
   });
 });
 
@@ -97,24 +121,6 @@ describe("detectEarnedAchievements — Θεριστής (≥ 80% of words found)
       validWordCount: 20, // 15 / 20 = 0.75
     });
     expect(detectEarnedAchievements(ctx)).not.toContain("leksokipos-theristis");
-  });
-});
-
-describe("detectEarnedAchievements — Τζιμάνι (perfect game)", () => {
-  it("earns when every valid word is found", () => {
-    const ctx = makeCtx({
-      foundWords:     Array.from({ length: 20 }, (_, i) => `word${i}`),
-      validWordCount: 20,
-    });
-    expect(detectEarnedAchievements(ctx)).toContain("leksokipos-tzimani");
-  });
-
-  it("does not earn when a word is still missing", () => {
-    const ctx = makeCtx({
-      foundWords:     Array.from({ length: 19 }, (_, i) => `word${i}`),
-      validWordCount: 20,
-    });
-    expect(detectEarnedAchievements(ctx)).not.toContain("leksokipos-tzimani");
   });
 });
 
@@ -226,6 +232,74 @@ describe("describeAchievement — earned-id → toast display", () => {
 
   it("returns null for an unknown id", () => {
     expect(describeAchievement("leksokipos-nope")).toBeNull();
+  });
+});
+
+// ── Handoff B: player-selected display badge (pure resolution) ─────────────────
+
+describe("SELECTABLE_BADGE_IDS — the whitelist of pickable badges", () => {
+  it("is exactly the base achievement ids, never the per-tier ids", () => {
+    expect([...SELECTABLE_BADGE_IDS].sort()).toEqual(
+      LEKSOKIPOS_ACHIEVEMENTS.map((a) => a.id).sort(),
+    );
+  });
+
+  it("does not admit a per-tier id", () => {
+    expect(SELECTABLE_BADGE_IDS.has("leksokipos-kynigos-pangram-chryso")).toBe(false);
+  });
+});
+
+describe("qualifyingEarnedIds — which earned rows prove ownership of a badge", () => {
+  it("a one-shot is owned by holding its own id", () => {
+    expect(qualifyingEarnedIds("leksokipos-first-daily")).toEqual(["leksokipos-first-daily"]);
+  });
+
+  it("a tiered badge is owned by holding ANY of its tier ids", () => {
+    expect(qualifyingEarnedIds("leksokipos-kynigos-pangram")).toEqual([
+      "leksokipos-kynigos-pangram-chalkino",
+      "leksokipos-kynigos-pangram-asimenio",
+      "leksokipos-kynigos-pangram-chryso",
+    ]);
+  });
+
+  it("returns [] for an unknown base id", () => {
+    expect(qualifyingEarnedIds("leksokipos-nope")).toEqual([]);
+  });
+});
+
+describe("TIER_MEDALS — Greek tier → medal glyph", () => {
+  it("maps each tier to its podium medal", () => {
+    expect(TIER_MEDALS).toEqual({ chalkino: "🥉", asimenio: "🥈", chryso: "🥇" });
+  });
+});
+
+describe("resolveDisplayBadge — read-time badge resolution for the leaderboard", () => {
+  it("null selection resolves to no badge", () => {
+    expect(resolveDisplayBadge(null, [])).toBeNull();
+  });
+
+  it("a one-shot selection resolves to its id with no tier (trusts the stored id)", () => {
+    expect(resolveDisplayBadge("leksokipos-first-daily", [])).toEqual({
+      achievementId: "leksokipos-first-daily",
+      tier:          null,
+    });
+  });
+
+  it("a tiered selection resolves to the HIGHEST earned tier", () => {
+    expect(
+      resolveDisplayBadge("leksokipos-kynigos-pangram", [
+        "leksokipos-kynigos-pangram-chalkino",
+        "leksokipos-kynigos-pangram-asimenio",
+      ]),
+    ).toEqual({ achievementId: "leksokipos-kynigos-pangram", tier: "asimenio" });
+  });
+
+  it("a dangling tiered selection (no earned tier rows) resolves to no badge", () => {
+    expect(resolveDisplayBadge("leksokipos-kynigos-pangram", [])).toBeNull();
+  });
+
+  it("an unknown selected id resolves to no badge", () => {
+    expect(resolveDisplayBadge("leksokipos-nope", [])).toBeNull();
   });
 });
 

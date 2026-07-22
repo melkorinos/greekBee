@@ -23,6 +23,7 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { table } from "@/lib/supabase";
+import { normalizeLetters } from "@/lib/normalize";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 const url        = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -131,6 +132,7 @@ describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/pangr
   async function wipeSentinelRows() {
     await table(service, "player_achievements").delete().like("device_uuid", "__rls_%");
     await table(service, "player_pangrams").delete().like("device_uuid", "__rls_%");
+    await table(service, "player_words").delete().like("device_uuid", "__rls_%");
     await table(service, "game_state").delete().like("device_uuid", "__rls_%");
   }
 
@@ -165,6 +167,19 @@ describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/pangr
     await table(anon, "player_pangrams").delete().eq("device_uuid", DEVICE);
 
     const { count } = await table(service, "player_pangrams")
+      .select("id", { count: "exact", head: true })
+      .eq("device_uuid", DEVICE);
+    expect(count).toBe(1);
+  });
+
+  it("blocks anon from DELETE-ing player_words rows", async () => {
+    const { error: seedErr } = await table(service, "player_words")
+      .insert({ device_uuid: DEVICE, puzzle_date: PUZZLE_DATE, word: "__rls_test__", length: 11 });
+    expect(seedErr).toBeNull();
+
+    await table(anon, "player_words").delete().eq("device_uuid", DEVICE);
+
+    const { count } = await table(service, "player_words")
       .select("id", { count: "exact", head: true })
       .eq("device_uuid", DEVICE);
     expect(count).toBe(1);
@@ -222,6 +237,39 @@ describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/pangr
       [row], { onConflict: "device_uuid,achievement_id", ignoreDuplicates: true },
     );
     expect(second.error).toBeNull();
+  });
+
+  it("still allows the anon insert-if-absent write on player_words", async () => {
+    const device = `__rls_${crypto.randomUUID()}`;
+    const row    = { device_uuid: device, puzzle_date: PUZZLE_DATE, word: "__rls_test__", length: 11 };
+
+    const first = await table(anon, "player_words").upsert(
+      [row], { onConflict: "device_uuid,puzzle_date,word", ignoreDuplicates: true },
+    );
+    expect(first.error).toBeNull();
+
+    // Re-submitting the same find is a no-op, not an error (DO NOTHING).
+    const second = await table(anon, "player_words").upsert(
+      [row], { onConflict: "device_uuid,puzzle_date,word", ignoreDuplicates: true },
+    );
+    expect(second.error).toBeNull();
+  });
+
+  it("lets anon call the player_words_by_length aggregate (invoker-rights RPC)", async () => {
+    const device = `__rls_${crypto.randomUUID()}`;
+    await table(service, "player_words").insert([
+      { device_uuid: device, puzzle_date: PUZZLE_DATE, word: "__rls_a__", length: 9 },
+      { device_uuid: device, puzzle_date: PUZZLE_DATE, word: "__rls_b__", length: 9 },
+      { device_uuid: device, puzzle_date: PUZZLE_DATE, word: "__rls_c__", length: 11 },
+    ]);
+
+    const { data, error } = await anon.rpc("player_words_by_length", { p_device_uuid: device });
+    expect(error).toBeNull();
+    const byLen = Object.fromEntries(
+      ((data as { length: number; count: number }[]) ?? []).map((r) => [r.length, Number(r.count)]),
+    );
+    expect(byLen[9]).toBe(2);
+    expect(byLen[11]).toBe(1);
   });
 });
 
@@ -336,6 +384,74 @@ describe.skipIf(!canRun)("live DB — community_stavrolekso_puzzles RLS invarian
     expect((data as { title: string }).title).toBe(SENTINEL_TITLE);
   });
 
+  it("blocks anon from SELECT-ing edit_pin", async () => {
+    // RLS has no column-level filtering, so this is held by a column GRANT
+    // (migration 20260717120000), not a policy. Asking for a column anon has no
+    // privilege on is a hard 42501 from Postgres — unlike the RLS traps above,
+    // this one does error rather than answer quietly.
+    const { data, error } = await table(anon, "community_stavrolekso_puzzles")
+      .select("id, edit_pin")
+      .eq("id", rowId);
+
+    expect(error).not.toBeNull();
+    expect(data).toBeNull();
+  });
+
+  it("still allows anon to SELECT the public browse columns", async () => {
+    // The other half of the grant: revoking edit_pin must not take the browse
+    // path (landing page + /stavrolekso/[id]) down with it.
+    const { data, error } = await table(anon, "community_stavrolekso_puzzles")
+      .select("id, title, submitter_name, data, status, created_at")
+      .eq("id", rowId);
+
+    expect(error).toBeNull();
+    expect(data).toHaveLength(1);
+  });
+
+  it("blocks anon from SELECT-ing every column via *", async () => {
+    // `select("*")` is the probe from the issue in its laziest form: with no
+    // grant on edit_pin, the star expansion itself is refused.
+    const { error } = await table(anon, "community_stavrolekso_puzzles").select("*").eq("id", rowId);
+    expect(error).not.toBeNull();
+  });
+
+  it("still allows the anon submit path to INSERT a puzzle and read back its id", async () => {
+    // The maker's submit path (createSubmitHandler, returnInsertedId) writes
+    // edit_pin as anon and RETURNINGs the new id for the creator's edit URL.
+    // INSERT is a separate privilege from SELECT, so revoking SELECT must not
+    // touch it — but RETURNING id does need `id` to have survived in the grant.
+    const { data, error } = await table(anon, "community_stavrolekso_puzzles")
+      .insert({
+        title:          SENTINEL_TITLE,
+        submitter_name: "rls-test",
+        edit_pin:       "0000",
+        status:         "pending",
+        data:           { slots: [] },
+      } as never)
+      .select("id")
+      .single();
+
+    expect(error).toBeNull();
+    expect((data as { id: number }).id).toBeTypeOf("number");
+  });
+
+  it("blocks the anon submit path from RETURNING the edit_pin it just wrote", async () => {
+    // Writing a column you cannot read is the intended asymmetry — otherwise
+    // RETURNING would be a way back to the PIN.
+    const { error } = await table(anon, "community_stavrolekso_puzzles")
+      .insert({
+        title:          SENTINEL_TITLE,
+        submitter_name: "rls-test",
+        edit_pin:       "0000",
+        status:         "pending",
+        data:           { slots: [] },
+      } as never)
+      .select("id, edit_pin")
+      .single();
+
+    expect(error).not.toBeNull();
+  });
+
   it("allows the service role to UPDATE a pending puzzle (the edit route's path)", async () => {
     const { data, error } = await table(service, "community_stavrolekso_puzzles")
       .update({ submitter_name: "edited" } as never)
@@ -345,5 +461,183 @@ describe.skipIf(!canRun)("live DB — community_stavrolekso_puzzles RLS invarian
     expect(error).toBeNull();
     // The route reads this same non-empty result as proof the edit landed.
     expect(data).toHaveLength(1);
+  });
+});
+
+// ── nominations / nomination_votes dedup backstops ────────────────────────────
+//
+// Migration 20260716120200 added the two DB objects that make the dedup promises
+// real rather than best-effort:
+//   nomination_votes_nomination_device_unique  UNIQUE (nomination_id, device_id)
+//   nominations_pending_word_direction_key     UNIQUE (word, direction)
+//                                              WHERE status = 'pending'
+// Both were only ever "tested" by unit tests that *inject* `code: "23505"` into a
+// mocked Supabase — which proves the route branches correctly given a violation,
+// not that a violation ever occurs. Drop either object and the whole mocked suite
+// stays green while duplicates silently return. Hence a live check, same argument
+// as the blocks above.
+//
+// The partial predicate gets its own test on purpose: re-proposing a word after
+// it was rejected is a deliberate feature (see the migration comment), so a
+// non-partial index would break it — and nothing else in the suite would notice.
+//
+// These inserts use the service role throughout. RLS is not what is under test
+// here (the blocks above own that); a unique index applies to every role alike,
+// so bypassing RLS isolates the constraint as the only thing that can fail.
+//
+// Safety: every row carries a sentinel word / device prefixed `__rls_`, which no
+// real query reads — the admin queue filters on status and the GET route reads
+// real Greek words. The service role wipes them either side of the run.
+
+// Normalised the same way route.ts stores every nomination word (accent-stripped,
+// lowercased, final sigma collapsed). This matters: the index is built on the
+// stored form, so a raw sentinel would exercise a different key than production.
+const SENTINEL_WORD = normalizeLetters("__RLS_TEST_ΛΈΞΗΣ__");
+
+describe.skipIf(!canRun)("live DB — nominations dedup backstops", () => {
+  let service: SupabaseClient;
+
+  function nominationRow(status: string, direction: "add" | "remove" = "add") {
+    return {
+      word:      SENTINEL_WORD,
+      direction,
+      device_id: `__rls_${crypto.randomUUID()}`,
+      status,
+    };
+  }
+
+  async function wipeSentinelRows() {
+    // Votes first — nomination_votes.nomination_id is an FK onto nominations.
+    await table(service, "nomination_votes").delete().like("device_id", "__rls_%");
+    await table(service, "nominations").delete().like("word", "__rls_%");
+  }
+
+  /** Seeds one nomination and returns its id. */
+  async function seedNomination(status: string, direction: "add" | "remove" = "add") {
+    const { data, error } = await table(service, "nominations")
+      .insert(nominationRow(status, direction))
+      .select("id")
+      .single();
+    expect(error).toBeNull();
+    return (data as { id: string }).id;
+  }
+
+  beforeAll(async () => {
+    service = createClient(url!, serviceKey!, { auth: { persistSession: false } });
+    await wipeSentinelRows();
+  });
+
+  afterAll(async () => {
+    await wipeSentinelRows();
+  });
+
+  beforeEach(async () => {
+    await wipeSentinelRows();
+  });
+
+  it("stores the sentinel word in its normalised form", async () => {
+    // Guards the test itself: if normalizeLetters ever stopped collapsing the
+    // final sigma / stripping the accent, every assertion below would still pass
+    // while keying on a word production never writes.
+    expect(SENTINEL_WORD).toBe("__rls_test_λεξησ__");
+    // …and it is a fixed point: normalising the stored form again changes nothing.
+    expect(SENTINEL_WORD).toBe(normalizeLetters(SENTINEL_WORD));
+  });
+
+  it("rejects a second PENDING nomination for the same (word, direction)", async () => {
+    await seedNomination("pending");
+
+    const second = await table(service, "nominations").insert(nominationRow("pending"));
+
+    // 23505 specifically — that is the code route.ts:148 branches on to answer
+    // 409 already_pending. Any other error would mean the 409 path is dead.
+    expect(second.error).not.toBeNull();
+    expect(second.error?.code).toBe("23505");
+  });
+
+  it("allows the same pending word in the other direction", async () => {
+    // The index keys on the pair, not the word: proposing to ADD a word and
+    // reporting it for REMOVAL are different rows and must coexist.
+    await seedNomination("pending", "add");
+
+    const { error } = await table(service, "nominations").insert(nominationRow("pending", "remove"));
+    expect(error).toBeNull();
+  });
+
+  it("allows accepted/rejected duplicates of the same (word, direction)", async () => {
+    // THE PARTIAL PREDICATE. `WHERE status = 'pending'` is what lets a player
+    // re-propose a word that was rejected before — a feature, per the migration.
+    // A plain UNIQUE (word, direction) would pass every other test in this block
+    // and silently kill re-proposals, so this is the half that needs pinning.
+    const first  = await table(service, "nominations").insert(nominationRow("rejected"));
+    const second = await table(service, "nominations").insert(nominationRow("rejected"));
+    const third  = await table(service, "nominations").insert(nominationRow("accepted"));
+
+    expect(first.error).toBeNull();
+    expect(second.error).toBeNull();
+    expect(third.error).toBeNull();
+
+    const { count } = await table(service, "nominations")
+      .select("id", { count: "exact", head: true })
+      .eq("word", SENTINEL_WORD);
+    expect(count).toBe(3);
+  });
+
+  it("allows a pending nomination alongside rejected history for the same (word, direction)", async () => {
+    // The re-proposal flow end to end: history rows exist, and exactly one new
+    // pending row is still allowed on top of them.
+    await seedNomination("rejected");
+    await seedNomination("rejected");
+
+    const pending = await table(service, "nominations").insert(nominationRow("pending"));
+    expect(pending.error).toBeNull();
+
+    // …but only one. The partial index still bites with history present.
+    const duplicate = await table(service, "nominations").insert(nominationRow("pending"));
+    expect(duplicate.error?.code).toBe("23505");
+  });
+
+  it("rejects a second vote from one device on one nomination", async () => {
+    const nominationId = await seedNomination("pending");
+    const device_id    = `__rls_${crypto.randomUUID()}`;
+
+    const first = await table(service, "nomination_votes")
+      .insert({ nomination_id: nominationId, device_id, vote_type: "up" });
+    expect(first.error).toBeNull();
+
+    // Same device, same nomination — even switching the vote type. The vote
+    // route's undo/switch keys on this row, so a duplicate must be impossible.
+    const second = await table(service, "nomination_votes")
+      .insert({ nomination_id: nominationId, device_id, vote_type: "down" });
+    expect(second.error).not.toBeNull();
+    expect(second.error?.code).toBe("23505");
+  });
+
+  it("allows one device to vote on two different nominations", async () => {
+    // The constraint is on the pair — one device voting across the queue is the
+    // normal case and must not be caught by it.
+    const firstNomination  = await seedNomination("pending", "add");
+    const secondNomination = await seedNomination("pending", "remove");
+    const device_id        = `__rls_${crypto.randomUUID()}`;
+
+    const a = await table(service, "nomination_votes")
+      .insert({ nomination_id: firstNomination, device_id, vote_type: "up" });
+    const b = await table(service, "nomination_votes")
+      .insert({ nomination_id: secondNomination, device_id, vote_type: "up" });
+
+    expect(a.error).toBeNull();
+    expect(b.error).toBeNull();
+  });
+
+  it("allows two devices to vote on one nomination", async () => {
+    const nominationId = await seedNomination("pending");
+
+    const a = await table(service, "nomination_votes")
+      .insert({ nomination_id: nominationId, device_id: `__rls_${crypto.randomUUID()}`, vote_type: "up" });
+    const b = await table(service, "nomination_votes")
+      .insert({ nomination_id: nominationId, device_id: `__rls_${crypto.randomUUID()}`, vote_type: "up" });
+
+    expect(a.error).toBeNull();
+    expect(b.error).toBeNull();
   });
 });

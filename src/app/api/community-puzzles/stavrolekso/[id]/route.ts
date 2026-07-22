@@ -56,7 +56,12 @@ export async function PATCH(
 
   if (!edit_pin) return jsonMessage("edit_pin required");
 
-  const supabase = getSupabaseClient();
+  // The PIN lookup is as privileged as the UPDATE below it. anon holds a SELECT
+  // grant on the public browse columns only (migration 20260717120000) — asking
+  // it for edit_pin is a hard 42501, because the column-level grant is what
+  // keeps the PIN out of a direct PostgREST call. So this read is service-role
+  // too, and the whole PATCH path stays off the anon client.
+  const supabase = getServiceRoleClient();
 
   const { data: row, error: fetchError } = await table(supabase, "community_stavrolekso_puzzles")
     .select("status, edit_pin")
@@ -94,7 +99,7 @@ export async function PATCH(
   // pending puzzle straight through PostgREST). The write privilege therefore has
   // to be server-side too — same reasoning as createReviewHandler's approve/reject.
   const { data: updated, error: updateError } = await table(
-    getServiceRoleClient(),
+    supabase,
     "community_stavrolekso_puzzles",
   )
     .update(updates)

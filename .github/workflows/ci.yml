@@ -1,0 +1,49 @@
+name: CI
+
+# Lint, typecheck and the vitest suite — the checks CLAUDE.md requires locally,
+# enforced on every push/PR. Until this existed (issue 03) the only workflow was
+# e2e.yml, so ~1800 unit tests and every eslint rule were green *only* on whoever's
+# laptop last ran them: a PR could merge with the entire suite failing.
+#
+# Deliberately separate from e2e.yml rather than bolted onto it:
+#   • These need no Playwright browser download and no production build, so they
+#     report in a fraction of e2e's time and run in parallel with it.
+#   • A red unit test and a red browser test are different failures; separate
+#     workflows say which one broke without opening the log.
+#
+# `npm run build` is NOT duplicated here — e2e.yml already builds before its
+# browser run, and a second build would just spend CI minutes to learn the same fact.
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npx eslint .
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      # No Supabase secrets are wired in here, and that is deliberate. The live-DB
+      # suites (rlsInvariantsLiveDb, cleanupScoresLiveDb) are describe.skipIf-gated
+      # on the env vars and so auto-skip — they write to the one Supabase project
+      # that backs both dev and prod, which CI must never touch. They are the
+      # developer's local pre-push check; this job guards the mocked suite.
+      - name: Unit tests
+        run: npm run test -- --run

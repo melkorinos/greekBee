@@ -46,7 +46,7 @@ interface ShellProps {
 }
 
 // Games shown in the main nav section; leksikastirio is in its own community section.
-const GAME_IDS      = ["leksokipos", "leksiarxeio", "leksindeseis", "vrestifrasi", "stavrolekso"] as const;
+const GAME_IDS      = ["leksokipos", "leksiarxeio", "leksindeseis", "vrestifrasi", "leksodromia", "leksoplegma", "stavrolekso", "topothesies"] as const;
 const COMMUNITY_IDS = ["leksikastirio"] as const;
 
 // Under-construction (wip) games move to their own drawer section, keeping the
@@ -75,7 +75,7 @@ export function Shell({ children }: ShellProps) {
     <div className="min-h-screen flex flex-col">
       {/* ── Sticky header ─────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 w-full border-b border-border bg-surface px-4 py-3">
-        <div className="flex items-center justify-between max-w-sm mx-auto">
+        <div className="flex items-center justify-between max-w-game mx-auto">
           <Link
             href="/"
             className="text-sm font-semibold text-foreground hover:opacity-80 transition-colors"

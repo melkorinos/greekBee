@@ -318,6 +318,7 @@ export type Database = {
           display_name: string
           id: number
           last_active: string
+          selected_badge_id: string | null
         }
         Insert: {
           auth_user_id?: string | null
@@ -326,6 +327,7 @@ export type Database = {
           display_name: string
           id?: number
           last_active?: string
+          selected_badge_id?: string | null
         }
         Update: {
           auth_user_id?: string | null
@@ -334,6 +336,37 @@ export type Database = {
           display_name?: string
           id?: number
           last_active?: string
+          selected_badge_id?: string | null
+        }
+        Relationships: []
+      }
+      player_words: {
+        Row: {
+          created_at: string
+          device_uuid: string
+          game_id: string
+          id: number
+          length: number
+          puzzle_date: string
+          word: string
+        }
+        Insert: {
+          created_at?: string
+          device_uuid: string
+          game_id?: string
+          id?: never
+          length: number
+          puzzle_date: string
+          word: string
+        }
+        Update: {
+          created_at?: string
+          device_uuid?: string
+          game_id?: string
+          id?: never
+          length?: number
+          puzzle_date?: string
+          word?: string
         }
         Relationships: []
       }
@@ -366,7 +399,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      player_words_by_length: {
+        Args: { p_device_uuid: string }
+        Returns: { length: number; count: number }[]
+      }
     }
     Enums: {
       community_puzzle_status: "pending" | "approved"

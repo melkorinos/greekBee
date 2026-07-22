@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { greekToGreeklish } from "@/lib/greeklish";
 import { LetterPickerModal } from "@/components/shared/LetterPickerModal";
+import { tooltipBubble } from "@/styles/recipes";
 
 export function NewPuzzleButton() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -28,7 +29,7 @@ export function NewPuzzleButton() {
         >
           🎲
         </button>
-        <div className="pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-inverted px-2.5 py-1 text-xs text-inverted-foreground opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        <div className={tooltipBubble}>
           Νέο Παζλ
         </div>
       </div>

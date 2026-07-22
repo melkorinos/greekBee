@@ -1,14 +1,14 @@
 // profileStatsRoute.test.ts — GET /api/profile/stats.
 //
 // Read-only lifetime stats for one device: total points and puzzles played
-// (cross-game), plus Τζιμάνι count and leksokipos_points (leksokipos-only) from
-// the game_scores aggregate, pangram_count — a parallel COUNT(*) over the
-// separate player_pangrams table (B2) — and leksokipos_first_place_count, derived
-// from a cross-device Leksokipos fetch (ADR 0014). Supabase is mocked; the pure
-// reduces themselves are covered by lifetimeStats.test.ts / placement.test.ts.
+// (cross-game), plus leksokipos_points (leksokipos-only) from the game_scores
+// aggregate, pangram_count — a parallel COUNT(*) over the separate
+// player_pangrams table (B2) — and leksokipos_first_place_count, derived from a
+// cross-device Leksokipos fetch (ADR 0014). Supabase is mocked; the pure reduces
+// themselves are covered by lifetimeStats.test.ts / placement.test.ts.
 //
 // The route issues TWO game_scores selects: the device aggregate (columns
-// "game_id, score, is_perfect") and the cross-device placement fetch (columns
+// "game_id, score") and the cross-device placement fetch (columns
 // "device_id, puzzle_date, score"). The mock branches on the requested columns.
 
 import { describe, expect, it, vi } from "vitest";
@@ -81,16 +81,20 @@ describe("GET /api/profile/stats", () => {
   it("returns aggregated stats + pangram_count + first-place count for the device", async () => {
     reset();
     holder.rows = [
-      { game_id: "leksokipos",  score: 120, is_perfect: true },
-      { game_id: "leksiarxeio", score: 30,  is_perfect: true },
+      { game_id: "leksokipos",  score: 120 },
+      { game_id: "leksiarxeio", score: 30  },
     ];
     holder.pangramCount = 7;
-    // Cross-device Leksokipos rows: dev-A tops 2026-07-10, is beaten 2026-07-11.
+    // Cross-device Leksokipos rows: dev-A tops 2026-07-10 (1st), is 2nd of two on
+    // 2026-07-11, and is 3rd behind two others on 2026-07-12.
     holder.leksokiposRows = [
       { device_id: "dev-A", puzzle_date: "2026-07-10", score: 120 },
       { device_id: "dev-B", puzzle_date: "2026-07-10", score: 40 },
       { device_id: "dev-A", puzzle_date: "2026-07-11", score: 30 },
       { device_id: "dev-B", puzzle_date: "2026-07-11", score: 99 },
+      { device_id: "dev-B", puzzle_date: "2026-07-12", score: 99 },
+      { device_id: "dev-C", puzzle_date: "2026-07-12", score: 80 },
+      { device_id: "dev-A", puzzle_date: "2026-07-12", score: 50 },
     ];
     const res = await GET(req("?device_uuid=dev-A"));
     expect(res.status).toBe(200);
@@ -98,8 +102,11 @@ describe("GET /api/profile/stats", () => {
     expect(mockPangramEq).toHaveBeenCalledWith("device_uuid", "dev-A");
     expect(mockLeksokiposEq).toHaveBeenCalledWith("game_id", "leksokipos");
     expect(await res.json()).toEqual({
-      total_points: 150, puzzles_played: 2, tzimani_count: 1,
-      leksokipos_points: 120, pangram_count: 7, leksokipos_first_place_count: 1,
+      total_points: 150, puzzles_played: 2,
+      leksokipos_points: 120, pangram_count: 7,
+      leksokipos_first_place_count: 1,
+      leksokipos_second_place_count: 1,
+      leksokipos_third_place_count: 1,
     });
     expect(res.headers.get("Cache-Control")).toBe("private, max-age=60");
   });
@@ -113,7 +120,7 @@ describe("GET /api/profile/stats", () => {
 
   it("defaults pangram_count to 0 when the device has no pangram rows", async () => {
     reset();
-    holder.rows = [{ game_id: "leksokipos", score: 40, is_perfect: false }];
+    holder.rows = [{ game_id: "leksokipos", score: 40 }];
     holder.pangramCount = null; // supabase returns null count for an empty set
     const res = await GET(req("?device_uuid=dev-A"));
     expect((await res.json()).pangram_count).toBe(0);
@@ -122,8 +129,8 @@ describe("GET /api/profile/stats", () => {
   it("aggregates the FULL history — never applies a puzzle_date window filter", async () => {
     reset();
     holder.rows = [
-      { game_id: "leksokipos", score: 500, is_perfect: true },
-      { game_id: "leksokipos", score: 40,  is_perfect: false },
+      { game_id: "leksokipos", score: 500 },
+      { game_id: "leksokipos", score: 40  },
     ];
     const res = await GET(req("?device_uuid=dev-A"));
     expect(res.status).toBe(200);

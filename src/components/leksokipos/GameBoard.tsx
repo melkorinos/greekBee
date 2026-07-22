@@ -70,7 +70,7 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
   // Redirect to today's puzzle if this page is a stale daily puzzle (day rolled over).
   useDayChange(puzzle);
 
-  // ── Endgame / Τζιμάνι ────────────────────────────────────────────────────
+  // ── Endgame / all words found ───────────────────────────────────────────────
   const isDaily   = isDailyPuzzle(activePuzzle);
   const isEndgame = isDaily && currentRank === TOP_RANK;
 
@@ -79,7 +79,7 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
     [activePuzzle, foundWords],
   );
 
-  const isPerfect = remainingWords.length === 0;
+  const allWordsFound = remainingWords.length === 0;
 
   // Pangrams found this round — feeds the achievement pangram-tier lane. Memoized on
   // [foundWords, activePuzzle] so a stable array ref doesn't re-fire the lane each render.
@@ -110,11 +110,17 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
     deviceId,
     displayName,
     enabled:     isDaily && !isGodMode,
-    isPerfect,
   });
 
+  // Per-score metadata for fairness analysis: how many words / pangrams this score
+  // represents. Counts only — the word list never leaves the client (issue 10).
+  const scoreData = useMemo(
+    () => ({ words: foundWords.length, pangrams: foundPangrams.length }),
+    [foundWords.length, foundPangrams.length],
+  );
+
   // Auto-post whenever the score increases.
-  useEffect(() => { postScore(score); }, [score, postScore]);
+  useEffect(() => { postScore(score, scoreData); }, [score, scoreData, postScore]);
 
   // Detect + post earned achievements as the game state crosses their thresholds,
   // and surface each genuinely-new badge as an in-game unlock toast.
@@ -137,7 +143,7 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
   const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } = useProfile({
     deviceId,
     onDeviceIdChange:    setDeviceIdState,
-    onDisplayNameChange: (name) => { setDisplayNameState(name); postScoreWithName(score, name); },
+    onDisplayNameChange: (name) => { setDisplayNameState(name); postScoreWithName(score, name, scoreData); },
   });
 
   // Cross-device sync — pushes state on every valid word, daily puzzles only.
@@ -161,7 +167,7 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
   }
 
   usePhysicalKeyboard((e) => {
-    if (givenUp || isPerfect) return; // board locked after give-up or full completion
+    if (givenUp || allWordsFound) return; // board locked after give-up or full completion
     if (e.key === "Enter") {
       submitWord();
     } else if (e.key === "Backspace") {
@@ -171,7 +177,7 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
     }
   });
 
-  const containerClass = "flex flex-col items-center gap-6 w-full max-w-sm mx-auto px-4 py-8";
+  const containerClass = "flex flex-col items-center gap-6 w-full max-w-game mx-auto px-4 py-8";
   const buttonRowClass  = "flex items-center gap-2 w-full justify-center";
 
   return (
@@ -205,13 +211,13 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
       {/* Active game UI -- hidden once the player gives up */}
       {!givenUp && (
         <>
-          {isPerfect ? (
-            /* Τζιμάνι — all words found */
+          {allWordsFound ? (
+            /* All words found — round complete */
             <div
               data-testid="perfect-message"
               className="text-center font-bold text-2xl text-foreground py-2"
             >
-              ΤΟ ΠΕΘΑΝΕΣ 🏛️
+              ΤΟ ΠΕΘΑΝΕΣ 🏆
             </div>
           ) : (
             <>
@@ -244,15 +250,15 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
             onSuccess={suggestions.confirm}
           />
 
-          {/* Flower grid — always visible; non-interactive once Τζιμάνι achieved */}
+          {/* Flower grid — always visible; non-interactive once all words are found */}
           <FlowerGrid
             centerLetter={activePuzzle.centerLetter}
             outerLetters={activePuzzle.outerLetters}
-            onLetterClick={isPerfect ? () => {} : (l) => { suggestions.clearConfirmation(); addLetter(l); }}
+            onLetterClick={allWordsFound ? () => {} : (l) => { suggestions.clearConfirmation(); addLetter(l); }}
             variant={variant}
           />
 
-          {!isPerfect && (
+          {!allWordsFound && (
             <div className={buttonRowClass}>
               <button
                 data-testid="btn-delete"
@@ -311,7 +317,7 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
       <FoundWordsList
         words={foundWords}
         puzzle={activePuzzle}
-        onGiveUp={isDaily && !givenUp && !isPerfect ? () => setGiveUpModalOpen(true) : undefined}
+        onGiveUp={isDaily && !givenUp && !allWordsFound ? () => setGiveUpModalOpen(true) : undefined}
         givenUp={givenUp}
       />
 

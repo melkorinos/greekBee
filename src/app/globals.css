@@ -22,6 +22,23 @@
   --inverted:            var(--color-stone-800);
   --inverted-foreground: #ffffff;
 
+  /* Status banner palette (ADR 0008) — warning/info promoted from raw-palette
+     exceptions to real tokens; danger/success gain surface+border companions so
+     the four NominationModal banners (blocked/rejected/accepted/pending) carry
+     no `dark:` pairs. Base = strong banner text; -surface = pale fill;
+     -border = hairline; -strong = the solid info action fill (btnInfo). */
+  --danger-surface:  var(--color-red-50);
+  --danger-border:   var(--color-red-300);
+  --warning:         var(--color-amber-800);
+  --warning-surface: var(--color-amber-50);
+  --warning-border:  var(--color-amber-300);
+  --info:            var(--color-sky-800);
+  --info-surface:    var(--color-sky-50);
+  --info-border:     var(--color-sky-200);
+  --info-strong:     var(--color-sky-600);
+  --success-surface: var(--color-green-50);
+  --success-border:  var(--color-green-300);
+
   /* Per-game brand accent (ADR 0009) — one knob per game, overridden by the
      [data-game] selectors below. This :root default is the fallback for any
      chrome rendered outside a game wrapper. */
@@ -49,6 +66,17 @@
   --success:        var(--color-green-500);
   --inverted:            var(--color-stone-200);
   --inverted-foreground: var(--color-stone-900);
+
+  --danger-surface:  var(--color-red-950);
+  --danger-border:   var(--color-red-700);
+  --warning:         var(--color-amber-200);
+  --warning-surface: var(--color-amber-950);
+  --warning-border:  var(--color-amber-700);
+  --info:            var(--color-sky-200);
+  --info-surface:    var(--color-sky-950);
+  --info-border:     var(--color-sky-800);
+  --success-surface: var(--color-green-950);
+  --success-border:  var(--color-green-700);
 }
 
 /* Per-game brand accents (ADR 0009) — each game's signature colour, set once
@@ -61,6 +89,10 @@
 [data-game="vrestifrasi"]  { --game-accent: var(--color-purple-600); --game-accent-foreground: #ffffff; }
 [data-game="leksodromia"]  { --game-accent: var(--color-red-600);    --game-accent-foreground: #ffffff; }
 [data-game="leksoplegma"]  { --game-accent: var(--color-teal-600);   --game-accent-foreground: #ffffff; }
+[data-game="stavrolekso"]  { --game-accent: var(--color-sky-600);    --game-accent-foreground: #ffffff; }
+[data-game="leksikastirio"]{ --game-accent: var(--color-indigo-600); --game-accent-foreground: #ffffff; }
+/* topothesies: ultramarine blue. */
+[data-game="topothesies"]  { --game-accent: var(--color-blue-700);   --game-accent-foreground: #ffffff; }
 
 @theme inline {
   --color-background: var(--background);
@@ -77,7 +109,18 @@
   --color-brand:          var(--brand);
   --color-accent:         var(--accent);
   --color-danger:         var(--danger);
+  --color-danger-surface: var(--danger-surface);
+  --color-danger-border:  var(--danger-border);
   --color-success:        var(--success);
+  --color-success-surface: var(--success-surface);
+  --color-success-border:  var(--success-border);
+  --color-warning:         var(--warning);
+  --color-warning-surface: var(--warning-surface);
+  --color-warning-border:  var(--warning-border);
+  --color-info:            var(--info);
+  --color-info-surface:    var(--info-surface);
+  --color-info-border:     var(--info-border);
+  --color-info-strong:     var(--info-strong);
   --color-inverted:            var(--inverted);
   --color-inverted-foreground: var(--inverted-foreground);
   --color-game-accent:            var(--game-accent);
@@ -89,6 +132,20 @@
 
   /* Shared icon size for the leaderboard 🏆 — one place to resize it everywhere. */
   --text-trophy: 1.25rem;
+
+  /* Shape tokens (ADR 0008) — radius/shadow knobs recorded once so the redesign
+     can retune them. Values compile byte-identically to today: rounded-card ==
+     rounded-2xl, rounded-control == rounded-xl, shadow-card == shadow-sm.
+     Tailwind v4 derives rounded-card / rounded-t-card / rounded-control /
+     shadow-card from the --radius-* / --shadow-* namespaces. */
+  --radius-card:    1rem;
+  --radius-control: 0.75rem;
+  --shadow-card:    var(--shadow-sm);
+
+  /* Platform column width → max-w-game. The single knob for every game page's
+     content column (header row, boards, grids, recaps, modal). Tailwind v4 reads
+     the --container-* namespace to generate the max-w-* utility. */
+  --container-game: 24rem;
 }
 
 body {

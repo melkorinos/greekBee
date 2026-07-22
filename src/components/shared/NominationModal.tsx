@@ -1,6 +1,6 @@
 "use client";
 
-import { btnCancel, btnModalPrimary, btnModalSubmit, inputClass, inputReadonlyClass, labelClass, labelOptionalClass } from "@/styles/recipes";
+import { btnCancel, btnInfo, btnModalPrimary, btnModalSubmit, inputClass, inputReadonlyClass, labelClass, labelOptionalClass } from "@/styles/recipes";
 
 import { Modal } from "./Modal";
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
@@ -244,12 +244,12 @@ export function NominationModal({
             {blockedHit && (
               <div
                 data-testid="nomination-blocked-warning"
-                className="mb-4 rounded-xl border border-rose-300 bg-rose-50 dark:border-rose-700 dark:bg-rose-950 px-3 py-2.5"
+                className="mb-4 rounded-xl border border-danger-border bg-danger-surface px-3 py-2.5"
               >
-                <p className="text-xs font-semibold text-rose-800 dark:text-rose-200">
+                <p className="text-xs font-semibold text-danger">
                   🚫 Δεν δεχόμαστε κύρια ονόματα.
                 </p>
-                <p className="text-xs text-rose-700 dark:text-rose-300 mt-1 leading-relaxed">
+                <p className="text-xs text-danger mt-1 leading-relaxed">
                   Ονόματα ανθρώπων, μηνών ή τόπων —  καθώς και ξένες λέξεις — δεν προστίθενται
                   στη λίστα. Δοκίμασε μια κοινή ελληνική λέξη.
                 </p>
@@ -259,12 +259,12 @@ export function NominationModal({
             {rejectedHit && (
               <div
                 data-testid="nomination-rejected-warning"
-                className="mb-4 rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950 px-3 py-2.5"
+                className="mb-4 rounded-xl border border-warning-border bg-warning-surface px-3 py-2.5"
               >
-                <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+                <p className="text-xs font-semibold text-warning">
                   ⚠ Αυτή η λέξη έχει ξαναπροταθεί και απορρίφθηκε.
                 </p>
-                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1 leading-relaxed">
+                <p className="text-xs text-warning mt-1 leading-relaxed">
                   Μπορείς να την ξαναστείλεις, αλλά εξήγησε καθαρά γιατί πιστεύεις ότι πρόκειται για
                   λάθος — η εξήγηση είναι <strong>υποχρεωτική</strong>.
                 </p>
@@ -274,9 +274,9 @@ export function NominationModal({
             {acceptedHit && (
               <div
                 data-testid="nomination-accepted-info"
-                className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950 px-3 py-2.5"
+                className="mb-4 rounded-xl border border-success-border bg-success-surface px-3 py-2.5"
               >
-                <p className="text-xs text-emerald-800 dark:text-emerald-200 leading-relaxed">
+                <p className="text-xs text-success leading-relaxed">
                   ✓ Αυτή η λέξη έχει ήδη εγκριθεί και θα προστεθεί στη λίστα με την επόμενη
                   ενημέρωση. Δεν χρειάζεται να την ξαναστείλεις.
                 </p>
@@ -286,9 +286,9 @@ export function NominationModal({
             {pendingHit && (
               <div
                 data-testid="nomination-pending-info"
-                className="mb-4 rounded-xl border border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950 px-3 py-2.5"
+                className="mb-4 rounded-xl border border-info-border bg-info-surface px-3 py-2.5"
               >
-                <p className="text-xs text-sky-800 dark:text-sky-200 leading-relaxed">
+                <p className="text-xs text-info leading-relaxed">
                   ℹ Υπάρχει ήδη ενεργή πρόταση για αυτή τη λέξη. Ψήφισέ την αντί να στείλεις
                   διπλή πρόταση.
                 </p>
@@ -296,7 +296,7 @@ export function NominationModal({
                   onClick={() => handleUpvoteExisting(lookup?.pendingId ?? null)}
                   disabled={status === "submitting" || !lookup?.pendingId}
                   data-testid="nomination-pending-upvote"
-                  className="mt-2.5 w-full py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                  className={`mt-2.5 w-full py-1.5 rounded-lg text-xs font-semibold ${btnInfo}`}
                 >
                   {status === "submitting" ? "…" : "▲ Ψήφισε υπέρ της υπάρχουσας"}
                 </button>
@@ -353,7 +353,7 @@ export function NominationModal({
                 <label className={labelClass}>
                   Σχόλιο{" "}
                   {noteRequired ? (
-                    <span className="text-amber-600 dark:text-amber-400 font-semibold">(υποχρεωτικό)</span>
+                    <span className="text-warning font-semibold">(υποχρεωτικό)</span>
                   ) : (
                     <span className={labelOptionalClass}>(προαιρετικό)</span>
                   )}
@@ -369,11 +369,11 @@ export function NominationModal({
                   rows={3}
                   data-testid="nomination-modal-note"
                   className={`${inputClass} resize-none ${
-                    noteMissing ? "border-amber-500 ring-1 ring-amber-500" : ""
+                    noteMissing ? "border-warning ring-1 ring-warning" : ""
                   }`}
                 />
                 {noteMissing && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1" data-testid="nomination-note-required">
+                  <p className="text-xs text-warning mt-1" data-testid="nomination-note-required">
                     Πρόσθεσε μια εξήγηση για να ξαναστείλεις αυτή τη λέξη.
                   </p>
                 )}
@@ -405,7 +405,7 @@ export function NominationModal({
                   pendingHit
                 }
                 data-testid="nomination-modal-submit"
-                className={btnModalSubmit}
+                className={`flex-1 ${btnModalSubmit}`}
               >
                 {status === "submitting" ? "…" : "Αποστολή"}
               </button>

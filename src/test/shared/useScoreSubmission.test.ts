@@ -119,6 +119,26 @@ describe("useScoreSubmission — submit()", () => {
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
+  it("includes the data record in the body when provided", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission(BASE));
+
+    await act(async () => { result.current.submit(10, { words: 12, pangrams: 2 }); });
+
+    const body = JSON.parse((spy.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body.data).toEqual({ words: 12, pangrams: 2 });
+  });
+
+  it("omits data from the body when not provided", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission(BASE));
+
+    await act(async () => { result.current.submit(10); });
+
+    const body = JSON.parse((spy.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body).not.toHaveProperty("data");
+  });
+
   it("falls back to 'Ανώνυμος' when displayName is empty", async () => {
     const spy = mockFetch();
     const { result } = renderHook(() => useScoreSubmission({ ...BASE, displayName: "" }));
@@ -169,6 +189,16 @@ describe("useScoreSubmission — submitWithName()", () => {
     const body = JSON.parse(init.body as string);
     expect(body.display_name).toBe("Νέος");
     expect(body.score).toBe(10);
+  });
+
+  it("forwards the data record when provided", async () => {
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission(BASE));
+
+    await act(async () => { result.current.submitWithName(10, "Νέος", { words: 8, pangrams: 1 }); });
+
+    const body = JSON.parse((spy.mock.calls[0] as [string, RequestInit])[1].body as string);
+    expect(body.data).toEqual({ words: 8, pangrams: 1 });
   });
 
   it("does not POST when score is 0", async () => {

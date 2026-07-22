@@ -13,7 +13,7 @@ import { PLATFORM_NAME } from "@/config/platform";
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
 import { HomeTrophyButton } from "@/components/shared/HomeTrophyButton";
 import { SubmitPuzzleButton } from "@/components/shared/SubmitPuzzleButton";
-import { btnHeaderIcon, btnHeaderIconSize } from "@/styles/recipes";
+import { btnHeaderIcon, btnHeaderIconSize, cardShellInteractive, chipWarning } from "@/styles/recipes";
 import Link from "next/link";
 
 function StavroleksoMakerButton() {
@@ -122,6 +122,17 @@ const GAME_RULES = {
       "Μπορείς να αναφέρεις λέξεις και μέσα από το παιχνίδι Leksokipos!",
     ],
   },
+  // Published (session 121) after the operator play-through; the gameplay copy
+  // below is final.
+  topothesies: {
+    rulesTitle: "Πώς να παίξεις — Topothesies",
+    bulletIcon: "🗺️",
+    rules: [
+      "Δες τη **σιλουέτα** μιας περιφερειακής ενότητας και μάντεψέ την σε **4 προσπάθειες**.",
+      "Μετά από κάθε λάθος παίρνεις **απόσταση, κατεύθυνση** και ποσοστό **εγγύτητας**.",
+      "Αν τη βρεις, μάντεψε και την **πρωτεύουσά** της σε **3 προσπάθειες** για bonus.",
+    ],
+  },
 } as const satisfies Record<keyof typeof GAME_REGISTRY, { rulesTitle: string; bulletIcon: string; rules: readonly string[] }>;
 
 const GAMES = (Object.keys(GAME_REGISTRY) as Array<keyof typeof GAME_REGISTRY>).map(
@@ -142,7 +153,7 @@ function submitButtonFor(id: (typeof GAMES)[number]["id"]): React.ReactNode {
     return <><SubmitPuzzleButton game={id} /><HomeTrophyButton gameId={id} /></>;
   }
   if (id === "stavrolekso") return <StavroleksoMakerButton />;
-  if (id === "leksokipos" || id === "leksodromia" || id === "leksoplegma") {
+  if (id === "leksokipos" || id === "leksodromia" || id === "leksoplegma" || id === "topothesies") {
     return <HomeTrophyButton gameId={id} />;
   }
   return undefined;
@@ -150,14 +161,14 @@ function submitButtonFor(id: (typeof GAMES)[number]["id"]): React.ReactNode {
 
 function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submitButton?: React.ReactNode }) {
   return (
-    <li className="flex items-stretch rounded-2xl bg-surface border border-border shadow-sm hover:shadow-md hover:border-border transition-all overflow-hidden">
+    <li className={`flex items-stretch ${cardShellInteractive} overflow-hidden`}>
       <Link href={game.href} className="flex-1 flex items-start gap-4 p-5">
         <span className="text-3xl mt-0.5">{game.emoji}</span>
         <div>
           <p className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
             {game.title}
             {game.wip && (
-              <span className="text-xs font-normal text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+              <span className={`text-xs font-normal ${chipWarning} px-1.5 py-0.5 rounded-full`}>
                 🚧 Υπό κατασκευή
               </span>
             )}
@@ -183,7 +194,7 @@ export default function HomePage() {
       <h1 className="text-3xl font-bold text-foreground mb-2">{PLATFORM_NAME}</h1>
       <p className="text-muted text-sm mb-10">Επίλεξε παιχνίδι για να ξεκινήσεις</p>
 
-      <ul className="w-full max-w-sm space-y-4">
+      <ul className="w-full max-w-game space-y-4">
         {gameList.map((game) => (
           <GameCard
             key={game.id}
@@ -193,25 +204,25 @@ export default function HomePage() {
         ))}
       </ul>
 
-      <div className="w-full max-w-sm mt-8 mb-4 flex items-center gap-3">
+      <div className="w-full max-w-game mt-8 mb-4 flex items-center gap-3">
         <hr className="flex-1 border-border" />
         <span className="text-xs font-semibold text-muted uppercase tracking-widest">Κοινότητα</span>
         <hr className="flex-1 border-border" />
       </div>
 
-      <ul className="w-full max-w-sm space-y-4">
+      <ul className="w-full max-w-game space-y-4">
         {communityList.map((game) => <GameCard key={game.id} game={game} />)}
       </ul>
 
       {wipList.length > 0 && (
         <>
-          <div className="w-full max-w-sm mt-8 mb-4 flex items-center gap-3">
+          <div className="w-full max-w-game mt-8 mb-4 flex items-center gap-3">
             <hr className="flex-1 border-border" />
             <span className="text-xs font-semibold text-muted uppercase tracking-widest">🚧 Υπό κατασκευή</span>
             <hr className="flex-1 border-border" />
           </div>
 
-          <ul className="w-full max-w-sm space-y-4">
+          <ul className="w-full max-w-game space-y-4">
             {wipList.map((game) => (
               <GameCard
                 key={game.id}

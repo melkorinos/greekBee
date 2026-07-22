@@ -110,7 +110,7 @@ export function ConnectionsBoard({ puzzle }: ConnectionsBoardProps) {
   const isPlaying = status === "playing";
 
   return (
-    <div className="w-full max-w-sm flex flex-col gap-4">
+    <div className="w-full max-w-game flex flex-col gap-4">
       {/* 🏆 leaderboard button — shown once game ends */}
       {status !== "playing" && (
         <div className="flex justify-end">

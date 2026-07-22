@@ -18,6 +18,7 @@ function makeChain(result: ChainResult) {
   const ret = () => chain;
   chain.select = ret;
   chain.eq     = ret;
+  chain.in     = ret;
   chain.order  = ret;
   chain.gt     = ret;
   chain.delete = ret;
@@ -293,5 +294,66 @@ describe("GET /api/game-scores — happy path", () => {
     enqueue({ data: null, error: { message: "connection refused" } });
     const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22" }));
     expect(res.status).toBe(500);
+  });
+});
+
+// ── GET — display badges (Handoff B) ──────────────────────────────────────────
+//
+// After the score rows, the GET fans out to player_profiles.selected_badge_id for
+// the returned devices and — for tiered selections — to player_achievements to
+// resolve the highest earned tier. Each row carries `badge` (or null).
+
+const TIERED  = "leksokipos-kynigos-pangram";
+const ONESHOT = "leksokipos-first-daily";
+
+type BadgedRow = { display_name: string; badge: { achievementId: string; tier: string | null } | null };
+
+describe("GET /api/game-scores — display badges", () => {
+  it("attaches each device's resolved badge; a tiered selection resolves the highest earned tier", async () => {
+    enqueue(
+      { data: [
+        { device_id: "a", display_name: "Άννα", score: 100 },
+        { device_id: "b", display_name: "Βάσω", score: 80  },
+      ], error: null },
+      // profiles: a picked the tiered badge, b picked the one-shot
+      { data: [
+        { device_uuid: "a", selected_badge_id: TIERED  },
+        { device_uuid: "b", selected_badge_id: ONESHOT },
+      ], error: null },
+      // achievements: a holds χάλκινο + ασημένιο of the tiered badge
+      { data: [
+        { device_uuid: "a", achievement_id: "leksokipos-kynigos-pangram-chalkino" },
+        { device_uuid: "a", achievement_id: "leksokipos-kynigos-pangram-asimenio" },
+      ], error: null },
+    );
+
+    const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22", deviceId: "a" }));
+    expect(res.status).toBe(200);
+    const json = await res.json() as { top20: BadgedRow[] };
+    const anna = json.top20.find((r) => r.display_name === "Άννα")!;
+    const vaso = json.top20.find((r) => r.display_name === "Βάσω")!;
+    expect(anna.badge).toEqual({ achievementId: TIERED, tier: "asimenio" });
+    expect(vaso.badge).toEqual({ achievementId: ONESHOT, tier: null });
+  });
+
+  it("resolves a dangling tiered selection (no earned tier rows) to no badge", async () => {
+    enqueue(
+      { data: [{ device_id: "a", display_name: "Άννα", score: 100 }], error: null },
+      { data: [{ device_uuid: "a", selected_badge_id: TIERED }], error: null },
+      { data: [], error: null }, // achievements — none earned
+    );
+    const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22", deviceId: "a" }));
+    const json = await res.json() as { top20: BadgedRow[] };
+    expect(json.top20[0].badge).toBeNull();
+  });
+
+  it("carries null badge for a device with no selection", async () => {
+    enqueue(
+      { data: [{ device_id: "a", display_name: "Άννα", score: 100 }], error: null },
+      { data: [], error: null }, // profiles — no selection rows
+    );
+    const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22", deviceId: "a" }));
+    const json = await res.json() as { top20: BadgedRow[] };
+    expect(json.top20[0].badge).toBeNull();
   });
 });

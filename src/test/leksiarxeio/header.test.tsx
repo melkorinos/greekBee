@@ -23,8 +23,9 @@ const PUZZLE: LeksiarxeioPuzzle = {
 };
 
 const PUZZLES: LeksiarxeioPuzzle[] = [PUZZLE];
+// Keys track LEKSIARXEIO.LENGTHS (4–8). There is no 3-letter Leksiarxeio.
 const WORD_LISTS: Record<LeksiarxeioLength, string[]> = {
-  3: [], 4: [], 5: ["αβγδε"], 6: [], 7: [], 8: [],
+  4: [], 5: ["αβγδε"], 6: [], 7: [], 8: [],
 };
 
 function renderHeader() {
