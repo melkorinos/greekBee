@@ -92,20 +92,19 @@ export const DEFERRED_ISLANDS: ReadonlyArray<{
 
 /**
  * Island answer ids EXCLUDED from emission (generateTopothesies drops any feature
- * assigned to one of these). Their OSM admin_level=7 silhouette is still not
- * high-fidelity enough to be a fair guess (operator review, 2026-07-21). Unlike a
- * hard removal, everything about them is retained — ANSWER_META, the ISLAND_PEEL_WD
- * mapping — so re-adding one is just deleting its id here, once a higher-fidelity
- * geometry is found for it. Tracked for refinement in the deferred-places doc.
+ * assigned to one of these). Everything about a deferred island is retained —
+ * ANSWER_META, the ISLAND_PEEL_WD mapping — so graduating one is just deleting its
+ * id here.
+ *
+ * 2026-07-22: SIZE-AWARE simplification (generateTopothesies.islandIntervalM) raised
+ * every small island from ~16–42 pts to ~130–400 pts, so the 28 islands deferred for
+ * "low fidelity" were graduated to live after operator preview sign-off. Πόρος alone
+ * stays deferred: even at full fidelity its silhouette reads WRONG on eyeball review
+ * (a geometry problem, not a simplification one) — see the
+ * topothesies-unpeelable-and-review handoff.
  */
 export const DEFERRED_ANSWER_IDS: ReadonlySet<string> = new Set([
-  "agistri", "anafi", "antiparos", "folegandros", "hydra", "ikaria", "kasos",
-  "kastellorizo", "kimolos", "nisyros", "oinousses", "patmos", "poros", "psara",
-  "samothrace", "serifos", "sikinos", "skiathos", "skopelos", "spetses", "symi",
-  "syros",
-  // Promoted from backlog 2026-07-22 (own-δήμος, peelable) — deferred for fidelity
-  // work; ANSWER_META + ISLAND_PEEL_WD added, excluded from live emission here.
-  "meganisi", "agios-efstratios", "fournoi", "tilos", "chalki", "lipsi", "agathonisi",
+  "poros",
 ]);
 
 /**

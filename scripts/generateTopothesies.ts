@@ -27,6 +27,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { normalizeLetters } from "../src/lib/normalize";
+import { haversineKm } from "../src/games/topothesies/lib/geo";
 import type { LngLat, TopothesiesAnswer, TopothesiesShape } from "../src/games/topothesies/types";
 import {
   ANSWER_META,
@@ -72,17 +73,32 @@ const DISSOLVED = path.join(__dirname, "lib/topothesies/source/_dissolved.geojso
 // attribution line restored in src/games/topothesies/attribution.ts.
 const GEOBOUNDARIES_FALLBACK_IDS: ReadonlySet<string> = new Set([]);
 
-// Simplification. OSM coastlines are dense (a δήμος can carry thousands of
-// vertices), so unlike the sparse geoBoundaries feed we simplify DOWN. An
-// absolute ground-distance tolerance (interval, metres) — not a percentage —
-// gives every coast the same resolution: it trims the dense mainland hard while
-// preserving small-island form, so the largest single silhouette (Εύβοια, ~15.6
-// KB at 200 m) stays under the per-shape byte budget in performance.test.ts
-// while Καστελλόριζο keeps ~33 vertices (was 11 at the geoBoundaries ceiling).
-// `keep-shapes` stops small islands from collapsing. Only one shape ships per
-// day (ADR 0018), so the budget is a per-shape worst case, never a whole-file
-// cost. Override with TOPO_SIMPLIFY (e.g. "interval=300", or a "12%").
-const SIMPLIFY = process.env.TOPO_SIMPLIFY ?? "interval=200";
+// Simplification is SIZE-AWARE. OSM coastlines are dense (a δήμος carries
+// thousands of vertices) so we simplify DOWN with an absolute ground-distance
+// tolerance (interval, metres). But a SINGLE global tolerance can't serve both a
+// 180 km νομός and a 3 km islet: interval=200 keeps the mainland under the
+// per-shape byte budget yet sands small islands down to ~18 vertices — the "low
+// fidelity" the small deferred islands suffered (an island δήμος boundary already
+// *is* the coastline, so the source was never the problem; the tolerance was).
+//
+// So the tolerance scales with each shape's own size. MAINLAND is left untouched
+// at 200 m (already high-fidelity, and must stay under budget). ISLANDS get a
+// finer tolerance the smaller they are — 30 m for the small ones (Αγκίστρι,
+// Καστελλόριζο …), still 200 m for big islands (Εύβοια, Λέσβος, Ρόδος) which read
+// well already and would otherwise blow the byte budget. Bucketed to a few
+// discrete intervals so all shapes in one bucket simplify in a single mapshaper
+// pass. `keep-shapes` stops small islands collapsing. Only one shape ships per
+// day (ADR 0018), so the budget is a per-shape worst case. TOPO_SIMPLIFY forces
+// ONE spec on every shape (e.g. "interval=300", or "12%") for experiments / A-B.
+const SIMPLIFY_OVERRIDE = process.env.TOPO_SIMPLIFY ?? null;
+
+/** Island-only, size-aware tolerance: km diagonal of the drawn landmass → interval m. */
+function islandIntervalM(diagKm: number): number {
+  if (diagKm < 12) return 30; // islets (Αγκίστρι, Καστελλόριζο, Αγαθονήσι, Σπέτσες…)
+  if (diagKm < 30) return 60; // small islands (Σύρος, Πάρος, Αίγινα…)
+  if (diagKm < 50) return 120; // medium islands (Νάξος, Σάμος, Κεφαλονιά…)
+  return 200; // big islands (Εύβοια, Λέσβος, Ρόδος, Χίος…) — unchanged
+}
 
 // Distance (in degrees) beyond which an OSM δήμος's nearest wd-muni is treated as
 // a foreign border municipality inside the bbox and dropped.
@@ -199,15 +215,51 @@ function main() {
   );
   console.log(`total tagged municipalities: ${tagged.length}`);
 
-  // ── 2. Dissolve by answer id + simplify (mapshaper via npx, no saved dep) ────
+  // ── 2. Dissolve by answer id (mapshaper via npx, no saved dep) ───────────────
   execSync(
-    `npx --yes mapshaper "${TMP}" -dissolve2 ansid -simplify ${SIMPLIFY} keep-shapes ` +
-      `-o format=geojson "${DISSOLVED}"`,
+    `npx --yes mapshaper "${TMP}" -dissolve2 ansid -o format=geojson "${DISSOLVED}"`,
     { stdio: "inherit" },
   );
 
+  // ── 2b. Size-aware simplify: bucket each dissolved shape by its own size, then
+  //        run ONE mapshaper -simplify pass per bucket. Mainland stays at 200 m;
+  //        islands get islandIntervalM(diagKm). TOPO_SIMPLIFY forces one spec. ──
+  const rawFeatures = (JSON.parse(fs.readFileSync(DISSOLVED, "utf8")).features as Feature[]);
+  const bucketOf = (f: Feature): string => {
+    if (SIMPLIFY_OVERRIDE) return SIMPLIFY_OVERRIDE;
+    const meta = ANSWER_META[f.properties.ansid];
+    if (!meta?.isIsland) return "interval=200"; // mainland — untouched
+    // Bucket by the drawn landmass (largest polygon), matching the keep=1 island render.
+    const polys = polygonsOf(f);
+    const largest = polys.reduce((a, b) => (Math.abs(ringArea(b[0])) > Math.abs(ringArea(a[0])) ? b : a));
+    const xs = largest[0].map((p) => p[0]);
+    const ys = largest[0].map((p) => p[1]);
+    const diagKm = haversineKm([Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]);
+    return `interval=${islandIntervalM(diagKm)}`;
+  };
+  const byBucket = new Map<string, Feature[]>();
+  for (const f of rawFeatures) {
+    const b = bucketOf(f);
+    if (!byBucket.has(b)) byBucket.set(b, []);
+    byBucket.get(b)!.push(f);
+  }
+  const simplifiedFeatures: Feature[] = [];
+  for (const [spec, feats] of byBucket) {
+    const inF = path.join(SRC, "_bucket_in.geojson");
+    const outF = path.join(SRC, "_bucket_out.geojson");
+    fs.writeFileSync(inF, JSON.stringify({
+      type: "FeatureCollection",
+      features: feats.map((f) => ({ type: "Feature", properties: f.properties, geometry: f.geometry })),
+    }));
+    console.log(`  -simplify ${spec}: ${feats.length} shapes`);
+    execSync(`npx --yes mapshaper "${inF}" -simplify ${spec} keep-shapes -o format=geojson "${outF}"`, { stdio: "inherit" });
+    simplifiedFeatures.push(...(JSON.parse(fs.readFileSync(outF, "utf8")).features as Feature[]));
+    fs.rmSync(inF, { force: true });
+    fs.rmSync(outF, { force: true });
+  }
+
   // ── 3. Project each dissolved shape → SVG path + viewBox + centroid ──────────
-  const dissolved = JSON.parse(fs.readFileSync(DISSOLVED, "utf8"));
+  const dissolved = { features: simplifiedFeatures };
   const shapes: TopothesiesShape[] = [];
   const answers: TopothesiesAnswer[] = [];
 
