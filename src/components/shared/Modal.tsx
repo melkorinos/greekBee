@@ -18,6 +18,8 @@
 
 import type { ReactNode } from "react";
 
+import { btnHeaderIcon, btnHeaderIconSize } from "@/styles/recipes";
+
 interface ModalProps {
   isOpen:   boolean;
   onClose:  () => void;
@@ -81,7 +83,7 @@ export function Modal({
             onClick={onClose}
             aria-label={closeLabel}
             data-testid={closeTestId}
-            className="absolute top-4 right-4 text-muted hover:text-foreground text-xl leading-none z-10"
+            className={`absolute top-4 right-4 z-10 ${btnHeaderIconSize} ${btnHeaderIcon} text-sm leading-none`}
           >
             ✕
           </button>

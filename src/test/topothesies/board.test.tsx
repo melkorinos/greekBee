@@ -5,7 +5,7 @@
 // The identity/network stack is stubbed — out of scope here.
 
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { TopothesiesBoard } from "@/components/topothesies/TopothesiesBoard";
@@ -53,6 +53,12 @@ async function guess(text: string) {
   await userEvent.keyboard("{Enter}");
 }
 
+/** Accept a stage reveal (the "continue" gate drawn over the silhouette). */
+async function acceptReveal(testId: string) {
+  const reveal = await screen.findByTestId(testId);
+  await userEvent.click(within(reveal).getByRole("button"));
+}
+
 describe("TopothesiesBoard", () => {
   it("renders the silhouette", () => {
     renderBoard();
@@ -70,11 +76,15 @@ describe("TopothesiesBoard", () => {
   it("plays through both stages to a scored result", async () => {
     renderBoard();
     await guess("Βητα");      // wrong shape
-    await guess("Αλφα");      // correct shape → capital stage
+    await guess("Αλφα");      // correct shape → shape reveal
 
-    // Unit revealed (in the reveal line and the solved guess row), capital input now available.
-    expect(screen.getAllByText("Αλφα").length).toBeGreaterThan(0);
-    await guess("Πρωτη");     // correct capital → finished
+    // The unit is revealed on top of the silhouette; accept it to reach the capital stage.
+    const reveal = await screen.findByTestId("shape-reveal");
+    expect(reveal).toHaveTextContent("Αλφα");
+    await acceptReveal("shape-reveal");
+
+    await guess("Πρωτη");     // correct capital → capital reveal
+    await acceptReveal("capital-reveal");
 
     const result = screen.getByTestId("topothesies-result");
     expect(result).toBeInTheDocument();
@@ -91,7 +101,8 @@ describe("TopothesiesBoard", () => {
 
   it("shows no distance hint on a wrong capital guess (right/wrong only)", async () => {
     renderBoard();
-    await guess("Αλφα");   // correct shape → capital stage
+    await guess("Αλφα");   // correct shape → shape reveal
+    await acceptReveal("shape-reveal");
     await guess("Δευτερη"); // wrong-but-known capital
     const rows = screen.getByTestId("capital-guesses");
     expect(rows).toHaveTextContent("Δευτερη");

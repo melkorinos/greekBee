@@ -48,6 +48,48 @@ function HintChips({ hint }: { hint: { distanceKm: number; arrow: string; proxim
   );
 }
 
+/**
+ * A reveal panel drawn ON TOP of the silhouette when a stage resolves: the
+ * correct answer (so a wrong guess is unmistakable), and an explicit "continue"
+ * the player must accept before the next stage begins.
+ */
+function StageReveal({
+  testId,
+  tone,
+  heading,
+  name,
+  sub,
+  buttonLabel,
+  onContinue,
+}: {
+  testId:      string;
+  tone:        "success" | "danger";
+  heading:     string;
+  name:        string;
+  sub?:        string;
+  buttonLabel: string;
+  onContinue:  () => void;
+}) {
+  return (
+    <div
+      data-testid={testId}
+      className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-card bg-surface/90 p-4 text-center"
+    >
+      <p className={`text-sm font-semibold ${tone === "success" ? "text-success" : "text-danger"}`}>
+        {heading}
+      </p>
+      <p className="text-3xl font-bold text-foreground">{name}</p>
+      {sub && <p className="text-sm text-muted">{sub}</p>}
+      <button
+        onClick={onContinue}
+        className="mt-2 px-5 py-2.5 rounded-control bg-game-accent text-game-accent-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
+      >
+        {buttonLabel}
+      </button>
+    </div>
+  );
+}
+
 export function TopothesiesBoard({
   answers,
   target,
@@ -64,6 +106,13 @@ export function TopothesiesBoard({
   const { state, dispatch, hasLiveActed } = useTopothesiesRound(target, answers, maxKm, today);
   const score = computeScore(state);
   const [giveUpOpen, setGiveUpOpen] = useState(false);
+
+  // Each stage ends with a reveal the player must accept before the next stage
+  // begins (these acks are UI-only). A reveal is gated on `hasLiveActed`, so a
+  // resumed (restored) round shows no reveal and never re-gates progress the
+  // player already made — only a live transition this session draws one.
+  const [shapeAck, setShapeAck] = useState(false);
+  const [capitalAck, setCapitalAck] = useState(false);
 
   const { submit: postScore } = useScoreSubmission({
     gameId:     "topothesies",
@@ -103,11 +152,44 @@ export function TopothesiesBoard({
   const shapeLeft   = TOPOTHESIES.SHAPE_GUESSES - state.shapeGuesses.length;
   const capitalLeft = TOPOTHESIES.CAPITAL_GUESSES - state.capitalGuesses.length;
 
+  const live            = hasLiveActed();
+  const shapeResolved   = state.shapeSolved || state.shapeFailed;
+  const capitalResolved = state.capitalSolved || state.capitalFailed;
+
+  const showShapeReveal   = live && shapeResolved && !state.gaveUp && !shapeAck;
+  const showCapitalInput  = state.stage === "capital" && (!live || shapeAck);
+  const showCapitalReveal = live && capitalResolved && !state.gaveUp && !capitalAck;
+  const showResult        = state.stage === "finished" && (!live || state.gaveUp || capitalAck);
+
   return (
     <div className="flex flex-col items-center gap-4 py-4 w-full max-w-game">
-      {/* Silhouette */}
-      <div className="w-full flex items-center justify-center min-h-[42vh]">
+      {/* Silhouette — a stage reveal is drawn on top of it when a stage resolves. */}
+      <div className="relative w-full flex items-center justify-center min-h-[42vh]">
         <TopothesiesSilhouette shape={shape} />
+
+        {showShapeReveal && (
+          <StageReveal
+            testId="shape-reveal"
+            tone={state.shapeSolved ? "success" : "danger"}
+            heading={state.shapeSolved ? "Σωστά!" : "Η σωστή απάντηση"}
+            name={target.name}
+            sub="Τώρα βρες την πρωτεύουσα."
+            buttonLabel="Συνέχεια →"
+            onContinue={() => setShapeAck(true)}
+          />
+        )}
+
+        {showCapitalReveal && (
+          <StageReveal
+            testId="capital-reveal"
+            tone={state.capitalSolved ? "success" : "danger"}
+            heading={state.capitalSolved ? "Σωστά!" : "Η σωστή πρωτεύουσα"}
+            name={target.capital}
+            sub={state.capitalSolved ? "Ολοκλήρωσες τον γύρο!" : undefined}
+            buttonLabel="Δες το σκορ →"
+            onContinue={() => setCapitalAck(true)}
+          />
+        )}
       </div>
 
       {/* Stage 1 guess history */}
@@ -142,8 +224,8 @@ export function TopothesiesBoard({
         </div>
       )}
 
-      {/* Capital stage: reveal the unit, then guess its capital */}
-      {(state.stage === "capital" || state.stage === "finished") && (
+      {/* Capital stage: the accepted unit stays on screen while guessing its capital */}
+      {showCapitalInput && (
         <div className="w-full flex flex-col gap-2 items-center">
           <p className="text-center text-sm">
             <span className="text-muted">Η περιοχή: </span>
@@ -173,7 +255,7 @@ export function TopothesiesBoard({
         </ul>
       )}
 
-      {state.stage === "capital" && (
+      {showCapitalInput && (
         <div className="w-full flex flex-col gap-2 items-center">
           <p className="text-sm text-muted">Ποια είναι η πρωτεύουσα; ({capitalLeft} προσπάθειες)</p>
           <GuessAutocomplete
@@ -184,7 +266,7 @@ export function TopothesiesBoard({
         </div>
       )}
 
-      {state.stage !== "finished" && (
+      {(state.stage === "shape" || showCapitalInput) && (
         <button
           data-testid="btn-give-up"
           onClick={() => setGiveUpOpen(true)}
@@ -194,7 +276,7 @@ export function TopothesiesBoard({
         </button>
       )}
 
-      {state.stage === "finished" && (
+      {showResult && (
         <TopothesiesResult
           target={target}
           score={score}
@@ -207,7 +289,7 @@ export function TopothesiesBoard({
         isOpen={giveUpOpen}
         onClose={() => setGiveUpOpen(false)}
         onConfirm={() => {
-          dispatch({ type: "GIVE_UP" });
+          dispatch({ type: "GIVE_UP" }); // gaveUp shows the result directly — no reveal gate
           setGiveUpOpen(false);
         }}
       />
