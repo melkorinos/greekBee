@@ -58,7 +58,7 @@
 | `recipes.test.ts` (shared) | Platform recipes — non-empty, button/leaderboard token contracts, no `dark:` pairs |
 | `styles.test.ts` (leksokipos) | Leksokipos-local recipes — feedback/found-word/score-bar/give-up token contracts, no `dark:` pairs (ADR 0009) |
 | `validateSubmission.test.ts` (×4: leksiarxeio, leksindeseis, vrestifrasi, stavrolekso) | Community Puzzle validation adapters as pure functions — per-game submission invariants; stavrolekso also `EDIT_PIN_PATTERN` + `validateStavroleksoData` (shared with PATCH edit route + maker) |
-| `scoring.test.ts` (leksodromia) | `computeWordPoints` — decay-to-floor, hint costs, MIN clamp, perfect round = MAX_SCORE |
+| `scoring.test.ts` (leksodromia) | `computeWordPoints` — decay-to-floor, hint costs, MIN clamp, perfect round = MAX_SCORE · `computeDecayFraction` — decay-bar fill (full/empty/clamp/linear) + base-independence regression (kills the perceived per-length speed-up) |
 | `selectDailyWords.test.ts` | Deterministic 2×(4–8) selection; **never Leksiarxeio's same-day fallback answer** (cross-game leak guard) |
 | `scrambleWord.test.ts` | Deterministic seeded scramble — multiset-preserving, never identity |
 | `leksodromiaReducer.test.ts` | PICK_TILE/ADD_LETTER/REMOVE_LETTER/SUBMIT_WORD/USE_HINT (cap+prefix lock)/SKIP_WORD/RESTORE_STATE + selectors |
@@ -135,6 +135,6 @@
 | `topothesies/scoring.test.ts` | `computeScore` — shape points + capital bonus scaling with guesses-left (gameRules knobs), failed-stage zero, independent-stage educational path |
 | `topothesies/topothesiesReducer.test.ts` | State machine — shape→capital→finished transitions, 4/3 guess exhaustion, typo/unknown no-op, failed-shape still enters capital, finished inert, `RESTORE_STATE` replay, `GIVE_UP` (s118: `gaveUp` forces unsolved stages failed→finished, inert once finished, restored gave-up round) |
 | `topothesies/shareText.test.ts` | `buildShareText` — spoiler-free (no name/capital/id), accent-free, shape squares carry arrows but capital line has none (s118), includes score |
-| `topothesies/board.test.tsx` | `TopothesiesBoard` — silhouette render, wrong-shape hint chip, full play-through to scored result, typo no-burn, capital wrong guess shows no distance hint (s118), give-up reveals unit+capital (s118) |
+| `topothesies/board.test.tsx` | `TopothesiesBoard` — silhouette render, wrong-shape hint chip, full play-through to scored result (score computed from config knobs), typo no-burn, capital wrong guess shows no distance hint (s118), give-up reveals unit+capital (s118), autocomplete row-pick fills-not-submits + «Μάντεψε» button commits (s123) |
 | `topothesiesProject.test.ts` (scripts) | Topothesies build-time projector (`project.ts`) — `projectPoint`/`ringToPath`/`computeViewBox`/`ringArea`/`centroidLngLat`/`maxPairwiseCentroidKm`, worked examples |
 | `osmPolygons.test.ts` (scripts) | Topothesies OSM assembler (s119) — `assembleRings` (head-to-tail stitch, reversed segment, already-closed passthrough, open-ring no-loop), `signedRingArea` (CCW +, CW −), `assembleRelation` (hole-nesting, largest-first polygons, null on too-few points) |

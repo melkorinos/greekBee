@@ -8,7 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import { LEKSODROMIA } from "@/config/gameRules";
-import { computeWordPoints } from "@/games/leksodromia/lib/scoring";
+import { computeDecayFraction, computeWordPoints } from "@/games/leksodromia/lib/scoring";
 
 describe("computeWordPoints", () => {
   it("awards full BASE points for an instant solve", () => {
@@ -54,5 +54,41 @@ describe("computeWordPoints", () => {
     );
     expect(perfect).toBe(LEKSODROMIA.MAX_SCORE);
     expect(perfect).toBe(1000);
+  });
+});
+
+describe("computeDecayFraction (the live decay bar's fill)", () => {
+  it("is full (1) at t=0 and empties fully (0) at the decay window", () => {
+    expect(computeDecayFraction(0)).toBe(1);
+    expect(computeDecayFraction(45_000)).toBe(0);
+  });
+
+  it("stays at 0 past the window — the bar never goes negative", () => {
+    expect(computeDecayFraction(90_000)).toBe(0);
+    expect(computeDecayFraction(3_600_000)).toBe(0);
+  });
+
+  it("eases linearly — halfway through the window is half full", () => {
+    expect(computeDecayFraction(22_500)).toBeCloseTo(0.5, 10);
+  });
+
+  it("treats negative elapsed as a full bar", () => {
+    expect(computeDecayFraction(-500)).toBe(1);
+  });
+
+  // Regression: the raw points NUMBER decays with a base-dependent slope, so on an
+  // 8-letter word it drops ~2.3× faster than a 4-letter word — that scaling is what
+  // read as "the timer running twice as fast on harder levels". The bar fraction is
+  // base-independent, so it drains at one identical pace for every word length.
+  it("drains at the same rate for every word length (kills the perceived speed-up)", () => {
+    for (const t of [0, 10_000, 22_500, 45_000]) {
+      const fractions = LEKSODROMIA.LENGTHS.map(() => computeDecayFraction(t));
+      expect(new Set(fractions).size).toBe(1); // identical across all lengths
+    }
+    // The raw number, by contrast, does NOT: slope scales with BASE, so over the
+    // same 9 s the 8-letter word sheds more than 2× the points a 4-letter word does.
+    const dropShort = computeWordPoints(0, 4, 0) - computeWordPoints(9_000, 4, 0);
+    const dropLong  = computeWordPoints(0, 8, 0) - computeWordPoints(9_000, 8, 0);
+    expect(dropLong).toBeGreaterThan(dropShort * 2);
   });
 });

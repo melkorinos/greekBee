@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 
 import { TopothesiesBoard } from "@/components/topothesies/TopothesiesBoard";
 import type { TopothesiesAnswer, TopothesiesShape } from "@/games/topothesies/types";
+import { TOPOTHESIES } from "@/config/gameRules";
 
 vi.mock("@/hooks/usePlayerIdentity", () => ({
   usePlayerIdentity: () => ({ deviceId: "", displayName: "", leaderboardProps: {} }),
@@ -88,9 +89,26 @@ describe("TopothesiesBoard", () => {
 
     const result = screen.getByTestId("topothesies-result");
     expect(result).toBeInTheDocument();
-    // Solved shape on 2nd try (3 left) + capital on 1st (3 left):
-    // 100·3 + 40·3 = 420.
-    expect(result).toHaveTextContent("420");
+    // Solved shape on the 2nd try (one wrong) + capital on the 1st (none wrong).
+    const expected =
+      TOPOTHESIES.POINTS_PER_SHAPE_GUESS_LEFT * (TOPOTHESIES.SHAPE_GUESSES - 1) +
+      TOPOTHESIES.POINTS_PER_CAPITAL_GUESS_LEFT * TOPOTHESIES.CAPITAL_GUESSES;
+    expect(result).toHaveTextContent(String(expected));
+  });
+
+  it("picking a dropdown row fills the box without submitting; the button commits", async () => {
+    renderBoard();
+    const input = screen.getByRole("textbox");
+    await userEvent.click(input); // focus → full candidate list opens
+
+    await userEvent.click(screen.getByRole("button", { name: "Βητα" }));
+    // Picking a row only fills the input — no guess is recorded (mis-tap safe).
+    expect(screen.queryByTestId("shape-guesses")).not.toBeInTheDocument();
+    expect(input).toHaveValue("Βητα");
+
+    // The explicit button is what actually commits the guess.
+    await userEvent.click(screen.getByRole("button", { name: "Μάντεψε" }));
+    expect(screen.getByTestId("shape-guesses")).toHaveTextContent("Βητα");
   });
 
   it("does not burn a guess on an unresolvable typo", async () => {

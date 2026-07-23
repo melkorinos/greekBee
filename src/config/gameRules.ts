@@ -58,7 +58,7 @@ export const LEKSOPLEGMA = {
 
 export const TOPOTHESIES = {
   // Stage 1: guess the regional unit from its silhouette.
-  SHAPE_GUESSES:   4,
+  SHAPE_GUESSES:   5,
   // Stage 2 (bonus): guess that unit's capital.
   CAPITAL_GUESSES: 3,
   // Scoring: points scale with guesses remaining at the moment of the correct
