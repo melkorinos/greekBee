@@ -36,6 +36,10 @@ Geometry now comes from OpenStreetMap admin_level=7 (fidelity handoff CLOSED, s1
 - Preview gallery (`source/outlines-preview.html`) regenerated at 76 shapes for the operator's eyeball.
 - Do NOT "fix": the **share card keeps its Worldle emoji grid on purpose** (renders when players paste results into messaging apps); only the on-screen surface is de-emoji'd (s118).
 
+### 🟡 Πόσο κάνει; — engine built, awaiting real content (s124)
+
+The whole slice ships `wip:true` on **one placeholder puzzle** (Αγγούρι + an authored SVG). It is functionally complete but cannot go live until real dated puzzles exist — photos (open-license / own, never the gov `image_url`) + frozen gov reference prices. Tracked in **issue 13** (carries the gov API details + item list + the unresolved branded-photo policy from the deleted `posoKanei.md` handoff; git history keeps the full text). Flip `posokanei.wip:false` only after content + an operator play-through. Placeholder honesty: the sample photo/license strings say «Δείγμα / placeholder» on purpose — don't let a real-looking price slip in without a real source.
+
 ---
 
 ## ✅ Resolved Tensions (archive)

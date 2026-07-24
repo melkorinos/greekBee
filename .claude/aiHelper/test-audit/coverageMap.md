@@ -138,3 +138,10 @@
 | `topothesies/board.test.tsx` | `TopothesiesBoard` — silhouette render, wrong-shape hint chip, full play-through to scored result (score computed from config knobs), typo no-burn, capital wrong guess shows no distance hint (s118), give-up reveals unit+capital (s118), autocomplete row-pick fills-not-submits + «Μάντεψε» button commits (s123) |
 | `topothesiesProject.test.ts` (scripts) | Topothesies build-time projector (`project.ts`) — `projectPoint`/`ringToPath`/`computeViewBox`/`ringArea`/`centroidLngLat`/`maxPairwiseCentroidKm`, worked examples |
 | `osmPolygons.test.ts` (scripts) | Topothesies OSM assembler (s119) — `assembleRings` (head-to-tail stitch, reversed segment, already-closed passthrough, open-ring no-loop), `signedRingArea` (CCW +, CW −), `assembleRelation` (hole-nesting, largest-first polygons, null on too-few points) |
+| `posokanei/evaluateGuess.test.ts` | Πόσο κάνει; price scoring — `evaluatePriceGuess`: within-band correct (inclusive edge via +1e-9 float guard), higher/lower direction, proximity% (100 exact, 0 at/over PROXIMITY_MAX_REL, monotone decreasing) |
+| `posokanei/selectDailyPuzzle.test.ts` | `selectDailyPuzzle` — exact `date` match wins; else `dateToIndex` rotation (stable, order-independent); single-row pool always returns it; throws on empty |
+| `posokanei/scoring.test.ts` | `computeScore` — full points first-guess, −1 step per earlier wrong, zero unsolved, zero after give-up (gameRules knobs) |
+| `posokanei/shareText.test.ts` | `buildShareText` — spoiler-free (no item/price digits in the guess row), 🟩 solve, ⬆️/⬇️ direction arrows, trailing `Σκορ:` line |
+| `posokanei/posokaneiReducer.test.ts` | State machine — wrong guess stays guessing, band solve→finished, invalid/≤0/NaN no-op, MAX_GUESSES exhaustion→failed, finished inert, `GIVE_UP` forces failed, `RESTORE_STATE` replay |
+| `posokanei/format.test.ts` | `formatEuro` — two decimals, Greek comma, trailing € (Intl-free) |
+| `posokanei/board.test.tsx` | `PosokaneiBoard` — framed photo + item render, «πιο πάνω»/«πιο κάτω» direction hints, ≤0 no-burn, play-through to scored result with revealed price, give-up reveals price |

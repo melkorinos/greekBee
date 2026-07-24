@@ -21,6 +21,7 @@ import { buildShareText } from "@/games/topothesies/lib/shareText";
 
 import { todayISO } from "@/lib/puzzleDate";
 import { btnApprove } from "@/styles/recipes";
+import { FramedMedia } from "@/components/shared/FramedMedia";
 import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { GuessAutocomplete, type GuessCandidate } from "./GuessAutocomplete";
 import { TopothesiesSilhouette } from "./TopothesiesSilhouette";
@@ -164,11 +165,10 @@ export function TopothesiesBoard({
   return (
     <div className="flex flex-col items-center gap-4 py-4 w-full max-w-game">
       {/* Silhouette — framed like a card so it reads as a deliberate panel, not
-          loose geometry floating in the column. Border thickness is a step up
-          from the usual hairline page margins. */}
-      <div className="relative w-full flex items-center justify-center min-h-[42vh] rounded-card border-4 border-border bg-surface p-3">
+          loose geometry floating in the column (shared FramedMedia). */}
+      <FramedMedia>
         <TopothesiesSilhouette shape={shape} />
-      </div>
+      </FramedMedia>
 
       {/* Stage reveals — shown BELOW the map (never over it). */}
       {showShapeReveal && (

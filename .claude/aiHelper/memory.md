@@ -2,8 +2,8 @@
 
 > **Rule (2026-07-18):** keep this file under **120 lines** — decisions and pointers, never narrative. Long prose belongs in an ADR with a pointer here. Maintained by the end-of-session Dream (soul.md).
 
-## ⚡ Current State (2026-07-22)
-Eight live games (incl. Λεξοδρομία + Λεξόπλεγμα, and **Topothesies** geography — published s121) + custom puzzle URLs + the Leksikastirio word-court. Run `npm run test -- --run` for current count.
+## ⚡ Current State (2026-07-24)
+Nine live games + **Πόσο κάνει;** (`posokanei` 🛒, guess-the-price, built s124, `wip:true` on a placeholder puzzle) + custom puzzle URLs + the Leksikastirio word-court. Run `npm run test -- --run` for current count.
 
 | Game | Route | Status |
 |------|-------|--------|
@@ -16,6 +16,7 @@ Eight live games (incl. Λεξοδρομία + Λεξόπλεγμα, and **Topot
 | Λεξοδρομία | `/leksodromia` | Live — daily anagram sprint, decay-to-floor scoring |
 | Λεξόπλεγμα | `/leksoplegma` | Live — daily word-web (zanagrams-style), points scoring, no timer/bonus |
 | Topothesies | `/topothesies` | Live (s121) — Worldle-style geography: guess the regional unit from its silhouette, then its capital |
+| Πόσο κάνει; | `/posokanei` | wip (s124) — guess a supermarket product's price (higher/lower + proximity, 6 guesses); one placeholder puzzle |
 
 ---
 
@@ -30,7 +31,8 @@ Eight live games (incl. Λεξοδρομία + Λεξόπλεγμα, and **Topot
 | **Theming** | Light default + manual ☀️/🌙 toggle — `.dark` class on `<html>` (never `prefers-color-scheme`), pref in `localStorage["theme-preference"]` (ADR 0002). **Semantic tokens only** (ADR 0008): components use tokens (`bg-surface`, `text-muted`, status trios, shape tokens), never `dark:` pairs or literal palette classes; the deliberate raw-palette exceptions are enumerated in ADR 0008 — do NOT tokenise them. Column = `max-w-game` (`--container-game`). Page frame = `GamePageShell` + `GameHeader` (Leksokipos keeps a bespoke full-bleed wrapper — open redesign decision). Per-game accent via `[data-game]` rows, all 8 surfaces (ADR 0009). Recipes own colour/typography/radius, call sites own layout: `src/styles/recipes.ts` (platform) / `src/components/leksokipos/styles.ts` (Leksokipos-only); shared modal shell `Modal.tsx`. Guards: `noRawPaletteClasses` / `noRawActionButtonColors` / `noLiteralColumnWidth`. **Full posture lives in ADR 0008 + 0009 — read those before styling work.** |
 | **Route envelope** | `src/lib/apiRoute.ts` owns what every `/api` route does before its own logic (ADR 0016). New routes use `parseJson` (never a hand-rolled `req.json()` try/catch) and `requireAdmin` (the `x-admin-secret` header is the **one** admin wire format; a bad secret is **401**, never 403). Error bodies stay `{ error: string }` but the string comes from one of two channels: `jsonError(code, detail?)` for envelope-owned codes — detail is logged, never sent, so **no route returns a raw Postgres message** — or `jsonMessage(text, status?)` for copy the route authors (validation, domain codes like `blocked_word`, and the Greek strings the UI renders verbatim). Deliberate exception: `/api/cleanup-scores` keeps raw messages — cron-only behind `CRON_SECRET`, so they're a diagnostic, not a leak. |
 | **Game logic** | Pure functions in `src/games/*/lib/` — zero React imports. |
-| **Shared components** | Graduate to `src/components/shared/` only when 2 games genuinely need it. |
+| **Shared components** | Graduate to `src/components/shared/` only when 2 games genuinely need it. `FramedMedia` (the `rounded-card border-4 border-border` media frame) graduated s124 — topothesies silhouette + posokanei photo both use it. |
+| **Πόσο κάνει; (wip)** | Guess-the-price daily game (`posokanei` 🛒), built s124 mirroring topothesies (analog: daily + one photo + share grid + license attribution). New logic = **price proximity** not geo: `evaluatePriceGuess(guess,price,band)`→`{correct=|g−p|≤p·band (+1e-9 edge), direction higher/lower/correct, proximityPct=1−relErr/PROXIMITY_MAX_REL clamped}`. `selectDailyPuzzle` = **exact `date` match, else `dateToIndex` rotation** (one row always renders). Single stage, invalid/≤0 guesses no-op, flags derived→RESTORE replays. Knobs in `POSOKANEI` gameRules (MAX_GUESSES 6, POINTS_PER_GUESS_LEFT 100, PROXIMITY_MAX_REL 1.0, CLOSE_PROXIMITY_PCT 70). `PriceInput` = local € numeric primitive (reuses play-surface input look + `btnApprove`). Attribution non-optional: gov price source (`Παρατηρητήριο Τιμών`) + per-puzzle photo credit, **never the copyrighted gov `image_url`**. **Real content sourcing = issue 13** (photos + gov prices); handoff `posoKanei.md` holds the item list + gov API notes. Photo `<img>` (next/image needs config for SVG). |
 | **Leksindeseis** | No `language` field on `LeksindeseisPuzzle`; identified by `date` alone. |
 | **Custom puzzle ID** | `custom-{center}-{sortedOuter}` — not date-scoped. |
 | **No Greek accents** | Zero accents in URLs, stored state, puzzle letters, valid-word output. `normalizeLetters()` is the single normalisation point. |

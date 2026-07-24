@@ -71,6 +71,23 @@ export const TOPOTHESIES = {
   PROXIMITY_MAX_KM: 938,
 } as const;
 
+export const POSOKANEI = {
+  // Daily "guess the supermarket price" game. N guesses; win = land within the
+  // puzzle's own tolerance band (a per-puzzle fraction of the price, so generic
+  // commodities can carry a wider band than specific SKUs — set in the data).
+  MAX_GUESSES: 6,
+  // Scoring: points scale with guesses remaining at the correct guess (solve on
+  // the first try → full points; each earlier wrong guess costs one step).
+  POINTS_PER_GUESS_LEFT: 100,  // ×(MAX_GUESSES − wrongGuesses)
+  // Proximity hint scaling: closeness% is 1 − (relativeError / PROXIMITY_MAX_REL),
+  // clamped to 0–100. A guess off by this fraction of the price (or more) reads
+  // 0%; an exact guess reads 100%. Kept generous so early guesses feel informative.
+  PROXIMITY_MAX_REL: 1.0,      // 100% relative error → 0% proximity
+  // Share-grid tier: a wrong guess at/above this proximity is a "close" 🟨,
+  // below it a "far" ⬛ (a correct guess is always 🟩). Purely cosmetic.
+  CLOSE_PROXIMITY_PCT: 70,
+} as const;
+
 export const LEKSODROMIA = {
   WORDS_PER_LENGTH:   2,
   LENGTHS:            [4, 5, 6, 7, 8] as const,   // mirrors LEKSIARXEIO.LENGTHS

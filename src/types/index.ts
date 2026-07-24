@@ -15,7 +15,7 @@ export type Language = "el";
  * (stavrolekso, leksikastirio) are intentionally absent. For "every registered
  * game" use `RegistryGameId` from `@/config/games`.
  */
-export type SliceId = "leksokipos" | "leksiarxeio" | "leksindeseis" | "vrestifrasi" | "leksodromia" | "leksoplegma" | "topothesies" | "suggestions" | "reports";
+export type SliceId = "leksokipos" | "leksiarxeio" | "leksindeseis" | "vrestifrasi" | "leksodromia" | "leksoplegma" | "topothesies" | "posokanei" | "suggestions" | "reports";
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 
@@ -34,6 +34,7 @@ export interface PersistenceEnvelope {
   "leksodromia"?:          unknown;
   "leksoplegma"?:          unknown;
   "topothesies"?:          unknown;
+  "posokanei"?:            unknown;
   /** Words already suggested by this device — string[] of normalised words. */
   "suggestions"?:          unknown;
   /** Words already flagged for removal by this device — string[] of normalised words. */
