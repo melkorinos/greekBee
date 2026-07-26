@@ -26,10 +26,47 @@ export const LEKSOKIPOS_ONESHOT_IDS = {
   stinKorifi:   "leksokipos-stin-korifi",
   sidirodromos: "leksokipos-sidirodromos",
   theristis:    "leksokipos-theristis",
+  // Word-length ladder (exact length). Σιδηρόδρομος (above) is the 10-letter rung;
+  // these extend it. FROZEN on first deploy like every other award id.
+  wordLength11: "leksokipos-word-11",
+  wordLength12: "leksokipos-word-12",
+  wordLength13: "leksokipos-word-13",
 } as const;
 
 export type OneShotAchievementId =
   (typeof LEKSOKIPOS_ONESHOT_IDS)[keyof typeof LEKSOKIPOS_ONESHOT_IDS];
+
+// ─── Word-length ladder (exact-length one-shots) ──────────────────────────────
+//
+// A found word of EXACTLY N letters earns the badge for N. Detection is `===`,
+// never `>=`: a 13-letter find earns only the 13 badge, so each length is its own
+// accomplishment. The lengths live in tuning (a balance knob + the player_words
+// storage floor); the id/name/glyph per length are frozen display copy, here.
+
+/** Frozen id + display copy for each exact word length that has a badge. */
+const WORD_LENGTH_BADGE_META: Record<number, { id: OneShotAchievementId; name: string; glyph: string }> = {
+  10: { id: LEKSOKIPOS_ONESHOT_IDS.sidirodromos, name: "Σιδηρόδρομος", glyph: "🚂" },
+  11: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength11,  name: "Υπερταχεία",   glyph: "🚄" },
+  12: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength12,  name: "Νταλίκα",      glyph: "🚛" },
+  13: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength13,  name: "Σεντόνι",      glyph: "🛏️" },
+};
+
+/**
+ * The exact-length ladder, in the configured order. Lengths come from tuning; the
+ * per-length id/copy come from the frozen meta above. If tuning ever lists a length
+ * with no meta entry it throws at module load — a loud, immediate failure rather
+ * than a silently missing badge.
+ */
+export const WORD_LENGTH_BADGES: readonly {
+  length: number;
+  id:     OneShotAchievementId;
+  name:   string;
+  glyph:  string;
+}[] = TUNING.wordLengthBadges.map((length) => {
+  const meta = WORD_LENGTH_BADGE_META[length];
+  if (!meta) throw new Error(`No word-length badge meta for length ${length}`);
+  return { length, ...meta };
+});
 
 export type AchievementKind = "oneshot" | "tiered";
 
@@ -86,8 +123,9 @@ export function detectEarnedAchievements(ctx: AchievementContext): OneShotAchiev
     earned.push(LEKSOKIPOS_ONESHOT_IDS.firstDaily);
   }
 
-  if (ctx.foundWords.some((w) => w.length >= TUNING.sidirodromosMinLetters)) {
-    earned.push(LEKSOKIPOS_ONESHOT_IDS.sidirodromos);
+  // Word-length ladder — a word of EXACTLY N letters earns the N badge (not ≥).
+  for (const { length, id } of WORD_LENGTH_BADGES) {
+    if (ctx.foundWords.some((w) => w.length === length)) earned.push(id);
   }
 
   if (
@@ -125,13 +163,14 @@ export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
     glyph: "👑",
     kind: "oneshot",
   },
-  {
-    id:   LEKSOKIPOS_ONESHOT_IDS.sidirodromos,
-    name: "Σιδηρόδρομος",
-    hint: `Βρες μια λέξη με ${TUNING.sidirodromosMinLetters}+ γράμματα.`,
-    glyph: "🚂",
+  // Word-length ladder — one one-shot per exact length (Σιδηρόδρομος = 10, …).
+  ...WORD_LENGTH_BADGES.map((b): Achievement => ({
+    id:   b.id,
+    name: b.name,
+    hint: `Βρες μια λέξη με ακριβώς ${b.length} γράμματα.`,
+    glyph: b.glyph,
     kind: "oneshot",
-  },
+  })),
   {
     id:   LEKSOKIPOS_ONESHOT_IDS.theristis,
     name: "Θεριστής",

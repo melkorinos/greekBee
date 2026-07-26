@@ -72,3 +72,8 @@ Tracked in `.claude/issue-tracker/issues/`. See that directory for status per it
 ## 🧪 Test Coverage Map
 
 Moved to **`.claude/aiHelper/coverageMap.md`** (2026-07-18). Not loaded at session start — grep it before writing any new test (if the function already appears, read that test file first) and update it in the end-of-session Dream (soul.md).
+
+---
+
+## 🔑 Test Accounts
+Throwaway, no real security, don't reuse for anything real. Google (manual auth testing): `testDimi91@gmail.com` / `zzkdgr33`.

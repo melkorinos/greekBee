@@ -10,8 +10,14 @@
  */
 
 export const LEKSOKIPOS_ACHIEVEMENT_TUNING = {
-  /** Σιδηρόδρομος (one-shot) — a single found word this long (letters) earns it. */
-  sidirodromosMinLetters: 10,
+  /**
+   * Word-length one-shots — a found word of EXACTLY each length earns the matching
+   * frozen badge (Σιδηρόδρομος = 10, then the 11/12/13 extensions). Ascending; each
+   * earned once. The smallest is also the storage floor for player_words: finds
+   * below it are not tracked at all (wordsByLength.ts derives WORDS_MIN_TRACKED from
+   * this). The badge ids + copy stay frozen in the catalog (achievements.ts).
+   */
+  wordLengthBadges: [10, 11, 12, 13],
 
   /** Θεριστής (one-shot) — fraction of a puzzle's valid words that must be found. */
   theristisFoundRatio: 0.8,

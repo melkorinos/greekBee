@@ -11,9 +11,9 @@
 // open anon SELECT policy on player_words already authorizes the read.
 //
 // The route only folds the sparse aggregate into the fixed display buckets
-// (bucketWordsByLength) — 4…9 individually plus a "10+" tail. Reading by
-// device_uuid is fine: the response carries only counts, never the id back. The 60s
-// private cache absorbs profile-page reloads.
+// (bucketWordsByLength) — 10, 11, 12 individually plus a "13+" tail (only long words
+// are tracked). Reading by device_uuid is fine: the response carries only counts,
+// never the id back. The 60s private cache absorbs profile-page reloads.
 
 import { NextResponse, type NextRequest } from "next/server";
 

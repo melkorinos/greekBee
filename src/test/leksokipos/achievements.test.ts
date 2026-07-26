@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   LEKSOKIPOS_ACHIEVEMENTS,
+  WORD_LENGTH_BADGES,
   SELECTABLE_BADGE_IDS,
   TIER_MEDALS,
   qualifyingEarnedIds,
@@ -20,6 +21,14 @@ import {
   describeAchievement,
   type AchievementContext,
 } from "@/games/leksokipos/lib/achievements";
+import { LEKSOKIPOS_ACHIEVEMENT_TUNING } from "@/config/achievementTuning";
+
+/** The frozen id of the word-length badge for an exact length (test helper). */
+function lengthBadgeId(length: number): string {
+  const badge = WORD_LENGTH_BADGES.find((b) => b.length === length);
+  if (!badge) throw new Error(`no word-length badge for length ${length}`);
+  return badge.id;
+}
 
 /** A neutral daily end-of-game snapshot; each test overrides only what it exercises. */
 function makeCtx(overrides: Partial<AchievementContext> = {}): AchievementContext {
@@ -44,6 +53,9 @@ describe("LEKSOKIPOS_ACHIEVEMENTS catalog", () => {
         "leksokipos-stin-korifi",
         "leksokipos-sidirodromos",
         "leksokipos-theristis",
+        "leksokipos-word-11",
+        "leksokipos-word-12",
+        "leksokipos-word-13",
       ]),
     );
   });
@@ -87,6 +99,9 @@ describe("LEKSOKIPOS_ACHIEVEMENTS catalog", () => {
       "Πρώτα Βήματα":     "🌱",
       "Στην Κορυφή":      "👑",
       "Σιδηρόδρομος":     "🚂",
+      "Υπερταχεία":       "🚄",
+      "Νταλίκα":         "🚛",
+      "Σεντόνι":         "🛏️",
       "Θεριστής":        "🌾",
       "Κυνηγός Πανγκράμ": "✍️",
       "Συλλέκτης Πόντων": "💎",
@@ -94,15 +109,51 @@ describe("LEKSOKIPOS_ACHIEVEMENTS catalog", () => {
   });
 });
 
-describe("detectEarnedAchievements — Σιδηρόδρομος (word ≥ 10 letters)", () => {
-  it("earns when any found word has 10 or more letters", () => {
-    const ctx = makeCtx({ foundWords: ["γατα", "παρακολουθηση"] }); // 13 letters
+describe("detectEarnedAchievements — word-length ladder (EXACT length one-shots)", () => {
+  // Σιδηρόδρομος = a word of exactly 10 letters; the 11/12/13 badges extend the
+  // ladder. Detection is exact (===), never ≥ — a 13-letter find earns only the 13
+  // badge, so each length is its own accomplishment.
+  it("earns Σιδηρόδρομος on a word of exactly 10 letters", () => {
+    const ctx = makeCtx({ foundWords: ["γατα", "α".repeat(10)] });
     expect(detectEarnedAchievements(ctx)).toContain("leksokipos-sidirodromos");
   });
 
-  it("does not earn when every found word is shorter than 10 letters", () => {
+  it("earns the 11 / 12 / 13 badge each on a word of exactly that length", () => {
+    for (const length of [11, 12, 13]) {
+      const ctx = makeCtx({ foundWords: ["α".repeat(length)] });
+      expect(detectEarnedAchievements(ctx)).toContain(lengthBadgeId(length));
+    }
+  });
+
+  it("a longer word does NOT earn a shorter length's badge (exact, not ≥)", () => {
+    const earned = detectEarnedAchievements(makeCtx({ foundWords: ["α".repeat(13)] }));
+    expect(earned).toContain(lengthBadgeId(13));
+    expect(earned).not.toContain("leksokipos-sidirodromos");
+    expect(earned).not.toContain(lengthBadgeId(11));
+    expect(earned).not.toContain(lengthBadgeId(12));
+  });
+
+  it("earns nothing in the ladder when every found word is under 10 letters", () => {
     const ctx = makeCtx({ foundWords: ["γατα", "σπιτια", "καλημερα"] }); // ≤ 8 letters
-    expect(detectEarnedAchievements(ctx)).not.toContain("leksokipos-sidirodromos");
+    const earned = detectEarnedAchievements(ctx);
+    for (const { id } of WORD_LENGTH_BADGES) expect(earned).not.toContain(id);
+  });
+
+  it("a word longer than the ladder top (14+) earns no length badge", () => {
+    const earned = detectEarnedAchievements(makeCtx({ foundWords: ["α".repeat(14)] }));
+    for (const { id } of WORD_LENGTH_BADGES) expect(earned).not.toContain(id);
+  });
+});
+
+describe("WORD_LENGTH_BADGES — the exact-length ladder", () => {
+  it("covers exactly the lengths configured in achievementTuning", () => {
+    expect(WORD_LENGTH_BADGES.map((b) => b.length)).toEqual(
+      LEKSOKIPOS_ACHIEVEMENT_TUNING.wordLengthBadges,
+    );
+  });
+
+  it("maps length 10 to the frozen Σιδηρόδρομος id", () => {
+    expect(lengthBadgeId(10)).toBe("leksokipos-sidirodromos");
   });
 });
 

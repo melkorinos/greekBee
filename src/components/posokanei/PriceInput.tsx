@@ -52,7 +52,7 @@ export function PriceInput({ disabled, onSubmit }: PriceInputProps) {
           aria-label="Η τιμή σου σε ευρώ"
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submit(); } }}
-          className="w-full pl-4 pr-10 py-3 rounded-control border border-border bg-surface text-foreground text-center text-lg placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-game-accent disabled:opacity-50"
+          className="w-full pl-4 pr-10 py-3 rounded-control border border-border bg-surface text-foreground text-center text-lg placeholder:text-muted focus:placeholder:text-transparent focus:outline-none focus:ring-2 focus:ring-game-accent disabled:opacity-50"
         />
         <span
           aria-hidden="true"

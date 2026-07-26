@@ -5,8 +5,9 @@
 // Fetches GET /api/profile/words for this device on mount and renders the found-word
 // count per length as a small horizontal-bar distribution (a magnitude-by-category
 // form — one series, so one hue and no legend; bars carry the magnitude, the ink
-// carries the labels). Every bucket row (4…9 individually + a "10+" tail) is always
-// present so the layout never reflows; a length with no finds shows an empty track.
+// carries the labels). Only long words are tracked, so every bucket row (10, 11, 12
+// individually + a "13+" tail — each length is itself a badge) is always present so
+// the layout never reflows; a length with no finds shows an empty track.
 //
 // States: a skeleton while loading, an honest empty state when the device has found
 // nothing (there is NO backfill — historical finds were never stored — so the copy

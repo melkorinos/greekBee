@@ -39,7 +39,8 @@
 | `useGameIdentity.test.ts` | SSR-safe DeviceId + DisplayName init, setter state updates |
 | `usePlayerIdentity.test.ts` | Bundled identity module — migration-runs-before-device-read ordering, scalar fields from store, complete `leaderboardProps` bundle + wiring, `saveName` persists |
 | `useGameStore.test.ts` | readSlice, writeSlice, clearSlice, deviceId, displayName, profileLinked, migration |
-| `Shell.test.tsx` | Hamburger open/close/Escape, nav links, theme toggle (aria-label, `.dark` class on `documentElement`) |
+| `Shell.test.tsx` | Hamburger open/close/Escape, nav links, theme toggle, profile-button toggle (opens /profile; back-vs-home on /profile via `window.history.state.idx`) |
+| `profileNav.test.ts` | `resolveProfileNav` — open /profile from elsewhere; back() on /profile with in-app history; "/" fallback with none |
 | `letterPickerModal.test.tsx` | Center/outer selection, quality rules (vowel center, ≥2 vowels, consonants) |
 | `feedbackMessage.test.tsx` | Valid/pangram/error statuses, suggest button |
 | `nominationModal.test.tsx` | NominationModal — visibility, word field (readonly + editable), direction copy, close, POST payload, success/error states |
@@ -71,7 +72,7 @@
 | `generator.test.ts` (leksoplegma) | Offline generator core — constraint validation on real pools (coverage, adjacency, no crossing diagonals), determinism, `enumerateBonusWords` on fixture board |
 | `dataLoader.test.ts` (leksoplegma) | `getPuzzleForDate` rotation + 365-date Leksiarxeio same-day answer-leak guard + `containsSameDayLeksiarxeioAnswer` |
 | `board.test.tsx` (leksoplegma) | Board — tap-build trace seam, collapse rendering, hint chips, bonus counter, recap, single live score post + is_perfect, no re-post on restore; PageClient header + no-timer rules |
-| `achievements.test.ts` (leksokipos) | Catalog + `detectEarnedAchievements` (4 one-shots — tzimani retired s108, daily gate) + `detectEarnedPointsTiers`/`detectEarnedPangramTiers` + `nextPangramTierThreshold` + `describeAchievement` + the operator-approved `glyph` map + display-badge resolution (`SELECTABLE_BADGE_IDS`, `qualifyingEarnedIds`, `resolveDisplayBadge`, `TIER_MEDALS`) |
+| `achievements.test.ts` (leksokipos) | Catalog + `detectEarnedAchievements` (word-length ladder = EXACT-length one-shots 10/11/12/13 + Θεριστής/Στην Κορυφή/Πρώτα Βήματα, daily gate) + `WORD_LENGTH_BADGES` (config lockstep, 10→Σιδηρόδρομος) + `detectEarnedPointsTiers`/`detectEarnedPangramTiers` + `nextPangramTierThreshold` + `describeAchievement` + operator-approved `glyph` map + display-badge resolution (`SELECTABLE_BADGE_IDS`, `qualifyingEarnedIds`, `resolveDisplayBadge`, `TIER_MEDALS`) |
 | `profileBadgeRoute.test.ts` | `POST/GET /api/profile/badge` — earned-id validation (400 unknown/tier id, 403 unowned), lazy profile upsert, null clears |
 | `leaderboardBadge.test.tsx` | `LeaderboardBadge` chip — glyph, medal only for tiered, distinct element after the name |
 | `achievementToast.test.tsx` | AchievementToast render + dismiss |
@@ -93,8 +94,8 @@
 | `auth-link.test.ts` (api) + `authLinkRoute.test.ts` (shared) | `POST /api/auth/link` — JWT security boundary, link/restore modes, occupied-device guard, `identity_audit`, error paths |
 | `applyDictionaryEdits.test.ts` + `resync{Registry,Leksiarxeio,Leksokipos,Leksoplegma,Leksodromia}.test.ts` (scripts) | ADR 0015 re-sync — orchestrator (dictionary + registry walk), write gate, per-game adapters: additions/removals/no-ops |
 | `IdentityHeader` / `LifetimeStatsStrip` / `NameEditor` / `TrophyCase` / `WelcomeBackBanner` / `WordsByLengthCard` (profile) | The six Profile Page components |
-| `words.test.ts` (leksokipos) / `wordsByLength.test.ts` / `wordsMerge.test.ts` | `sanitizeFoundWords` shape guards · `bucketWordsByLength` (sparse RPC rows → 4…9/"10+") · `planWordsMerge` Restore union |
-| `wordsRoute.test.ts` / `profileWordsRoute.test.ts` | `POST /api/words` (insert-if-absent, server-side `length`) · `GET /api/profile/words` (RPC → buckets) |
+| `words.test.ts` (leksokipos) / `wordsByLength.test.ts` / `wordsMerge.test.ts` | `sanitizeFoundWords` shape guards · `bucketWordsByLength` (sparse RPC rows → 10/11/12/"13+"; `WORDS_MIN_TRACKED`=10 floor) · `planWordsMerge` Restore union |
+| `wordsRoute.test.ts` / `profileWordsRoute.test.ts` | `POST /api/words` (insert-if-absent, server-side `length`, **drops finds <10**) · `GET /api/profile/words` (RPC → buckets) |
 | `achievementMerge.test.ts` / `pangramMerge.test.ts` | `planAchievementMerge` / `planPangramMerge` — Sign-in Restore unions |
 | `achievementsRoute.test.ts` / `pangramsRoute.test.ts` | `POST/GET /api/achievements` (id whitelist) · `POST /api/pangrams` (insert-if-absent, validation, DB errors) |
 | `authCallbackRedirect.test.tsx` | `/auth/callback` redirect destination |

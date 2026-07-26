@@ -1,0 +1,16 @@
+-- Purge word-find rows below the ≥10 tracking floor.
+--
+-- player_words used to capture every valid find (~20–40 rows/player/day — the
+-- fastest-growing fact table on the platform, issue 14). The platform now only
+-- tracks words of 10+ letters: each such length is itself a one-shot achievement
+-- (Σιδηρόδρομος = 10, plus the 11/12/13 badges), and the "Λέξεις ανά μήκος" profile
+-- card shows counts for 10 / 11 / 12 / 13+. The /api/words route no longer writes
+-- anything shorter (the floor is derived from achievementTuning.wordLengthBadges).
+--
+-- This one-shot cleanup drops the historical short rows so the table matches the new
+-- floor. 10 is the launch floor — kept in sync with WORDS_MIN_TRACKED in the app.
+-- Idempotent: re-running it deletes nothing once the table holds only 10+ rows.
+--
+-- NOTE: this data is behind FEATURE_FLAGS.achievements (dark pre-launch) and is
+-- ADR 0013 launch-reset class, so the deleted volume is expected to be small.
+DELETE FROM public.player_words WHERE length < 10;
