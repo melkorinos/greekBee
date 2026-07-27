@@ -47,7 +47,7 @@ interface ShellProps {
 }
 
 // Games shown in the main nav section; leksikastirio is in its own community section.
-const GAME_IDS      = ["leksokipos", "leksiarxeio", "leksindeseis", "vrestifrasi", "leksodromia", "leksoplegma", "stavrolekso", "topothesies", "posokanei"] as const;
+const GAME_IDS      = ["leksokipos", "leksiarxeio", "leksindeseis", "vrestifrasi", "leksodromia", "leksoplegma", "stavrolekso", "topothesies", "posokanei", "logopaignio"] as const;
 const COMMUNITY_IDS = ["leksikastirio"] as const;
 
 // Under-construction (wip) games move to their own drawer section, keeping the

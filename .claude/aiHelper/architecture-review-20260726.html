@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Architecture review — Greek Word Games</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+    </script>
+    <style>
+      .seam { stroke-dasharray: 5 4; }
+      body { -webkit-font-smoothing: antialiased; }
+      .brace { font-variation-settings: "wght" 300; }
+      /* faded "now internal" look for collapsed internals */
+      .internal { opacity: .38; }
+    </style>
+  </head>
+  <body class="bg-stone-50 text-slate-900 font-sans">
+    <main class="max-w-5xl mx-auto px-5 sm:px-6 py-12 space-y-14">
+
+      <!-- ─────────── HEADER ─────────── -->
+      <header class="space-y-5">
+        <p class="text-xs uppercase tracking-[0.2em] text-slate-500">Architecture review</p>
+        <h1 class="font-serif text-4xl sm:text-5xl leading-tight">The slot-fill round family</h1>
+        <p class="text-slate-600 max-w-3xl text-[15px] leading-relaxed">
+          Three daily games — <span class="font-medium">Topothesies</span>,
+          <span class="font-medium">Πόσο κάνει;</span> and <span class="font-medium">Λογοπαίγνιο</span> —
+          were each built by <em>cloning</em> the last. They now share a spine that nobody owns:
+          the same reducer skeleton, the same round hook, the same decay score, copied
+          three times with the game-specific parts threaded through by hand. This review
+          asks where that copying is <strong>shallow duplication</strong> worth collapsing into a
+          <strong>deep</strong> module, and where the differences are real enough to leave alone.
+        </p>
+
+        <!-- legend -->
+        <div class="flex flex-wrap gap-x-6 gap-y-2 text-xs text-slate-500 pt-2 border-t border-slate-200">
+          <span class="inline-flex items-center gap-2"><span class="inline-block w-4 h-3 border border-slate-400 bg-white"></span> module</span>
+          <span class="inline-flex items-center gap-2"><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" class="seam" stroke="#64748b" stroke-width="1.5"/></svg> seam</span>
+          <span class="inline-flex items-center gap-2"><svg width="26" height="8"><line x1="0" y1="4" x2="26" y2="4" stroke="#dc2626" stroke-width="2"/></svg> duplication / leak</span>
+          <span class="inline-flex items-center gap-2"><span class="inline-block w-4 h-3 bg-slate-900"></span> deep module</span>
+        </div>
+
+        <!-- reading key: strength badges -->
+        <div class="flex flex-wrap gap-2 text-xs pt-1">
+          <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-medium">Strong</span>
+          <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-medium">Worth exploring</span>
+          <span class="px-2 py-0.5 rounded bg-slate-200 text-slate-700 font-medium">Speculative</span>
+          <span class="text-slate-400">— recommendation strength, top-right of each card</span>
+        </div>
+      </header>
+
+      <!-- ─────────── CANDIDATES ─────────── -->
+      <section id="candidates" class="space-y-12">
+
+        <!-- ============================================================ -->
+        <!-- CANDIDATE 1 — the round spine                                -->
+        <!-- ============================================================ -->
+        <article id="c1" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-6 sm:px-8 pt-7 pb-6 space-y-6">
+
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="text-xs uppercase tracking-wider text-slate-400">Candidate 1</p>
+                <h2 class="font-serif text-2xl sm:text-3xl mt-1">Deepen the round spine into <code class="text-[0.7em] bg-slate-100 px-1.5 py-0.5 rounded">useSlotFillRound</code></h2>
+              </div>
+              <span class="shrink-0 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-semibold">Strong</span>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs font-mono">in-process</span>
+              <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs">precedent: useGuessRound, useLiveScorePost</span>
+            </div>
+
+            <!-- files -->
+            <div class="text-sm">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-1">Files</p>
+              <ul class="font-mono text-[13px] text-slate-700 space-y-0.5">
+                <li>src/games/posokanei/hooks/usePosokaneiRound.ts <span class="text-slate-400">— 72 lines</span></li>
+                <li>src/games/logopaignio/hooks/useLogopaignioRound.ts <span class="text-slate-400">— 72 lines, byte-identical bar 2 tokens</span></li>
+                <li>src/games/topothesies/hooks/useTopothesiesRound.ts <span class="text-slate-400">— 87 lines, same spine, 2-list snapshot</span></li>
+              </ul>
+            </div>
+
+            <!-- before / after -->
+            <div class="grid md:grid-cols-2 gap-4">
+              <!-- BEFORE -->
+              <div class="rounded-xl border border-slate-200 bg-stone-50 p-4">
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">Before — three copies of one spine</p>
+                <div class="space-y-3">
+                  <!-- three near-identical stacks -->
+                  <div class="grid grid-cols-3 gap-2 text-[10px] uppercase tracking-wider text-center">
+                    <div class="font-semibold text-slate-500">posokanei</div>
+                    <div class="font-semibold text-slate-500">logopaignio</div>
+                    <div class="font-semibold text-slate-500">topothesies</div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2">
+                    <!-- each column repeats the SAME rows -->
+                    <div class="space-y-1">
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">useReducer</div>
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">liveActed ref</div>
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">dispatch wrap</div>
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">onRestore</div>
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">snapshot memo</div>
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">persist call</div>
+                    </div>
+                    <div class="space-y-1">
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">useReducer</div>
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">liveActed ref</div>
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">dispatch wrap</div>
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">onRestore</div>
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">snapshot memo</div>
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">persist call</div>
+                    </div>
+                    <div class="space-y-1">
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">useReducer</div>
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">liveActed ref</div>
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">dispatch wrap</div>
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">onRestore</div>
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">snapshot memo</div>
+                      <div class="border border-red-300 bg-red-50 rounded px-1.5 py-1 text-[10px] text-center text-red-700">persist call</div>
+                    </div>
+                  </div>
+                  <p class="text-[11px] text-slate-500 leading-snug pt-1">
+                    18 rows, 6 distinct. Fix a restore bug once → paste it three times.
+                    The interface (3 fields) is dwarfed by boilerplate that is identical everywhere.
+                  </p>
+                </div>
+              </div>
+
+              <!-- AFTER -->
+              <div class="rounded-xl border border-slate-200 bg-white p-4">
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">After — one deep spine, three thin adapters</p>
+                <div class="space-y-3">
+                  <div class="grid grid-cols-3 gap-2 text-[10px] uppercase tracking-wider text-center">
+                    <div class="font-semibold text-slate-500">posokanei</div>
+                    <div class="font-semibold text-slate-500">logopaignio</div>
+                    <div class="font-semibold text-slate-500">topothesies</div>
+                  </div>
+                  <!-- three thin adapters -->
+                  <div class="grid grid-cols-3 gap-2">
+                    <div class="border border-slate-300 bg-slate-50 rounded px-1.5 py-2 text-[10px] text-center text-slate-600">reducer +<br/>snapshot map</div>
+                    <div class="border border-slate-300 bg-slate-50 rounded px-1.5 py-2 text-[10px] text-center text-slate-600">reducer +<br/>snapshot map</div>
+                    <div class="border border-slate-300 bg-slate-50 rounded px-1.5 py-2 text-[10px] text-center text-slate-600">reducer +<br/>snapshot map</div>
+                  </div>
+                  <!-- brace -->
+                  <div class="flex justify-center text-slate-300 text-lg leading-none brace">▽</div>
+                  <!-- the deep module -->
+                  <div class="bg-slate-900 text-slate-100 rounded-lg px-3 py-4 text-center">
+                    <p class="text-xs uppercase tracking-wider text-slate-400">useSlotFillRound</p>
+                    <p class="text-[11px] text-slate-300 mt-2 leading-snug">
+                      liveActed ref · dispatch wrap · onRestore ·
+                      snapshot memo · persistence
+                    </p>
+                    <p class="internal text-[10px] text-slate-400 mt-2">(now internal — tested once)</p>
+                  </div>
+                  <p class="text-[11px] text-slate-500 leading-snug pt-1">
+                    Each game hands over its reducer + a <code>state→snapshot</code> map.
+                    One place to test the RESTORE / liveActed contract.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- problem / solution -->
+            <div class="grid sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+              <div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-1">Problem</p>
+                <p class="text-slate-700 leading-relaxed">The spine is shallow and triplicated — the interface is three fields, the copied implementation is ~60 lines each, and the tricky part (liveActed never flips on RESTORE) has no single place to be verified.</p>
+              </div>
+              <div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-1">Solution</p>
+                <p class="text-slate-700 leading-relaxed">One generic <code>useSlotFillRound&lt;S,A,G&gt;</code> owns reducer wiring, the liveActed ref, RESTORE plumbing and persistence. Each game passes its reducer, initial-state factory, and a <code>state→snapshot</code> selector.</p>
+              </div>
+            </div>
+
+            <!-- wins -->
+            <div>
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Wins</p>
+              <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 text-sm text-slate-700">
+                <li class="flex gap-2"><span class="text-emerald-600">▸</span> leverage: one interface, three call sites</li>
+                <li class="flex gap-2"><span class="text-emerald-600">▸</span> locality: liveActed/RESTORE bug fixed once</li>
+                <li class="flex gap-2"><span class="text-emerald-600">▸</span> interface shrinks; spine absorbs the ceremony</li>
+                <li class="flex gap-2"><span class="text-emerald-600">▸</span> game #4 (any slot-fill) is an adapter, not a paste</li>
+                <li class="flex gap-2"><span class="text-emerald-600">▸</span> the contract becomes the test surface</li>
+                <li class="flex gap-2"><span class="text-emerald-600">▸</span> deletion test: passes — complexity reappears ×3</li>
+              </ul>
+            </div>
+
+            <!-- note callout -->
+            <div class="rounded-lg bg-sky-50 border border-sky-200 px-4 py-3 text-[13px] text-sky-900 leading-relaxed">
+              <span class="font-semibold">Why not just use <code>useGuessRound</code>?</span>
+              It exists but fits the Wordle family (<code>status: playing/won/lost</code>, no liveActed getter).
+              The slot-fill family is a genuinely different shape: derived <code>stage</code> +
+              <code>solved/failed/gaveUp</code> + a <code>hasLiveActed()</code> getter feeding <code>useLiveScorePost</code>.
+              This is a <em>sibling</em> spine, not a reuse of the existing one. Two families, two spines — each deep.
+            </div>
+          </div>
+        </article>
+
+        <!-- ============================================================ -->
+        <!-- CANDIDATE 2 — the reducer skeleton                            -->
+        <!-- ============================================================ -->
+        <article id="c2" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-6 sm:px-8 pt-7 pb-6 space-y-6">
+
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="text-xs uppercase tracking-wider text-slate-400">Candidate 2</p>
+                <h2 class="font-serif text-2xl sm:text-3xl mt-1">Extract the single-stage reducer skeleton</h2>
+              </div>
+              <span class="shrink-0 px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-semibold">Worth exploring</span>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs font-mono">in-process</span>
+              <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs">pure — trivial to test</span>
+            </div>
+
+            <div class="text-sm">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-1">Files</p>
+              <ul class="font-mono text-[13px] text-slate-700 space-y-0.5">
+                <li>src/games/posokanei/lib/posokaneiReducer.ts <span class="text-slate-400">— 83 lines</span></li>
+                <li>src/games/logopaignio/lib/logopaignioReducer.ts <span class="text-slate-400">— 74 lines</span></li>
+                <li class="text-slate-400">(topothesies reducer is two-stage — see note)</li>
+              </ul>
+            </div>
+
+            <!-- diff-style before/after -->
+            <div class="grid md:grid-cols-2 gap-4">
+              <div class="rounded-xl border border-slate-200 bg-stone-50 p-4">
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">Before — same skeleton, two bodies</p>
+<pre class="text-[11px] leading-relaxed overflow-x-auto"><code><span class="text-slate-400">// posokanei                // logopaignio</span>
+GUESS:                     GUESS:
+  stage!=guessing? return    stage!=guessing? return
+  <span class="text-red-600">!isValid(n)? return</span>        <span class="text-red-600">norm=="" ? return</span>
+  <span class="text-red-600">eval price → record</span>        <span class="text-red-600">eval brand → record</span>
+  push, derive()             push, derive()
+GIVE_UP:  ← identical       GIVE_UP:  ← identical
+RESTORE:  ← identical       RESTORE:  ← identical
+derive(): solved/failed/    derive(): solved/failed/
+          stage  ← identical           stage  ← identical</code></pre>
+                <p class="text-[11px] text-slate-500 leading-snug pt-2">
+                  <span class="text-red-600 font-medium">Red</span> = the only lines that differ:
+                  the validity test and the per-guess evaluation. Everything else is copied.
+                </p>
+              </div>
+
+              <div class="rounded-xl border border-slate-200 bg-white p-4">
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">After — skeleton takes two functions</p>
+<pre class="text-[11px] leading-relaxed overflow-x-auto"><code><span class="text-slate-400">// shared: makeSingleStageReducer({</span>
+<span class="text-slate-400">//   maxGuesses,</span>
+  <span class="text-emerald-700">evaluate:</span> (input, target) =&gt; record | null,
+<span class="text-slate-400">// })  → returns {reducer, makeInitialState}</span>
+
+<span class="text-slate-400">// posokanei adapter</span>
+evaluate = (n, t) =&gt;
+  isValid(n) ? evalPrice(n,t) : <span class="text-emerald-700">null</span>
+
+<span class="text-slate-400">// logopaignio adapter</span>
+evaluate = (s, t) =&gt;
+  norm(s) ? evalBrand(s,t) : <span class="text-emerald-700">null</span>
+<span class="text-slate-400">// null ⇒ no guess consumed (input noise)</span></code></pre>
+                <p class="text-[11px] text-slate-500 leading-snug pt-2">
+                  <code>null</code> is the no-op signal both games already need. derive / GIVE_UP / RESTORE live in the skeleton.
+                </p>
+              </div>
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+              <div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-1">Problem</p>
+                <p class="text-slate-700 leading-relaxed">Two reducers share an identical state machine (derive, GIVE_UP, RESTORE, the "invalid guess no-ops" rule) and differ only in one evaluate step — but the machine is duplicated, so a change to the shared rule touches every game.</p>
+              </div>
+              <div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-1">Solution</p>
+                <p class="text-slate-700 leading-relaxed">A <code>makeSingleStageReducer(evaluate, maxGuesses)</code> factory returns the reducer + initial-state. Games supply only <code>evaluate</code>, returning a guess record or <code>null</code> for input noise.</p>
+              </div>
+            </div>
+
+            <div>
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Wins</p>
+              <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 text-sm text-slate-700">
+                <li class="flex gap-2"><span class="text-amber-600">▸</span> locality: the no-op / derive rule lives once</li>
+                <li class="flex gap-2"><span class="text-amber-600">▸</span> leverage: state machine tested once, thoroughly</li>
+                <li class="flex gap-2"><span class="text-amber-600">▸</span> game logic reduces to one evaluate fn</li>
+                <li class="flex gap-2"><span class="text-amber-600">▸</span> pairs naturally with Candidate 1</li>
+              </ul>
+            </div>
+
+            <div class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-[13px] text-amber-900 leading-relaxed">
+              <span class="font-semibold">Scope caveat.</span> Only the <strong>single-stage</strong> reducers (posokanei, logopaignio) fit cleanly.
+              Topothesies is two-stage (shape → capital) with its own transitions — force-fitting it into the skeleton would
+              re-inflate the interface with stage-count config and hurt depth. Leave it out; two adapters
+              (posokanei + logopaignio) already justify the seam, and a third slot-fill game would make it three.
+            </div>
+          </div>
+        </article>
+
+        <!-- ============================================================ -->
+        <!-- CANDIDATE 3 — decay scoring                                   -->
+        <!-- ============================================================ -->
+        <article id="c3" class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+          <div class="px-6 sm:px-8 pt-7 pb-6 space-y-6">
+
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="text-xs uppercase tracking-wider text-slate-400">Candidate 3</p>
+                <h2 class="font-serif text-2xl sm:text-3xl mt-1">Collapse the guesses-left decay score</h2>
+              </div>
+              <span class="shrink-0 px-3 py-1 rounded-full bg-slate-200 text-slate-700 text-xs font-semibold">Speculative</span>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+              <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs font-mono">in-process</span>
+              <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-xs">pure</span>
+            </div>
+
+            <div class="text-sm">
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-1">Files</p>
+              <ul class="font-mono text-[13px] text-slate-700 space-y-0.5">
+                <li>src/games/posokanei/lib/scoring.ts <span class="text-slate-400">— 15 lines</span></li>
+                <li>src/games/logopaignio/lib/scoring.ts <span class="text-slate-400">— 16 lines, identical logic</span></li>
+              </ul>
+            </div>
+
+            <!-- mass diagram: interface vs implementation -->
+            <div class="grid md:grid-cols-2 gap-4">
+              <div class="rounded-xl border border-slate-200 bg-stone-50 p-4">
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">Before — two copies of one formula</p>
+<pre class="text-[11px] leading-relaxed overflow-x-auto"><code><span class="text-slate-400">// both files, verbatim except the</span>
+<span class="text-slate-400">// config constant name:</span>
+if (!state.solved) return 0;
+const wrong = guesses.length - 1;
+return <span class="text-red-600">CFG</span>.POINTS_PER_GUESS_LEFT
+     * (<span class="text-red-600">CFG</span>.MAX_GUESSES - wrong);</code></pre>
+                <p class="text-[11px] text-slate-500 leading-snug pt-2">
+                  The only difference is <code>POSOKANEI</code> vs <code>LOGOPAIGNIO</code>.
+                </p>
+              </div>
+              <div class="rounded-xl border border-slate-200 bg-white p-4">
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-3">After — one pure function, knobs passed in</p>
+<pre class="text-[11px] leading-relaxed overflow-x-auto"><code><span class="text-slate-400">// src/lib/decayScore.ts</span>
+export function guessesLeftScore(
+  solved, guessCount,
+  { pointsPerGuessLeft, maxGuesses },
+) { ... }
+
+<span class="text-slate-400">// posokanei scoring.ts</span>
+guessesLeftScore(s.solved, s.guesses.length,
+                 POSOKANEI)</code></pre>
+                <p class="text-[11px] text-slate-500 leading-snug pt-2">
+                  Accepts its knobs (config-import stays at the call site, honouring the "never hardcode config" rule).
+                </p>
+              </div>
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-x-8 gap-y-4 text-sm">
+              <div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-1">Problem</p>
+                <p class="text-slate-700 leading-relaxed">The decay formula is duplicated across two games. Low harm today — but it is the third copied artifact in the same trio, and the natural home for a shared "round scoring" vocabulary.</p>
+              </div>
+              <div>
+                <p class="text-xs uppercase tracking-wider text-slate-400 mb-1">Solution</p>
+                <p class="text-slate-700 leading-relaxed">A pure <code>guessesLeftScore(solved, count, knobs)</code> in <code>src/lib/</code>. Each game's scoring.ts becomes a one-line call that still imports its own config row.</p>
+              </div>
+            </div>
+
+            <div>
+              <p class="text-xs uppercase tracking-wider text-slate-400 mb-2">Wins</p>
+              <ul class="grid sm:grid-cols-2 gap-x-8 gap-y-1.5 text-sm text-slate-700">
+                <li class="flex gap-2"><span class="text-slate-500">▸</span> locality: one formula, one test table</li>
+                <li class="flex gap-2"><span class="text-slate-500">▸</span> leverage: accepts knobs, so any decay game reuses it</li>
+                <li class="flex gap-2"><span class="text-slate-500">▸</span> smallest of the three — do it alongside C1/C2</li>
+              </ul>
+            </div>
+
+            <div class="rounded-lg bg-slate-100 border border-slate-200 px-4 py-3 text-[13px] text-slate-700 leading-relaxed">
+              <span class="font-semibold">Honest read.</span> A 4-line formula behind a function is a
+              <em>shallow</em> module on its own — the deletion test barely passes. It earns its keep only
+              as part of a deliberate "slot-fill round toolkit" (C1 + C2 + C3 together), not in isolation.
+              <strong>Do not do this one alone.</strong>
+            </div>
+          </div>
+        </article>
+
+        <!-- ============================================================ -->
+        <!-- NON-CANDIDATE — what NOT to merge                             -->
+        <!-- ============================================================ -->
+        <article class="rounded-2xl border border-dashed border-slate-300 bg-stone-100/60 overflow-hidden">
+          <div class="px-6 sm:px-8 pt-7 pb-6 space-y-4">
+            <div class="flex items-start gap-3">
+              <span class="text-2xl leading-none">🛑</span>
+              <div>
+                <h2 class="font-serif text-xl sm:text-2xl">Leave these alone — the differences are real</h2>
+                <p class="text-slate-600 text-sm mt-1">Not everything that looks parallel is shallow duplication. These earn their separate implementations.</p>
+              </div>
+            </div>
+            <ul class="space-y-2.5 text-sm text-slate-700">
+              <li class="flex gap-3">
+                <code class="shrink-0 font-mono text-[12px] text-slate-500">shareText.ts</code>
+                <span><strong>Genuinely different.</strong> posokanei renders a variable-length proximity row (🟩/🟨/⬛ + ⬆️/⬇️); logopaignio renders a fixed <code>MAX_GUESSES</code>-wide grid (🟩/🟦/⬜). Same idea, incompatible layouts — merging would need a strategy param and deepen nothing.</span>
+              </li>
+              <li class="flex gap-3">
+                <code class="shrink-0 font-mono text-[12px] text-slate-500">evaluateGuess.ts</code>
+                <span><strong>The actual game.</strong> Price-band proximity vs accept-list brand matching are the domain — this is where the games <em>should</em> differ. Never merge.</span>
+              </li>
+              <li class="flex gap-3">
+                <code class="shrink-0 font-mono text-[12px] text-slate-500">selectDailyPuzzle.ts</code>
+                <span><strong>One-line divergence, already justified.</strong> Identical bar the sort key (<code>date</code> vs <code>id</code>). Could take a <code>keyOf</code> param, but at ~12 lines the duplication is cheaper than the seam. Borderline — fold in only if C1 lands and it's free.</span>
+              </li>
+            </ul>
+          </div>
+        </article>
+
+      </section>
+
+      <!-- ─────────── TOP RECOMMENDATION ─────────── -->
+      <section id="top-recommendation">
+        <div class="rounded-2xl bg-slate-900 text-slate-100 px-6 sm:px-10 py-9 shadow-lg">
+          <p class="text-xs uppercase tracking-[0.2em] text-slate-400">Top recommendation</p>
+          <h2 class="font-serif text-2xl sm:text-3xl mt-2">Start with <a href="#c1" class="underline decoration-emerald-400 decoration-2 underline-offset-4">Candidate 1 — the round spine</a>.</h2>
+          <p class="text-slate-300 text-[15px] leading-relaxed mt-4 max-w-3xl">
+            It is the deepest win with the strongest precedent: the codebase already deepened the
+            Wordle family this exact way (<code class="text-slate-200">useGuessRound</code>,
+            <code class="text-slate-200">useLiveScorePost</code>), so the pattern is proven and blessed.
+            Two near-byte-identical hooks plus a third that only differs in its snapshot fields is the
+            clearest deletion-test pass in the codebase. Land C1, then fold in C2 (the reducer skeleton)
+            and C3 (the decay score) as a single "slot-fill round toolkit" — they're cheap once the spine
+            exists and pointless before it. Leave <code class="text-slate-200">shareText</code> and
+            <code class="text-slate-200">evaluateGuess</code> per-game; that's where these games are
+            supposed to diverge.
+          </p>
+          <p class="text-slate-400 text-[13px] leading-relaxed mt-5 max-w-3xl border-t border-slate-700 pt-4">
+            Naming note for the grilling phase: the slot-fill family has no term in
+            <code class="text-slate-300">CONTEXT.md</code> yet. If a shared spine lands, it wants a name
+            (candidate: <em>slot-fill round</em> — a daily one-target guess game with derived stage +
+            give-up + liveActed). Adding that term is a side effect to do inline, not a blocker now.
+          </p>
+        </div>
+      </section>
+
+      <footer class="text-center text-xs text-slate-400 pt-4">
+        Greek Word Games · architecture review · 2026-07-26 · scoped to the slot-fill round family (the codebase's current hot spot)
+      </footer>
+
+    </main>
+  </body>
+</html>

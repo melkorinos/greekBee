@@ -88,6 +88,20 @@ export const POSOKANEI = {
   CLOSE_PROXIMITY_PCT: 70,
 } as const;
 
+export const LOGOPAIGNIO = {
+  // Daily "guess the Greek company from its name-stripped logo mark" game.
+  // Each wrong guess de-blurs the mark one step; solve on the first (fully
+  // blurred) look → full points, each wrong guess costs one step, give-up → 0.
+  MAX_GUESSES: 6,
+  // Scoring: points scale with guesses remaining at the correct guess.
+  POINTS_PER_GUESS_LEFT: 100,  // ×(MAX_GUESSES − wrongGuesses)
+  // Progressive de-blur: the CSS blur radius (px) applied to the mark at each
+  // count of wrong guesses so far. Index = wrongGuesses (0 = first, hardest
+  // look); a solved/revealed mark uses 0. Length MUST equal MAX_GUESSES. Tune
+  // freely — difficulty is a data knob, no code change needed.
+  BLUR_STEP_RADII_PX: [16, 12, 8, 5, 3, 1] as const,
+} as const;
+
 export const LEKSODROMIA = {
   WORDS_PER_LENGTH:   2,
   LENGTHS:            [4, 5, 6, 7, 8] as const,   // mirrors LEKSIARXEIO.LENGTHS

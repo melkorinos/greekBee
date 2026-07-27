@@ -4,7 +4,7 @@
 
 **What to build:** 30 real puzzles so the wip build is genuinely playable with recognizable Greek brands — each a name-stripped **mark** with a curated accept-list. This is the developer's grind: an agent can't reliably fetch/crop real brand assets or judge recognizability.
 
-**Blocked by:** 01 — Foundation (the puzzle JSON shape must be locked first).
+**Blocked by:** Foundation (was ticket 01) — **DONE.** The puzzle JSON shape is locked: `LogopaignioPuzzle { id; date?; brand; sector; accept: string[]; markAsset; credit? }` in `src/games/logopaignio/types.ts`, and `src/data/logopaignio/puzzles-el.json` holds the single placeholder row to append real brands to.
 
 **Status:** ready-for-human
 

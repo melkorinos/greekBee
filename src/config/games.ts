@@ -90,6 +90,17 @@ export const GAME_REGISTRY = {
     href:        "/posokanei",
     wip:         true,
   },
+  // Daily "guess the Greek company from its name-stripped logo mark" game. Ships
+  // wip:true (single placeholder puzzle); flip to false once ~30 real brands are
+  // sourced (mark assets + accept-lists — handoff logopaignio.md).
+  logopaignio: {
+    label:       "🔎 Λογοπαίγνιο",
+    emoji:       "🔎",
+    title:       "Λογοπαίγνιο",
+    description: "Μάντεψε την εταιρεία από το λογότυπό της.",
+    href:        "/logopaignio",
+    wip:         true,
+  },
 } as const;
 
 /** The ID of any registered Game. */

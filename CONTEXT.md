@@ -21,6 +21,14 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Session** — One continuous play of a Puzzle on a given device. Persists across refreshes until the Puzzle changes. Each game persists different fields (Leksokipos: score + found words; Leksiarxeio: guesses per length; Leksindeseis: solved groups + mistakes; Vres Tin Frasi: guesses + status; Stavrolekso: typed cells + solved slots per puzzle ID). Leksokipos daily Sessions are also synced to the server (see `game_state` table) for cross-device restore via TransferCode.
 
+**Round Spine** — The shared hook that owns a game family's reducer → persistence wiring, so member games keep only what genuinely differs. Two exist, one per family, and they are deliberate siblings rather than one generic spine (ADR 0019). (Not: base hook, game engine)
+
+**Guess Family** — The Wordle-shaped games: **Leksiarxeio**, **Vres Tin Frasi**. A fixed number of attempts at a secret Answer, a `status` of `playing`/`won`/`lost`, and a Score that is a pure function of `(attempts, won)` computed once the round ends. Spine: `useGuessRound`. (Not: wordle games)
+
+**Slot-Fill Family** — The Worldle-shaped games: **Topothesies**, **Πόσο κάνει;**, **Λογοπαίγνιο**. The player fills a slot (a Regional unit, a price, a brand) from a visual prompt; every stage flag is *derived* from the guess history; giving up is an explicit end-state; the Score decays with each wrong guess and is posted continuously while the round is live. Spine: `useSlotFillRound`. Λεξόπλεγμα shares the shape but still runs its own copy; Λεξοδρομία is **not** a member (it owns a decay clock and a restore that must interleave with it) — see ADR 0019. (Not: worldle games, daily-photo games)
+
+**Live Action** *(Slot-Fill Family)* — A Guess or give-up the player makes **this** Session, as opposed to a round replayed from storage on mount. The Round Spine tracks it (`hasLiveActed`) by issuing its own `RESTORE_STATE` through a raw dispatch that never flips the flag; `useLiveScorePost` reads it so a restored-but-untouched round never re-posts its Score. (Not: interaction, touch)
+
 **DeviceId** — Stable anonymous UUID generated once per browser, shared across all games. Not permanently unique per browser: a browser *adopts* another's DeviceId on TransferCode claim or Sign-in Restore, so one DeviceId can identify all of a player's browsers. Treated as a **secret credential** — knowing it authorises score posts and profile access, so it must never appear in public URLs, links, or payloads visible to other players. (Not: userId, playerId)
 
 **DisplayName** — Player-chosen name shown on leaderboards. Optional. (Not: username)
