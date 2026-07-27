@@ -100,6 +100,21 @@ export const LOGOPAIGNIO = {
   // look); a solved/revealed mark uses 0. Length MUST equal MAX_GUESSES. Tune
   // freely — difficulty is a data knob, no code change needed.
   BLUR_STEP_RADII_PX: [16, 12, 8, 5, 3, 1] as const,
+  // Every shipped mark is normalised onto ONE square canvas before it enters
+  // puzzles-el.json (operator decision, 2026-07-27). Square because a
+  // name-stripped mark is square-ish in practice — the three PoC crops came out
+  // at ratios 1.00 / 1.00 / 0.74, while the *full* logos they came from were
+  // 4.53 / 3.48 / 4.89 wide. The wide ratios belong to the wordmark, which the
+  // crop removes.
+  //
+  // This is a difficulty invariant, not just styling: BLUR_STEP_RADII_PX is in
+  // FIXED PIXELS, so on an un-normalised pool the same 16px first look erases a
+  // thin 11:1 strip while barely hazing a large square — difficulty would depend
+  // on a logo's shape rather than how recognizable it is.
+  MARK_CANVAS_PX: 512,
+  // Fraction of the canvas left empty around the mark, so marks with differing
+  // bounding boxes still read as the same visual weight in the frame.
+  MARK_PADDING_RATIO: 0.12,
 } as const;
 
 export const LEKSODROMIA = {

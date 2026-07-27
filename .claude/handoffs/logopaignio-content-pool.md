@@ -1,103 +1,124 @@
 # Handoff: Λογοπαίγνιο — content pool (source, curate, grow to 150–200)
 
-**Date:** 2026-07-27 (folds in the former `logopaignio.md` design spec)
-**Status:** Game code shipped (`wip:true`, single placeholder). Content is the remaining work.
+**Date:** 2026-07-27 (updated after the bulk-sourcing session; folds in the former `logopaignio.md` design spec)
+**Status:** Game code shipped (`wip:true`, single placeholder). **Sourcing is now largely done — 144/159 candidates have a downloaded asset.** The remaining work is human curation, not fetching.
 **Goal:** Curate real puzzles up to **150–200** brands so the daily rotation doesn't repeat for months. First **~30** unlocks a proper wip build; 150 is the launch floor.
-**Owner:** Human-led with agent assist. See "Division of labour" — the agent can now do more of the sourcing than originally assumed.
-
-This is the single content handoff for Λογοπαίγνιο. The design decisions, seed list, and legal note that used to live in `logopaignio.md` are folded in below; the implementation plan is dropped because the game is built.
+**Owner:** Human-led with agent assist.
 
 ---
 
-## Working approach (agreed 2026-07-27, after the 5-brand PoC)
+## Where this stands
 
-**Gather broad, approve one-by-one with an eye check.** The agent sources a large batch of candidate marks (full logo + a mark-only crop + draft accept-list + credit); the human eyeballs each and approves or rejects individually. This scales the boring half (finding + fetching + cropping) and keeps the judgment half (recognizable? right mark? still-Greek?) with the human, where it belongs.
+| | Count |
+|---|---|
+| Candidate brands in the seed list | **159** |
+| With a downloaded asset | **144** |
+| — from Wikimedia Commons | 68 |
+| — from official sites (Plan B) | 68 |
+| — from Google favicon cache (Plan C) | 8 |
+| Without an asset (see "The 15") | 15 |
+| Cards clean / flagged in the preview | 71 / 73 |
 
-### What the PoC proved (5 brands: Alpha Bank, Cosmote, Aegean, HelleniQ, Public)
+**Nothing has been approved yet.** Every asset is in gitignored staging (`public/logopaignio/_raw/`); `puzzles-el.json` still holds only the fake «Δείγμα» placeholder. The eye check is the next human step.
 
-- **Sourcing + download works.** `scripts/fetch-logopaignio-logos.mjs` pulls real SVGs from Wikimedia Commons "Original file" URLs into `public/logopaignio/_raw/`, with the license recorded per row for takedown readiness.
-- **Mark extraction is often scriptable, not manual.** When a logo ships as **layered vector paths** (symbol and wordmark as separate `<path>`s at separate x-ranges), the mark can be isolated just by clipping the SVG `viewBox` — no image editor. This is better than the original spec assumed. Raster-only or single-flattened-path logos still need a manual crop.
-- **The real bottleneck is judgment, not fetching** — exactly the calls left to the human eye check.
-
-### PoC verdicts (locked)
-
-| Brand | Verdict | Note |
-|---|---|---|
-| **Alpha Bank** | ✅ keep | Navy square + white "A" is a clean standalone mark. |
-| **Aegean Airlines** | ✅ keep | Approved. (2020 file's motif is thin; prefer the tail-livery mark if sourcing a better asset.) |
-| **HelleniQ Energy** | ✅ keep | Lower recognition, but kept; pinwheel emblem crops perfectly. Accept-list must also cover the old **ΕΛΠΕ / Ελληνικά Πετρέλαια** name. |
-| **Cosmote** | ❌ drop | The only separable symbol is **Deutsche Telekom's magenta "T"** (parent co.), not a Cosmote-Greek mark — reads as "Telekom". Fails the master-brand-perceived-as-Greek test from the symbol angle. |
-| **Public** | ○ manual | No clean public SVG; source from public.gr by hand. |
-
-Preview of the PoC: `.claude/aiHelper/logopaignio-preview.html` (full logo vs. mark-only crop, side by side).
+**Review surface:** `.claude/aiHelper/logopaignio-preview.html` — 159 cards grouped by sector, with filter buttons (Όλα / Καθαρά / Με προειδοποίηση / Προβληματικά / Χωρίς αρχείο). Regenerate with `npm run logopaignio:preview`.
 
 ---
 
-## Division of labour
+## The pipeline (three commands)
 
-**Agent can:** find source URLs (Wikimedia Commons, official brand kits, favicons); download via the fetch script; produce a mark-only crop when the SVG is layered; draft the accept-list from names; record sector + credit.
+```
+npm run logopaignio:fetch      # Commons pass  → _raw/ + manifest.json
+npm run logopaignio:official   # Plan B (official sites) + Plan C (Google favicons)
+npm run logopaignio:preview    # renders the eye-check page from the manifest
+```
 
-**Human must:** judge recognizability, confirm it's the current master brand still perceived as Greek, and accept/reject each candidate 1-by-1. Also: any manual raster crop, and brands with no public asset.
+Data files:
+- `scripts/lib/logopaignio/seedBrands.mjs` — the 159 candidates (id, brand, sector, accept-list, Commons search terms)
+- `scripts/lib/logopaignio/officialSites.mjs` — 92 domain mappings for Plan B
+- `public/logopaignio/_raw/manifest.json` — machine-readable result of every attempt (gitignored)
 
----
-
-## Per-brand recipe (repeat at scale)
-
-1. Pick a brand that passes the **icon-only filter** — if the logo *is* just the name in a typeface (pure wordmark), **drop the brand.**
-2. Source its **mark-only asset** (app icon / favicon / brand-kit "symbol"), or crop the mark out of a layered logo; manual crop as fallback.
-3. Write the **accept-list** — Greek form + Latin form + common variants (covers the `Cosmote`/`Κοσμοτέ` fork).
-4. Record **sector** and **credit/source** (takedown readiness).
-5. Human eye-check → approve or reject.
-
-## Rules (locked in the grill — do not re-litigate)
-
-- **Current logo only** — no old/rebrand versions (avoids "that's the old one" disputes).
-- **Master/parent brand only** — no product-line sub-brands. *And beware the inverse (Cosmote): if the only separable mark belongs to a foreign parent, drop it.*
-- **Foreign-owned allowed if still perceived as Greek** (Goody's, Chipita-era brands).
-- **Defunct brands allowed** — nostalgia marks (Olympic Airways, retired ΟΤΕ/WIND marks) are a feature and help reach depth.
-- **Scope of "Greek":** founded/HQ'd in Greece **and** recognizable to a general Greek audience. Excludes obscure B2B and foreign brands.
-- **Matching is normalized + accept-list**, never character-exact (see the game's `evaluateGuess`): case/accent-insensitive, trimmed, plus the per-brand Greek⇄Latin accept-list.
-
-## If the pool stalls before 150
-
-Relax **"recognizable"** before you relax **"icon-only"**. Dropping the icon-only filter breaks the game (unguessable stripped wordmarks); dropping "must be a household name" just makes some days harder, which is acceptable once the core pool is solid. Defunct/nostalgia marks are the other lever to reach depth.
-
-## Legal (the one thing that could kill the game post-launch)
-
-Every hosted logo is someone's trademark/copyright — no clean open-data license story exists (unlike the map/price games). **Decision: ship anyway** as a hobby-game risk, **with** a `credit`/source recorded per asset and a fast takedown path. Wikimedia "Original file" pages give a clean license line (most are PD-textlogo, trademark noted) — prefer them as the source of record. Reassess if the game gets real traffic; the risk note belongs in `CONTEXT.md`/an ADR when the game graduates from wip.
+All three scripts merge into the same manifest, so `--only <ids>` re-runs a subset without losing earlier results. A failed re-fetch never overwrites a good row.
 
 ---
 
-## Seed candidate list (verify each has a separable non-text mark before including)
+## Decisions made this session (do not silently revert)
 
-Organized by sector. **Not confirmed against the icon-only filter** — each needs mark-verification; some drop as wordmark-only or as borrowed-parent-mark (Cosmote).
+**Greek-origin rule DROPPED.** The pool is now *"brands a Greek audience recognizes"*, regardless of origin — DHL, Revolut, Sprite, Fanta, Pepsi, Wolt, Groupama, Lidl et al. are in scope. Recognizability is still required. The icon-only filter is untouched and remains the rule that actually keeps the game playable.
 
-- **Supermarkets:** ΑΒ Βασιλόπουλος (AB mark), My Market / Metro, Κρητικός, Γαλαξίας, Bazaar, Μασούτης, Χαλκιάδης.
-- **Airlines / ferries:** Aegean Airlines ✅, Olympic Air / **Olympic Airways** (defunct — meander rings), Sky Express, Blue Star Ferries (star), Superfast Ferries, ANEK Lines, Minoan Lines, Hellenic Seaways, SeaJets, Attica Group.
-- **Telecom / internet:** ~~Cosmote~~ (dropped — DT parent mark), OTE (ΟΤΕ), Nova, WIND (defunct/merged), Forthnet.
-- **Banks / finance:** Εθνική Τράπεζα, Τράπεζα Πειραιώς, Alpha Bank ✅, Eurobank, Optima Bank, Attica Bank, Εθνική Ασφαλιστική, Interamerican.
-- **Energy / fuel:** ΔΕΗ (PPC), ΕΚΟ (EKO — flame), HelleniQ Energy / ΕΛΠΕ ✅, Shell Hellas (skip if foreign-perceived), Coral, Avin, Jetoil, Aegean Oil.
-- **Food / beverage / dairy:** ΔΕΛΤΑ, ΝΟΥΝΟΥ (mascot), Μέβγαλ, Όλυμπος, ΦΑΓΕ, Vikos, Λουξ (Loux), ΕΨΑ, Ήβη, 3E/Coca-Cola (skip foreign), Chipita / 7Days / Molto, Παπαδοπούλου, ΙΟΝ, Misko, Μέλισσα, Barba Stathis (Μπάρμπα Στάθης).
-- **Fast food / cafe:** Goody's, Everest, Γρηγόρης, Coffee Island, Mikel, Flocafe.
-- **Retail / electronics:** Public (○ manual), Kotsovolos, Πλαίσιο, Media Markt (skip if foreign), Praktiker, Leroy Merlin (skip foreign), Hondos Center, Jumbo (likely wordmark → verify).
-- **Online / delivery:** Skroutz (bag mark), e-food (efood), BOX, Wolt (skip foreign), Car.gr, Spitogatos, XE.gr.
-- **Betting / lottery:** ΟΠΑΠ, Stoiximan, Novibet, Pamestoixima.
-- **Cosmetics / pharma:** Korres, Apivita, Frezyderm, Sarantis, Papoutsanis, Sesderma (skip foreign).
-- **Industry / construction:** ΤΙΤΑΝ (Titan), Μυτιληναίος / Metlen, ΓΕΚ ΤΕΡΝΑ, Aktor, Alumil, ΕΛΒΑΛ.
-- **Utilities / transport:** ΕΥΔΑΠ, ΕΥΑΘ, Hellenic Train / ΟΣΕ, ΣΤΑΣΥ, ΟΑΣΑ.
+**Sector merges.** «Ταχυδρομείο» + «Ταχυμεταφορές» → **Delivery**; «Ακτοπλοΐα» + «Μεταφορές» → one **Μεταφορές**. Sector is the in-game free hint, so fewer/fatter categories give away less.
 
-**Excluded for v1:** sports clubs (Olympiacos/ΠΑΟ etc. — clubs, not companies; possible later expansion pack), foreign brands merely popular in Greece.
+**Εστίαση is deferred** — banner-marked TODO in the preview (amber header, dimmed cards). Skip it during the eye check.
 
-Realistic yield after the icon-only filter is **~80–130** from this seed; the remainder to 150–200 comes from the long tail + defunct/nostalgia marks.
+**Mark canvas: 512×512 square**, mark centred, 12% padding — recorded in `src/config/gameRules.ts` as `LOGOPAIGNIO.MARK_CANVAS_PX` / `MARK_PADDING_RATIO`.
+
+> Why square, and why it matters beyond looks: the three PoC crops came out at ratios **1.00 / 1.00 / 0.74**, while the full logos they came from were **4.53 / 3.48 / 4.89** wide — the extreme widths belong to the *wordmark*, which the crop removes. And `BLUR_STEP_RADII_PX` is in **fixed pixels**, so on an un-normalised pool the same 16px first look *erases* a thin 11:1 strip while barely hazing a large square. Un-normalised assets make difficulty depend on a logo's shape rather than on how recognizable it is.
+
+**Skipped deliberately:** «Candia (αυτοκινητοβιομηχανία)» (Candia is a dairy brand; the carmaker was Namco) and «Dekagro» (no public presence).
+
+---
+
+## What the scripts flag automatically (and why to trust the flags)
+
+Commons search ranks by text relevance and has no idea which country or company you mean. Blind "first hit" returned confident nonsense: **ΔΕΗ → "Namibia Power Corporation"**, **Κρι Κρι → an Indonesian hospital** (1.35 MB), **ΣΤΑΣΥ → a Lithuanian choir competition**, **MAD TV → *Mad Men***, **Cosmos Aluminium AND Αλουμίνιον της Ελλάδος → both got ETEM's logo**.
+
+So the fetcher now requires a distinctive token from the brand's own accept-list to appear in the file title, and flags failures as **SUSPECT** (red card). It over-flags on purpose — `ote` and `ert` are false alarms (correct files, Latin-cased titles vs Greek accept-lists). A wrong flag costs one glance; a missed one poisons the pool.
+
+Still flagged suspect, needing your verdict: `dei`, `kri-kri`, `stasy`, `forthnet` (genuinely wrong) and `ote`, `ert` (false alarms).
+One real duplicate remains: **nova / forthnet** point at the same Commons file — at least one is wrong.
+
+Other automatic checks: HTML-error-pages-saved-as-images are rejected (this bit once — `geniki-taxydromiki` saved a whole error page as `logo.svg`); raster assets under 64px are rejected; Plan C's floor is 128px because Google answers a *miss* with a 16×16 globe at status 200, never a 404. Favicon `sizes` attributes lie and are never trusted — apivita.com advertises a 1024×1024 icon that 404s, eydap.gr's "favicon.png" is 16×16, olympos.gr's "192" icon is really 32×32.
+
+---
+
+## The 15 without an asset
+
+These are **anti-bot defences and dead infrastructure, not sourcing gaps** — automated scraping has genuinely hit its limit. They need manual sourcing.
+
+| Cause | Brands |
+|---|---|
+| Domain does not resolve at all | `allatini`, `chalyvourgia`, `estia`, `naupigeia-elefsinas`, `pelargos`, `evropi-asfalistiki`, `ivi` |
+| Blocked (403 / 502) | `golden-star-ferries`, `orizon`, `euroins` |
+| Serves a JS shell with no logo in the HTML | `elval` (961 B), `notos-galleries` (88 B), `grigoris` |
+| Redirects to an unrelated company | `coral` (→ netcare.gr) |
+| Only a 32×32 icon available | `olympos` |
+
+`ivi` and `jetoil` are defunct brands, so a dead domain is expected — Jetoil was nonetheless recovered from Google's cache. Their rows are left pointing at the dead hosts on purpose, so a future session sees them as attempted-and-dead rather than never-tried.
 
 ---
 
 ## Next actions
 
-1. **Extend the fetcher** (`scripts/fetch-logopaignio-logos.mjs`) — walk the seed list sector-by-sector, sourcing Wikimedia/official URLs into `_raw/`, and generate the side-by-side preview (full logo + mark crop + draft accept-list + credit) for each batch.
-2. **Batch eye-check** — human approves/rejects one-by-one from the preview.
-3. **Graduate approved rows** into `src/data/logopaignio/puzzles-el.json` with their mark asset in `public/logopaignio/`, then flip `wip:false` once ~30 are live.
-4. **Gitignore `_raw/`** so only finished marks ship (staging is not app content).
+1. **Batch eye-check** the 159 cards. For each: is this the right company, and does it have a separable non-text symbol? Pure wordmarks are **rejected** — the icon-only filter is what keeps the game playable.
+2. **Strip the wordmarks.** Many assets are the *full* logo, name included. Deferred this session; it is the main remaining craft work. Layered SVGs (84 of 144) can often be cropped by clipping the `viewBox` alone; the 60 PNG/JPGs need a manual crop.
+3. **Normalise approved marks** onto the 512×512 canvas (script not yet written — mechanical, no per-brand judgment).
+4. **Graduate approved rows** into `src/data/logopaignio/puzzles-el.json` with their mark in `public/logopaignio/`, then flip `wip:false` once ~30 are live.
+5. **Manual-source the 15** (and re-check the 6 suspect cards) if the pool needs them to clear 150.
+
+---
+
+## Rules (locked in the grill — do not re-litigate)
+
+- **Current logo only** — no old/rebrand versions.
+- **Master/parent brand only** — no product-line sub-brands. *And beware the inverse (Cosmote): if the only separable mark belongs to a foreign parent, drop it.*
+- **Origin is no longer a filter** (changed 2026-07-27) — recognizability to a Greek audience is what counts.
+- **Defunct brands allowed** — nostalgia marks (Olympic Airways, retired ΟΤΕ/WIND marks) are a feature and help reach depth.
+- **Matching is normalized + accept-list**, never character-exact (see the game's `evaluateGuess`): case/accent-insensitive, trimmed, plus the per-brand Greek⇄Latin accept-list.
+- **Icon-only filter is the one rule that must not be relaxed.** If the pool stalls, relax *"recognizable"* first — that just makes some days harder. Dropping icon-only breaks the game outright (unguessable stripped wordmarks).
+
+---
+
+## Legal (the one thing that could kill the game post-launch)
+
+Every hosted logo is someone's trademark/copyright — no clean open-data license story exists (unlike the map/price games). **Decision: ship anyway** as a hobby-game risk, **with** a `credit`/source recorded per asset and a fast takedown path.
+
+**Sharpened this session:** the two source paths carry *different* provenance, and the manifest records which is which.
+- **Commons rows** carry an explicit license line (mostly PD-textlogo, trademark noted) — prefer these as the source of record.
+- **Plan B/C rows** (official sites, favicon cache) have **no stated license** — they are the company's trademark retrieved from its own site. Their `credit` is `"<domain> (retrieved <date>)"`, and `license` reads `"© the company — no stated license"`.
+
+This does not change the ship-anyway posture, but the ticket-04 legal note must state both paths honestly. Reassess if the game gets real traffic.
+
+---
 
 ## Progress
 
@@ -106,3 +127,5 @@ Realistic yield after the icon-only filter is **~80–130** from this seed; the 
 - [ ] 100
 - [ ] 150 (launch floor)
 - [ ] 200 (comfortable)
+
+*Sourcing is ahead of curation: 144 assets are staged, 0 approved. The bottleneck is now entirely the eye check + wordmark stripping.*

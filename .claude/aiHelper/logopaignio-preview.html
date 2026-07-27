@@ -1,197 +1,2861 @@
 <!doctype html><html lang="el"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Λογοπαίγνιο — PoC (5 brands)</title>
+<title>Λογοπαίγνιο — έλεγχος υποψηφίων (159)</title>
 <style>
   :root { color-scheme: light; }
+  * { box-sizing: border-box; }
   body { margin: 0; font: 14px system-ui, sans-serif; background: #f4f4f5; color: #18181b; }
-  header { position: sticky; top: 0; background: #fff; border-bottom: 1px solid #e4e4e7; padding: 12px 20px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; z-index: 1; }
+  header { position: sticky; top: 0; z-index: 5; background: #fff; border-bottom: 1px solid #e4e4e7;
+           padding: 12px 20px; display: flex; gap: 14px; align-items: baseline; flex-wrap: wrap; }
   header h1 { font-size: 16px; margin: 0; }
-  header .muted { color: #71717a; }
-  .legend { padding: 12px 20px 0; color: #52525b; max-width: 900px; line-height: 1.5; }
+  header .muted { color: #71717a; font-size: 13px; }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+  .filters button { font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px;
+                    border: 1px solid #d4d4d8; background: #fff; cursor: pointer; }
+  .filters button.on { background: #18181b; color: #fff; border-color: #18181b; }
+  .legend { padding: 14px 20px 0; color: #52525b; max-width: 940px; line-height: 1.6; }
   .legend b { color: #18181b; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; padding: 20px; }
-  .card { margin: 0; background: #fff; border: 1px solid #e4e4e7; border-radius: 12px; padding: 14px; }
-  .card.reject { border-color: #f0d8a6; background: #fffdf7; }
-  .card.manual { border-color: #d3c8f2; background: #faf9ff; }
-  .panes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .pane { border: 1px solid #e4e4e7; border-radius: 8px; padding: 8px; background: #fafafa; display: flex; flex-direction: column; }
-  .pane h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #71717a; font-weight: 600; }
-  .pane.mark { background: #f0f9fb; border-color: #bae6ec; }
-  .pane svg { width: 100%; height: 90px; display: block; }
-  .missing { height: 90px; display: flex; align-items: center; justify-content: center; text-align: center; color: #8b7fc0; border: 1.5px dashed #c9bef0; border-radius: 6px; font-size: 12px; }
-  figcaption { margin-top: 12px; display: flex; flex-direction: column; gap: 4px; }
-  figcaption .row1 { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
-  figcaption b { font-size: 15px; }
-  figcaption small { color: #52525b; }
-  figcaption small.src { color: #a1a1aa; word-break: break-word; }
-  .tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; background: #e4e4e7; color: #3f3f46; }
-  .tag.keep { background: #dcfce7; color: #15803d; }
-  .tag.review { background: #fef3c7; color: #92500c; }
-  .tag.manual { background: #ede9fe; color: #6d28d9; }
-  .accept { font-size: 12px; color: #3f3f46; }
-  .accept code { background: #f4f4f5; border: 1px solid #e4e4e7; border-radius: 4px; padding: 0 5px; margin-right: 4px; }
+  .legend ul { margin: 8px 0 0; padding-left: 20px; }
+  h2 { margin: 26px 20px 0; font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
+       color: #71717a; border-bottom: 1px solid #e4e4e7; padding-bottom: 6px; }
+  h2.deferred { color: #92500c; border-bottom-color: #f0d8a6; }
+  h2 .todo { text-transform: none; letter-spacing: 0; font-weight: 600; color: #92500c;
+             background: #fef3c7; border-radius: 999px; padding: 2px 10px; margin-left: 8px; }
+  h2.deferred + .grid { opacity: .55; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+          gap: 14px; padding: 14px 20px; }
+  .card { margin: 0; background: #fff; border: 1px solid #e4e4e7; border-radius: 12px;
+          padding: 12px; display: flex; flex-direction: column; }
+  .card.warn { border-color: #f0d8a6; background: #fffdf7; }
+  .card.bad  { border-color: #f3bcbc; background: #fff8f8; }
+  .card.hidden { display: none; }
+  .media { background: #fafafa; border: 1px solid #e4e4e7; border-radius: 8px; padding: 10px;
+           height: 110px; display: flex; align-items: center; justify-content: center; }
+  .media img { max-width: 100%; max-height: 88px; display: block; }
+  .missing { color: #a1a1aa; text-align: center; font-size: 12px; line-height: 1.5; }
+  figcaption { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .row1 { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+  .row1 b { font-size: 15px; }
+  .tag { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: #e4e4e7; color: #3f3f46; }
+  .tag.st-ok { background: #dcfce7; color: #15803d; }
+  .tag.st-not-found { background: #f4f4f5; color: #71717a; }
+  .tag.st-manual { background: #ede9fe; color: #6d28d9; }
+  .tag.st-error { background: #fee2e2; color: #b91c1c; }
+  .warns { margin: 0; padding-left: 16px; font-size: 12px; line-height: 1.5; }
+  .warns .bad { color: #b91c1c; }
+  .warns .warn { color: #92500c; }
+  .accept { font-size: 12px; }
+  .accept code { background: #f4f4f5; border: 1px solid #e4e4e7; border-radius: 4px;
+                 padding: 0 5px; margin: 0 3px 3px 0; display: inline-block; }
+  .note { color: #52525b; }
+  .src { color: #a1a1aa; font-size: 11px; word-break: break-word; }
+  .src a { color: #71717a; }
 </style></head><body>
 <header>
-  <h1>Λογοπαίγνιο — proof-of-concept</h1>
-  <span class="muted">5 brands · 4 fetched · 1 manual · left = full logo, right = mark-only crop</span>
+  <h1>Λογοπαίγνιο — έλεγχος υποψηφίων</h1>
+  <span class="muted">159 μάρκες · 144 με αρχείο (71 καθαρά, 73 με σημείωση) · 15 χωρίς αρχείο</span>
+  <div class="filters">
+    <button data-filter="all" class="on">Όλα</button>
+    <button data-filter="clean">Καθαρά</button>
+    <button data-filter="warn">Με προειδοποίηση</button>
+    <button data-filter="bad">Προβληματικά</button>
+    <button data-filter="missing">Χωρίς αρχείο</button>
+  </div>
 </header>
 <div class="legend">
-  Each card shows the <b>full downloaded logo</b> on the left and a <b>mark-only crop</b> (viewBox clipped to the symbol) on the right —
-  the crop is what the game would blur-reveal. Judge each: does the mark stay recognizable without its name? The
-  accept-list and source are the draft puzzle row. Raw files live in <code>public/logopaignio/_raw/</code>.
+  Κάθε κάρτα δείχνει το <b>πλήρες λογότυπο όπως κατέβηκε</b> — <b>όχι</b> το τελικό «mark-only» crop.
+  Το crop είναι το επόμενο βήμα και γίνεται μόνο για όσες μάρκες εγκρίνεις.
+  <ul>
+    <li><b>Η κρίση είναι δική σου:</b> το script βρίσκει και μετράει, αλλά δεν αποφασίζει.
+        Για κάθε κάρτα: αναγνωρίζεται η μάρκα <i>χωρίς</i> το όνομά της; Αν το λογότυπο είναι
+        μόνο κείμενο, <b>απορρίπτεται</b> (icon-only filter).</li>
+    <li><b>Κόκκινες κάρτες</b> = πιθανώς λάθος εταιρεία ή διπλό/υπερβολικά βαρύ αρχείο.</li>
+    <li><b>Κίτρινες κάρτες</b> = χρειάζονται δουλειά (PNG, flattened path, βάρος, «wordmark»).</li>
+    <li>Τα αρχεία είναι στο <code>public/logopaignio/_raw/</code> (gitignored staging).</li>
+  </ul>
 </div>
+<h2>Αναψυκτικά <span style="text-transform:none;color:#a1a1aa">· 12</span></h2>
 <div class="grid">
-
-  <!-- ALPHA BANK -->
-  <figure class="card keep">
-    <div class="panes">
-      <div class="pane"><h4>full logo</h4>
-        <svg viewBox="-1.5945 -1.5945 254.973 56.339" preserveAspectRatio="xMidYMid meet">
-          <path d="m 0,53.15 53.145,0 L 53.145,0 0,0 0,53.15 z" fill="#0d3b70"/>
-          <path d="m 46.033,26.685 c 0,13.829 -7.925,19.495 -19.49,19.495 -11.565,0 -19.494,-5.666 -19.494,-19.495 0,-13.826 7.929,-19.495 19.494,-19.495 11.565,0 19.49,5.669 19.49,19.495" fill="#fff"/>
-          <path d="m 10.005,26.685 c 0,11.731 5.989,16.539 16.538,16.539 10.553,0 16.54,-4.808 16.54,-16.539 0,-11.731 -5.987,-16.536 -16.54,-16.536 -10.549,0 -16.538,4.805 -16.538,16.536" fill="#0d3b70"/>
-          <path d="m 18.663,13.681 0,5.562 -5.274,0 c -0.507,1.55 -0.874,4.687 -0.909,6.331 l 6.186,0 0,14.141 c 1.314,0.52 4.562,1.03 6.115,1.061 l 0,-10.833 9.289,9.613 c 1.05,-0.307 4.313,-3.157 4.7,-4.127 l -9.187,-9.858 11.037,0 C 40.495,23.559 40.108,20.824 39.608,19.24 l -14.827,0 0,-6.591 c -1.238,0.06 -5.625,0.782 -6.115,1.03" fill="#fff"/>
-          <path d="m 197.133,21.09 3.65,7.068 -7.163,0 3.513,-7.068 z m -1.1,-3.477 -9.187,17.716 3.175,0 2.524,-4.718 9.326,0 2.463,4.718 3.312,0 -8.962,-17.716 -2.65,0 m 50.975,0 -10.738,8.6 0,-8.6 -3.038,0 0,17.716 3.038,0 0,-6.249 2.663,-2.121 8.736,8.37 4.114,0 -10.75,-10.02 9.55,-7.696 -3.575,0 m -37.075,17.716 2.65,0 0,-14.766 12.45,14.766 3.136,0 0,-17.716 -2.649,0 0,13.822 -11.962,-13.822 -3.625,0 0,17.716 M 178.846,20.084 c 2.025,0 3.1,0.715 3.1,2.065 0,1.329 -0.3,2.744 -3.95,2.744 l -6.125,0 0,-4.809 6.975,0 z m 0.125,7.234 c 2.763,0 4.05,0.945 4.05,2.968 0,1.702 -1.25,2.565 -3.7,2.565 l -7.4,0 0,-5.533 7.05,0 z m -10.087,-9.705 0,17.716 11.025,0 c 3.062,0 6.15,-1.569 6.15,-5.071 0,-0.172 -0.163,-3.632 -3.15,-4.388 1.3,-0.466 2.1,-1.814 2.1,-3.721 0,-2.094 -1.525,-4.536 -5.825,-4.536 l -10.3,0 m -18.15,3.443 3.637,7.068 -7.15,0 3.513,-7.068 z m -1.113,-3.443 -9.187,17.716 3.175,0 2.525,-4.739 9.325,0 2.461,4.739 3.313,0 -8.949,-17.716 -2.663,0 m -14.5,0 0,7.14 -10.912,0 0,-7.14 -3.025,0 0,17.716 3.025,0 0,-8.07 10.912,0 0,8.07 3.025,0 0,-17.716 -3.025,0 m -22.9,2.471 c 1.588,0 3.288,1.115 3.288,2.777 0,2.499 -1.026,3.339 -4.05,3.339 l -5.5,0 0,-6.116 6.262,0 z m -9.287,-2.471 0,17.716 3.025,0 0,-6.6 4.937,0 c 3.274,0 7.649,-0.601 7.649,-5.788 0,-3.933 -3.149,-5.328 -5.849,-5.328 l -9.762,0 m -14.113,0 0,17.716 11.974,0 0,-2.478 -8.949,0 0,-15.238 -3.026,0 m -12.674,3.448 3.649,7.068 -7.162,0 3.513,-7.068 z m -1.113,-3.448 -9.175,17.716 3.163,0 2.537,-4.724 9.325,0 2.463,4.724 3.3,0 -8.951,-17.716 -2.662,0" fill="#231f20"/>
-        </svg>
-      </div>
-      <div class="pane mark"><h4>mark only</h4>
-        <svg viewBox="-1.5945 -1.5945 56.339 56.339" preserveAspectRatio="xMidYMid meet">
-          <path d="m 0,53.15 53.145,0 L 53.145,0 0,0 0,53.15 z" fill="#0d3b70"/>
-          <path d="m 46.033,26.685 c 0,13.829 -7.925,19.495 -19.49,19.495 -11.565,0 -19.494,-5.666 -19.494,-19.495 0,-13.826 7.929,-19.495 19.494,-19.495 11.565,0 19.49,5.669 19.49,19.495" fill="#fff"/>
-          <path d="m 10.005,26.685 c 0,11.731 5.989,16.539 16.538,16.539 10.553,0 16.54,-4.808 16.54,-16.539 0,-11.731 -5.987,-16.536 -16.54,-16.536 -10.549,0 -16.538,4.805 -16.538,16.536" fill="#0d3b70"/>
-          <path d="m 18.663,13.681 0,5.562 -5.274,0 c -0.507,1.55 -0.874,4.687 -0.909,6.331 l 6.186,0 0,14.141 c 1.314,0.52 4.562,1.03 6.115,1.061 l 0,-10.833 9.289,9.613 c 1.05,-0.307 4.313,-3.157 4.7,-4.127 l -9.187,-9.858 11.037,0 C 40.495,23.559 40.108,20.824 39.608,19.24 l -14.827,0 0,-6.591 c -1.238,0.06 -5.625,0.782 -6.115,1.03" fill="#fff"/>
-        </svg>
-      </div>
-    </div>
+  <figure class="card clean" data-status="ok" data-sector="Αναψυκτικά"
+          data-flag="clean" id="3e">
+    <div class="media"><img src="../../public/logopaignio/_raw/3e.svg" alt="3Ε" loading="lazy"></div>
     <figcaption>
-      <div class="row1"><b>Alpha Bank</b> <span class="tag">banking</span> <span class="tag keep">KEEP · clean symbol</span></div>
-      <div class="accept"><code>Άλφα Μπανκ</code><code>Alpha Bank</code><code>Άλφα</code><code>ΑΛΦΑ</code></div>
-      <small>The navy square + white "A" reads on its own. Strong candidate.</small>
-      <small class="src">Wikimedia Commons · File:Alpha Bank logo.svg · PD-textlogo, trademarked</small>
+      <div class="row1">
+        <b>3Ε</b>
+        <span class="tag sector">Αναψυκτικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">9.9 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>3Ε</code><code>3E</code><code>Coca-Cola 3E</code><code>Coca-Cola HBC</code></div>
+      <small class="note">Likely REJECT — reads as Coca-Cola (foreign master brand).</small>
+      <small class="src">Public domain · <a href="https://commons.wikimedia.org/wiki/File:Logo_Coca-Cola_Hbc.svg" target="_blank" rel="noreferrer">File:Logo Coca-Cola Hbc.svg</a></small>
     </figcaption>
   </figure>
-
-  <!-- HELLENIQ ENERGY -->
-  <figure class="card keep">
-    <div class="panes">
-      <div class="pane"><h4>full logo</h4>
-        <svg viewBox="0 0 696 200" preserveAspectRatio="xMidYMid meet">
-          <use href="#helleniq-full"/>
-        </svg>
-      </div>
-      <div class="pane mark"><h4>mark only</h4>
-        <svg viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet">
-          <path d="M187.971 52.375C187.971 52.375 187.951 52.375 187.971 52.375C171.033 21.1667 137.989 0 100.007 0C44.774 0 0 44.7708 0 100C0 105.521 0.437531 110.896 1.29176 116.167C1.31259 116.292 1.45844 116.354 1.56261 116.271C6.1671 113 10.4174 111.208 21.3973 111.187C26.6685 111.187 64.4003 113.708 77.2554 112.021C89.0062 110.479 96.09 103.688 97.7985 91.2708C98.2569 87.9792 98.4444 83.1667 98.6319 79.0833C99.2778 63.8958 105.466 57.7083 120.217 56.6667C126.321 56.2292 142.51 57.1667 156.865 57.5C166.782 57.7292 173.825 57.0417 181.346 55.3333C185.742 54.3542 188.034 52.6042 187.971 52.375ZM200.014 100C200.035 107.937 199.097 113.458 198.806 115.479C198.556 117.229 197.66 118.438 196.41 119.688C193.097 123 188.555 125.187 183.034 126.625C166.949 130.812 131.718 127.062 121.779 127.958C107.528 129.25 101.403 134.875 100.715 149.833C100.528 153.958 100.486 158.104 99.9445 162.021C97.1318 181.979 82.0266 182.896 74.1302 183.646C69.5882 184.083 58.5249 184.333 50.3994 183.5C46.5866 183.104 42.378 181.667 39.6486 179.75C28.0228 170.917 18.418 159.708 11.5425 146.708C11.48 146.583 11.5425 146.542 11.605 146.5C15.8969 143.771 20.4181 142.104 26.4602 141.979C37.0026 141.792 65.7129 144.875 79.7347 143.417C93.569 142 99.5695 135.146 100.695 121.104C100.986 117.583 101.09 114.187 101.528 110.667C102.924 99.2083 108.653 93.2083 120.321 92.3958C132.655 91.5417 163.574 93.5833 178.867 92.9167C187.971 92.5208 194.534 90.875 198.806 86.4167C198.889 86.3333 199.056 86.3542 199.097 86.5C199.701 90.9375 199.993 95.4375 200.014 100ZM101.674 200C101.486 200 101.465 199.875 101.486 199.792C102.195 197.292 102.57 194.625 102.82 191.396C103.07 188.125 103.236 184.646 103.653 181.271C105.007 170.083 111.466 164.208 122.363 163.625C131.863 163.125 142.697 163.625 152.698 163.875C161.074 164.083 167.97 164.312 176.241 164.25C176.408 164.25 176.512 164.437 176.387 164.562C158.219 185.979 131.697 199.5 101.674 200ZM88.6937 62.2292C86.131 63 74.4219 66.3333 59.7333 66.9792C58.8583 76.1667 55.8164 83.3333 55.108 84.8958C55.0455 85.0208 54.8788 85.0208 54.8163 84.8958C54.1079 83.3333 51.0661 76.1667 50.191 66.9792C35.4816 66.3542 23.7725 63.0208 21.2306 62.2292C21.064 62.1875 21.064 61.9583 21.2306 61.8958C23.7933 61.125 35.5025 57.7917 50.191 57.1458C51.0661 47.9583 54.1079 40.7917 54.8163 39.2292C54.8788 39.1042 55.0455 39.1042 55.108 39.2292C55.8164 40.7917 58.8583 47.9583 59.7333 57.1458C74.4427 57.7708 86.1519 61.1042 88.6937 61.8958C88.8395 61.9583 88.8395 62.1667 88.6937 62.2292Z" fill="#0032A0"/>
-        </svg>
-      </div>
-    </div>
+  <figure class="card warn" data-status="ok" data-sector="Αναψυκτικά"
+          data-flag="warn" id="amita">
+    <div class="media"><img src="../../public/logopaignio/_raw/amita.png" alt="Amita" loading="lazy"></div>
     <figcaption>
-      <div class="row1"><b>HelleniQ Energy</b> <span class="tag">energy</span> <span class="tag keep">KEEP · strong symbol</span></div>
-      <div class="accept"><code>Χελένικ Ενέρτζι</code><code>HelleniQ</code><code>ΕΛΠΕ</code><code>Ελληνικά Πετρέλαια</code></div>
-      <small>Pinwheel emblem is distinctive and crops perfectly. Best of the five. Note the accept-list must cover the old ΕΛΠΕ name too.</small>
-      <small class="src">Wikimedia Commons · File:HelleniQ Energy logo.svg · PD-textlogo, trademarked</small>
+      <div class="row1">
+        <b>Amita</b>
+        <span class="tag sector">Αναψυκτικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">14.6 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Amita</code><code>Αμίτα</code><code>Αμιτα</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://amita.gr/" target="_blank" rel="noreferrer"></a></small>
     </figcaption>
   </figure>
-
-  <!-- COSMOTE -->
-  <figure class="card review">
-    <div class="panes">
-      <div class="pane"><h4>full logo</h4>
-        <svg viewBox="0 0 546 160" preserveAspectRatio="xMidYMid meet"><use href="#cosmote-full"/></svg>
-      </div>
-      <div class="pane mark"><h4>mark only (DT "T")</h4>
-        <svg viewBox="395 0 151 160" preserveAspectRatio="xMidYMid meet">
-          <path fill="#e20074" d="m400 62c0 0-1.7-51.4-56-62-54.3-10.6 63-21 63-21h48.7v91h-55.7z"/>
-          <path fill-rule="evenodd" fill="#e20074" d="m481 0c35.9 0 65 29.1 65 65v95h-146v-160z"/>
-          <path fill-rule="evenodd" fill="#fff" d="m448.7 122.7v-6.1h4.1c7.2 0 10.5-4.2 10.5-10.5v-63.4h-1.2c-13.5 0-22 8.9-22 22v1.2h-5.1v-29.2h72.1v29.2h-5.1v-1.2c0-13.1-8.5-22-22-22h-1.2v63.4c0 6.3 3.3 10.5 10.5 10.5h4.1v6.1zm58.4-46.5v17.2h-17.1v-17.2zm-55 0v17.2h-17.1v-17.2z"/>
-        </svg>
-      </div>
-    </div>
+  <figure class="card warn" data-status="ok" data-sector="Αναψυκτικά"
+          data-flag="warn" id="epsa">
+    <div class="media"><img src="../../public/logopaignio/_raw/epsa.png" alt="ΕΨΑ" loading="lazy"></div>
     <figcaption>
-      <div class="row1"><b>Cosmote</b> <span class="tag">telecom</span> <span class="tag review">REVIEW · borrowed mark</span></div>
-      <div class="accept"><code>Κοσμοτέ</code><code>Cosmote</code><code>ΟΤΕ</code></div>
-      <small>The only separable symbol is Deutsche Telekom's magenta "T" — not a Cosmote-unique mark, so it reads as "Telekom", not "Cosmote". The Cosmote identity is the wordmark itself. Likely a poor puzzle unless you source an older Cosmote-specific emblem.</small>
-      <small class="src">Wikimedia Commons · File:Cosmote Telekom Logo.svg · PD-textlogo, trademarked</small>
+      <div class="row1">
+        <b>ΕΨΑ</b>
+        <span class="tag sector">Αναψυκτικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">18.3 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>ΕΨΑ</code><code>Έψα</code><code>Εψα</code><code>EPSA</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:EPSA_Logo.png" target="_blank" rel="noreferrer">File:EPSA Logo.png</a></small>
     </figcaption>
   </figure>
-
-  <!-- AEGEAN -->
-  <figure class="card review">
-    <div class="panes">
-      <div class="pane"><h4>full logo</h4>
-        <svg viewBox="0 0 225 46" preserveAspectRatio="xMidYMid meet"><use href="#aegean-full"/></svg>
-      </div>
-      <div class="pane mark"><h4>mark only (motif)</h4>
-        <svg viewBox="192 0 34 46" preserveAspectRatio="xMidYMid meet">
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M215.503 22.9891H223.647C219.34 20.9109 215.827 17.5405 213.67 13.4065C210.104 6.58062 203.218 2.67557 194.265 1.84897L194.478 2.44548C200.67 4.83048 204.959 8.60345 207.441 13.9455L207.443 13.9465C209.193 17.6407 212.006 20.7734 215.503 22.9891Z" fill="#94AACB"/>
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M215.503 22.9891H223.647C219.34 25.0674 215.827 28.439 213.67 32.5722V32.5732C210.104 39.3984 203.218 43.3036 194.265 44.1292L194.478 43.5348C200.67 41.1486 204.959 37.3754 207.441 32.0342L207.443 32.031C209.193 28.3388 212.006 25.2059 215.503 22.9891Z" fill="#00217a"/>
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M194.265 8.71024C195.742 13.9472 197.734 18.3015 199.484 20.4191L199.486 20.4212C200.384 21.5295 201.561 22.4163 202.922 22.9891H209.343C206.317 21.7009 203.883 19.3736 202.544 16.4831L202.542 16.481C200.942 12.9815 197.966 10.1848 194.265 8.71024Z" fill="#94AACB"/>
-          <path fill-rule="evenodd" clip-rule="evenodd" d="M194.265 37.2679C195.742 32.0321 197.734 27.6756 199.484 25.5602L199.486 25.557C200.384 24.4497 201.561 23.5618 202.922 22.9891H209.343C206.317 24.2783 203.883 26.6035 202.544 29.4929L202.542 29.4972C200.942 32.9966 197.966 35.7934 194.265 37.2679Z" fill="#00217a"/>
-        </svg>
-      </div>
-    </div>
+  <figure class="card clean" data-status="ok" data-sector="Αναψυκτικά"
+          data-flag="clean" id="fanta">
+    <div class="media"><img src="../../public/logopaignio/_raw/fanta.svg" alt="Fanta" loading="lazy"></div>
     <figcaption>
-      <div class="row1"><b>Aegean Airlines</b> <span class="tag">airline</span> <span class="tag review">REVIEW · weak mark</span></div>
-      <div class="accept"><code>Έιτζιαν</code><code>Aegean</code><code>Αίγαιον</code></div>
-      <small>This 2020 wordmark logo has only a small blue pinwheel motif — recognizable to frequent flyers, but thin. The real Aegean icon most people picture is the tail livery, which isn't in this file. Consider sourcing the tail mark instead.</small>
-      <small class="src">Wikimedia Commons · File:Aegean Airlines Logo 2020.svg · PD-textlogo, trademarked</small>
+      <div class="row1">
+        <b>Fanta</b>
+        <span class="tag sector">Αναψυκτικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">6.6 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Fanta</code><code>Φάντα</code><code>Φαντα</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Fanta_logo_(2009).svg" target="_blank" rel="noreferrer">File:Fanta logo (2009).svg</a></small>
     </figcaption>
   </figure>
-
-  <!-- PUBLIC -->
-  <figure class="card manual">
-    <div class="panes">
-      <div class="pane"><h4>full logo</h4><div class="missing">no public SVG found</div></div>
-      <div class="pane mark"><h4>mark only</h4><div class="missing">source manually<br>from public.gr</div></div>
-    </div>
+  <figure class="card clean" data-status="error" data-sector="Αναψυκτικά"
+          data-flag="clean" id="ivi">
+    <div class="media"><div class="missing">σφάλμα λήψης</div></div>
     <figcaption>
-      <div class="row1"><b>Public</b> <span class="tag">retail</span> <span class="tag manual">MANUAL · no source</span></div>
-      <div class="accept"><code>Πάμπλικ</code><code>Public</code></div>
-      <small>No clean Wikimedia asset. Grab from public.gr brand assets and record its license. This is the "some brands have no public source" case the PoC was meant to surface.</small>
-      <small class="src">TODO — public.gr official brand asset</small>
+      <div class="row1">
+        <b>Ήβη</b>
+        <span class="tag sector">Αναψυκτικά</span>
+        <span class="tag st-error">σφάλμα</span>
+        
+        
+      </div>
+      
+      <div class="accept"><code>Ήβη</code><code>Ηβη</code><code>IVI</code><code>Ivi</code></div>
+      
+      <small class="src">site unreachable (fetch failed)</small>
     </figcaption>
   </figure>
-
-</div>
-
-<!-- reusable full-logo defs -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-  <g id="cosmote-full">
-    <path fill="#3b61a6" d="m305.3 54h-30.4c-4.1 0-4.5 2-4.5 3.6v7.5h13.8v39.9h11.8v-39.9h13.9v-7.5c0-1.6-0.4-3.6-4.6-3.6z"/>
-    <path fill="#509e2f" d="m39.7 90c2.5 2.5 6.1 6.1 6.6 6.7-3.5 3.8-10.2 9.3-19.6 9.3-14.3 0-26.7-11.1-26.7-26.5 0-15.3 12.2-26.6 26.7-26.6 9.6 0 15.9 5.1 19.5 8.7-0.4 0.4-4 4-6.4 6.6-2 2.1-4.4 0.6-5.6-0.2-1.8-1.2-4.1-2.4-7.5-2.4-7.4 0-13.6 6.2-13.6 13.9 0 7.8 6 13.8 13.6 13.8 2.8 0 5.4-0.9 7.5-2.5 1.5-1.1 3.8-2.7 5.5-0.8"/>
-    <path fill="#509e2f" d="m48 79.5c0-14.7 11.8-26.6 26.5-26.6 14.7 0 26.6 11.9 26.6 26.6 0 14.7-11.9 26.5-26.5 26.5-14.7 0-26.6-11.8-26.6-26.5zm12.9 0c0 7.8 5.9 13.9 13.7 13.9 7.7 0 13.5-6.1 13.5-13.9 0-7.8-5.9-14-13.6-14-7.8 0-13.6 6.2-13.6 14z"/>
-    <path fill="#3b61a6" d="m216.1 79.5c0-14.7 11.9-26.6 26.5-26.6 14.6 0 26.6 11.9 26.6 26.6 0 14.7-11.9 26.5-26.5 26.5-14.7 0-26.6-11.8-26.6-26.5zm12.9 0c0 7.8 5.9 13.9 13.7 13.9 7.7 0 13.6-6.1 13.6-13.9 0-7.8-6-14-13.7-14-7.8 0-13.6 6.2-13.6 14z"/>
-    <path fill="#509e2f" d="m193.8 54h9.9l7.9 51h-13.2l-3.9-29.3-14.4 29.3-14.1-29.5-3.5 29.5h-13l6.6-43.8c0.5-3.3 1-7.2 5.4-7.2h8.3l10.5 24.5 8.1-19.3c0.8-2.1 1.6-5.2 5.4-5.2z"/>
-    <path fill="#509e2f" d="m144.1 94.5c3.4-11-5.8-16.8-10.3-19.3-4.5-2.6-9-4.5-10.2-5-1.1-0.5-4-1.7-2.8-4.3 1.9-4.3 9.9 0.1 13.6 1.9 3.7 1.8 4.5-0.1 4.8-0.7l4.1-7.7c0 0-9.6-6-18.1-6.5-12.8-0.8-19.1 8.3-18.8 14.9 0 7.7 7.8 12 15.5 15.6 7.7 3.5 8.8 5.5 8.8 7.1 0 1.5-0.9 4.3-5.7 4.3-4.8 0-9.5-4.3-11.1-5.5-1.6-1.3-3-0.7-4.1 0.7-1.1 1.4-5.5 6.8-5.5 6.8 4 3.6 10.9 9.3 22.3 9.3 9 0 15.1-4.2 17.5-11.6z"/>
-    <path fill="#3b61a6" d="m338 106c9.5-0.1 15.1-4.3 18-7.3 0.4-0.4-1.8-5.9-4.3-8.5-2-2.1-4.4-0.6-5.5 0.1-2.1 1.3-4 2.9-8.4 3-5.3 0.1-9.9-3.4-12.1-7.9h14.8v-11.9h-14.8c2.2-4.6 6.9-7.9 12.2-7.9 3.3 0 5.8 1.2 7.6 2.4 1.1 0.7 3.6 2.2 5.5 0.1 2.5-2.6 4.7-8.2 4.3-8.6-3.6-3.1-8-6.4-17.3-6.6-14.5-0.4-26.7 11.4-26.7 26.6 0 15.2 12.4 26.5 26.7 26.5z"/>
-    <path fill="#e20074" d="m400 62c0 0-1.7-51.4-56-62-54.3-10.6 63-21 63-21h48.7v91h-55.7z"/>
-    <path fill-rule="evenodd" fill="#e20074" d="m481 0c35.9 0 65 29.1 65 65v95h-146v-160z"/>
-    <path fill-rule="evenodd" fill="#fff" d="m448.7 122.7v-6.1h4.1c7.2 0 10.5-4.2 10.5-10.5v-63.4h-1.2c-13.5 0-22 8.9-22 22v1.2h-5.1v-29.2h72.1v29.2h-5.1v-1.2c0-13.1-8.5-22-22-22h-1.2v63.4c0 6.3 3.3 10.5 10.5 10.5h4.1v6.1zm58.4-46.5v17.2h-17.1v-17.2zm-55 0v17.2h-17.1v-17.2z"/>
-  </g>
-  <g id="aegean-full">
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M215.503 22.9891H223.647C219.34 20.9109 215.827 17.5405 213.67 13.4065C210.104 6.58062 203.218 2.67557 194.265 1.84897L194.478 2.44548C200.67 4.83048 204.959 8.60345 207.441 13.9455L207.443 13.9465C209.193 17.6407 212.006 20.7734 215.503 22.9891Z" fill="#94AACB"/>
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M215.503 22.9891H223.647C219.34 25.0674 215.827 28.439 213.67 32.5722V32.5732C210.104 39.3984 203.218 43.3036 194.265 44.1292L194.478 43.5348C200.67 41.1486 204.959 37.3754 207.441 32.0342L207.443 32.031C209.193 28.3388 212.006 25.2059 215.503 22.9891Z" fill="#00217a"/>
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M194.265 8.71024C195.742 13.9472 197.734 18.3015 199.484 20.4191L199.486 20.4212C200.384 21.5295 201.561 22.4163 202.922 22.9891H209.343C206.317 21.7009 203.883 19.3736 202.544 16.4831L202.542 16.481C200.942 12.9815 197.966 10.1848 194.265 8.71024Z" fill="#94AACB"/>
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M194.265 37.2679C195.742 32.0321 197.734 27.6756 199.484 25.5602L199.486 25.557C200.384 24.4497 201.561 23.5618 202.922 22.9891H209.343C206.317 24.2783 203.883 26.6035 202.544 29.4929L202.542 29.4972C200.942 32.9966 197.966 35.7934 194.265 37.2679Z" fill="#00217a"/>
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M56.3396 32.9808L57.0232 29.4692H39.3515V25.0405H53.4351C53.444 25.0405 53.4496 25.0341 53.4496 25.0266V20.9441H39.3515V16.508H55.2209C55.6093 16.508 55.94 16.2396 56.0011 15.8732L56.6192 12.419H35.1353C34.7313 12.419 34.4072 12.7311 34.4072 13.1177V33.5591H55.627C55.9811 33.5591 56.2807 33.3142 56.3396 32.9808Z" fill="#00217a"/>
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M115.874 32.9808L116.559 29.4692H98.888V25.0405H112.97C112.979 25.0405 112.985 25.0341 112.985 25.0266V20.9441H98.888V16.508H114.756C115.144 16.508 115.474 16.2396 115.536 15.8732L116.154 12.419H94.6711C94.2683 12.419 93.9431 12.7311 93.9431 13.1177V33.5591H115.163C115.516 33.5591 115.816 33.3142 115.874 32.9808Z" fill="#00217a"/>
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M157.843 18.6979L173.377 33.0029C173.765 33.3603 174.276 33.5591 174.817 33.5591H178.415V12.419H174.371C173.945 12.419 173.601 12.7487 173.601 13.156V26.7368L158.596 12.937C158.227 12.6041 157.741 12.419 157.232 12.419H152.899V33.5591H157.816L157.843 18.6979Z" fill="#00217a"/>
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M8.90415 29.6838C9.13408 29.2477 9.59728 28.9744 10.1094 28.9744H22.0436L24.1652 32.8902C24.3885 33.2997 24.8339 33.5591 25.316 33.5591H30.1546L19.0534 13.273C18.7646 12.7477 18.1948 12.419 17.5772 12.419H12.9196L1.35303 33.5591H6.78366L8.90415 29.6838ZM15.6844 17.3037L19.812 24.8906H11.5289L15.6844 17.3037Z" fill="#00217a"/>
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M127.203 29.6838C127.434 29.2477 127.896 28.9744 128.408 28.9744H140.341L142.464 32.8902C142.686 33.2997 143.131 33.5591 143.614 33.5591H148.454L137.351 13.273C137.063 12.7477 136.494 12.419 135.875 12.419H131.219L119.652 33.5591H125.083L127.203 29.6838ZM133.982 17.3037L138.111 24.8906H129.828L133.982 17.3037Z" fill="#00217a"/>
-    <path fill-rule="evenodd" clip-rule="evenodd" d="M87.371 30.9747V21.64H78.0384V25.0727C78.0384 25.4399 78.3505 25.7379 78.734 25.7379H82.4042V28.5106C81.1344 29.377 78.0841 29.9763 74.8866 29.9763C69.7314 29.9763 66.4726 27.3292 66.5283 23.0684C66.583 18.8301 69.8206 16.1904 74.9189 16.1904C78.472 16.1904 81.6405 16.9631 84.5203 18.515L86.7244 14.5555C80.7074 11.6912 75.4585 11.8647 74.9189 11.8647C66.9988 11.8647 61.469 16.4724 61.469 23.0684C61.469 29.7868 66.7468 34.3009 74.6068 34.3009C83.1111 34.3009 87.371 30.9747 87.371 30.9747Z" fill="#00217a"/>
-  </g>
-  <g id="helleniq-full">
-    <path d="M292.062 100.604V42.2292C292.062 40.4792 290.916 39.25 289.249 39.25H281.54C279.894 39.25 278.728 40.4375 278.728 42.1458V64.4167H253.413V42.1458C253.413 40.3542 252.309 39.25 250.517 39.25H242.892C241.267 39.25 240.079 40.4583 240.079 42.1458V100.604C240.079 102.312 241.225 103.5 242.892 103.5H250.601C252.309 103.5 253.413 102.354 253.413 100.604V75.4167H278.728V100.604C278.728 102.271 279.936 103.5 281.624 103.5H289.249C290.937 103.5 292.062 102.333 292.062 100.604Z" fill="#0032A0"/>
-    <path d="M311.939 103.5H351.358C352.879 103.5 353.921 102.604 354.15 101.083C354.15 101.083 354.879 96.7707 355.025 95.3332C355.025 95.2498 355.046 95.0207 355.046 95.0207C355.046 92.8748 353.587 92.1248 352.337 92.1248H322.46V75.9373H342.42C344.128 75.9373 345.399 74.6873 345.399 73.0415V67.8123C345.399 66.1665 344.108 64.9165 342.42 64.9165H322.46V50.229H350.754C352.546 50.229 353.733 49.0207 353.733 47.2498V42.2082C353.733 40.4998 352.441 39.229 350.754 39.229H311.959C310.563 39.229 309.147 40.1457 309.147 42.2082V100.5C309.126 102.229 310.334 103.5 311.939 103.5Z" fill="#0032A0"/>
-    <path d="M406.111 92.1458H379.505V42.1458C379.505 40.3542 378.401 39.25 376.609 39.25H368.984C367.358 39.25 366.171 40.4583 366.171 42.1458V100.521C366.171 102.583 367.588 103.5 368.984 103.5H405.215C406.715 103.5 407.924 102.479 408.174 101.021C408.174 101.021 408.841 96.6667 408.986 95.2083C408.986 95.1042 409.007 94.75 409.007 94.75C409.007 93.4583 408.007 92.1458 406.111 92.1458Z" fill="#0032A0"/>
-    <path d="M421.613 103.5H457.844C459.344 103.5 460.553 102.479 460.803 101.021C460.803 101.021 461.469 96.6665 461.615 95.2082C461.615 95.104 461.636 94.7498 461.636 94.7498C461.636 93.4373 460.636 92.1248 458.74 92.1248H432.134V42.1248C432.134 40.3332 431.03 39.229 429.238 39.229H421.613C419.987 39.229 418.8 40.4373 418.8 42.1248V100.5C418.821 102.583 420.217 103.5 421.613 103.5Z" fill="#0032A0"/>
-    <path d="M514.64 92.1458H484.763V75.9583H504.722C506.431 75.9583 507.702 74.7083 507.702 73.0625V67.8333C507.702 66.1875 506.41 64.9375 504.722 64.9375H484.763V50.25H513.056C514.848 50.25 516.036 49.0417 516.036 47.2708V42.2292C516.036 40.5208 514.744 39.25 513.056 39.25H474.262C472.866 39.25 471.449 40.1667 471.449 42.2292V100.521C471.449 102.229 472.658 103.5 474.262 103.5H513.681C515.202 103.5 516.244 102.604 516.473 101.083C516.473 101.083 517.202 96.7708 517.348 95.3333C517.348 95.25 517.369 95.0208 517.369 95.0208C517.348 92.8958 515.89 92.1458 514.64 92.1458Z" fill="#0032A0"/>
-    <path d="M580.998 39.25H573.477C571.769 39.25 570.581 40.4792 570.581 42.2292V86.9792L551.142 41.1667C550.309 39.25 548.621 39.25 547.975 39.25H533.183C531.287 39.25 530.203 40.3125 530.203 42.1458V100.437C530.203 102.333 531.37 103.5 533.266 103.5H540.537C542.35 103.5 543.517 102.354 543.517 100.604V55.375L563.122 101.354C563.664 102.771 564.747 103.5 566.31 103.5H581.019C582.457 103.5 583.915 102.542 583.915 100.437V42.2292C583.894 40.4167 582.748 39.25 580.998 39.25Z" fill="#0032A0"/>
-    <path d="M611.397 58.479H603.876C602.209 58.479 600.979 59.6873 600.979 61.3748V100.625C600.979 102.333 602.125 103.521 603.792 103.521H611.501C613.21 103.521 614.314 102.375 614.314 100.625V61.2707C614.272 59.5832 613.147 58.479 611.397 58.479Z" fill="#0032A0"/>
-    <path d="M611.48 39.25H603.771C602.125 39.25 600.958 40.4375 600.958 42.1458V49.4167C600.958 51.375 602.375 52.3958 603.771 52.3958H611.48C613.188 52.3958 614.292 51.25 614.292 49.5V42.1458C614.271 40.3958 613.188 39.25 611.48 39.25Z" fill="#0032A0"/>
-    <path d="M692.257 93.4583H687.131C685.319 93.4583 683.881 93.1875 682.819 92.625C686.611 87.1667 688.527 79.7708 688.527 70.6458C688.527 50.75 677.047 38.875 657.817 38.875C638.586 38.875 627.106 50.75 627.106 70.6458C627.106 92.1667 638.045 104.021 657.9 104.021C664.901 104.021 670.88 102.5 675.693 99.4792C678.61 102.167 682.652 103.479 687.944 103.479H692.278C693.924 103.479 695.278 102.125 695.278 100.479V96.4583C695.257 94.8125 693.903 93.4583 692.257 93.4583ZM657.65 73.625C656.004 73.625 654.65 74.9792 654.65 76.625V80.6667C654.65 82.3125 656.004 83.6667 657.65 83.6667H661.984C666.38 83.6667 668.068 85.6667 669.526 88.625C666.922 91.1042 663.276 92.2292 657.921 92.2292C649.212 92.2292 641.149 89.6667 641.149 71.0208C641.149 52.3333 650.712 50.1667 657.921 50.1667C669.297 50.1667 674.61 56.7917 674.61 71.0208C674.61 73.1667 674.506 75.1458 674.256 77.0208C671.443 74.7083 667.38 73.625 661.817 73.625H657.65Z" fill="#0032A0"/>
-    <path d="M187.971 52.375C187.971 52.375 187.951 52.375 187.971 52.375C171.033 21.1667 137.989 0 100.007 0C44.774 0 0 44.7708 0 100C0 105.521 0.437531 110.896 1.29176 116.167C1.31259 116.292 1.45844 116.354 1.56261 116.271C6.1671 113 10.4174 111.208 21.3973 111.187C26.6685 111.187 64.4003 113.708 77.2554 112.021C89.0062 110.479 96.09 103.688 97.7985 91.2708C98.2569 87.9792 98.4444 83.1667 98.6319 79.0833C99.2778 63.8958 105.466 57.7083 120.217 56.6667C126.321 56.2292 142.51 57.1667 156.865 57.5C166.782 57.7292 173.825 57.0417 181.346 55.3333C185.742 54.3542 188.034 52.6042 187.971 52.375ZM200.014 100C200.035 107.937 199.097 113.458 198.806 115.479C198.556 117.229 197.66 118.438 196.41 119.688C193.097 123 188.555 125.187 183.034 126.625C166.949 130.812 131.718 127.062 121.779 127.958C107.528 129.25 101.403 134.875 100.715 149.833C100.528 153.958 100.486 158.104 99.9445 162.021C97.1318 181.979 82.0266 182.896 74.1302 183.646C69.5882 184.083 58.5249 184.333 50.3994 183.5C46.5866 183.104 42.378 181.667 39.6486 179.75C28.0228 170.917 18.418 159.708 11.5425 146.708C11.48 146.583 11.5425 146.542 11.605 146.5C15.8969 143.771 20.4181 142.104 26.4602 141.979C37.0026 141.792 65.7129 144.875 79.7347 143.417C93.569 142 99.5695 135.146 100.695 121.104C100.986 117.583 101.09 114.187 101.528 110.667C102.924 99.2083 108.653 93.2083 120.321 92.3958C132.655 91.5417 163.574 93.5833 178.867 92.9167C187.971 92.5208 194.534 90.875 198.806 86.4167C198.889 86.3333 199.056 86.3542 199.097 86.5C199.701 90.9375 199.993 95.4375 200.014 100ZM101.674 200C101.486 200 101.465 199.875 101.486 199.792C102.195 197.292 102.57 194.625 102.82 191.396C103.07 188.125 103.236 184.646 103.653 181.271C105.007 170.083 111.466 164.208 122.363 163.625C131.863 163.125 142.697 163.625 152.698 163.875C161.074 164.083 167.97 164.312 176.241 164.25C176.408 164.25 176.512 164.437 176.387 164.562C158.219 185.979 131.697 199.5 101.674 200ZM88.6937 62.2292C86.131 63 74.4219 66.3333 59.7333 66.9792C58.8583 76.1667 55.8164 83.3333 55.108 84.8958C55.0455 85.0208 54.8788 85.0208 54.8163 84.8958C54.1079 83.3333 51.0661 76.1667 50.191 66.9792C35.4816 66.3542 23.7725 63.0208 21.2306 62.2292C21.064 62.1875 21.064 61.9583 21.2306 61.8958C23.7933 61.125 35.5025 57.7917 50.191 57.1458C51.0661 47.9583 54.1079 40.7917 54.8163 39.2292C54.8788 39.1042 55.0455 39.1042 55.108 39.2292C55.8164 40.7917 58.8583 47.9583 59.7333 57.1458C74.4427 57.7708 86.1519 61.1042 88.6937 61.8958C88.8395 61.9583 88.8395 62.1667 88.6937 62.2292Z" fill="#0032A0"/>
-  </g>
-</defs></svg>
-
+  <figure class="card bad" data-status="ok" data-sector="Αναψυκτικά"
+          data-flag="bad" id="lipton-ice-tea">
+    <div class="media"><img src="../../public/logopaignio/_raw/lipton-ice-tea.png" alt="Lipton Ice Tea" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Lipton Ice Tea</b>
+        <span class="tag sector">Αναψυκτικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">557 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="bad">Πολύ βαρύ (557 KB) — χρειάζεται αντικατάσταση.</li><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Lipton Ice Tea</code><code>Ice Tea</code><code>Λίπτον</code><code>Λιπτον</code><code>Lipton</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Lipton_logo.png" target="_blank" rel="noreferrer">File:Lipton logo.png</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Αναψυκτικά"
+          data-flag="warn" id="loux">
+    <div class="media"><img src="../../public/logopaignio/_raw/loux.svg" alt="Λουξ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Λουξ</b>
+        <span class="tag sector">Αναψυκτικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">42.3 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="warn">Το SVG περιέχει ενσωματωμένη εικόνα (όχι καθαρά vector).</li></ul>
+      <div class="accept"><code>Λουξ</code><code>Loux</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:%CE%9B%CE%BF%CF%85%CE%BE_(logo).svg" target="_blank" rel="noreferrer">File:Λουξ (logo).svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Αναψυκτικά"
+          data-flag="clean" id="nestea">
+    <div class="media"><img src="../../public/logopaignio/_raw/nestea.jpg" alt="Nestea" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Nestea</b>
+        <span class="tag sector">Αναψυκτικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">5.9 KB</span>
+        <span class="tag fmt">JPG</span>
+      </div>
+      
+      <div class="accept"><code>Nestea</code><code>Νεστέα</code><code>Νεστεα</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://nestea.com" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Αναψυκτικά"
+          data-flag="warn" id="pepsi">
+    <div class="media"><img src="../../public/logopaignio/_raw/pepsi.svg" alt="Pepsi" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Pepsi</b>
+        <span class="tag sector">Αναψυκτικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">11.1 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="warn">Ένα μόνο path — πιθανώς «flattened»· το σύμβολο δεν απομονώνεται με clip.</li></ul>
+      <div class="accept"><code>Pepsi</code><code>Πέπσι</code><code>Πεπσι</code></div>
+      <small class="note">The globe roundel is a textbook icon-only mark.</small>
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Pepsi_logo_(2014).svg" target="_blank" rel="noreferrer">File:Pepsi logo (2014).svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Αναψυκτικά"
+          data-flag="warn" id="sprite">
+    <div class="media"><img src="../../public/logopaignio/_raw/sprite.svg" alt="Sprite" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Sprite</b>
+        <span class="tag sector">Αναψυκτικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">2.8 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="warn">Ένα μόνο path — πιθανώς «flattened»· το σύμβολο δεν απομονώνεται με clip.</li></ul>
+      <div class="accept"><code>Sprite</code><code>Σπράιτ</code><code>Σπραιτ</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Sprite_Logo.svg" target="_blank" rel="noreferrer">File:Sprite Logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Αναψυκτικά"
+          data-flag="warn" id="three-cents">
+    <div class="media"><img src="../../public/logopaignio/_raw/three-cents.png" alt="Three Cents" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Three Cents</b>
+        <span class="tag sector">Αναψυκτικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">2.4 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Three Cents</code><code>3 Cents</code><code>Θρι Σεντς</code><code>3cents</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://threecents.com/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Αναψυκτικά"
+          data-flag="clean" id="vikos">
+    <div class="media"><img src="../../public/logopaignio/_raw/vikos.svg" alt="Βίκος" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Βίκος</b>
+        <span class="tag sector">Αναψυκτικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.5 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Βίκος</code><code>Βικος</code><code>Vikos</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.vikos.com/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure></div>
+<h2>Σούπερ μάρκετ <span style="text-transform:none;color:#a1a1aa">· 8</span></h2>
+<div class="grid">
+  <figure class="card clean" data-status="ok" data-sector="Σούπερ μάρκετ"
+          data-flag="clean" id="ab-vassilopoulos">
+    <div class="media"><img src="../../public/logopaignio/_raw/ab-vassilopoulos.svg" alt="ΑΒ Βασιλόπουλος" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΑΒ Βασιλόπουλος</b>
+        <span class="tag sector">Σούπερ μάρκετ</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">39.9 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>ΑΒ Βασιλόπουλος</code><code>ΑΒ Βασιλοπουλος</code><code>Βασιλόπουλος</code><code>Βασιλοπουλος</code><code>ΑΒ</code><code>AB Vassilopoulos</code><code>AB</code></div>
+      <small class="note">The «ΑΒ» monogram tile is the mark.</small>
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Alfa-Beta_Vassilopoulos_logo_with_slogan.svg" target="_blank" rel="noreferrer">File:Alfa-Beta Vassilopoulos logo with slogan.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Σούπερ μάρκετ"
+          data-flag="clean" id="bazaar">
+    <div class="media"><img src="../../public/logopaignio/_raw/bazaar.svg" alt="Bazaar" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Bazaar</b>
+        <span class="tag sector">Σούπερ μάρκετ</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.3 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Bazaar</code><code>Μπαζάαρ</code><code>Μπαζααρ</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Logo_Bazaar.svg" target="_blank" rel="noreferrer">File:Logo Bazaar.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Σούπερ μάρκετ"
+          data-flag="warn" id="galaxias">
+    <div class="media"><img src="../../public/logopaignio/_raw/galaxias.png" alt="Γαλαξίας" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Γαλαξίας</b>
+        <span class="tag sector">Σούπερ μάρκετ</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">33.4 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Γαλαξίας</code><code>Γαλαξιας</code><code>Galaxias</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://galaxias.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Σούπερ μάρκετ"
+          data-flag="warn" id="kritikos">
+    <div class="media"><img src="../../public/logopaignio/_raw/kritikos.svg" alt="Κρητικός" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Κρητικός</b>
+        <span class="tag sector">Σούπερ μάρκετ</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">97.7 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="warn">Βαρύ (97.7 KB) — χρειάζεται συμπίεση.</li></ul>
+      <div class="accept"><code>Κρητικός</code><code>Κρητικος</code><code>Kritikos</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://kritikos-sm.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Σούπερ μάρκετ"
+          data-flag="clean" id="lidl-hellas">
+    <div class="media"><img src="../../public/logopaignio/_raw/lidl-hellas.svg" alt="Lidl" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Lidl</b>
+        <span class="tag sector">Σούπερ μάρκετ</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">1.2 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Lidl</code><code>Λιντλ</code><code>Λίντλ</code></div>
+      <small class="note">FOREIGN — German. Likely reject per the Greek-scope rule; kept only for the eye check.</small>
+      <small class="src">CC0 · <a href="https://commons.wikimedia.org/wiki/File:Lidl_logo.svg" target="_blank" rel="noreferrer">File:Lidl logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Σούπερ μάρκετ"
+          data-flag="clean" id="masoutis">
+    <div class="media"><img src="../../public/logopaignio/_raw/masoutis.svg" alt="Μασούτης" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Μασούτης</b>
+        <span class="tag sector">Σούπερ μάρκετ</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">8.7 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Μασούτης</code><code>Μασουτης</code><code>Masoutis</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:%CE%9C%CE%B1%CF%83%CE%BF%CF%8D%CF%84%CE%B7%CF%82_(logo).svg" target="_blank" rel="noreferrer">File:Μασούτης (logo).svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Σούπερ μάρκετ"
+          data-flag="warn" id="my-market">
+    <div class="media"><img src="../../public/logopaignio/_raw/my-market.png" alt="My Market" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>My Market</b>
+        <span class="tag sector">Σούπερ μάρκετ</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">2.1 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>My Market</code><code>Μάι Μάρκετ</code><code>Μαι Μαρκετ</code><code>MyMarket</code><code>Metro</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://mymarket.gr" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Σούπερ μάρκετ"
+          data-flag="clean" id="sklavenitis">
+    <div class="media"><img src="../../public/logopaignio/_raw/sklavenitis.svg" alt="Σκλαβενίτης" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Σκλαβενίτης</b>
+        <span class="tag sector">Σούπερ μάρκετ</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">1.8 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Σκλαβενίτης</code><code>Σκλαβενιτης</code><code>Sklavenitis</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Sklavenitis_Logo.svg" target="_blank" rel="noreferrer">File:Sklavenitis Logo.svg</a></small>
+    </figcaption>
+  </figure></div>
+<h2>Ταχυμεταφορές <span style="text-transform:none;color:#a1a1aa">· 2</span></h2>
+<div class="grid">
+  <figure class="card clean" data-status="ok" data-sector="Ταχυμεταφορές"
+          data-flag="clean" id="acs">
+    <div class="media"><img src="../../public/logopaignio/_raw/acs.svg" alt="ACS" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ACS</b>
+        <span class="tag sector">Ταχυμεταφορές</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">9.5 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>ACS</code><code>Έι Σι Ες</code><code>Ειcιες</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.acscourier.net/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Ταχυμεταφορές"
+          data-flag="warn" id="geniki-taxydromiki">
+    <div class="media"><img src="../../public/logopaignio/_raw/geniki-taxydromiki.png" alt="Γενική Ταχυδρομική" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Γενική Ταχυδρομική</b>
+        <span class="tag sector">Ταχυμεταφορές</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">79.0 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">Βαρύ (79.0 KB) — χρειάζεται συμπίεση.</li><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Γενική Ταχυδρομική</code><code>Γενικη Ταχυδρομικη</code><code>Geniki Taxydromiki</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.taxydromiki.com/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure></div>
+<h2>Αεροπορική εταιρεία <span style="text-transform:none;color:#a1a1aa">· 3</span></h2>
+<div class="grid">
+  <figure class="card clean" data-status="ok" data-sector="Αεροπορική εταιρεία"
+          data-flag="clean" id="aegean">
+    <div class="media"><img src="../../public/logopaignio/_raw/aegean.svg" alt="Aegean Airlines" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Aegean Airlines</b>
+        <span class="tag sector">Αεροπορική εταιρεία</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.8 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Aegean</code><code>Aegean Airlines</code><code>Έιτζιαν</code><code>Ειτζιαν</code><code>Αιγαίον</code><code>Αιγαιον</code></div>
+      <small class="note">PoC ✅ keep — 2020 motif is thin; prefer a tail-livery mark if a better asset appears.</small>
+      <small class="src">Public domain · <a href="https://commons.wikimedia.org/wiki/File:Aegean_Airlines_logo_light-on-dark.svg" target="_blank" rel="noreferrer">File:Aegean Airlines logo light-on-dark.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Αεροπορική εταιρεία"
+          data-flag="warn" id="olympic-airways">
+    <div class="media"><img src="../../public/logopaignio/_raw/olympic-airways.svg" alt="Olympic Airways" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Olympic Airways</b>
+        <span class="tag sector">Αεροπορική εταιρεία</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">8.9 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="warn">Ο τίτλος λέει «wordmark» — πιθανώς μόνο το όνομα, χωρίς σύμβολο (ΑΠΟΡΡΙΨΗ).</li></ul>
+      <div class="accept"><code>Olympic Airways</code><code>Ολυμπιακή</code><code>Ολυμπιακη</code><code>Ολυμπιακή Αεροπορία</code><code>Olympic</code><code>Olympic Air</code></div>
+      <small class="note">DEFUNCT/nostalgia — the six meander rings are one of the strongest Greek marks.</small>
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Olympic_Air_wordmark.svg" target="_blank" rel="noreferrer">File:Olympic Air wordmark.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Αεροπορική εταιρεία"
+          data-flag="clean" id="sky-express">
+    <div class="media"><img src="../../public/logopaignio/_raw/sky-express.svg" alt="Sky Express" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Sky Express</b>
+        <span class="tag sector">Αεροπορική εταιρεία</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.2 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Sky Express</code><code>Σκάι Εξπρές</code><code>Σκαι Εξπρες</code><code>SkyExpress</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Sky_Express_(Greece)_logo.svg" target="_blank" rel="noreferrer">File:Sky Express (Greece) logo.svg</a></small>
+    </figcaption>
+  </figure></div>
+<h2>Καύσιμα <span style="text-transform:none;color:#a1a1aa">· 9</span></h2>
+<div class="grid">
+  <figure class="card clean" data-status="ok" data-sector="Καύσιμα"
+          data-flag="clean" id="aegean-oil">
+    <div class="media"><img src="../../public/logopaignio/_raw/aegean-oil.svg" alt="Aegean Oil" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Aegean Oil</b>
+        <span class="tag sector">Καύσιμα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">7.3 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Aegean Oil</code><code>Έιτζιαν Όιλ</code><code>Αιγαίον Όιλ</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Aegean-Oil-logo.svg" target="_blank" rel="noreferrer">File:Aegean-Oil-logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Καύσιμα"
+          data-flag="clean" id="avin">
+    <div class="media"><img src="../../public/logopaignio/_raw/avin.svg" alt="Avin" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Avin</b>
+        <span class="tag sector">Καύσιμα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">1.3 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Avin</code><code>Άβιν</code><code>Αβιν</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.avinoil.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="error" data-sector="Καύσιμα"
+          data-flag="clean" id="coral">
+    <div class="media"><div class="missing">σφάλμα λήψης</div></div>
+    <figcaption>
+      <div class="row1">
+        <b>Coral</b>
+        <span class="tag sector">Καύσιμα</span>
+        <span class="tag st-error">σφάλμα</span>
+        
+        
+      </div>
+      
+      <div class="accept"><code>Coral</code><code>Κόραλ</code><code>Κοραλ</code></div>
+      
+      <small class="src">site unreachable (fetch failed)</small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Καύσιμα"
+          data-flag="warn" id="eko">
+    <div class="media"><img src="../../public/logopaignio/_raw/eko.png" alt="ΕΚΟ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΕΚΟ</b>
+        <span class="tag sector">Καύσιμα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">11.6 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>ΕΚΟ</code><code>EKO</code><code>Εκο</code></div>
+      <small class="note">Flame mark.</small>
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.eko.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Καύσιμα"
+          data-flag="clean" id="elin">
+    <div class="media"><img src="../../public/logopaignio/_raw/elin.svg" alt="ELIN" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ELIN</b>
+        <span class="tag sector">Καύσιμα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.2 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>ELIN</code><code>ΕΛΙΝ</code><code>Έλιν</code><code>Ελιν</code><code>Elinoil</code><code>ΕΛΙΝΟΙΛ</code></div>
+      <small class="note">Same group as ΕΛΙΝΟΙΛ — accept both names.</small>
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.elin.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Καύσιμα"
+          data-flag="warn" id="eteka">
+    <div class="media"><img src="../../public/logopaignio/_raw/eteka.png" alt="ΕΤΕΚΑ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΕΤΕΚΑ</b>
+        <span class="tag sector">Καύσιμα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">23.2 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>ΕΤΕΚΑ</code><code>ETEKA</code><code>Ετεκα</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://eteka.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Καύσιμα"
+          data-flag="warn" id="jetoil">
+    <div class="media"><img src="../../public/logopaignio/_raw/jetoil.png" alt="Jetoil" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Jetoil</b>
+        <span class="tag sector">Καύσιμα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">11.2 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Jetoil</code><code>Τζέτοϊλ</code><code>Τζετοιλ</code></div>
+      <small class="note">DEFUNCT — nostalgia mark.</small>
+      <small class="src">© the company — no stated license · trademarked · <a href="https://jetoil.gr" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Καύσιμα"
+          data-flag="warn" id="revoil">
+    <div class="media"><img src="../../public/logopaignio/_raw/revoil.png" alt="Revoil" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Revoil</b>
+        <span class="tag sector">Καύσιμα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.5 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Revoil</code><code>Ρεβόιλ</code><code>Ρεβοιλ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.revoil.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Καύσιμα"
+          data-flag="warn" id="silkoil">
+    <div class="media"><img src="../../public/logopaignio/_raw/silkoil.png" alt="Silk Oil" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Silk Oil</b>
+        <span class="tag sector">Καύσιμα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">22.2 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Silk Oil</code><code>Silkoil</code><code>Σιλκ Όιλ</code><code>Σιλκοιλ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.silkoil.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure></div>
+<h2>Γαλακτοκομικά <span style="text-transform:none;color:#a1a1aa">· 9</span></h2>
+<div class="grid">
+  <figure class="card warn" data-status="ok" data-sector="Γαλακτοκομικά"
+          data-flag="warn" id="agno">
+    <div class="media"><img src="../../public/logopaignio/_raw/agno.png" alt="ΑΓΝΟ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΑΓΝΟ</b>
+        <span class="tag sector">Γαλακτοκομικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">20.4 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>ΑΓΝΟ</code><code>AGNO</code><code>Αγνο</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://agno.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Γαλακτοκομικά"
+          data-flag="clean" id="delta">
+    <div class="media"><img src="../../public/logopaignio/_raw/delta.svg" alt="ΔΕΛΤΑ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΔΕΛΤΑ</b>
+        <span class="tag sector">Γαλακτοκομικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.8 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>ΔΕΛΤΑ</code><code>Δέλτα</code><code>Δελτα</code><code>Delta</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:%CE%94%CE%AD%CE%BB%CF%84%CE%B1_%CE%91%CE%95_(logo).svg" target="_blank" rel="noreferrer">File:Δέλτα ΑΕ (logo).svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Γαλακτοκομικά"
+          data-flag="clean" id="evga">
+    <div class="media"><img src="../../public/logopaignio/_raw/evga.svg" alt="ΕΒΓΑ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΕΒΓΑ</b>
+        <span class="tag sector">Γαλακτοκομικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">8.9 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>ΕΒΓΑ</code><code>EVGA</code><code>Εβγα</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Evga_logo.svg" target="_blank" rel="noreferrer">File:Evga logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Γαλακτοκομικά"
+          data-flag="clean" id="fage">
+    <div class="media"><img src="../../public/logopaignio/_raw/fage.svg" alt="ΦΑΓΕ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΦΑΓΕ</b>
+        <span class="tag sector">Γαλακτοκομικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">32.0 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>ΦΑΓΕ</code><code>Φάγε</code><code>Φαγε</code><code>FAGE</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Fage_logo.svg" target="_blank" rel="noreferrer">File:Fage logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Γαλακτοκομικά"
+          data-flag="clean" id="giannotiko">
+    <div class="media"><img src="../../public/logopaignio/_raw/giannotiko.svg" alt="Γιαννιώτικο" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Γιαννιώτικο</b>
+        <span class="tag sector">Γαλακτοκομικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">2.9 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Γιαννιώτικο</code><code>Γιαννιωτικο</code><code>Giannotiko</code><code>Γιαννιώτικο Γάλα</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://dodoni.com/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card bad" data-status="ok" data-sector="Γαλακτοκομικά"
+          data-flag="bad" id="kri-kri">
+    <div class="media"><img src="../../public/logopaignio/_raw/kri-kri.png" alt="Κρι Κρι" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Κρι Κρι</b>
+        <span class="tag sector">Γαλακτοκομικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">1352 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="bad">Πιθανώς ΛΑΘΟΣ εταιρεία — ο τίτλος «File:Logo KRI dr. Radjiman Wedyodiningrat.png» δεν αναφέρει τη μάρκα.</li><li class="bad">Πολύ βαρύ (1352 KB) — χρειάζεται αντικατάσταση.</li><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Κρι Κρι</code><code>Κρι-Κρι</code><code>Kri Kri</code><code>Kri-Kri</code></div>
+      
+      <small class="src">Public domain · <a href="https://commons.wikimedia.org/wiki/File:Logo_KRI_dr._Radjiman_Wedyodiningrat.png" target="_blank" rel="noreferrer">File:Logo KRI dr. Radjiman Wedyodiningrat.png</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Γαλακτοκομικά"
+          data-flag="warn" id="mevgal">
+    <div class="media"><img src="../../public/logopaignio/_raw/mevgal.png" alt="Μέβγαλ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Μέβγαλ</b>
+        <span class="tag sector">Γαλακτοκομικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">121 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">Βαρύ (121 KB) — χρειάζεται συμπίεση.</li><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Μέβγαλ</code><code>Μεβγαλ</code><code>Mevgal</code></div>
+      
+      <small class="src">CC BY-SA 4.0 · <a href="https://commons.wikimedia.org/wiki/File:MEVGAL_LOGO_(DESCRIPTOR).png" target="_blank" rel="noreferrer">File:MEVGAL LOGO (DESCRIPTOR).png</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Γαλακτοκομικά"
+          data-flag="warn" id="nounou">
+    <div class="media"><img src="../../public/logopaignio/_raw/nounou.png" alt="ΝΟΥΝΟΥ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΝΟΥΝΟΥ</b>
+        <span class="tag sector">Γαλακτοκομικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">81.1 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">Βαρύ (81.1 KB) — χρειάζεται συμπίεση.</li><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>ΝΟΥΝΟΥ</code><code>Νουνού</code><code>Νουνου</code><code>Nounou</code><code>NOYNOY</code></div>
+      <small class="note">Mascot mark — strong candidate if the bear/child figure separates.</small>
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.nounou.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="not-found" data-sector="Γαλακτοκομικά"
+          data-flag="clean" id="olympos">
+    <div class="media"><div class="missing">δεν βρέθηκε στο Commons</div></div>
+    <figcaption>
+      <div class="row1">
+        <b>Όλυμπος</b>
+        <span class="tag sector">Γαλακτοκομικά</span>
+        <span class="tag st-not-found">δεν βρέθηκε</span>
+        
+        
+      </div>
+      
+      <div class="accept"><code>Όλυμπος</code><code>Ολυμπος</code><code>Olympos</code></div>
+      
+      <small class="src">no usable asset (tried 1: icon-192: only 32×32)</small>
+    </figcaption>
+  </figure></div>
+<h2>Κατασκευές <span style="text-transform:none;color:#a1a1aa">· 3</span></h2>
+<div class="grid">
+  <figure class="card clean" data-status="ok" data-sector="Κατασκευές"
+          data-flag="clean" id="aktor">
+    <div class="media"><img src="../../public/logopaignio/_raw/aktor.svg" alt="Aktor" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Aktor</b>
+        <span class="tag sector">Κατασκευές</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">6.4 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Aktor</code><code>Άκτωρ</code><code>Ακτωρ</code><code>Ελλάκτωρ</code><code>Ellaktor</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Ellaktor_logo.svg" target="_blank" rel="noreferrer">File:Ellaktor logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Κατασκευές"
+          data-flag="clean" id="gek-terna">
+    <div class="media"><img src="../../public/logopaignio/_raw/gek-terna.svg" alt="ΓΕΚ ΤΕΡΝΑ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΓΕΚ ΤΕΡΝΑ</b>
+        <span class="tag sector">Κατασκευές</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">13.7 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>ΓΕΚ ΤΕΡΝΑ</code><code>ΓΕΚ</code><code>ΤΕΡΝΑ</code><code>Τέρνα</code><code>Τερνα</code><code>GEK TERNA</code><code>Terna</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Logo_Terna.svg" target="_blank" rel="noreferrer">File:Logo Terna.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="error" data-sector="Κατασκευές"
+          data-flag="clean" id="pelargos">
+    <div class="media"><div class="missing">σφάλμα λήψης</div></div>
+    <figcaption>
+      <div class="row1">
+        <b>Πελαργός</b>
+        <span class="tag sector">Κατασκευές</span>
+        <span class="tag st-error">σφάλμα</span>
+        
+        
+      </div>
+      
+      <div class="accept"><code>Πελαργός</code><code>Πελαργος</code><code>Pelargos</code><code>Πελαργός Τεχνική</code></div>
+      
+      <small class="src">site unreachable (fetch failed)</small>
+    </figcaption>
+  </figure></div>
+<h2>Τρόφιμα <span style="text-transform:none;color:#a1a1aa">· 8</span></h2>
+<div class="grid">
+  <figure class="card clean" data-status="error" data-sector="Τρόφιμα"
+          data-flag="clean" id="allatini">
+    <div class="media"><div class="missing">σφάλμα λήψης</div></div>
+    <figcaption>
+      <div class="row1">
+        <b>Αλλατίνη</b>
+        <span class="tag sector">Τρόφιμα</span>
+        <span class="tag st-error">σφάλμα</span>
+        
+        
+      </div>
+      
+      <div class="accept"><code>Αλλατίνη</code><code>Αλλατινη</code><code>Allatini</code></div>
+      
+      <small class="src">site unreachable (This operation was aborted)</small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Τρόφιμα"
+          data-flag="warn" id="barba-stathis">
+    <div class="media"><img src="../../public/logopaignio/_raw/barba-stathis.png" alt="Μπάρμπα Στάθης" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Μπάρμπα Στάθης</b>
+        <span class="tag sector">Τρόφιμα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">27.6 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Μπάρμπα Στάθης</code><code>Μπαρμπα Σταθης</code><code>Barba Stathis</code><code>Μπαρμπαστάθης</code></div>
+      <small class="note">Mascot (the old man) — strong icon candidate.</small>
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.barbastathis.com/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Τρόφιμα"
+          data-flag="clean" id="chipita">
+    <div class="media"><img src="../../public/logopaignio/_raw/chipita.svg" alt="Chipita" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Chipita</b>
+        <span class="tag sector">Τρόφιμα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">4.5 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Chipita</code><code>Τσιπίτα</code><code>Τσιπιτα</code><code>7Days</code><code>Molto</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Chipita_logo.svg" target="_blank" rel="noreferrer">File:Chipita logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Τρόφιμα"
+          data-flag="warn" id="ion">
+    <div class="media"><img src="../../public/logopaignio/_raw/ion.png" alt="ΙΟΝ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΙΟΝ</b>
+        <span class="tag sector">Τρόφιμα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">8.8 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>ΙΟΝ</code><code>Ίον</code><code>Ιον</code><code>ION</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.ion.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Τρόφιμα"
+          data-flag="warn" id="kyknos">
+    <div class="media"><img src="../../public/logopaignio/_raw/kyknos.jpg" alt="ΚΥΚΝΟΣ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΚΥΚΝΟΣ</b>
+        <span class="tag sector">Τρόφιμα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">89.1 KB</span>
+        <span class="tag fmt">JPG</span>
+      </div>
+      <ul class="warns"><li class="warn">Βαρύ (89.1 KB) — χρειάζεται συμπίεση.</li></ul>
+      <div class="accept"><code>ΚΥΚΝΟΣ</code><code>Κύκνος</code><code>Κυκνος</code><code>Kyknos</code></div>
+      <small class="note">A swan mark would be a strong icon — verify.</small>
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.kyknos.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Τρόφιμα"
+          data-flag="warn" id="melissa">
+    <div class="media"><img src="../../public/logopaignio/_raw/melissa.png" alt="Μέλισσα" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Μέλισσα</b>
+        <span class="tag sector">Τρόφιμα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">30.3 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Μέλισσα</code><code>Μελισσα</code><code>Melissa</code><code>Μέλισσα Κίκιζας</code></div>
+      <small class="note">A bee mark would be ideal for the icon-only filter.</small>
+      <small class="src">© the company — no stated license · trademarked · <a href="https://melissa-kikizas.com/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Τρόφιμα"
+          data-flag="warn" id="misko">
+    <div class="media"><img src="../../public/logopaignio/_raw/misko.png" alt="Misko" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Misko</b>
+        <span class="tag sector">Τρόφιμα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">28.9 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Misko</code><code>Μίσκο</code><code>Μισκο</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://misko.gr" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Τρόφιμα"
+          data-flag="clean" id="papadopoulou">
+    <div class="media"><img src="../../public/logopaignio/_raw/papadopoulou.svg" alt="Παπαδοπούλου" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Παπαδοπούλου</b>
+        <span class="tag sector">Τρόφιμα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">7.9 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Παπαδοπούλου</code><code>Παπαδοπουλου</code><code>Παπαδόπουλος</code><code>Papadopoulou</code><code>Ε.Ι. Παπαδοπούλου</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://papadopoulou.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure></div>
+<h2>Τράπεζα <span style="text-transform:none;color:#a1a1aa">· 7</span></h2>
+<div class="grid">
+  <figure class="card clean" data-status="ok" data-sector="Τράπεζα"
+          data-flag="clean" id="alpha-bank">
+    <div class="media"><img src="../../public/logopaignio/_raw/alpha-bank.svg" alt="Alpha Bank" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Alpha Bank</b>
+        <span class="tag sector">Τράπεζα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.3 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Alpha Bank</code><code>Άλφα Μπανκ</code><code>Alpha</code><code>Άλφα</code><code>Αλφα Μπανκ</code></div>
+      <small class="note">PoC ✅ keep — navy square + white A is a clean standalone mark.</small>
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Alpha_Bank_logo.svg" target="_blank" rel="noreferrer">File:Alpha Bank logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Τράπεζα"
+          data-flag="clean" id="attica-bank">
+    <div class="media"><img src="../../public/logopaignio/_raw/attica-bank.svg" alt="Attica Bank" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Attica Bank</b>
+        <span class="tag sector">Τράπεζα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">8.3 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Attica Bank</code><code>Αττικής</code><code>Τράπεζα Αττικής</code><code>Attica</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Attica_Bank_logo.svg" target="_blank" rel="noreferrer">File:Attica Bank logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Τράπεζα"
+          data-flag="warn" id="ethniki-trapeza">
+    <div class="media"><img src="../../public/logopaignio/_raw/ethniki-trapeza.svg" alt="Εθνική Τράπεζα" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Εθνική Τράπεζα</b>
+        <span class="tag sector">Τράπεζα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">19.5 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="warn">Ένα μόνο path — πιθανώς «flattened»· το σύμβολο δεν απομονώνεται με clip.</li><li class="warn">Ο τίτλος λέει «wordmark» — πιθανώς μόνο το όνομα, χωρίς σύμβολο (ΑΠΟΡΡΙΨΗ).</li></ul>
+      <div class="accept"><code>Εθνική Τράπεζα</code><code>Εθνικη Τραπεζα</code><code>Εθνική</code><code>ΕΤΕ</code><code>National Bank of Greece</code><code>NBG</code></div>
+      <small class="note">Fire-horse/flame emblem — check it separates from the wordmark.</small>
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:National_Bank_of_Greece_wordmark.svg" target="_blank" rel="noreferrer">File:National Bank of Greece wordmark.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Τράπεζα"
+          data-flag="clean" id="eurobank">
+    <div class="media"><img src="../../public/logopaignio/_raw/eurobank.svg" alt="Eurobank" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Eurobank</b>
+        <span class="tag sector">Τράπεζα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">2.5 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Eurobank</code><code>Γιούρομπανκ</code><code>Ευρωμπανκ</code><code>Γιουρομπανκ</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Eurobank_logo_2021.svg" target="_blank" rel="noreferrer">File:Eurobank logo 2021.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Τράπεζα"
+          data-flag="warn" id="optima-bank">
+    <div class="media"><img src="../../public/logopaignio/_raw/optima-bank.svg" alt="Optima Bank" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Optima Bank</b>
+        <span class="tag sector">Τράπεζα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">4.6 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="warn">Ένα μόνο path — πιθανώς «flattened»· το σύμβολο δεν απομονώνεται με clip.</li></ul>
+      <div class="accept"><code>Optima Bank</code><code>Optima</code><code>Όπτιμα</code><code>Οπτιμα</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Optima_Bank_(Greece)_logo.svg" target="_blank" rel="noreferrer">File:Optima Bank (Greece) logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Τράπεζα"
+          data-flag="clean" id="peiraios">
+    <div class="media"><img src="../../public/logopaignio/_raw/peiraios.svg" alt="Τράπεζα Πειραιώς" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Τράπεζα Πειραιώς</b>
+        <span class="tag sector">Τράπεζα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">9.2 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Τράπεζα Πειραιώς</code><code>Τραπεζα Πειραιως</code><code>Πειραιώς</code><code>Πειραιως</code><code>Piraeus Bank</code><code>Piraeus</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Piraeus_Bank_logo_2000.svg" target="_blank" rel="noreferrer">File:Piraeus Bank logo 2000.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Τράπεζα"
+          data-flag="warn" id="revolut">
+    <div class="media"><img src="../../public/logopaignio/_raw/revolut.svg" alt="Revolut" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Revolut</b>
+        <span class="tag sector">Τράπεζα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.3 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="warn">Ένα μόνο path — πιθανώς «flattened»· το σύμβολο δεν απομονώνεται με clip.</li></ul>
+      <div class="accept"><code>Revolut</code><code>Ρεβολούτ</code><code>Ρεβολουτ</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Revolut_logo.svg" target="_blank" rel="noreferrer">File:Revolut logo.svg</a></small>
+    </figcaption>
+  </figure></div>
+<h2>Μέσα ενημέρωσης <span style="text-transform:none;color:#a1a1aa">· 11</span></h2>
+<div class="grid">
+  <figure class="card warn" data-status="ok" data-sector="Μέσα ενημέρωσης"
+          data-flag="warn" id="alpha-tv">
+    <div class="media"><img src="../../public/logopaignio/_raw/alpha-tv.svg" alt="Alpha TV" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Alpha TV</b>
+        <span class="tag sector">Μέσα ενημέρωσης</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.9 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="warn">Ένα μόνο path — πιθανώς «flattened»· το σύμβολο δεν απομονώνεται με clip.</li></ul>
+      <div class="accept"><code>Alpha TV</code><code>Άλφα TV</code><code>Alpha</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Alpha_TV_logo.svg" target="_blank" rel="noreferrer">File:Alpha TV logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Μέσα ενημέρωσης"
+          data-flag="clean" id="ant1">
+    <div class="media"><img src="../../public/logopaignio/_raw/ant1.svg" alt="ANT1" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ANT1</b>
+        <span class="tag sector">Μέσα ενημέρωσης</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">2.3 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>ANT1</code><code>ΑΝΤ1</code><code>Άντεννα</code><code>Αντεννα</code><code>Antenna</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:ANT1_logo.svg" target="_blank" rel="noreferrer">File:ANT1 logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Μέσα ενημέρωσης"
+          data-flag="warn" id="art-tv">
+    <div class="media"><img src="../../public/logopaignio/_raw/art-tv.png" alt="ΑΡΤ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΑΡΤ</b>
+        <span class="tag sector">Μέσα ενημέρωσης</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">15.1 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>ΑΡΤ</code><code>ART</code><code>Αρτ</code><code>ART TV</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://arttv.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card bad" data-status="ok" data-sector="Μέσα ενημέρωσης"
+          data-flag="bad" id="ert">
+    <div class="media"><img src="../../public/logopaignio/_raw/ert.svg" alt="ΕΡΤ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΕΡΤ</b>
+        <span class="tag sector">Μέσα ενημέρωσης</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">2.2 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="bad">Πιθανώς ΛΑΘΟΣ εταιρεία — ο τίτλος «File:ERT NEWS logo 2020.svg» δεν αναφέρει τη μάρκα.</li></ul>
+      <div class="accept"><code>ΕΡΤ</code><code>ERT</code><code>Ερτ</code><code>Ελληνική Ραδιοφωνία Τηλεόραση</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:ERT_NEWS_logo_2020.svg" target="_blank" rel="noreferrer">File:ERT NEWS logo 2020.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Μέσα ενημέρωσης"
+          data-flag="warn" id="mad-tv">
+    <div class="media"><img src="../../public/logopaignio/_raw/mad-tv.png" alt="MAD TV" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>MAD TV</b>
+        <span class="tag sector">Μέσα ενημέρωσης</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">77.4 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">Βαρύ (77.4 KB) — χρειάζεται συμπίεση.</li><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>MAD TV</code><code>MAD</code><code>Μαντ</code><code>Μαντ Τι Βι</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.mad.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Μέσα ενημέρωσης"
+          data-flag="warn" id="mega-channel">
+    <div class="media"><img src="../../public/logopaignio/_raw/mega-channel.svg" alt="MEGA" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>MEGA</b>
+        <span class="tag sector">Μέσα ενημέρωσης</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.5 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="warn">Ένα μόνο path — πιθανώς «flattened»· το σύμβολο δεν απομονώνεται με clip.</li></ul>
+      <div class="accept"><code>MEGA</code><code>Μέγκα</code><code>Μεγκα</code><code>Mega Channel</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Mega_channel_logo.svg" target="_blank" rel="noreferrer">File:Mega channel logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Μέσα ενημέρωσης"
+          data-flag="warn" id="novalife">
+    <div class="media"><img src="../../public/logopaignio/_raw/novalife.png" alt="Novalife" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Novalife</b>
+        <span class="tag sector">Μέσα ενημέρωσης</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">35.9 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Novalife</code><code>Νόβαλαϊφ</code><code>Νοβαλαιφ</code><code>Nova Life</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Novalife_logo.png" target="_blank" rel="noreferrer">File:Novalife logo.png</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Μέσα ενημέρωσης"
+          data-flag="warn" id="rise-tv">
+    <div class="media"><img src="../../public/logopaignio/_raw/rise-tv.png" alt="RISE TV" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>RISE TV</b>
+        <span class="tag sector">Μέσα ενημέρωσης</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">14.6 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>RISE TV</code><code>RISE</code><code>Ράιζ</code><code>Ραιζ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.rise.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Μέσα ενημέρωσης"
+          data-flag="warn" id="skai">
+    <div class="media"><img src="../../public/logopaignio/_raw/skai.svg" alt="ΣΚΑΪ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΣΚΑΪ</b>
+        <span class="tag sector">Μέσα ενημέρωσης</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">948 B</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="warn">Ένα μόνο path — πιθανώς «flattened»· το σύμβολο δεν απομονώνεται με clip.</li></ul>
+      <div class="accept"><code>ΣΚΑΪ</code><code>ΣΚΑΙ</code><code>Σκάι</code><code>Σκαι</code><code>SKAI</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Skai_TV_logo.svg" target="_blank" rel="noreferrer">File:Skai TV logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Μέσα ενημέρωσης"
+          data-flag="clean" id="star-channel">
+    <div class="media"><img src="../../public/logopaignio/_raw/star-channel.svg" alt="Star" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Star</b>
+        <span class="tag sector">Μέσα ενημέρωσης</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">1.7 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Star</code><code>Σταρ</code><code>Star Channel</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Star_Channel_Greece_logo.svg" target="_blank" rel="noreferrer">File:Star Channel Greece logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Μέσα ενημέρωσης"
+          data-flag="clean" id="vouli-tileorasi">
+    <div class="media"><img src="../../public/logopaignio/_raw/vouli-tileorasi.jpg" alt="Βουλή Τηλεόραση" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Βουλή Τηλεόραση</b>
+        <span class="tag sector">Μέσα ενημέρωσης</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">11.0 KB</span>
+        <span class="tag fmt">JPG</span>
+      </div>
+      
+      <div class="accept"><code>Βουλή Τηλεόραση</code><code>Βουλη Τηλεοραση</code><code>Βουλή</code><code>Vouli TV</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.hellenicparliament.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure></div>
+<h2>Βιομηχανία <span style="text-transform:none;color:#a1a1aa">· 15</span></h2>
+<div class="grid">
+  <figure class="card clean" data-status="ok" data-sector="Βιομηχανία"
+          data-flag="clean" id="alumil">
+    <div class="media"><img src="../../public/logopaignio/_raw/alumil.svg" alt="Alumil" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Alumil</b>
+        <span class="tag sector">Βιομηχανία</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">13.6 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Alumil</code><code>Αλουμίλ</code><code>Αλουμιλ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.alumil.com/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Βιομηχανία"
+          data-flag="clean" id="aluminion-ellados">
+    <div class="media"><img src="../../public/logopaignio/_raw/aluminion-ellados.svg" alt="Αλουμίνιον της Ελλάδος" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Αλουμίνιον της Ελλάδος</b>
+        <span class="tag sector">Βιομηχανία</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">13.0 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Αλουμίνιον της Ελλάδος</code><code>Αλουμινιον της Ελλαδος</code><code>Aluminium of Greece</code><code>Αλουμίνιον</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.metlen.com/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Βιομηχανία"
+          data-flag="warn" id="athinaiki-zythopoiia">
+    <div class="media"><img src="../../public/logopaignio/_raw/athinaiki-zythopoiia.png" alt="Αθηναϊκή Ζυθοποιία" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Αθηναϊκή Ζυθοποιία</b>
+        <span class="tag sector">Βιομηχανία</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">10.6 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Αθηναϊκή Ζυθοποιία</code><code>Αθηναικη Ζυθοποιια</code><code>Athenian Brewery</code><code>Αθηναϊκή</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://athenianbrewery.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="error" data-sector="Βιομηχανία"
+          data-flag="clean" id="chalyvourgia">
+    <div class="media"><div class="missing">σφάλμα λήψης</div></div>
+    <figcaption>
+      <div class="row1">
+        <b>Χαλυβουργία Ελλάδος</b>
+        <span class="tag sector">Βιομηχανία</span>
+        <span class="tag st-error">σφάλμα</span>
+        
+        
+      </div>
+      
+      <div class="accept"><code>Χαλυβουργία Ελλάδος</code><code>Χαλυβουργια Ελλαδος</code><code>Χαλυβουργία</code><code>Hellenic Halyvourgia</code></div>
+      
+      <small class="src">site unreachable (fetch failed)</small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Βιομηχανία"
+          data-flag="warn" id="cosmos-aluminium">
+    <div class="media"><img src="../../public/logopaignio/_raw/cosmos-aluminium.png" alt="Cosmos Aluminium" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Cosmos Aluminium</b>
+        <span class="tag sector">Βιομηχανία</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.0 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Cosmos Aluminium</code><code>Κόσμος Αλουμίνιο</code><code>Cosmos</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.cosmosaluminium.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="not-found" data-sector="Βιομηχανία"
+          data-flag="clean" id="elval">
+    <div class="media"><div class="missing">δεν βρέθηκε στο Commons</div></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΕΛΒΑΛ</b>
+        <span class="tag sector">Βιομηχανία</span>
+        <span class="tag st-not-found">δεν βρέθηκε</span>
+        
+        
+      </div>
+      
+      <div class="accept"><code>ΕΛΒΑΛ</code><code>Έλβαλ</code><code>Ελβαλ</code><code>Elval</code><code>ElvalHalcor</code></div>
+      
+      <small class="src">no logo asset on page</small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="error" data-sector="Βιομηχανία"
+          data-flag="clean" id="estia">
+    <div class="media"><div class="missing">σφάλμα λήψης</div></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΕΣΤΙΑ</b>
+        <span class="tag sector">Βιομηχανία</span>
+        <span class="tag st-error">σφάλμα</span>
+        
+        
+      </div>
+      
+      <div class="accept"><code>ΕΣΤΙΑ</code><code>ESTIA</code><code>Εστία</code><code>Εστια</code></div>
+      
+      <small class="src">site unreachable (fetch failed)</small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Βιομηχανία"
+          data-flag="clean" id="etem">
+    <div class="media"><img src="../../public/logopaignio/_raw/etem.svg" alt="ΕΤΕΜ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΕΤΕΜ</b>
+        <span class="tag sector">Βιομηχανία</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.8 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>ΕΤΕΜ</code><code>ETEM</code><code>Ετεμ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://etem.com/el" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Βιομηχανία"
+          data-flag="clean" id="iraklis">
+    <div class="media"><img src="../../public/logopaignio/_raw/iraklis.svg" alt="Ηρακλής" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Ηρακλής</b>
+        <span class="tag sector">Βιομηχανία</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">1.4 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Ηρακλής</code><code>Ηρακλης</code><code>Iraklis</code><code>ΑΓΕΤ Ηρακλής</code><code>Heracles</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.lafarge.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Βιομηχανία"
+          data-flag="clean" id="metlen">
+    <div class="media"><img src="../../public/logopaignio/_raw/metlen.svg" alt="Metlen" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Metlen</b>
+        <span class="tag sector">Βιομηχανία</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">13.0 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Metlen</code><code>Μέτλεν</code><code>Μετλεν</code><code>Μυτιληναίος</code><code>Μυτιληναιος</code><code>Mytilineos</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Metlen_Energy_%26_Metals_(logo).svg" target="_blank" rel="noreferrer">File:Metlen Energy &amp; Metals (logo).svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="error" data-sector="Βιομηχανία"
+          data-flag="clean" id="naupigeia-elefsinas">
+    <div class="media"><div class="missing">σφάλμα λήψης</div></div>
+    <figcaption>
+      <div class="row1">
+        <b>Ναυπηγεία Ελευσίνας</b>
+        <span class="tag sector">Βιομηχανία</span>
+        <span class="tag st-error">σφάλμα</span>
+        
+        
+      </div>
+      
+      <div class="accept"><code>Ναυπηγεία Ελευσίνας</code><code>Ναυπηγεια Ελευσινας</code><code>Elefsis Shipyards</code><code>Ναυπηγεία</code></div>
+      
+      <small class="src">site unreachable (fetch failed)</small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Βιομηχανία"
+          data-flag="clean" id="pitsos">
+    <div class="media"><img src="../../public/logopaignio/_raw/pitsos.svg" alt="Πίτσος" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Πίτσος</b>
+        <span class="tag sector">Βιομηχανία</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">6.8 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Πίτσος</code><code>Πιτσος</code><code>Pitsos</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Pitsos_logo.svg" target="_blank" rel="noreferrer">File:Pitsos logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Βιομηχανία"
+          data-flag="warn" id="skag">
+    <div class="media"><img src="../../public/logopaignio/_raw/skag.png" alt="SKAG" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>SKAG</b>
+        <span class="tag sector">Βιομηχανία</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">48.2 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>SKAG</code><code>ΣΚΑΓ</code><code>Σκαγ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.skag.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Βιομηχανία"
+          data-flag="clean" id="titan">
+    <div class="media"><img src="../../public/logopaignio/_raw/titan.svg" alt="ΤΙΤΑΝ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΤΙΤΑΝ</b>
+        <span class="tag sector">Βιομηχανία</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">12.4 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>ΤΙΤΑΝ</code><code>Τιτάν</code><code>Τιταν</code><code>Titan</code><code>Titan Cement</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.titanmaterials.com/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Βιομηχανία"
+          data-flag="clean" id="viohalco">
+    <div class="media"><img src="../../public/logopaignio/_raw/viohalco.svg" alt="Viohalco" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Viohalco</b>
+        <span class="tag sector">Βιομηχανία</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.1 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Viohalco</code><code>Βιοχάλκο</code><code>Βιοχαλκο</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Viohalco_logo.svg" target="_blank" rel="noreferrer">File:Viohalco logo.svg</a></small>
+    </figcaption>
+  </figure></div>
+<h2>Ακτοπλοΐα <span style="text-transform:none;color:#a1a1aa">· 7</span></h2>
+<div class="grid">
+  <figure class="card clean" data-status="ok" data-sector="Ακτοπλοΐα"
+          data-flag="clean" id="anek-lines">
+    <div class="media"><img src="../../public/logopaignio/_raw/anek-lines.svg" alt="ANEK Lines" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ANEK Lines</b>
+        <span class="tag sector">Ακτοπλοΐα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">2.1 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>ANEK</code><code>ANEK Lines</code><code>ΑΝΕΚ</code><code>Άνεκ</code><code>Ανεκ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.anek.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Ακτοπλοΐα"
+          data-flag="clean" id="attica-group">
+    <div class="media"><img src="../../public/logopaignio/_raw/attica-group.svg" alt="Attica Group" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Attica Group</b>
+        <span class="tag sector">Ακτοπλοΐα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">12.0 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Attica Group</code><code>Αττικα Γκρουπ</code><code>Αττική Γκρουπ</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Attica_group_logo.svg" target="_blank" rel="noreferrer">File:Attica group logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Ακτοπλοΐα"
+          data-flag="clean" id="blue-star-ferries">
+    <div class="media"><img src="../../public/logopaignio/_raw/blue-star-ferries.svg" alt="Blue Star Ferries" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Blue Star Ferries</b>
+        <span class="tag sector">Ακτοπλοΐα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">8.2 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Blue Star Ferries</code><code>Blue Star</code><code>Μπλε Σταρ</code><code>Μπλου Σταρ</code></div>
+      <small class="note">The star is the separable mark.</small>
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Blue_star_ferries_logo.svg" target="_blank" rel="noreferrer">File:Blue star ferries logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Ακτοπλοΐα"
+          data-flag="clean" id="hellenic-seaways">
+    <div class="media"><img src="../../public/logopaignio/_raw/hellenic-seaways.svg" alt="Hellenic Seaways" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Hellenic Seaways</b>
+        <span class="tag sector">Ακτοπλοΐα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">12.8 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Hellenic Seaways</code><code>Χέλενικ Σίγουεης</code><code>Ελληνικές Γραμμές</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.hellenicseaways.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Ακτοπλοΐα"
+          data-flag="clean" id="minoan-lines">
+    <div class="media"><img src="../../public/logopaignio/_raw/minoan-lines.svg" alt="Minoan Lines" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Minoan Lines</b>
+        <span class="tag sector">Ακτοπλοΐα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">14.0 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Minoan Lines</code><code>Minoan</code><code>Μινωικές Γραμμές</code><code>Μινωικες Γραμμες</code><code>Μινωικές</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.minoan.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Ακτοπλοΐα"
+          data-flag="clean" id="seajets">
+    <div class="media"><img src="../../public/logopaignio/_raw/seajets.jpg" alt="SeaJets" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>SeaJets</b>
+        <span class="tag sector">Ακτοπλοΐα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.9 KB</span>
+        <span class="tag fmt">JPG</span>
+      </div>
+      
+      <div class="accept"><code>SeaJets</code><code>Sea Jets</code><code>Σίτζετς</code><code>Σιτζετς</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://seajets.com" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Ακτοπλοΐα"
+          data-flag="clean" id="superfast-ferries">
+    <div class="media"><img src="../../public/logopaignio/_raw/superfast-ferries.svg" alt="Superfast Ferries" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Superfast Ferries</b>
+        <span class="tag sector">Ακτοπλοΐα</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">4.7 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Superfast Ferries</code><code>Superfast</code><code>Σούπερφαστ</code><code>Σουπερφαστ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.superfast.com/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure></div>
+<h2>Καλλυντικά <span style="text-transform:none;color:#a1a1aa">· 5</span></h2>
+<div class="grid">
+  <figure class="card bad" data-status="ok" data-sector="Καλλυντικά"
+          data-flag="bad" id="apivita">
+    <div class="media"><img src="../../public/logopaignio/_raw/apivita.png" alt="Apivita" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Apivita</b>
+        <span class="tag sector">Καλλυντικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">229 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="bad">Πολύ βαρύ (229 KB) — χρειάζεται αντικατάσταση.</li><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Apivita</code><code>Απιβίτα</code><code>Απιβιτα</code></div>
+      <small class="note">Bee/hive mark — good icon candidate.</small>
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.apivita.com/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Καλλυντικά"
+          data-flag="warn" id="frezyderm">
+    <div class="media"><img src="../../public/logopaignio/_raw/frezyderm.png" alt="Frezyderm" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Frezyderm</b>
+        <span class="tag sector">Καλλυντικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">8.8 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Frezyderm</code><code>Φρεζιντέρμ</code><code>Φρεζιντερμ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.frezyderm.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Καλλυντικά"
+          data-flag="warn" id="korres">
+    <div class="media"><img src="../../public/logopaignio/_raw/korres.png" alt="Korres" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Korres</b>
+        <span class="tag sector">Καλλυντικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">26.8 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Korres</code><code>Κορρές</code><code>Κορρες</code></div>
+      
+      <small class="src">Public domain · <a href="https://commons.wikimedia.org/wiki/File:Korres_logo.png" target="_blank" rel="noreferrer">File:Korres logo.png</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Καλλυντικά"
+          data-flag="clean" id="papoutsanis">
+    <div class="media"><img src="../../public/logopaignio/_raw/papoutsanis.svg" alt="Παπουτσάνης" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Παπουτσάνης</b>
+        <span class="tag sector">Καλλυντικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">7.0 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Παπουτσάνης</code><code>Παπουτσανης</code><code>Papoutsanis</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.papoutsanis.gr/el/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Καλλυντικά"
+          data-flag="warn" id="sarantis">
+    <div class="media"><img src="../../public/logopaignio/_raw/sarantis.png" alt="Σαράντης" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Σαράντης</b>
+        <span class="tag sector">Καλλυντικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">13.4 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Σαράντης</code><code>Σαραντης</code><code>Sarantis</code><code>Γρ. Σαράντης</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.sarantisgroup.com/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure></div>
+<h2>Delivery <span style="text-transform:none;color:#a1a1aa">· 6</span></h2>
+<div class="grid">
+  <figure class="card warn" data-status="ok" data-sector="Delivery"
+          data-flag="warn" id="box">
+    <div class="media"><img src="../../public/logopaignio/_raw/box.png" alt="BOX" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>BOX</b>
+        <span class="tag sector">Delivery</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">84.1 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">Βαρύ (84.1 KB) — χρειάζεται συμπίεση.</li><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>BOX</code><code>Box</code><code>Μποξ</code><code>Μπόξ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://box.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Delivery"
+          data-flag="clean" id="dhl">
+    <div class="media"><img src="../../public/logopaignio/_raw/dhl.svg" alt="DHL" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>DHL</b>
+        <span class="tag sector">Delivery</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">962 B</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>DHL</code><code>Ντι Έιτς Ελ</code><code>Ντιέιτσελ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.dhl.com/nl-nl/home.html?locale=true" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Delivery"
+          data-flag="clean" id="efood">
+    <div class="media"><img src="../../public/logopaignio/_raw/efood.svg" alt="efood" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>efood</b>
+        <span class="tag sector">Delivery</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">6.0 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>efood</code><code>e-food</code><code>Ίφουντ</code><code>Ιφουντ</code><code>e food</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Efood_logo.svg" target="_blank" rel="noreferrer">File:Efood logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Delivery"
+          data-flag="clean" id="elta-courier">
+    <div class="media"><img src="../../public/logopaignio/_raw/elta-courier.jpg" alt="ΕΛΤΑ Courier" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΕΛΤΑ Courier</b>
+        <span class="tag sector">Delivery</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">7.6 KB</span>
+        <span class="tag fmt">JPG</span>
+      </div>
+      
+      <div class="accept"><code>ΕΛΤΑ Courier</code><code>ELTA Courier</code><code>Ελτα Κούριερ</code><code>ΕΛΤΑ Κούριερ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.elta-courier.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Delivery"
+          data-flag="warn" id="icc-courier">
+    <div class="media"><img src="../../public/logopaignio/_raw/icc-courier.png" alt="ICC Courier" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ICC Courier</b>
+        <span class="tag sector">Delivery</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">12.7 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>ICC Courier</code><code>ICC</code><code>Άι Σι Σι</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.icccourier.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Delivery"
+          data-flag="warn" id="wolt">
+    <div class="media"><img src="../../public/logopaignio/_raw/wolt.png" alt="Wolt" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Wolt</b>
+        <span class="tag sector">Delivery</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">25.2 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Wolt</code><code>Βολτ</code><code>Γουόλτ</code><code>Γουολτ</code></div>
+      
+      <small class="src">Public domain · <a href="https://commons.wikimedia.org/wiki/File:Wolt-logo-2019.png" target="_blank" rel="noreferrer">File:Wolt-logo-2019.png</a></small>
+    </figcaption>
+  </figure></div>
+<h2>Ηλεκτρονικό εμπόριο <span style="text-transform:none;color:#a1a1aa">· 4</span></h2>
+<div class="grid">
+  <figure class="card warn" data-status="ok" data-sector="Ηλεκτρονικό εμπόριο"
+          data-flag="warn" id="car-gr">
+    <div class="media"><img src="../../public/logopaignio/_raw/car-gr.png" alt="Car.gr" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Car.gr</b>
+        <span class="tag sector">Ηλεκτρονικό εμπόριο</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">1.8 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Car.gr</code><code>Car gr</code><code>Κάρ</code><code>Cargr</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://car.gr" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Ηλεκτρονικό εμπόριο"
+          data-flag="clean" id="skroutz">
+    <div class="media"><img src="../../public/logopaignio/_raw/skroutz.svg" alt="Skroutz" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Skroutz</b>
+        <span class="tag sector">Ηλεκτρονικό εμπόριο</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.2 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Skroutz</code><code>Σκρουτζ</code><code>Σκρούτζ</code></div>
+      <small class="note">The shopping-bag mark is a clean icon.</small>
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Skroutz-logo.svg" target="_blank" rel="noreferrer">File:Skroutz-logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Ηλεκτρονικό εμπόριο"
+          data-flag="warn" id="spitogatos">
+    <div class="media"><img src="../../public/logopaignio/_raw/spitogatos.png" alt="Spitogatos" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Spitogatos</b>
+        <span class="tag sector">Ηλεκτρονικό εμπόριο</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">7.3 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Spitogatos</code><code>Σπιτόγατος</code><code>Σπιτογατος</code></div>
+      <small class="note">A cat mark would be a perfect icon — verify.</small>
+      <small class="src">© the company — no stated license · trademarked · <a href="https://spitogatos.gr" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Ηλεκτρονικό εμπόριο"
+          data-flag="clean" id="xe-gr">
+    <div class="media"><img src="../../public/logopaignio/_raw/xe-gr.svg" alt="XE.gr" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>XE.gr</b>
+        <span class="tag sector">Ηλεκτρονικό εμπόριο</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">10.0 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>XE.gr</code><code>XE</code><code>Χρυσή Ευκαιρία</code><code>Χρυση Ευκαιρια</code><code>Xe gr</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.xe.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure></div>
+<h2>Καφέ <span style="text-transform:none;color:#a1a1aa">· 3</span></h2>
+<div class="grid">
+  <figure class="card warn" data-status="ok" data-sector="Καφέ"
+          data-flag="warn" id="coffee-island">
+    <div class="media"><img src="../../public/logopaignio/_raw/coffee-island.png" alt="Coffee Island" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Coffee Island</b>
+        <span class="tag sector">Καφέ</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.1 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Coffee Island</code><code>Κόφι Άιλαντ</code><code>Κοφι Αιλαντ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.coffeeisland.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Καφέ"
+          data-flag="warn" id="flocafe">
+    <div class="media"><img src="../../public/logopaignio/_raw/flocafe.png" alt="Flocafe" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Flocafe</b>
+        <span class="tag sector">Καφέ</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">42.3 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Flocafe</code><code>Φλοκαφέ</code><code>Φλοκαφε</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.flocafe.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card bad" data-status="ok" data-sector="Καφέ"
+          data-flag="bad" id="mikel">
+    <div class="media"><img src="../../public/logopaignio/_raw/mikel.png" alt="Mikel" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Mikel</b>
+        <span class="tag sector">Καφέ</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">361 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="bad">Πολύ βαρύ (361 KB) — χρειάζεται αντικατάσταση.</li><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Mikel</code><code>Μάικελ</code><code>Μαικελ</code><code>Mikel Coffee</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://mikelcoffee.com/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure></div>
+<h2>Ενέργεια <span style="text-transform:none;color:#a1a1aa">· 3</span></h2>
+<div class="grid">
+  <figure class="card bad" data-status="ok" data-sector="Ενέργεια"
+          data-flag="bad" id="dei">
+    <div class="media"><img src="../../public/logopaignio/_raw/dei.svg" alt="ΔΕΗ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΔΕΗ</b>
+        <span class="tag sector">Ενέργεια</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">6.2 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="bad">Πιθανώς ΛΑΘΟΣ εταιρεία — ο τίτλος «File:Namibia Power Corporation logo.svg» δεν αναφέρει τη μάρκα.</li></ul>
+      <div class="accept"><code>ΔΕΗ</code><code>Δεη</code><code>DEI</code><code>PPC</code><code>Δημόσια Επιχείρηση Ηλεκτρισμού</code></div>
+      <small class="note">The blue/white swirl is highly recognizable.</small>
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Namibia_Power_Corporation_logo.svg" target="_blank" rel="noreferrer">File:Namibia Power Corporation logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Ενέργεια"
+          data-flag="warn" id="depa">
+    <div class="media"><img src="../../public/logopaignio/_raw/depa.png" alt="ΔΕΠΑ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΔΕΠΑ</b>
+        <span class="tag sector">Ενέργεια</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">1.5 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>ΔΕΠΑ</code><code>DEPA</code><code>Δεπα</code><code>Δημόσια Επιχείρηση Αερίου</code></div>
+      
+      <small class="src">CC BY-SA 4.0 · <a href="https://commons.wikimedia.org/wiki/File:Depa-logo-100px.png" target="_blank" rel="noreferrer">File:Depa-logo-100px.png</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Ενέργεια"
+          data-flag="clean" id="helleniq-energy">
+    <div class="media"><img src="../../public/logopaignio/_raw/helleniq-energy.svg" alt="HelleniQ Energy" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>HelleniQ Energy</b>
+        <span class="tag sector">Ενέργεια</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">11.1 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>HelleniQ Energy</code><code>HelleniQ</code><code>ΕΛΠΕ</code><code>Ελληνικά Πετρέλαια</code><code>Ελληνικα Πετρελαια</code><code>Χελένικ Ενέρτζι</code></div>
+      <small class="note">PoC ✅ keep — pinwheel crops perfectly. Accept-list MUST cover the old ΕΛΠΕ name.</small>
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:HelleniQ_Energy_logo.svg" target="_blank" rel="noreferrer">File:HelleniQ Energy logo.svg</a></small>
+    </figcaption>
+  </figure></div>
+<h2>Ασφάλειες <span style="text-transform:none;color:#a1a1aa">· 14</span></h2>
+<div class="grid">
+  <figure class="card warn" data-status="ok" data-sector="Ασφάλειες"
+          data-flag="warn" id="dynamis">
+    <div class="media"><img src="../../public/logopaignio/_raw/dynamis.png" alt="Δύναμις" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Δύναμις</b>
+        <span class="tag sector">Ασφάλειες</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">10.3 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Δύναμις</code><code>Δυναμις</code><code>Dynamis</code><code>Δύναμις Ασφαλιστική</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://dynamis.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Ασφάλειες"
+          data-flag="clean" id="elpa-asfaleies">
+    <div class="media"><img src="../../public/logopaignio/_raw/elpa-asfaleies.svg" alt="ΕΛΠΑ Ασφάλειες" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΕΛΠΑ Ασφάλειες</b>
+        <span class="tag sector">Ασφάλειες</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">1.1 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>ΕΛΠΑ</code><code>ELPA</code><code>Ελπα</code><code>ΕΛΠΑ Ασφάλειες</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.elpa.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Ασφάλειες"
+          data-flag="clean" id="ergo">
+    <div class="media"><img src="../../public/logopaignio/_raw/ergo.svg" alt="ERGO" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ERGO</b>
+        <span class="tag sector">Ασφάλειες</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">10.3 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>ERGO</code><code>Έργκο</code><code>Εργκο</code><code>ERGO Ασφαλιστική</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.ergohellas.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Ασφάλειες"
+          data-flag="warn" id="ethniki-asfalistiki">
+    <div class="media"><img src="../../public/logopaignio/_raw/ethniki-asfalistiki.jpg" alt="Εθνική Ασφαλιστική" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Εθνική Ασφαλιστική</b>
+        <span class="tag sector">Ασφάλειες</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">92.1 KB</span>
+        <span class="tag fmt">JPG</span>
+      </div>
+      <ul class="warns"><li class="warn">Βαρύ (92.1 KB) — χρειάζεται συμπίεση.</li></ul>
+      <div class="accept"><code>Εθνική Ασφαλιστική</code><code>Εθνικη Ασφαλιστικη</code><code>Ethniki Asfalistiki</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.ethnikiasfalistiki.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="error" data-sector="Ασφάλειες"
+          data-flag="clean" id="euroins">
+    <div class="media"><div class="missing">σφάλμα λήψης</div></div>
+    <figcaption>
+      <div class="row1">
+        <b>Euroins</b>
+        <span class="tag sector">Ασφάλειες</span>
+        <span class="tag st-error">σφάλμα</span>
+        
+        
+      </div>
+      
+      <div class="accept"><code>Euroins</code><code>Γιουρόινς</code><code>Ευρωινς</code></div>
+      
+      <small class="src">homepage HTTP 502</small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Ασφάλειες"
+          data-flag="warn" id="eurolife">
+    <div class="media"><img src="../../public/logopaignio/_raw/eurolife.png" alt="Eurolife FFH" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Eurolife FFH</b>
+        <span class="tag sector">Ασφάλειες</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">36.2 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Eurolife</code><code>Eurolife FFH</code><code>Γιουρολάιφ</code><code>Ευρωλάιφ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.eurolife.gr/el-GR" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="error" data-sector="Ασφάλειες"
+          data-flag="clean" id="evropi-asfalistiki">
+    <div class="media"><div class="missing">σφάλμα λήψης</div></div>
+    <figcaption>
+      <div class="row1">
+        <b>Ευρώπη Ασφαλιστική</b>
+        <span class="tag sector">Ασφάλειες</span>
+        <span class="tag st-error">σφάλμα</span>
+        
+        
+      </div>
+      
+      <div class="accept"><code>Ευρώπη Ασφαλιστική</code><code>Ευρωπη Ασφαλιστικη</code><code>Ευρώπη</code><code>Evropi</code></div>
+      
+      <small class="src">site unreachable (fetch failed)</small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Ασφάλειες"
+          data-flag="clean" id="groupama">
+    <div class="media"><img src="../../public/logopaignio/_raw/groupama.svg" alt="Groupama" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Groupama</b>
+        <span class="tag sector">Ασφάλειες</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.5 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Groupama</code><code>Γκρουπαμά</code><code>Γκρουπαμα</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Groupama_logo.svg" target="_blank" rel="noreferrer">File:Groupama logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Ασφάλειες"
+          data-flag="warn" id="interamerican">
+    <div class="media"><img src="../../public/logopaignio/_raw/interamerican.svg" alt="Interamerican" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Interamerican</b>
+        <span class="tag sector">Ασφάλειες</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.4 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="warn">Ένα μόνο path — πιθανώς «flattened»· το σύμβολο δεν απομονώνεται με clip.</li></ul>
+      <div class="accept"><code>Interamerican</code><code>Ίντεραμέρικαν</code><code>Ιντεραμερικαν</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Interamerican_(logo).svg" target="_blank" rel="noreferrer">File:Interamerican (logo).svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Ασφάλειες"
+          data-flag="warn" id="interlife">
+    <div class="media"><img src="../../public/logopaignio/_raw/interlife.png" alt="Interlife" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Interlife</b>
+        <span class="tag sector">Ασφάλειες</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">8.2 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Interlife</code><code>Ίντερλαϊφ</code><code>Ιντερλαιφ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.interlife.gr/Intropage/pages/default.aspx" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Ασφάλειες"
+          data-flag="clean" id="minetta">
+    <div class="media"><img src="../../public/logopaignio/_raw/minetta.svg" alt="Μινέττα" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Μινέττα</b>
+        <span class="tag sector">Ασφάλειες</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">21.5 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Μινέττα</code><code>Μινεττα</code><code>Minetta</code><code>Ασφάλειαι Μινέττα</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.minetta.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="error" data-sector="Ασφάλειες"
+          data-flag="clean" id="orizon">
+    <div class="media"><div class="missing">σφάλμα λήψης</div></div>
+    <figcaption>
+      <div class="row1">
+        <b>Ορίζων</b>
+        <span class="tag sector">Ασφάλειες</span>
+        <span class="tag st-error">σφάλμα</span>
+        
+        
+      </div>
+      
+      <div class="accept"><code>Ορίζων</code><code>Οριζων</code><code>Orizon</code><code>Ορίζων Ασφαλιστική</code></div>
+      
+      <small class="src">homepage HTTP 403</small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Ασφάλειες"
+          data-flag="warn" id="wakam">
+    <div class="media"><img src="../../public/logopaignio/_raw/wakam.jpg" alt="Wakam" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Wakam</b>
+        <span class="tag sector">Ασφάλειες</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">60.1 KB</span>
+        <span class="tag fmt">JPG</span>
+      </div>
+      <ul class="warns"><li class="warn">Βαρύ (60.1 KB) — χρειάζεται συμπίεση.</li></ul>
+      <div class="accept"><code>Wakam</code><code>Γουακάμ</code><code>Βακάμ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.wakam.com/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Ασφάλειες"
+          data-flag="warn" id="ydrogios">
+    <div class="media"><img src="../../public/logopaignio/_raw/ydrogios.png" alt="Υδρόγειος" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Υδρόγειος</b>
+        <span class="tag sector">Ασφάλειες</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">31.4 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Υδρόγειος</code><code>Υδρογειος</code><code>Ydrogios</code><code>Υδρόγειος Ασφαλιστική</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://ydrogios.gr/web/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure></div>
+<h2>Ταχυδρομείο <span style="text-transform:none;color:#a1a1aa">· 1</span></h2>
+<div class="grid">
+  <figure class="card warn" data-status="ok" data-sector="Ταχυδρομείο"
+          data-flag="warn" id="elta">
+    <div class="media"><img src="../../public/logopaignio/_raw/elta.svg" alt="ΕΛΤΑ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΕΛΤΑ</b>
+        <span class="tag sector">Ταχυδρομείο</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">703 B</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="warn">Ένα μόνο path — πιθανώς «flattened»· το σύμβολο δεν απομονώνεται με clip.</li></ul>
+      <div class="accept"><code>ΕΛΤΑ</code><code>ELTA</code><code>Ελτα</code><code>Ελληνικά Ταχυδρομεία</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:ELTA_logo.svg" target="_blank" rel="noreferrer">File:ELTA logo.svg</a></small>
+    </figcaption>
+  </figure></div>
+<h2 class="deferred">Εστίαση <span style="text-transform:none;color:#a1a1aa">· 3</span> <span class="todo">TODO — αναβλήθηκε για επόμενη συνεδρία, μην ελέγχεις τώρα</span></h2>
+<div class="grid">
+  <figure class="card clean" data-status="ok" data-sector="Εστίαση"
+          data-flag="clean" id="everest">
+    <div class="media"><img src="../../public/logopaignio/_raw/everest.svg" alt="Everest" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Everest</b>
+        <span class="tag sector">Εστίαση</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">18.4 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Everest</code><code>Έβερεστ</code><code>Εβερεστ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.everest.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Εστίαση"
+          data-flag="clean" id="goodys">
+    <div class="media"><img src="../../public/logopaignio/_raw/goodys.svg" alt="Goody's" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Goody's</b>
+        <span class="tag sector">Εστίαση</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">26.2 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Goody's</code><code>Goodys</code><code>Γκούντις</code><code>Γκουντις</code><code>Goody s</code></div>
+      <small class="note">Foreign-owned but perceived Greek — allowed by the rules.</small>
+      <small class="src">Public domain · <a href="https://commons.wikimedia.org/wiki/File:New_Goody%27s_Burger_House_logo.svg" target="_blank" rel="noreferrer">File:New Goody's Burger House logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="not-found" data-sector="Εστίαση"
+          data-flag="clean" id="grigoris">
+    <div class="media"><div class="missing">δεν βρέθηκε στο Commons</div></div>
+    <figcaption>
+      <div class="row1">
+        <b>Γρηγόρης</b>
+        <span class="tag sector">Εστίαση</span>
+        <span class="tag st-not-found">δεν βρέθηκε</span>
+        
+        
+      </div>
+      
+      <div class="accept"><code>Γρηγόρης</code><code>Γρηγορης</code><code>Grigoris</code><code>Γρηγόρης Μικρογεύματα</code></div>
+      
+      <small class="src">no logo asset on page</small>
+    </figcaption>
+  </figure></div>
+<h2>Ύδρευση <span style="text-transform:none;color:#a1a1aa">· 2</span></h2>
+<div class="grid">
+  <figure class="card clean" data-status="ok" data-sector="Ύδρευση"
+          data-flag="clean" id="eyath">
+    <div class="media"><img src="../../public/logopaignio/_raw/eyath.svg" alt="ΕΥΑΘ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΕΥΑΘ</b>
+        <span class="tag sector">Ύδρευση</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">1.9 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>ΕΥΑΘ</code><code>EYATH</code><code>Ευαθ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.eyath.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Ύδρευση"
+          data-flag="warn" id="eydap">
+    <div class="media"><img src="../../public/logopaignio/_raw/eydap.png" alt="ΕΥΔΑΠ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΕΥΔΑΠ</b>
+        <span class="tag sector">Ύδρευση</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">4.2 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>ΕΥΔΑΠ</code><code>EYDAP</code><code>Ευδαπ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.eydap.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure></div>
+<h2>Μεταφορές <span style="text-transform:none;color:#a1a1aa">· 6</span></h2>
+<div class="grid">
+  <figure class="card warn" data-status="ok" data-sector="Μεταφορές"
+          data-flag="warn" id="fast-ferries">
+    <div class="media"><img src="../../public/logopaignio/_raw/fast-ferries.png" alt="Fast Ferries" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Fast Ferries</b>
+        <span class="tag sector">Μεταφορές</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">2.1 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Fast Ferries</code><code>Φαστ Φέρις</code><code>Φαστ Φερις</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://fastferries.com.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="error" data-sector="Μεταφορές"
+          data-flag="clean" id="golden-star-ferries">
+    <div class="media"><div class="missing">σφάλμα λήψης</div></div>
+    <figcaption>
+      <div class="row1">
+        <b>Golden Star Ferries</b>
+        <span class="tag sector">Μεταφορές</span>
+        <span class="tag st-error">σφάλμα</span>
+        
+        
+      </div>
+      
+      <div class="accept"><code>Golden Star Ferries</code><code>Golden Star</code><code>Γκόλντεν Σταρ</code></div>
+      
+      <small class="src">homepage HTTP 403</small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Μεταφορές"
+          data-flag="clean" id="hellenic-train">
+    <div class="media"><img src="../../public/logopaignio/_raw/hellenic-train.svg" alt="Hellenic Train" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Hellenic Train</b>
+        <span class="tag sector">Μεταφορές</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">634 B</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Hellenic Train</code><code>ΟΣΕ</code><code>OSE</code><code>ΤΡΑΙΝΟΣΕ</code><code>TrainOSE</code><code>Τραινοσέ</code></div>
+      
+      <small class="src">Public domain · <a href="https://commons.wikimedia.org/wiki/File:Hellenic_Train_Symbol.svg" target="_blank" rel="noreferrer">File:Hellenic Train Symbol.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Μεταφορές"
+          data-flag="clean" id="levante-ferries">
+    <div class="media"><img src="../../public/logopaignio/_raw/levante-ferries.svg" alt="Levante Ferries" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Levante Ferries</b>
+        <span class="tag sector">Μεταφορές</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">10.6 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Levante Ferries</code><code>Levante</code><code>Λεβάντε</code><code>Λεβαντε</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Levante_ferries_logo.svg" target="_blank" rel="noreferrer">File:Levante ferries logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card warn" data-status="ok" data-sector="Μεταφορές"
+          data-flag="warn" id="oasa">
+    <div class="media"><img src="../../public/logopaignio/_raw/oasa.svg" alt="ΟΑΣΑ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΟΑΣΑ</b>
+        <span class="tag sector">Μεταφορές</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">2.0 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="warn">Ένα μόνο path — πιθανώς «flattened»· το σύμβολο δεν απομονώνεται με clip.</li></ul>
+      <div class="accept"><code>ΟΑΣΑ</code><code>OASA</code><code>Οασα</code></div>
+      
+      <small class="src">Public domain · <a href="https://commons.wikimedia.org/wiki/File:Athens_transit_icons_-_OASA.svg" target="_blank" rel="noreferrer">File:Athens transit icons - OASA.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card bad" data-status="ok" data-sector="Μεταφορές"
+          data-flag="bad" id="stasy">
+    <div class="media"><img src="../../public/logopaignio/_raw/stasy.png" alt="ΣΤΑΣΥ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΣΤΑΣΥ</b>
+        <span class="tag sector">Μεταφορές</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">9.4 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="bad">Πιθανώς ΛΑΘΟΣ εταιρεία — ο τίτλος «File:Tarptautinis Stasio Šimkaus chorų konkursas - LOGO.png» δεν αναφέρει τη μάρκα.</li><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>ΣΤΑΣΥ</code><code>STASY</code><code>Στασυ</code><code>Σταθερές Συγκοινωνίες</code></div>
+      
+      <small class="src">CC BY-SA 3.0 · <a href="https://commons.wikimedia.org/wiki/File:Tarptautinis_Stasio_%C5%A0imkaus_chor%C5%B3_konkursas_-_LOGO.png" target="_blank" rel="noreferrer">File:Tarptautinis Stasio Šimkaus chorų konkursas - LOGO.png</a></small>
+    </figcaption>
+  </figure></div>
+<h2>Τηλεπικοινωνίες <span style="text-transform:none;color:#a1a1aa">· 4</span></h2>
+<div class="grid">
+  <figure class="card bad" data-status="ok" data-sector="Τηλεπικοινωνίες"
+          data-flag="bad" id="forthnet">
+    <div class="media"><img src="../../public/logopaignio/_raw/forthnet.svg" alt="Forthnet" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Forthnet</b>
+        <span class="tag sector">Τηλεπικοινωνίες</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">1.8 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="bad">Πιθανώς ΛΑΘΟΣ εταιρεία — ο τίτλος «File:NOVA Greece logo.svg» δεν αναφέρει τη μάρκα.</li><li class="bad">Ίδιο αρχείο με: nova — τουλάχιστον ένα είναι λάθος.</li></ul>
+      <div class="accept"><code>Forthnet</code><code>Φόρθνετ</code><code>Φορθνετ</code></div>
+      <small class="note">DEFUNCT/merged.</small>
+      <small class="src">Public domain · <a href="https://commons.wikimedia.org/wiki/File:NOVA_Greece_logo.svg" target="_blank" rel="noreferrer">File:NOVA Greece logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card bad" data-status="ok" data-sector="Τηλεπικοινωνίες"
+          data-flag="bad" id="nova">
+    <div class="media"><img src="../../public/logopaignio/_raw/nova.svg" alt="Nova" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Nova</b>
+        <span class="tag sector">Τηλεπικοινωνίες</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">1.8 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="bad">Ίδιο αρχείο με: forthnet — τουλάχιστον ένα είναι λάθος.</li></ul>
+      <div class="accept"><code>Nova</code><code>Νόβα</code><code>Νοβα</code></div>
+      
+      <small class="src">Public domain · <a href="https://commons.wikimedia.org/wiki/File:NOVA_Greece_logo.svg" target="_blank" rel="noreferrer">File:NOVA Greece logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card bad" data-status="ok" data-sector="Τηλεπικοινωνίες"
+          data-flag="bad" id="ote">
+    <div class="media"><img src="../../public/logopaignio/_raw/ote.svg" alt="ΟΤΕ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΟΤΕ</b>
+        <span class="tag sector">Τηλεπικοινωνίες</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">9.7 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      <ul class="warns"><li class="bad">Πιθανώς ΛΑΘΟΣ εταιρεία — ο τίτλος «File:OTE Logo.svg» δεν αναφέρει τη μάρκα.</li></ul>
+      <div class="accept"><code>ΟΤΕ</code><code>OTE</code><code>Οτε</code><code>Οργανισμός Τηλεπικοινωνιών Ελλάδος</code></div>
+      <small class="note">Prefer a RETIRED OTE mark — the current one is Deutsche Telekom's T (same trap as Cosmote).</small>
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:OTE_Logo.svg" target="_blank" rel="noreferrer">File:OTE Logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Τηλεπικοινωνίες"
+          data-flag="clean" id="wind-hellas">
+    <div class="media"><img src="../../public/logopaignio/_raw/wind-hellas.svg" alt="WIND" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>WIND</b>
+        <span class="tag sector">Τηλεπικοινωνίες</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">54.6 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>WIND</code><code>Wind</code><code>Γουίντ</code><code>Γουιντ</code><code>Wind Hellas</code></div>
+      <small class="note">DEFUNCT (merged into Nova) — nostalgia mark.</small>
+      <small class="src">CC BY-SA 4.0 · <a href="https://commons.wikimedia.org/wiki/File:Wind_Hellas_logo_(2015-2017).svg" target="_blank" rel="noreferrer">File:Wind Hellas logo (2015-2017).svg</a></small>
+    </figcaption>
+  </figure></div>
+<h2>Λιανική <span style="text-transform:none;color:#a1a1aa">· 5</span></h2>
+<div class="grid">
+  <figure class="card warn" data-status="ok" data-sector="Λιανική"
+          data-flag="warn" id="hondos-center">
+    <div class="media"><img src="../../public/logopaignio/_raw/hondos-center.png" alt="Hondos Center" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Hondos Center</b>
+        <span class="tag sector">Λιανική</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">91.9 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">Βαρύ (91.9 KB) — χρειάζεται συμπίεση.</li><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Hondos Center</code><code>Χονδρός</code><code>Χόντος</code><code>Χοντος Σεντερ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.hondoscenter.com/el/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Λιανική"
+          data-flag="clean" id="jumbo">
+    <div class="media"><img src="../../public/logopaignio/_raw/jumbo.svg" alt="Jumbo" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Jumbo</b>
+        <span class="tag sector">Λιανική</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">6.6 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Jumbo</code><code>Τζάμπο</code><code>Τζαμπο</code></div>
+      <small class="note">Likely wordmark-only — verify.</small>
+      <small class="src">CC BY-SA 4.0 · <a href="https://commons.wikimedia.org/wiki/File:Jumbo_logo.svg" target="_blank" rel="noreferrer">File:Jumbo logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="not-found" data-sector="Λιανική"
+          data-flag="clean" id="notos-galleries">
+    <div class="media"><div class="missing">δεν βρέθηκε στο Commons</div></div>
+    <figcaption>
+      <div class="row1">
+        <b>Notos Galleries</b>
+        <span class="tag sector">Λιανική</span>
+        <span class="tag st-not-found">δεν βρέθηκε</span>
+        
+        
+      </div>
+      
+      <div class="accept"><code>Notos Galleries</code><code>Νότος</code><code>Νοτος</code><code>Notos</code></div>
+      
+      <small class="src">no logo asset on page</small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Λιανική"
+          data-flag="clean" id="praktiker">
+    <div class="media"><img src="../../public/logopaignio/_raw/praktiker.svg" alt="Praktiker" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Praktiker</b>
+        <span class="tag sector">Λιανική</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">2.0 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Praktiker</code><code>Πρακτίκερ</code><code>Πρακτικερ</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Praktiker_HU_Logo_2023.svg" target="_blank" rel="noreferrer">File:Praktiker HU Logo 2023.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Λιανική"
+          data-flag="clean" id="public">
+    <div class="media"><img src="../../public/logopaignio/_raw/public.svg" alt="Public" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Public</b>
+        <span class="tag sector">Λιανική</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">1.8 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Public</code><code>Πάμπλικ</code><code>Παμπλικ</code></div>
+      <small class="note">PoC ○ manual — no clean public SVG; source from public.gr by hand.</small>
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.public.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure></div>
+<h2>Ηλεκτρονικά <span style="text-transform:none;color:#a1a1aa">· 2</span></h2>
+<div class="grid">
+  <figure class="card clean" data-status="ok" data-sector="Ηλεκτρονικά"
+          data-flag="clean" id="kotsovolos">
+    <div class="media"><img src="../../public/logopaignio/_raw/kotsovolos.svg" alt="Κωτσόβολος" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Κωτσόβολος</b>
+        <span class="tag sector">Ηλεκτρονικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">4.9 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Κωτσόβολος</code><code>Κωτσοβολος</code><code>Kotsovolos</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Kotsovolos_logo.svg" target="_blank" rel="noreferrer">File:Kotsovolos logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Ηλεκτρονικά"
+          data-flag="clean" id="plaisio">
+    <div class="media"><img src="../../public/logopaignio/_raw/plaisio.svg" alt="Πλαίσιο" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Πλαίσιο</b>
+        <span class="tag sector">Ηλεκτρονικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">2.0 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Πλαίσιο</code><code>Πλαισιο</code><code>Plaisio</code></div>
+      
+      <small class="src">CC BY-SA 4.0 · <a href="https://commons.wikimedia.org/wiki/File:Plaisio_logo.svg" target="_blank" rel="noreferrer">File:Plaisio logo.svg</a></small>
+    </figcaption>
+  </figure></div>
+<h2>Φαρμακευτικά <span style="text-transform:none;color:#a1a1aa">· 2</span></h2>
+<div class="grid">
+  <figure class="card clean" data-status="ok" data-sector="Φαρμακευτικά"
+          data-flag="clean" id="lanes">
+    <div class="media"><img src="../../public/logopaignio/_raw/lanes.svg" alt="Lanes" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Lanes</b>
+        <span class="tag sector">Φαρμακευτικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">2.6 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Lanes</code><code>Λάνες</code><code>Λανες</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.sdm.gr/?utm_source=lanes&amp;utm_medium=redirect&amp;utm_campaign=lanes" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card bad" data-status="ok" data-sector="Φαρμακευτικά"
+          data-flag="bad" id="vianex">
+    <div class="media"><img src="../../public/logopaignio/_raw/vianex.jpg" alt="ΒΙΑΝΕΞ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΒΙΑΝΕΞ</b>
+        <span class="tag sector">Φαρμακευτικά</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">581 KB</span>
+        <span class="tag fmt">JPG</span>
+      </div>
+      <ul class="warns"><li class="bad">Πολύ βαρύ (581 KB) — χρειάζεται αντικατάσταση.</li></ul>
+      <div class="accept"><code>ΒΙΑΝΕΞ</code><code>VIANEX</code><code>Βιανεξ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.vianex.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure></div>
+<h2>Μουσική <span style="text-transform:none;color:#a1a1aa">· 1</span></h2>
+<div class="grid">
+  <figure class="card warn" data-status="ok" data-sector="Μουσική"
+          data-flag="warn" id="minos-emi">
+    <div class="media"><img src="../../public/logopaignio/_raw/minos-emi.png" alt="Minos EMI" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Minos EMI</b>
+        <span class="tag sector">Μουσική</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">2.4 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Minos EMI</code><code>Μίνως</code><code>Μινως</code><code>Minos</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.minosemi.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure></div>
+<h2>Τυχερά παιχνίδια <span style="text-transform:none;color:#a1a1aa">· 3</span></h2>
+<div class="grid">
+  <figure class="card warn" data-status="ok" data-sector="Τυχερά παιχνίδια"
+          data-flag="warn" id="novibet">
+    <div class="media"><img src="../../public/logopaignio/_raw/novibet.png" alt="Novibet" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Novibet</b>
+        <span class="tag sector">Τυχερά παιχνίδια</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">4.5 KB</span>
+        <span class="tag fmt">PNG</span>
+      </div>
+      <ul class="warns"><li class="warn">PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.</li></ul>
+      <div class="accept"><code>Novibet</code><code>Νόβιμπετ</code><code>Νοβιμπετ</code></div>
+      
+      <small class="src">© the company — no stated license · trademarked · <a href="https://novibet.gr" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Τυχερά παιχνίδια"
+          data-flag="clean" id="opap">
+    <div class="media"><img src="../../public/logopaignio/_raw/opap.svg" alt="ΟΠΑΠ" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>ΟΠΑΠ</b>
+        <span class="tag sector">Τυχερά παιχνίδια</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">15.5 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>ΟΠΑΠ</code><code>OPAP</code><code>Οπαπ</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:OPAP_logo.svg" target="_blank" rel="noreferrer">File:OPAP logo.svg</a></small>
+    </figcaption>
+  </figure>
+  <figure class="card clean" data-status="ok" data-sector="Τυχερά παιχνίδια"
+          data-flag="clean" id="stoiximan">
+    <div class="media"><img src="../../public/logopaignio/_raw/stoiximan.svg" alt="Stoiximan" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Stoiximan</b>
+        <span class="tag sector">Τυχερά παιχνίδια</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">3.6 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Stoiximan</code><code>Στοίχημαν</code><code>Στοιχηματάν</code><code>Στοιχειμαν</code></div>
+      
+      <small class="src">Public domain · trademarked · <a href="https://commons.wikimedia.org/wiki/File:Stoiximan_(logo).svg" target="_blank" rel="noreferrer">File:Stoiximan (logo).svg</a></small>
+    </figcaption>
+  </figure></div>
+<h2>Ψυχαγωγία <span style="text-transform:none;color:#a1a1aa">· 1</span></h2>
+<div class="grid">
+  <figure class="card clean" data-status="ok" data-sector="Ψυχαγωγία"
+          data-flag="clean" id="public-cinemas">
+    <div class="media"><img src="../../public/logopaignio/_raw/public-cinemas.svg" alt="Village Cinemas" loading="lazy"></div>
+    <figcaption>
+      <div class="row1">
+        <b>Village Cinemas</b>
+        <span class="tag sector">Ψυχαγωγία</span>
+        <span class="tag st-ok">βρέθηκε</span>
+        <span class="tag size">56.6 KB</span>
+        <span class="tag fmt">SVG</span>
+      </div>
+      
+      <div class="accept"><code>Village Cinemas</code><code>Village</code><code>Βίλατζ</code><code>Βιλατζ</code></div>
+      <small class="note">Foreign-origin — check the perceived-Greek rule.</small>
+      <small class="src">© the company — no stated license · trademarked · <a href="https://www.villagecinemas.gr/" target="_blank" rel="noreferrer"></a></small>
+    </figcaption>
+  </figure></div>
+<script>
+  const buttons = document.querySelectorAll('.filters button');
+  const cards = document.querySelectorAll('.card');
+  buttons.forEach((b) => b.addEventListener('click', () => {
+    buttons.forEach((x) => x.classList.toggle('on', x === b));
+    const f = b.dataset.filter;
+    cards.forEach((c) => {
+      const status = c.dataset.status;
+      const flag = c.dataset.flag;
+      const show =
+        f === 'all' ? true :
+        f === 'missing' ? status !== 'ok' :
+        status === 'ok' && flag === f;
+      c.classList.toggle('hidden', !show);
+    });
+    document.querySelectorAll('h2').forEach((h) => {
+      const grid = h.nextElementSibling;
+      const any = [...grid.children].some((c) => !c.classList.contains('hidden'));
+      h.style.display = any ? '' : 'none';
+      grid.style.display = any ? '' : 'none';
+    });
+  }));
+</script>
 </body></html>
