@@ -72,3 +72,9 @@ src/data/*.dic
 # mirroring into .claude/skills. Claude Code never reads it, so it stays ignored — it is
 # 100% tool-generated scratch.
 .agents/skills/
+
+# --- Logopaignio logo staging (added 2026-07-27) ---
+# Raw downloaded logos (fetch-logopaignio-logos.mjs → public/logopaignio/_raw/)
+# are staging material: full logos WITH wordmarks, awaiting the mark-only crop.
+# Only processed marks in public/logopaignio/ ship. See handoff logopaignio-content-pool.md.
+public/logopaignio/_raw/
