@@ -6,7 +6,7 @@
 //
 // One static file backs the game: puzzles-el.json (an array of LogopaignioPuzzle).
 // A row graduates in only when fully sourced (mark asset + accept-list + credit)
-// — see handoff `logopaignio.md`.
+// — see handoff `logopaignio-content-pool.md`.
 
 /**
  * One brand puzzle. `brand` is the canonical display name (revealed only after a

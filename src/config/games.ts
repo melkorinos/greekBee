@@ -92,7 +92,7 @@ export const GAME_REGISTRY = {
   },
   // Daily "guess the Greek company from its name-stripped logo mark" game. Ships
   // wip:true (single placeholder puzzle); flip to false once ~30 real brands are
-  // sourced (mark assets + accept-lists — handoff logopaignio.md).
+  // sourced (mark assets + accept-lists — handoff logopaignio-content-pool.md).
   logopaignio: {
     label:       "🔎 Λογοπαίγνιο",
     emoji:       "🔎",
