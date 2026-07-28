@@ -29,8 +29,12 @@ const OUT = join(ROOT, ".claude", "aiHelper", "logopaignio-preview.html");
 /**
  * Sectors the operator has parked. Their cards still render (the assets are
  * fetched and worth keeping) but are banner-marked so the eye check skips them.
+ *
+ * Εστίαση was un-deferred on 2026-07-27 (expansion #2): the operator added the
+ * coffee and fast-food chains and wants them reviewed with everything else. The
+ * mechanism stays — it costs nothing and the next parked sector will want it.
  */
-const DEFERRED_SECTORS = new Set(["Εστίαση"]);
+const DEFERRED_SECTORS = new Set([]);
 
 /** Budget per shipped mark. Anything above reads as HEAVY in the preview. */
 const SIZE_WARN_BYTES = 60_000;
@@ -68,10 +72,13 @@ function warningsFor(r) {
   } else if (r.bytes > SIZE_WARN_BYTES) {
     out.push({ level: "warn", text: `Βαρύ (${fmtBytes(r.bytes)}) — χρειάζεται συμπίεση.` });
   }
-  if (r.ext === "png") {
+  // Every raster format needs a manual crop — only an SVG can be cut by clipping
+  // its viewBox. WebP joined the list on 2026-07-28 when the fetcher learned to
+  // accept it; leaving it out would have shown those cards as falsely "clean".
+  if (["png", "jpg", "jpeg", "webp", "gif"].includes(r.ext)) {
     out.push({
       level: "warn",
-      text: "PNG — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.",
+      text: `${r.ext.toUpperCase()} — δεν κόβεται με clip του viewBox· χρειάζεται χειροκίνητο crop.`,
     });
   }
   if (r.svg?.embeddedRaster) {
@@ -81,6 +88,24 @@ function warningsFor(r) {
     out.push({
       level: "warn",
       text: "Ένα μόνο path — πιθανώς «flattened»· το σύμβολο δεν απομονώνεται με clip.",
+    });
+  }
+  // An archived snapshot can be older than the brand's current logo, which is a
+  // direct conflict with the "current logo only" rule. Defunct brands are the
+  // exception — for them an old mark is the point.
+  if (r.source === "wayback") {
+    out.push({
+      level: "warn",
+      text: `Από αρχειοθετημένο στιγμιότυπο (${r.snapshotDate ?? "άγνωστη ημερομηνία"}) — επιβεβαίωσε ότι είναι το ΤΡΕΧΟΝ λογότυπο.`,
+    });
+  }
+  // Plan D resolves by article, which collides with brands named after ordinary
+  // Greek words (Κορφή the peak, Ιόλη the person). The guards catch most of it,
+  // but the operator should still confirm the subject.
+  if (r.source === "wikipedia") {
+    out.push({
+      level: "warn",
+      text: `Από Wikipedia («${r.wikiTitle ?? "?"}») — επιβεβαίωσε ότι το άρθρο αφορά την ΕΤΑΙΡΕΙΑ.`,
     });
   }
   if (/wordmark/i.test(r.commonsTitle ?? "")) {
@@ -105,9 +130,9 @@ function card(r, assetHref) {
       ? `<img src="${esc(assetHref)}" alt="${esc(r.brand)}" loading="lazy">`
       : `<div class="missing">${
           r.status === "manual"
-            ? "χειροκίνητη άντληση<br><small>δεν υπάρχει δημόσιο αρχείο</small>"
+            ? `<b>ΘΕΛΕΙ ΕΙΚΟΝΑ ΑΠΟ ΕΣΕΝΑ</b><br><small>ονόμασέ την <code>${esc(r.id)}.png</code> (ή .svg)</small>`
             : r.status === "not-found"
-              ? "δεν βρέθηκε στο Commons"
+              ? "δεν βρέθηκε αυτόματα"
               : "σφάλμα λήψης"
         }</div>`;
 
@@ -207,6 +232,9 @@ async function main() {
   .tag.st-ok { background: #dcfce7; color: #15803d; }
   .tag.st-not-found { background: #f4f4f5; color: #71717a; }
   .tag.st-manual { background: #ede9fe; color: #6d28d9; }
+  .card[data-status="manual"] { border-color: #c4b5fd; background: #faf8ff; }
+  .card[data-status="manual"] .missing b { color: #6d28d9; font-size: 12px; letter-spacing: .02em; }
+  .card[data-status="manual"] .missing code { background: #ede9fe; border-radius: 4px; padding: 0 4px; }
   .tag.st-error { background: #fee2e2; color: #b91c1c; }
   .warns { margin: 0; padding-left: 16px; font-size: 12px; line-height: 1.5; }
   .warns .bad { color: #b91c1c; }
@@ -227,6 +255,7 @@ async function main() {
     <button data-filter="warn">Με προειδοποίηση</button>
     <button data-filter="bad">Προβληματικά</button>
     <button data-filter="missing">Χωρίς αρχείο</button>
+    <button data-filter="manual">Θέλουν εικόνα από εσένα</button>
   </div>
 </header>
 <div class="legend">
@@ -262,6 +291,7 @@ ${bySector
       const flag = c.dataset.flag;
       const show =
         f === 'all' ? true :
+        f === 'manual' ? status === 'manual' :
         f === 'missing' ? status !== 'ok' :
         status === 'ok' && flag === f;
       c.classList.toggle('hidden', !show);

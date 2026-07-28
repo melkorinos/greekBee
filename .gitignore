@@ -78,3 +78,6 @@ src/data/*.dic
 # are staging material: full logos WITH wordmarks, awaiting the mark-only crop.
 # Only processed marks in public/logopaignio/ ship. See handoff logopaignio-content-pool.md.
 public/logopaignio/_raw/
+# Operator-supplied images (drop zone for import-logopaignio-manual.mjs). Same
+# staging status as _raw/ — the importer copies them into _raw/ on the way in.
+public/logopaignio/_manual/

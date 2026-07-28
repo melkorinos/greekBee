@@ -59,13 +59,11 @@ export const OFFICIAL_SITES = [
   { id: "ivi", domain: "www.ivi.gr" },
   { id: "sarantis", domain: "www.sarantisgroup.com" },
   { id: "papoutsanis", domain: "www.papoutsanis.gr" },
-  { id: "lanes", domain: "www.lanes.gr" },
   { id: "anek-lines", domain: "www.anek.gr" },
   { id: "superfast-ferries", domain: "www.superfast.com" },
   { id: "seajets", domain: "www.seajets.com" },
   { id: "hellenic-seaways", domain: "www.hellenicseaways.gr" },
   { id: "eyath", domain: "www.eyath.gr" },
-  { id: "elval", domain: "www.elval.com" },
   { id: "alumil", domain: "www.alumil.com" },
   { id: "acs", domain: "www.acscourier.net" },
   { id: "geniki-taxydromiki", domain: "www.taxydromiki.com" },
@@ -101,24 +99,15 @@ export const OFFICIAL_SITES = [
   { id: "silkoil", domain: "www.silkoil.gr" },
   { id: "eteka", domain: "www.eteka.gr" },
   { id: "elin", domain: "www.elin.gr" },
-  { id: "pelargos", domain: "www.pelargos.gr" },
   { id: "art-tv", domain: "www.arttv.gr" },
   { id: "mad-tv", domain: "www.mad.tv" },
   { id: "vouli-tileorasi", domain: "www.hellenicparliament.gr" },
   { id: "rise-tv", domain: "rise.gr" },
   { id: "athinaiki-zythopoiia", domain: "www.athenianbrewery.gr" },
-  { id: "cosmos-aluminium", domain: "www.cosmosaluminium.gr" },
-  { id: "skag", domain: "www.skag.gr" },
   { id: "allatini", domain: "www.allatini.gr" },
-  { id: "aluminion-ellados", domain: "www.metlengroup.com" },
-  { id: "vianex", domain: "www.vianex.gr" },
   { id: "evga", domain: "www.evga.gr" },
-  { id: "estia", domain: "www.estia-sa.gr" },
-  { id: "etem", domain: "www.etem.com" },
   { id: "iraklis", domain: "www.lafarge.gr" },
   { id: "kyknos", domain: "www.kyknos.gr" },
-  { id: "naupigeia-elefsinas", domain: "www.neltd.gr" },
-  { id: "chalyvourgia", domain: "www.chalyvourgia.gr" },
   { id: "golden-star-ferries", domain: "www.goldenstarferries.gr" },
   { id: "fast-ferries", domain: "fastferries.com.gr" },
   // Γιαννιώτικο is a ΔΩΔΩΝΗ brand — sourced from the parent's site.
@@ -138,4 +127,129 @@ export const OFFICIAL_SITES = [
   // to the Estonian arm), so they are sourced from the brand's own site instead.
   { id: "dhl", domain: "www.dhl.com" },
   { id: "ergo", domain: "www.ergohellas.gr" },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // EXPANSION #2 (2026-07-27) — betting, music labels, beer/wine/spirits/water,
+  // cheese & charcuterie, εστίαση chains, retailers, Greek food classics.
+  //
+  // Commons resolved only 24 of these 95: Greek consumer brands are precisely
+  // what Commons lacks (no free-licensed file exists for Ζαγόρι or Τερκενλής),
+  // so the company's own site is the primary source for this batch, not the
+  // fallback it was for the first pass.
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // ── Υγρά: μπίρα ──
+  { id: "mythos", domain: "www.mythosbrewery.gr" },
+  { id: "alfa-beer", domain: "www.alfabeer.gr" },
+  { id: "vergina-beer", domain: "www.verginabeer.com" },
+  // hint avoids EUROCERT_LOGO_final_small.png — a CERTIFICATION BODY's badge in
+  // the footer, which the unhinted run picked as "the logo".
+  { id: "nissos", domain: "nissos.beer", hint: "uploads/Logo" },
+  { id: "septem", domain: "www.septem.gr" },
+  // voreia / korfi: no domain found on any guessed pattern (.gr/.com). Left out of
+  // Plan B rather than pointed at a dead host — they need manual sourcing.
+  { id: "amstel", domain: "www.amstel.gr" },
+
+  // ── Υγρά: κρασί & ποτά ──
+  { id: "boutari", domain: "www.boutari.gr" },
+  { id: "tsantali", domain: "www.tsantali.com" },
+  // Κουρτάκη is now trading as Greek Wine Cellars — the Kourtaki name survives as
+  // one of its labels, which is exactly the sub-brand case the relaxed rule allows.
+  { id: "kourtaki", domain: "www.greek-wine-cellars.com" },
+  { id: "malamatina", domain: "www.malamatina.gr" },
+  { id: "cavino", domain: "www.cavino.gr" },
+  { id: "lazaridi", domain: "www.domaine-lazaridi.gr" },
+  { id: "plomari", domain: "www.plomari.gr" },
+  { id: "barbayanni", domain: "www.barbayanni-ouzo.com" },
+  { id: "tsipouro-tirnavou", domain: "www.tsipourotirnavou.gr" },
+
+  // ── Υγρά: νερά ──
+  { id: "zagori", domain: "www.zagoriwater.gr" },
+  { id: "avra", domain: "www.avrawater.gr" },
+  { id: "theoni", domain: "www.theoni.gr" },
+  { id: "souroti", domain: "www.souroti.gr" },
+  { id: "ioli", domain: "www.ioli.gr" },
+  { id: "loutraki", domain: "www.loutrakiwater.gr" },
+  { id: "korpi", domain: "www.korpi.gr" },
+  { id: "kaiafas", domain: "www.kaiafaswater.gr" },
+  { id: "doubles", domain: "www.doumpia.gr" },
+
+  // ── Τρόφιμα ──
+  { id: "loumidis", domain: "www.loumidis.gr" },
+  { id: "pavlidis", domain: "www.pavlidis.gr" },
+  { id: "lacta", domain: "www.lacta.gr" },
+  { id: "terkenlis", domain: "www.terkenlis.gr" },
+  { id: "molto", domain: "www.molto.gr" },
+  { id: "tsakiris", domain: "www.tsakiris.gr" },
+  { id: "sevendays", domain: "www.7days.com" },
+  { id: "elite-tsakiris", domain: "www.elite.gr" },
+  { id: "trikalinos", domain: "www.trikalinos.gr" },
+  { id: "minerva", domain: "www.minerva.com.gr" },
+  { id: "altis", domain: "altis.com.gr" },
+  { id: "gioutis", domain: "www.giotis.gr" },
+
+  // ── Τυριά & αλλαντικά ──
+  { id: "ifantis", domain: "www.ifantis.gr" },
+  { id: "nikas", domain: "www.nikas.gr" },
+  { id: "creta-farms", domain: "www.cretafarms.gr" },
+  { id: "venetis", domain: "www.venetis.gr" },
+  { id: "dodoni", domain: "dodoni.com" },
+  { id: "epirus", domain: "www.ipiros.gr" },
+  { id: "karalis", domain: "www.karalis-sa.gr" },
+  { id: "eyellinikon", domain: "www.efellinikon.gr" },
+  { id: "olympus-tyri", domain: "www.tyras.gr" },
+  { id: "roussas", domain: "www.roussas.gr" },
+
+  // ── Εστίαση ──
+  { id: "pizza-fan", domain: "www.pizzafan.gr" },
+  { id: "ta-adelfia", domain: "www.taaderfia.gr" },
+  { id: "kotobiky", domain: "www.kotobites.gr" },
+  { id: "simply-burgers", domain: "www.simplyburgers.gr" },
+  { id: "starbucks", domain: "starbucks.com.gr" },
+  { id: "gregorys", domain: "http://grigoris.gr" },
+  // hint avoids netsteps-logo-1.svg — the WEB AGENCY that built the site. A
+  // footer "made by" credit is a logo on the page like any other, so an unhinted
+  // "first logo-ish asset" pick has no way to know it is the wrong company.
+  { id: "coffee-lab", domain: "www.coffeelab.gr", hint: "coffeelab" },
+  { id: "coffeeright", domain: "www.coffeeright.gr" },
+  { id: "taf-coffee", domain: "tafcoffee.com" },
+  // roast-bakery: no resolving domain found — manual sourcing.
+
+  // ── Λιανική ──
+  { id: "moustakas", domain: "www.moustakastoys.gr" },
+  { id: "attica-stores", domain: "www.atticadps.gr" },
+  { id: "factory-outlet", domain: "www.factoryoutlet.gr" },
+  { id: "cosmos-sport", domain: "www.cosmossport.gr" },
+  { id: "sklavenitis-cash", domain: "www.themart.gr" }, // 403 on UA alone; opens with full browser headers
+
+  // ── Τυχερά παιχνίδια ──
+  // The ΟΠΑΠ sub-brands were first pointed at the parent (www.opap.gr) and all
+  // three came back with the SAME file — ΟΠΑΠ's corporate PNG, not the game's own
+  // mark. Sub-brands are in scope precisely because they have their own identity,
+  // so a parent-logo fallback is a wrong answer, not a partial one. Retried
+  // against each game's own site.
+  { id: "pamestoixima", domain: "www.pamestoixima.gr" },
+  { id: "tzoker", domain: "www.tzoker.gr" },
+  { id: "kino", domain: "www.opaponline.gr", hint: "kino" },
+  { id: "winmasters", domain: "www.winmasters.gr" },
+  { id: "fonbet", domain: "www.fonbet.gr" },
+
+  // ── Μουσική ──
+  { id: "panik-records", domain: "www.panikrecords.gr" },
+  { id: "heaven-music", domain: "heavenmusic.gr" },
+  { id: "cobalt-music", domain: "cobaltmusic.gr" },
+  { id: "spicy-music", domain: "www.spicy.gr" },
+
+  // ── Ραδιόφωνο (2026-07-28) ──
+  // enlefko.gr and kissfm.gr are omitted: the first 403s even with full browser
+  // headers, the second does not resolve. Both go straight to manual sourcing.
+  // rythmos.gr is NOT the radio station — it resolves to Burg-Wächter, a German
+  // lock manufacturer. Removed rather than re-pointed: the station's real domain
+  // was not found, so Ρυθμός goes to manual sourcing.
+  { id: "red-fm", domain: "www.redfm.gr" },
+  { id: "dromos-fm", domain: "www.dromosfm.gr" },
+  { id: "melodia-fm", domain: "melodia.gr" },
+  { id: "sfera", domain: "www.sfera.gr" },
+  { id: "athens-deejay", domain: "www.athensdeejay.gr" },
+  // fm-records: no resolving domain on any guessed pattern — manual sourcing.
 ];

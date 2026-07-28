@@ -36,7 +36,29 @@ const MANIFEST = join(RAW_DIR, "manifest.json");
 
 // A real browser UA: several Greek sites 403 anything that looks scripted.
 const UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+
+/**
+ * The rest of what a browser sends. A correct UA alone is not enough for the
+ * stricter filters: measured 2026-07-28, adding these opened themart.gr,
+ * altis.com.gr and goldenstarferries.gr, all of which 403'd on UA alone. The
+ * Sec-Fetch-* set is what a top-level navigation looks like; sending a UA that
+ * claims to be Chrome while omitting them is itself a bot signal.
+ *
+ * It is not a bypass for real defences — pizzafan.gr, winmasters.gr, tsakiris.gr
+ * and orizonins.gr still 403 with a full header set, and those need manual
+ * sourcing rather than a cleverer request.
+ */
+const BROWSER_HEADERS = {
+  "User-Agent": UA,
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+  "Accept-Language": "el-GR,el;q=0.9,en-US;q=0.8,en;q=0.7",
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "none",
+  "Sec-Fetch-User": "?1",
+  "Upgrade-Insecure-Requests": "1",
+};
 
 const CONCURRENCY = 3;
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -57,7 +79,7 @@ async function get(url, asText) {
   const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": UA, Accept: "*/*" },
+      headers: BROWSER_HEADERS,
       redirect: "follow",
       signal: ctrl.signal,
     });
@@ -107,12 +129,44 @@ function measure(buf) {
     if (vb) return { kind: "svg", w: Math.round(+vb[1]), h: Math.round(+vb[2]) };
     return { kind: "svg", w: 0, h: 0 };
   }
+  // WebP: "RIFF" .... "WEBP". Added 2026-07-28 — it was falling through to `bin`
+  // and being rejected as an unusable format, which silently cost us every site
+  // that had modernised its images (ipiros.gr serves logo.webp and nothing else).
+  // Both Next.js and every target browser handle WebP, so there is no reason to
+  // refuse it. Dimensions come from the VP8 chunk variant in use.
+  if (
+    buf.length > 30 &&
+    buf.slice(0, 4).toString("latin1") === "RIFF" &&
+    buf.slice(8, 12).toString("latin1") === "WEBP"
+  ) {
+    const fourcc = buf.slice(12, 16).toString("latin1");
+    if (fourcc === "VP8X") {
+      return {
+        kind: "webp",
+        w: 1 + buf.readUIntLE(24, 3),
+        h: 1 + buf.readUIntLE(27, 3),
+      };
+    }
+    if (fourcc === "VP8L") {
+      const b = buf.readUInt32LE(21);
+      return { kind: "webp", w: 1 + (b & 0x3fff), h: 1 + ((b >> 14) & 0x3fff) };
+    }
+    if (fourcc === "VP8 ") {
+      return {
+        kind: "webp",
+        w: buf.readUInt16LE(26) & 0x3fff,
+        h: buf.readUInt16LE(28) & 0x3fff,
+      };
+    }
+    return { kind: "webp", w: 0, h: 0 };
+  }
   if (head.startsWith("GIF")) return { kind: "gif", w: 0, h: 0 };
   if (/^\x00\x00\x01\x00/.test(head)) return { kind: "ico", w: 0, h: 0 };
   return { kind: "bin", w: 0, h: 0 };
 }
 
-const extFor = (kind) => ({ png: "png", jpg: "jpg", svg: "svg", gif: "gif", ico: "ico" })[kind] ?? "bin";
+const extFor = (kind) =>
+  ({ png: "png", jpg: "jpg", svg: "svg", gif: "gif", ico: "ico", webp: "webp" })[kind] ?? "bin";
 
 /** Collect candidate asset URLs from a homepage, best-first. */
 function candidates(html, pageUrl, hint) {
