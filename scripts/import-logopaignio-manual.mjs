@@ -6,11 +6,17 @@
 // human, and this is how the human's files get in.
 //
 // USAGE
-//   1. Name each file after the brand's SEED ID:  mythos.png, epsa.svg, …
-//      The preview prints the exact filename on every purple "needs your image"
-//      card, so it can be copied from there.
+//   1. Name each file after the brand's SEED ID (mythos.png) OR its DISPLAY NAME
+//      (Μύθος.png) — both resolve. The operator's first batch arrived named by
+//      display name, which is the natural thing to type, so matching accepts it:
+//      accents, case and spacing are all folded away before comparing, and the
+//      brand's accept-list is searched too (so "7Days.png" finds `sevendays`).
 //   2. Drop them all in one folder (default: public/logopaignio/_manual/).
 //   3. node scripts/import-logopaignio-manual.mjs [folder]
+//
+// A trailing number marks a DELIBERATE alternative: "Κωτσόβολος 2.jpg" imports as
+// `kotsovolos-2` so both candidates survive for the operator to choose between.
+// Without that rule the second file would silently overwrite the first.
 //
 // It validates each file, copies it into _raw/ and updates the manifest, so the
 // image shows up in the next preview exactly like an automatically fetched one.
@@ -32,7 +38,7 @@
 // no license. That is weaker provenance than a Commons row, so ticket-04's legal
 // note must keep listing it as its own path.
 
-import { readFile, writeFile, mkdir, readdir, copyFile } from "node:fs/promises";
+import { readFile, writeFile, mkdir, readdir, copyFile, unlink } from "node:fs/promises";
 import { join, dirname, extname, basename } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -109,6 +115,63 @@ function inspectSvg(text) {
   };
 }
 
+/** Fold to comparable letters: accents, case, punctuation and spacing removed. */
+const fold = (s) =>
+  s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, "");
+
+/**
+ * Resolve a filename stem to a seed id.
+ *
+ * Accepts the id itself, the display name, or any accept-list variant, because a
+ * human naming 53 files will reach for the brand name rather than the slug. A
+ * trailing " 2"/"-2" is stripped before matching and re-applied as an id suffix,
+ * so alternatives stay side by side instead of overwriting each other.
+ *
+ * @returns {{id: string, seed: object, variant: string}|null}
+ */
+function resolveStem(stem, seeds) {
+  const variantMatch = stem.match(/[\s_-]+(\d+)$/);
+  const variant = variantMatch ? variantMatch[1] : "";
+  const base = variantMatch ? stem.slice(0, variantMatch.index) : stem;
+  const key = fold(base);
+  if (!key) return null;
+
+  for (const s of seeds) {
+    if (s.id === base || fold(s.id) === key) {
+      return { id: variant ? `${s.id}-${variant}` : s.id, seed: s, variant };
+    }
+  }
+  // Display name next — an exact brand match is unambiguous.
+  for (const s of seeds) {
+    if (fold(s.brand) === key) {
+      return { id: variant ? `${s.id}-${variant}` : s.id, seed: s, variant };
+    }
+  }
+
+  // Accept-list LAST, and only when exactly one brand claims the name.
+  //
+  // Accept-lists deliberately overlap: Chipita's includes "7Days" (it makes the
+  // product) and Attica Bank's includes "Attica" (so does the department store).
+  // Matching them like a name silently files the operator's 7Days logo under
+  // Chipita and their attica-stores logo under Attica Bank — both happened on the
+  // first 53-file import. When more than one brand answers to a name, no guess is
+  // better than the wrong one: refuse and let the operator disambiguate by using
+  // the seed id in the filename.
+  const claimants = seeds.filter((s) => s.accept.some((a) => fold(a) === key));
+  if (claimants.length === 1) {
+    const s = claimants[0];
+    return { id: variant ? `${s.id}-${variant}` : s.id, seed: s, variant };
+  }
+  if (claimants.length > 1) {
+    return { ambiguous: claimants.map((s) => s.id) };
+  }
+  return null;
+}
+
 async function main() {
   const inbox = process.argv[2] ? join(process.cwd(), process.argv[2]) : DEFAULT_INBOX;
 
@@ -130,8 +193,6 @@ async function main() {
     return;
   }
 
-  const seedById = new Map(SEED_BRANDS.map((s) => [s.id, s]));
-
   let manifest = [];
   try {
     manifest = JSON.parse(await readFile(MANIFEST, "utf8"));
@@ -147,39 +208,63 @@ async function main() {
   let rejected = 0;
 
   for (const f of files.sort()) {
-    const id = basename(f, extname(f));
-    const seed = seedById.get(id);
+    const stem = basename(f, extname(f));
+    const hit = resolveStem(stem, SEED_BRANDS);
 
-    if (!seed) {
-      console.log(`  ✗ ${f.padEnd(28)} no seed brand with id "${id}" — check the filename`);
+    if (!hit) {
+      console.log(`  ✗ ${f.padEnd(30)} no brand matches "${stem}" — removed from the pool, or a typo`);
       rejected += 1;
       continue;
     }
+    if (hit.ambiguous) {
+      console.log(
+        `  ✗ ${f.padEnd(30)} "${stem}" matches ${hit.ambiguous.length} brands (${hit.ambiguous.join(", ")}) — rename the file to one of those ids`,
+      );
+      rejected += 1;
+      continue;
+    }
+    const { id, seed, variant } = hit;
 
     const buf = await readFile(join(inbox, f));
     const dim = measure(buf);
 
     if (dim.kind === "bin") {
-      console.log(`  ✗ ${f.padEnd(28)} not a usable image (PNG/JPEG/SVG/WebP expected)`);
+      console.log(`  ✗ ${f.padEnd(30)} not a usable image (PNG/JPEG/SVG/WebP expected)`);
       rejected += 1;
       continue;
     }
     if (dim.kind !== "svg" && Math.max(dim.w, dim.h) < MIN_RASTER_PX) {
-      console.log(`  ✗ ${f.padEnd(28)} only ${dim.w}×${dim.h} — too small for the 512px canvas`);
+      console.log(`  ✗ ${f.padEnd(30)} only ${dim.w}×${dim.h} — too small for the 512px canvas`);
       rejected += 1;
       continue;
     }
 
     const ext = dim.kind;
     const outName = `${id}.${ext}`;
+
+    // OPERATOR SUPERSEDES AUTOMATION (their explicit rule). A supplied image wins
+    // over whatever a fetch pass found, and the superseded file is deleted rather
+    // than left orphaned in _raw/ — the operator looked at the preview and judged
+    // theirs better, so keeping both would only re-introduce the doubt.
+    const prev = byId.get(id);
+    if (prev?.file && prev.file !== outName) {
+      try {
+        await unlink(join(RAW_DIR, prev.file));
+      } catch {
+        // already gone
+      }
+    }
+
     await copyFile(join(inbox, f), join(RAW_DIR, outName));
 
     byId.set(id, {
       id,
-      brand: seed.brand,
+      brand: variant ? `${seed.brand} (εναλλακτικό ${variant})` : seed.brand,
       sector: seed.sector,
       accept: seed.accept,
-      note: seed.note ?? "",
+      note: variant
+        ? `Εναλλακτική εικόνα ${variant} για «${seed.brand}» — διάλεξε ποια κρατάς.`
+        : (seed.note ?? ""),
       status: "ok",
       file: outName,
       ext,
@@ -194,7 +279,7 @@ async function main() {
     });
 
     console.log(
-      `  ✓ ${f.padEnd(28)} ${String(buf.length).padStart(8)} B  ${(dim.w && dim.h ? `${dim.w}×${dim.h}` : "").padEnd(11)}${ext}`,
+      `  ✓ ${f.padEnd(30)} → ${id.padEnd(20)} ${String(buf.length).padStart(7)} B  ${(dim.w && dim.h ? `${dim.w}×${dim.h}` : "").padEnd(11)}${ext}`,
     );
     imported += 1;
   }
