@@ -13,6 +13,8 @@
     "generate-puzzle": "tsx scripts/generate-puzzle.ts",
     "generate-puzzle-index": "node scripts/generate-puzzle-index.mjs",
     "batch-generate": "tsx scripts/batch-generate.ts",
+    "prune-leksokipos": "tsx scripts/prune-leksokipos-puzzles.ts",
+    "prune-leksokipos:dry": "tsx scripts/prune-leksokipos-puzzles.ts --dry-run",
     "generate-leksoplegma": "tsx scripts/generate-leksoplegma.ts",
     "generate-leksodromia-anagrams": "tsx scripts/generate-leksodromia-anagrams.ts",
     "apply-nominations": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/apply-nominations.ts",

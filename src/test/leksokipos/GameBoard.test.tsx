@@ -401,8 +401,10 @@ describe("Endgame Zone", () => {
   it("rank ladder still appears below the top rank (Απολυτότητα)", async () => {
     const user = userEvent.setup();
     render(<GameBoard puzzle={dailyPuzzle} />);
-    await submitWords(user, ["painted", "panted", "paid", "anti"]); // 22 pts: 75.9% < 80% → not top rank
-    expect(screen.getByTestId("score-label")).toHaveTextContent("22 pts");
+    // maxScore here is 25 (raw 33 × SCORE_SCALE 0.75), so the top rank sits at 20 pts.
+    // 16 pts = 64% — comfortably mid-ladder, which is what this test needs.
+    await submitWords(user, ["painted", "paid", "anti"]); // 16 pts: 64% < 80% → not top rank
+    expect(screen.getByTestId("score-label")).toHaveTextContent("16 pts");
     await user.click(screen.getByRole("button", { name: /εμφάνιση επιπέδων/i }));
     expect(screen.queryByTestId("endgame-panel")).toBeNull();
     // rank ladder rows are present (at least one rank name visible)

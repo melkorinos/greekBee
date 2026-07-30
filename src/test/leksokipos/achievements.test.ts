@@ -46,22 +46,35 @@ function ids() {
 }
 
 describe("LEKSOKIPOS_ACHIEVEMENTS catalog", () => {
-  it("contains the frozen one-shot badge ids", () => {
+  it("contains the frozen top-level badge ids", () => {
     expect(ids()).toEqual(
       expect.arrayContaining([
         "leksokipos-first-daily",
         "leksokipos-stin-korifi",
-        "leksokipos-sidirodromos",
         "leksokipos-theristis",
-        "leksokipos-word-11",
-        "leksokipos-word-12",
-        "leksokipos-word-13",
+        "leksokipos-makrylexis",
       ]),
     );
   });
 
-  it("gives each tiered badge three per-tier frozen ids with ascending thresholds", () => {
-    const tiered = LEKSOKIPOS_ACHIEVEMENTS.filter((a) => a.kind === "tiered");
+  it("keeps the frozen word-length ids as the ladder's tier ids", () => {
+    // The four lengths were shipped as separate one-shots and their ids are frozen
+    // in player_achievements. Grouping them under Μακρυλέξης must not rename them.
+    const ladder = LEKSOKIPOS_ACHIEVEMENTS.find((a) => a.id === "leksokipos-makrylexis");
+    expect(ladder?.tiers?.map((t) => t.id)).toEqual([
+      "leksokipos-sidirodromos",
+      "leksokipos-word-11",
+      "leksokipos-word-12",
+      "leksokipos-word-13",
+    ]);
+  });
+
+  it("gives each cumulative tiered badge three per-tier frozen ids with ascending thresholds", () => {
+    // The word-length ladder is excluded: its tier ids are the pre-existing frozen
+    // one-shot ids, not `${base}-${tier}`, and it has a fourth rung above gold.
+    const tiered = LEKSOKIPOS_ACHIEVEMENTS.filter(
+      (a) => a.kind === "tiered" && a.id !== "leksokipos-makrylexis",
+    );
     expect(tiered.length).toBeGreaterThan(0);
     for (const badge of tiered) {
       const tiers = badge.tiers ?? [];
@@ -73,6 +86,12 @@ describe("LEKSOKIPOS_ACHIEVEMENTS catalog", () => {
       const thresholds = tiers.map((t) => t.threshold);
       expect(thresholds).toEqual([...thresholds].sort((a, b) => a - b));
     }
+  });
+
+  it("orders the ladder's rungs by ascending word length", () => {
+    const ladder = LEKSOKIPOS_ACHIEVEMENTS.find((a) => a.id === "leksokipos-makrylexis");
+    const thresholds = (ladder?.tiers ?? []).map((t) => t.threshold);
+    expect(thresholds).toEqual([...thresholds].sort((a, b) => a - b));
   });
 
   it("has globally unique award ids (entries and tiers)", () => {
@@ -98,14 +117,17 @@ describe("LEKSOKIPOS_ACHIEVEMENTS catalog", () => {
     expect(glyphByName).toMatchObject({
       "Πρώτα Βήματα":     "🌱",
       "Στην Κορυφή":      "👑",
-      "Σιδηρόδρομος":     "🚂",
-      "Υπερταχεία":       "🚄",
-      "Νταλίκα":         "🚛",
-      "Σεντόνι":         "🛏️",
       "Θεριστής":        "🌾",
+      "Μακρυλέξης":      "🛏️", // the ladder wears its top rung's glyph
       "Κυνηγός Πανγκράμ": "✍️",
       "Συλλέκτης Πόντων": "💎",
     });
+  });
+
+  it("keeps the operator-approved per-length glyphs on the ladder's rungs", () => {
+    expect(
+      Object.fromEntries(WORD_LENGTH_BADGES.map((b) => [b.length, b.glyph])),
+    ).toMatchObject({ 10: "🚂", 11: "🚄", 12: "🚛", 13: "🛏️" });
   });
 });
 
@@ -316,11 +338,55 @@ describe("qualifyingEarnedIds — which earned rows prove ownership of a badge",
   it("returns [] for an unknown base id", () => {
     expect(qualifyingEarnedIds("leksokipos-nope")).toEqual([]);
   });
+
+  it("the word-length ladder is owned by holding ANY frozen length id", () => {
+    expect(qualifyingEarnedIds("leksokipos-makrylexis")).toEqual([
+      "leksokipos-sidirodromos",
+      "leksokipos-word-11",
+      "leksokipos-word-12",
+      "leksokipos-word-13",
+    ]);
+  });
+});
+
+describe("resolveDisplayBadge — the word-length ladder shows the rarest rung held", () => {
+  it("shows the 13-letter rung when the player holds it", () => {
+    expect(resolveDisplayBadge("leksokipos-makrylexis", ["leksokipos-word-13"])).toEqual({
+      achievementId: "leksokipos-makrylexis",
+      tier: "diamanti",
+    });
+  });
+
+  it("shows the highest rung when several are held", () => {
+    expect(
+      resolveDisplayBadge("leksokipos-makrylexis", [
+        "leksokipos-sidirodromos",
+        "leksokipos-word-12",
+      ]),
+    ).toEqual({ achievementId: "leksokipos-makrylexis", tier: "chryso" });
+  });
+
+  it("shows a high rung held WITHOUT the lower ones (rungs are not cumulative)", () => {
+    // Exact-length detection means a player can hold 13 and never have held 10.
+    expect(resolveDisplayBadge("leksokipos-makrylexis", ["leksokipos-word-11"])).toEqual({
+      achievementId: "leksokipos-makrylexis",
+      tier: "asimenio",
+    });
+  });
+
+  it("is null when no rung has been earned", () => {
+    expect(resolveDisplayBadge("leksokipos-makrylexis", ["leksokipos-first-daily"])).toBeNull();
+  });
 });
 
 describe("TIER_MEDALS — Greek tier → medal glyph", () => {
-  it("maps each tier to its podium medal", () => {
-    expect(TIER_MEDALS).toEqual({ chalkino: "🥉", asimenio: "🥈", chryso: "🥇" });
+  it("maps each tier to its podium medal, with a rung above gold", () => {
+    expect(TIER_MEDALS).toEqual({
+      chalkino: "🥉",
+      asimenio: "🥈",
+      chryso:   "🥇",
+      diamanti: "💠",
+    });
   });
 });
 

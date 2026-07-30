@@ -17,7 +17,9 @@ import {
   KYNIGOS_PANGRAM_ID,
   LEKSOKIPOS_ACHIEVEMENTS,
   SYLLEKTIS_PONTON_ID,
+  TIER_MEDALS,
   nextTierThreshold,
+  resolveDisplayBadge,
   type Achievement,
   type AchievementTier,
 } from "@/games/leksokipos/lib/achievements";
@@ -72,11 +74,22 @@ function TrophyTile({
   onSelect:    (id: string) => void;
 }) {
   const tiers = achievement.tiers;
-  // For a one-shot the tile keys on its own id; for a tiered badge, any lit tier
-  // (earned or live-crossed) lights the tile so progress is visible at a glance.
-  const tileEarned = tiers
-    ? tiers.some((t) => earned.has(t.id) || (liveValue !== undefined && liveValue >= t.threshold))
-    : earned.has(achievement.id);
+
+  // A tier counts as held when the server recorded it OR the live value has crossed
+  // it — the same belt-and-suspenders rule the chips use, so the tile, its chips and
+  // its medal can never disagree. Resolving through resolveDisplayBadge (rather than
+  // a local `some`) means the medal here is the same highest-tier-wins answer the
+  // leaderboard chip shows.
+  const heldIds = tiers
+    ? [
+        ...earned,
+        ...tiers.filter((t) => liveValue !== undefined && liveValue >= t.threshold).map((t) => t.id),
+      ]
+    : [...earned];
+
+  const resolved = resolveDisplayBadge(achievement.id, heldIds);
+  const tileEarned = tiers ? resolved !== null : earned.has(achievement.id);
+  const medal = resolved?.tier ? TIER_MEDALS[resolved.tier] : null;
 
   // Only earned tiles are pickable as the display badge; locked ones are inert.
   const selectable = tileEarned;
@@ -116,6 +129,11 @@ function TrophyTile({
       <span className={tileEarned ? "text-2xl" : "text-2xl grayscale"} aria-hidden="true">
         {tileEarned ? achievement.glyph : "🔒"}
       </span>
+      {medal && (
+        <span data-testid={`tile-medal-${achievement.id}`} className="-mt-1 text-sm" aria-hidden="true">
+          {medal}
+        </span>
+      )}
       <span className="text-xs font-semibold text-foreground">{achievement.name}</span>
       <span className="text-[11px] leading-tight text-muted">{achievement.hint}</span>
       {tiers && <TierChips tiers={tiers} earned={earned} liveValue={liveValue} />}

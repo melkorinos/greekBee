@@ -21,6 +21,9 @@
 import fs from "fs";
 import path from "path";
 
+import type { LeksokiposPuzzle } from "../src/games/leksokipos/types";
+import { meetsDifficultyRules } from "./lib/leksokipos/puzzleQuality";
+
 // ── CLI args ───────────────────────────────────────────────────────────────────
 
 function getArg(name: string, fallback: string): string {
@@ -212,6 +215,26 @@ while (newPuzzles.length < TARGET) {
   usedSets.add(key);
   const date = addDays(lastDate, dayOffset++);
   const id = `${date}-${LANG}`;
+
+  // Upper bounds: MIN_WORDS only sets a floor, so without these the generator
+  // happily produces the 558-word gardens and 110-pangram letter sets that the
+  // 2026-07-30 rebalance pruned out. Gates live in gameRules (MAX_PANGRAMS,
+  // MAX_WORDS_TO_GENIUS) and are pinned on the corpus by
+  // puzzleCorpusQuality.test.ts. Rejected here rather than after the write so a
+  // failing candidate never consumes a date.
+  const candidate: LeksokiposPuzzle = {
+    id,
+    language: LANG as LeksokiposPuzzle["language"],
+    date,
+    centerLetter: center,
+    outerLetters: outer,
+    validWords,
+  };
+  if (!meetsDifficultyRules(candidate)) {
+    usedSets.delete(key);
+    dayOffset--;
+    continue;
+  }
 
   newPuzzles.push({
     id,
