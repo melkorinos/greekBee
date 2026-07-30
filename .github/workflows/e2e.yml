@@ -26,7 +26,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # Supabase anon key — set in GitHub repo secrets
+          # Supabase keys — set in GitHub repo secrets
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
@@ -36,6 +36,11 @@ jobs:
           CI: true
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          # Server-only key. `npm run start` serves the production bundle, so
+          # middleware/route handlers need it at request time or they throw
+          # "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY"
+          # and bury the real test failures in stack traces.
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Upload test report
         if: failure()

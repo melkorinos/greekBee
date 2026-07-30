@@ -15,6 +15,7 @@ There is one more aiHelper file that is deliberately **NOT** in this list: `.cla
 ## Standing rules (every session)
 
 - Run `npm run test -- --run`, `npx eslint .`, and `npm run build` after every meaningful change. All must pass (0 failures, 0 errors).
+- **Run `npm run test:e2e` before saying a branch is ready to push** whenever the change touched a page, layout, route, or shared chrome component. Playwright otherwise only runs in CI, so a stale selector stays invisible until after the merge — which is exactly how the `getByRole("link")` guard in `e2e/profile.spec.ts` survived the header's Link→button change. Local runs use the dev server and need no build.
 - **PowerShell only** — use `Select-Object -Last N`, never `tail`.
 - Game logic (`src/games/*/lib/`) must stay pure functions — zero React imports.
 - Each game reads/writes only its own `useGameStore` slice — never touches `localStorage` directly.
