@@ -93,6 +93,10 @@
 [data-game="leksikastirio"]{ --game-accent: var(--color-indigo-600); --game-accent-foreground: #ffffff; }
 /* topothesies: ultramarine blue. */
 [data-game="topothesies"]  { --game-accent: var(--color-blue-700);   --game-accent-foreground: #ffffff; }
+/* posokanei: emerald (grocery / money), distinct from leksiarxeio green + leksoplegma teal. */
+[data-game="posokanei"]    { --game-accent: var(--color-emerald-600); --game-accent-foreground: #ffffff; }
+/* logopaignio: rose (brand / logo), distinct from leksodromia red. */
+[data-game="logopaignio"]  { --game-accent: var(--color-rose-600);   --game-accent-foreground: #ffffff; }
 
 @theme inline {
   --color-background: var(--background);

@@ -133,6 +133,24 @@ const GAME_RULES = {
       "Αν τη βρεις, μάντεψε και την **πρωτεύουσά** της σε **3 προσπάθειες** για bonus.",
     ],
   },
+  posokanei: {
+    rulesTitle: "Πώς να παίξεις — Πόσο κάνει;",
+    bulletIcon: "🛒",
+    rules: [
+      "Δες ένα **προϊόν** του σούπερ μάρκετ και μάντεψε την **τιμή** του σε **6 προσπάθειες**.",
+      "Μετά από κάθε λάθος μαθαίνεις αν η σωστή τιμή είναι **πιο πάνω** ή **πιο κάτω**, με ποσοστό **εγγύτητας**.",
+      "Κερδίζεις αν πέσεις **αρκετά κοντά** — όσο νωρίτερα, τόσο περισσότεροι πόντοι!",
+    ],
+  },
+  logopaignio: {
+    rulesTitle: "Πώς να παίξεις — Λογοπαίγνιο",
+    bulletIcon: "🔎",
+    rules: [
+      "Δες το **λογότυπο** μιας ελληνικής εταιρείας — χωρίς το όνομά της — και γράψε το όνομα.",
+      "Το λογότυπο ξεκινά **θολό** και ξεθολώνει λίγο σε κάθε λάθος προσπάθεια.",
+      "Ο **τομέας** της εταιρείας φαίνεται σαν βοήθεια — όσο πιο νωρίς τη βρεις, τόσο περισσότεροι πόντοι!",
+    ],
+  },
 } as const satisfies Record<keyof typeof GAME_REGISTRY, { rulesTitle: string; bulletIcon: string; rules: readonly string[] }>;
 
 const GAMES = (Object.keys(GAME_REGISTRY) as Array<keyof typeof GAME_REGISTRY>).map(
@@ -153,7 +171,7 @@ function submitButtonFor(id: (typeof GAMES)[number]["id"]): React.ReactNode {
     return <><SubmitPuzzleButton game={id} /><HomeTrophyButton gameId={id} /></>;
   }
   if (id === "stavrolekso") return <StavroleksoMakerButton />;
-  if (id === "leksokipos" || id === "leksodromia" || id === "leksoplegma" || id === "topothesies") {
+  if (id === "leksokipos" || id === "leksodromia" || id === "leksoplegma" || id === "topothesies" || id === "posokanei" || id === "logopaignio") {
     return <HomeTrophyButton gameId={id} />;
   }
   return undefined;

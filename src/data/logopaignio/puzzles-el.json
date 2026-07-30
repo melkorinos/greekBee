@@ -1,0 +1,10 @@
+[
+  {
+    "id": "logopaignio-sample",
+    "brand": "Δείγμα",
+    "sector": "Δείγμα",
+    "accept": ["Δείγμα", "Deigma", "Δειγμα"],
+    "markAsset": "/logopaignio/sample.svg",
+    "credit": "Δείγμα / placeholder — αυθαίρετο σχέδιο, όχι πραγματικό λογότυπο"
+  }
+]

@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { Modal } from "./Modal";
 import { HeaderIconButton } from "./HeaderIconButton";
+import { btnModalSubmit } from "@/styles/recipes";
 
 interface HowToPlayModalProps {
   title:        string;
@@ -62,6 +63,10 @@ export function HowToPlayModal({
             </li>
           ))}
         </ul>
+
+        <button onClick={() => setOpen(false)} className={`mt-5 w-full ${btnModalSubmit}`}>
+          Κατάλαβα!
+        </button>
       </Modal>
     </>
   );

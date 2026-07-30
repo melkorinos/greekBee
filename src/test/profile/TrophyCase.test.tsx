@@ -85,7 +85,7 @@ describe("TrophyCase", () => {
     await waitFor(() =>
       expect(tileFor("Πρώτα Βήματα")).toHaveAttribute("data-earned", "true"),
     );
-    expect(tileFor("Σιδηρόδρομος")).toHaveAttribute("data-earned", "false");
+    expect(tileFor("Μακρυλέξης")).toHaveAttribute("data-earned", "false");
   });
 
   it("shows an earned tile's own glyph instead of the generic trophy", async () => {
@@ -100,7 +100,7 @@ describe("TrophyCase", () => {
 
   it("shows the lock glyph on a tile the device has not earned", () => {
     render(<TrophyCase deviceId="" />);
-    expect(tileFor("Σιδηρόδρομος")).toHaveTextContent("🔒");
+    expect(tileFor("Μακρυλέξης")).toHaveTextContent("🔒");
   });
 
   it("keeps every tile locked when the device has earned nothing", async () => {
@@ -208,6 +208,71 @@ describe("TrophyCase", () => {
       expect(screen.getByTestId("tier-progress-leksokipos-kynigos-pangram")).toHaveTextContent("7 / 10"),
     );
   });
+
+  // ── Tier medals on the tile: a top-tier holder must not look like a bronze one ──
+
+  it("shows the medal of the highest earned tier on a tiered tile", async () => {
+    mockData({ earned: ["leksokipos-kynigos-pangram-chryso"] });
+    render(<TrophyCase deviceId="dev-A" />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("tile-medal-leksokipos-kynigos-pangram")).toHaveTextContent("🥇"),
+    );
+  });
+
+  it("shows the bronze medal when only the lowest tier is held", async () => {
+    mockData({ earned: ["leksokipos-kynigos-pangram-chalkino"] });
+    render(<TrophyCase deviceId="dev-A" />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("tile-medal-leksokipos-kynigos-pangram")).toHaveTextContent("🥉"),
+    );
+  });
+
+  it("shows a medal for a tier reached only by the live value", async () => {
+    mockData({ earned: [], points: 30000 }); // past χρυσό, nothing recorded server-side
+    render(<TrophyCase deviceId="dev-A" />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("tile-medal-leksokipos-syllektis-ponton")).toHaveTextContent("🥇"),
+    );
+  });
+
+  it("shows no medal on a one-shot tile", async () => {
+    mockData({ earned: ["leksokipos-first-daily"] });
+    render(<TrophyCase deviceId="dev-A" />);
+
+    await waitFor(() =>
+      expect(tileFor("Πρώτα Βήματα")).toHaveAttribute("data-earned", "true"),
+    );
+    expect(screen.queryByTestId("tile-medal-leksokipos-first-daily")).not.toBeInTheDocument();
+  });
+
+  // ── Word-length ladder: one climbing badge over the four frozen length ids ──
+
+  it("lights the ladder tile from a frozen word-length id and shows that rung's medal", async () => {
+    mockData({ earned: ["leksokipos-word-13"] });
+    render(<TrophyCase deviceId="dev-A" />);
+
+    await waitFor(() =>
+      expect(tileFor("Μακρυλέξης")).toHaveAttribute("data-earned", "true"),
+    );
+    expect(screen.getByTestId("tile-medal-leksokipos-makrylexis")).toHaveTextContent("💠");
+  });
+
+  it("selects the ladder by its base id, not the frozen rung id", async () => {
+    const spy = mockData({ earned: ["leksokipos-word-11"] });
+    render(<TrophyCase deviceId="dev-A" />);
+
+    await waitFor(() =>
+      expect(tileFor("Μακρυλέξης")).toHaveAttribute("data-earned", "true"),
+    );
+    fireEvent.click(tileFor("Μακρυλέξης"));
+
+    await waitFor(() =>
+      expect(lastBadgePost(spy)?.selected_badge_id).toBe("leksokipos-makrylexis"),
+    );
+  });
 });
 
 // ── Badge picker (Handoff B) ──────────────────────────────────────────────────
@@ -262,9 +327,9 @@ describe("TrophyCase — display-badge picker", () => {
     render(<TrophyCase deviceId="dev-A" />);
 
     await waitFor(() =>
-      expect(tileFor("Σιδηρόδρομος")).toHaveAttribute("data-earned", "false"),
+      expect(tileFor("Μακρυλέξης")).toHaveAttribute("data-earned", "false"),
     );
-    fireEvent.click(tileFor("Σιδηρόδρομος"));
+    fireEvent.click(tileFor("Μακρυλέξης"));
 
     expect(lastBadgePost(spy)).toBeNull();
   });

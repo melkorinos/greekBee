@@ -81,6 +81,8 @@ const STATICALLY_IMPORTED_DATA_FILES = [
   "src/data/leksindeseis/puzzles-connections.json",
   // Leksoplegma — committed generator batch (bonus words precomputed offline)
   "src/data/leksoplegma/puzzles-el.json",
+  // Πόσο κάνει; — dated puzzles (item + frozen reference price + photo path)
+  "src/data/posokanei/puzzles-el.json",
   // Leksokipos — pre-built puzzles
   "src/data/leksokipos/puzzles-el.json",
   // Full word list — statically imported by /api/validate-words; buildCustomPuzzle

@@ -1,8 +1,8 @@
 // WordsByLengthCard — the "Λέξεις ανά μήκος" distribution card on /profile.
 //
 // Fetches GET /api/profile/words on mount. Shows a skeleton while loading, a total
-// plus a per-length bar for each bucket (4…9 individually + "10+") on success, an
-// honest empty state when the device has found nothing (no backfill exists — the
+// plus a per-length bar for each bucket (10, 11, 12 individually + "13+") on success,
+// an honest empty state when the device has found nothing (no backfill exists — the
 // copy must not imply history), and degrades to dashes on error without blocking.
 
 import { render, screen, waitFor } from "@testing-library/react";
@@ -21,10 +21,10 @@ function mockWords(body: unknown, ok = true) {
 
 /** A full { total, buckets } response with the given per-key counts (missing = 0). */
 function response(counts: Record<string, number>) {
-  const keys = ["4", "5", "6", "7", "8", "9", "10+"];
+  const keys = ["10", "11", "12", "13+"];
   const buckets = keys.map((key, i) => ({
     key,
-    minLength: key === "10+" ? 10 : 4 + i,
+    minLength: 10 + i,
     count: counts[key] ?? 0,
   }));
   const total = buckets.reduce((s, b) => s + b.count, 0);
@@ -33,19 +33,19 @@ function response(counts: Record<string, number>) {
 
 describe("WordsByLengthCard", () => {
   it("shows the total and a labelled row per length bucket on success", async () => {
-    // Counts chosen to not collide with any length label (4…9) under getByText.
-    mockWords(response({ "4": 12, "5": 20, "7": 33, "10+": 11 }));
+    // Counts chosen to not collide with any length label (10…13) under getByText.
+    mockWords(response({ "10": 42, "11": 20, "13+": 33 }));
     render(<WordsByLengthCard deviceId="dev-A" />);
 
-    // Total (76) and the section heading.
+    // Total (95) and the section heading.
     await waitFor(() => expect(screen.getByText("Λέξεις ανά μήκος")).toBeInTheDocument());
-    expect(screen.getByText("76")).toBeInTheDocument();
+    expect(screen.getByText("95")).toBeInTheDocument();
 
-    // Every bucket row is present, including the "10+" tail and zeroed lengths.
-    expect(screen.getByText("10+")).toBeInTheDocument();
-    expect(screen.getByText("6")).toBeInTheDocument(); // zero-count length still shown
+    // Every bucket row is present, including the "13+" tail and zeroed lengths.
+    expect(screen.getByText("13+")).toBeInTheDocument();
+    expect(screen.getByText("12")).toBeInTheDocument(); // zero-count length still shown
     // The counts for populated buckets render.
-    expect(screen.getByText("12")).toBeInTheDocument();
+    expect(screen.getByText("42")).toBeInTheDocument();
     expect(screen.getByText("20")).toBeInTheDocument();
     expect(screen.getByText("33")).toBeInTheDocument();
   });

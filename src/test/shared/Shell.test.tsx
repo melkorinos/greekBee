@@ -2,14 +2,31 @@
 // Verifies hamburger open/close, drawer content, Escape dismissal, backdrop click,
 // and the dark/light theme toggle button.
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 
-import { Shell } from "@/components/shared/Shell";
 import userEvent from "@testing-library/user-event";
+
+// The header profile button reads the current path and drives the router (toggle
+// behaviour). Mock next/navigation so the button has a router + pathname under test.
+let _pathname = "/leksokipos";
+const push = vi.fn();
+const back = vi.fn();
+vi.mock("next/navigation", () => ({
+  usePathname: () => _pathname,
+  useRouter:   () => ({ push, back }),
+}));
+
+const { Shell } = await import("@/components/shared/Shell");
 
 // ── cleanup ───────────────────────────────────────────────────────────────────
 // Theme toggle modifies document.documentElement and localStorage; reset between tests.
+beforeEach(() => {
+  _pathname = "/leksokipos";
+  push.mockClear();
+  back.mockClear();
+});
+
 afterEach(() => {
   document.documentElement.classList.remove("dark");
   localStorage.clear();
@@ -47,10 +64,30 @@ describe("Shell rendering", () => {
     expect(getHamburger()).toBeInTheDocument();
   });
 
-  it("renders an always-visible profile link to /profile in the header", () => {
-    setup();
-    const profileLink = screen.getByRole("link", { name: "Το προφίλ μου" });
-    expect(profileLink).toHaveAttribute("href", "/profile");
+  it("renders an always-visible profile button that opens /profile from another page", async () => {
+    const { user } = setup();
+    const profileBtn = screen.getByRole("button", { name: "Το προφίλ μου" });
+    await user.click(profileBtn);
+    expect(push).toHaveBeenCalledWith("/profile");
+    expect(back).not.toHaveBeenCalled();
+  });
+
+  it("goes back from /profile when there is in-app history", async () => {
+    _pathname = "/profile";
+    window.history.replaceState({ ...window.history.state, idx: 2 }, "");
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Το προφίλ μου" }));
+    expect(back).toHaveBeenCalledTimes(1);
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("falls back to home from /profile with no in-app history", async () => {
+    _pathname = "/profile";
+    window.history.replaceState({ ...window.history.state, idx: 0 }, "");
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Το προφίλ μου" }));
+    expect(push).toHaveBeenCalledWith("/");
+    expect(back).not.toHaveBeenCalled();
   });
 
   it("renders children inside the shell", () => {

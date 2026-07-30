@@ -33,13 +33,15 @@
 | `useLiveScorePost.test.ts` | Shared round-game posting policy — restored/untouched never posts (+never opens leaderboard), posts live score on every change, opens leaderboard once after delay on finish, custom delay |
 | `useLeksiarxeioScoreSubmission.test.ts` | Leksiarxeio per-length posting — attempts→points mapping, deviceId gate, name ref |
 | `useGuessRound.test.ts` | Shared guess-game spine — score-only-on-end, onGameEnd once, persist `{guesses,status}` + restore, save guard, per-puzzle sessions |
+| `useSlotFillRound.test.ts` | Shared **slot-fill** spine (ADR 0019; topothesies/posokanei/logopaignio) — `hasLiveActed` false-on-fresh/flips-on-live/**false-after-restore**/flips-on-act-after-restore; snapshot persist+replay, derived flags replayed not persisted, give-up restore, hasProgress guard, **no re-write when only a non-persisted field changes**, per-session isolation |
 | `communityPuzzleLifecycle.test.ts` | submit/list/review handlers **+ `consumeApprovedPuzzle`** (claim oldest approved, delete by id, null on empty/error) |
 | `apiRoute.test.ts` | The route envelope (ADR 0016), tested once instead of per route — `jsonError` code→status + detail logged-not-leaked, `jsonMessage` verbatim copy (incl. Greek at a chosen status), `parseJson` ok/invalid_json, `requireAdmin` header match, body-borne secret rejected, never fails open on unset `ADMIN_SECRET` |
 | `leksokiposSync.test.ts` | `pushFoundWords` (wire shape, never throws) + `pullSnapshot` (rebuild snapshot+score, params, null on empty/null/error) — the cross-device sync wire |
 | `useGameIdentity.test.ts` | SSR-safe DeviceId + DisplayName init, setter state updates |
 | `usePlayerIdentity.test.ts` | Bundled identity module — migration-runs-before-device-read ordering, scalar fields from store, complete `leaderboardProps` bundle + wiring, `saveName` persists |
 | `useGameStore.test.ts` | readSlice, writeSlice, clearSlice, deviceId, displayName, profileLinked, migration |
-| `Shell.test.tsx` | Hamburger open/close/Escape, nav links, theme toggle (aria-label, `.dark` class on `documentElement`) |
+| `Shell.test.tsx` | Hamburger open/close/Escape, nav links, theme toggle, profile-button toggle (opens /profile; back-vs-home on /profile via `window.history.state.idx`) |
+| `profileNav.test.ts` | `resolveProfileNav` — open /profile from elsewhere; back() on /profile with in-app history; "/" fallback with none |
 | `letterPickerModal.test.tsx` | Center/outer selection, quality rules (vowel center, ≥2 vowels, consonants) |
 | `feedbackMessage.test.tsx` | Valid/pangram/error statuses, suggest button |
 | `nominationModal.test.tsx` | NominationModal — visibility, word field (readonly + editable), direction copy, close, POST payload, success/error states |
@@ -58,7 +60,7 @@
 | `recipes.test.ts` (shared) | Platform recipes — non-empty, button/leaderboard token contracts, no `dark:` pairs |
 | `styles.test.ts` (leksokipos) | Leksokipos-local recipes — feedback/found-word/score-bar/give-up token contracts, no `dark:` pairs (ADR 0009) |
 | `validateSubmission.test.ts` (×4: leksiarxeio, leksindeseis, vrestifrasi, stavrolekso) | Community Puzzle validation adapters as pure functions — per-game submission invariants; stavrolekso also `EDIT_PIN_PATTERN` + `validateStavroleksoData` (shared with PATCH edit route + maker) |
-| `scoring.test.ts` (leksodromia) | `computeWordPoints` — decay-to-floor, hint costs, MIN clamp, perfect round = MAX_SCORE |
+| `scoring.test.ts` (leksodromia) | `computeWordPoints` — decay-to-floor, hint costs, MIN clamp, perfect round = MAX_SCORE · `computeDecayFraction` — decay-bar fill (full/empty/clamp/linear) + base-independence regression (kills the perceived per-length speed-up) |
 | `selectDailyWords.test.ts` | Deterministic 2×(4–8) selection; **never Leksiarxeio's same-day fallback answer** (cross-game leak guard) |
 | `scrambleWord.test.ts` | Deterministic seeded scramble — multiset-preserving, never identity |
 | `leksodromiaReducer.test.ts` | PICK_TILE/ADD_LETTER/REMOVE_LETTER/SUBMIT_WORD/USE_HINT (cap+prefix lock)/SKIP_WORD/RESTORE_STATE + selectors |
@@ -71,7 +73,8 @@
 | `generator.test.ts` (leksoplegma) | Offline generator core — constraint validation on real pools (coverage, adjacency, no crossing diagonals), determinism, `enumerateBonusWords` on fixture board |
 | `dataLoader.test.ts` (leksoplegma) | `getPuzzleForDate` rotation + 365-date Leksiarxeio same-day answer-leak guard + `containsSameDayLeksiarxeioAnswer` |
 | `board.test.tsx` (leksoplegma) | Board — tap-build trace seam, collapse rendering, hint chips, bonus counter, recap, single live score post + is_perfect, no re-post on restore; PageClient header + no-timer rules |
-| `achievements.test.ts` (leksokipos) | Catalog + `detectEarnedAchievements` (4 one-shots — tzimani retired s108, daily gate) + `detectEarnedPointsTiers`/`detectEarnedPangramTiers` + `nextPangramTierThreshold` + `describeAchievement` + the operator-approved `glyph` map + display-badge resolution (`SELECTABLE_BADGE_IDS`, `qualifyingEarnedIds`, `resolveDisplayBadge`, `TIER_MEDALS`) |
+| `round.test.tsx` (leksoplegma) | `useLeksoplegmaRound` as REAL-reducer-through-REAL-persistence integration (ADR 0019 migration safety net) — round-trip restore (required/bonus/hints), status re-derived not persisted, wrongTrace transient/excluded, foundBonus `?? []` back-compat, filter-on-restore (stale saved words dropped vs current puzzle), hasLiveActed false-after-pure-restore/flips-on-act, hasProgress guard. Generic spine contract stays in `useSlotFillRound.test.ts`; filtering as reducer logic stays in `leksoplegmaReducer.test.ts` |
+| `achievements.test.ts` (leksokipos) | Catalog + `detectEarnedAchievements` (word-length ladder = EXACT-length one-shots 10/11/12/13 + Θεριστής/Στην Κορυφή/Πρώτα Βήματα, daily gate) + `WORD_LENGTH_BADGES` (config lockstep, 10→Σιδηρόδρομος) + `detectEarnedPointsTiers`/`detectEarnedPangramTiers` + `nextPangramTierThreshold` + `describeAchievement` + operator-approved `glyph` map + display-badge resolution (`SELECTABLE_BADGE_IDS`, `qualifyingEarnedIds`, `resolveDisplayBadge`, `TIER_MEDALS`) |
 | `profileBadgeRoute.test.ts` | `POST/GET /api/profile/badge` — earned-id validation (400 unknown/tier id, 403 unowned), lazy profile upsert, null clears |
 | `leaderboardBadge.test.tsx` | `LeaderboardBadge` chip — glyph, medal only for tiered, distinct element after the name |
 | `achievementToast.test.tsx` | AchievementToast render + dismiss |
@@ -93,8 +96,8 @@
 | `auth-link.test.ts` (api) + `authLinkRoute.test.ts` (shared) | `POST /api/auth/link` — JWT security boundary, link/restore modes, occupied-device guard, `identity_audit`, error paths |
 | `applyDictionaryEdits.test.ts` + `resync{Registry,Leksiarxeio,Leksokipos,Leksoplegma,Leksodromia}.test.ts` (scripts) | ADR 0015 re-sync — orchestrator (dictionary + registry walk), write gate, per-game adapters: additions/removals/no-ops |
 | `IdentityHeader` / `LifetimeStatsStrip` / `NameEditor` / `TrophyCase` / `WelcomeBackBanner` / `WordsByLengthCard` (profile) | The six Profile Page components |
-| `words.test.ts` (leksokipos) / `wordsByLength.test.ts` / `wordsMerge.test.ts` | `sanitizeFoundWords` shape guards · `bucketWordsByLength` (sparse RPC rows → 4…9/"10+") · `planWordsMerge` Restore union |
-| `wordsRoute.test.ts` / `profileWordsRoute.test.ts` | `POST /api/words` (insert-if-absent, server-side `length`) · `GET /api/profile/words` (RPC → buckets) |
+| `words.test.ts` (leksokipos) / `wordsByLength.test.ts` / `wordsMerge.test.ts` | `sanitizeFoundWords` shape guards · `bucketWordsByLength` (sparse RPC rows → 10/11/12/"13+"; `WORDS_MIN_TRACKED`=10 floor) · `planWordsMerge` Restore union |
+| `wordsRoute.test.ts` / `profileWordsRoute.test.ts` | `POST /api/words` (insert-if-absent, server-side `length`, **drops finds <10**) · `GET /api/profile/words` (RPC → buckets) |
 | `achievementMerge.test.ts` / `pangramMerge.test.ts` | `planAchievementMerge` / `planPangramMerge` — Sign-in Restore unions |
 | `achievementsRoute.test.ts` / `pangramsRoute.test.ts` | `POST/GET /api/achievements` (id whitelist) · `POST /api/pangrams` (insert-if-absent, validation, DB errors) |
 | `authCallbackRedirect.test.tsx` | `/auth/callback` redirect destination |
@@ -135,6 +138,20 @@
 | `topothesies/scoring.test.ts` | `computeScore` — shape points + capital bonus scaling with guesses-left (gameRules knobs), failed-stage zero, independent-stage educational path |
 | `topothesies/topothesiesReducer.test.ts` | State machine — shape→capital→finished transitions, 4/3 guess exhaustion, typo/unknown no-op, failed-shape still enters capital, finished inert, `RESTORE_STATE` replay, `GIVE_UP` (s118: `gaveUp` forces unsolved stages failed→finished, inert once finished, restored gave-up round) |
 | `topothesies/shareText.test.ts` | `buildShareText` — spoiler-free (no name/capital/id), accent-free, shape squares carry arrows but capital line has none (s118), includes score |
-| `topothesies/board.test.tsx` | `TopothesiesBoard` — silhouette render, wrong-shape hint chip, full play-through to scored result, typo no-burn, capital wrong guess shows no distance hint (s118), give-up reveals unit+capital (s118) |
+| `topothesies/board.test.tsx` | `TopothesiesBoard` — silhouette render, wrong-shape hint chip, full play-through to scored result (score computed from config knobs), typo no-burn, capital wrong guess shows no distance hint (s118), give-up reveals unit+capital (s118), autocomplete row-pick fills-not-submits + «Μάντεψε» button commits (s123) |
 | `topothesiesProject.test.ts` (scripts) | Topothesies build-time projector (`project.ts`) — `projectPoint`/`ringToPath`/`computeViewBox`/`ringArea`/`centroidLngLat`/`maxPairwiseCentroidKm`, worked examples |
 | `osmPolygons.test.ts` (scripts) | Topothesies OSM assembler (s119) — `assembleRings` (head-to-tail stitch, reversed segment, already-closed passthrough, open-ring no-loop), `signedRingArea` (CCW +, CW −), `assembleRelation` (hole-nesting, largest-first polygons, null on too-few points) |
+| `posokanei/evaluateGuess.test.ts` | Πόσο κάνει; price scoring — `evaluatePriceGuess`: within-band correct (inclusive edge via +1e-9 float guard), higher/lower direction, proximity% (100 exact, 0 at/over PROXIMITY_MAX_REL, monotone decreasing) |
+| `posokanei/selectDailyPuzzle.test.ts` | `selectDailyPuzzle` — exact `date` match wins; else `dateToIndex` rotation (stable, order-independent); single-row pool always returns it; throws on empty |
+| `posokanei/scoring.test.ts` | `computeScore` — full points first-guess, −1 step per earlier wrong, zero unsolved, zero after give-up (gameRules knobs) |
+| `posokanei/shareText.test.ts` | `buildShareText` — spoiler-free (no item/price digits in the guess row), 🟩 solve, ⬆️/⬇️ direction arrows, trailing `Σκορ:` line |
+| `posokanei/posokaneiReducer.test.ts` | State machine — wrong guess stays guessing, band solve→finished, invalid/≤0/NaN no-op, MAX_GUESSES exhaustion→failed, finished inert, `GIVE_UP` forces failed, `RESTORE_STATE` replay |
+| `posokanei/format.test.ts` | `formatEuro` — two decimals, Greek comma, trailing € (Intl-free) |
+| `posokanei/board.test.tsx` | `PosokaneiBoard` — framed photo + item render, «πιο πάνω»/«πιο κάτω» direction hints, ≤0 no-burn, play-through to scored result with revealed price, give-up reveals price |
+| `logopaignio/evaluateGuess.test.ts` | Λογοπαίγνιο brand matching — `evaluateGuess`/`normalizeAnswer`: exact/case/accent-insensitive, Greek⇄Latin via accept-list, all-whitespace-stripped, wrong rejected, empty→`{correct:false, normalizedInput:""}`, returns normalized input |
+| `logopaignio/selectDailyPuzzle.test.ts` | `selectDailyPuzzle` — exact `date` match wins; else `dateToIndex` rotation over **id-sorted** pool (date optional; stable, order-independent); single undated row always returned; throws on empty |
+| `logopaignio/scoring.test.ts` | `computeScore` — full points first-guess (per-reveal decay), −1 step per earlier wrong, zero unsolved, zero after give-up (gameRules knobs) |
+| `logopaignio/shareText.test.ts` | `buildShareText` — spoiler-free (no brand/sector/input leak), fixed `MAX_GUESSES`-wide cell row (🟦 wrong / 🟩 solve / ⬜ unused), no digits in the row, trailing `Σκορ:` line |
+| `logopaignio/logopaignioReducer.test.ts` | State machine — wrong guess stays guessing, accepted-spelling solve→finished, blank/whitespace no-op, MAX_GUESSES exhaustion→failed, finished inert, `GIVE_UP` forces failed, `RESTORE_STATE` replay (incl. given-up round) |
+| `logopaignio/blur.test.ts` | `blurRadiusForReveal` — first (hardest) radius pre-guess, one ladder step per wrong guess, monotone non-increasing, clamps past-end/negative, 0 once revealed (gameRules `BLUR_STEP_RADII_PX`) |
+| `logopaignio/board.test.tsx` | `LogopaignioBoard` — framed mark + sector render, blur steps down after a wrong guess, wrong-guess history row (no finish), blank/whitespace no-burn, play-through to scored result with revealed brand (Latin accept spelling), give-up reveals brand + 0 πόντοι |

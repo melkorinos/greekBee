@@ -26,14 +26,67 @@ export const LEKSOKIPOS_ONESHOT_IDS = {
   stinKorifi:   "leksokipos-stin-korifi",
   sidirodromos: "leksokipos-sidirodromos",
   theristis:    "leksokipos-theristis",
+  // Word-length ladder (exact length). Σιδηρόδρομος (above) is the 10-letter rung;
+  // these extend it. FROZEN on first deploy like every other award id.
+  wordLength11: "leksokipos-word-11",
+  wordLength12: "leksokipos-word-12",
+  wordLength13: "leksokipos-word-13",
 } as const;
 
 export type OneShotAchievementId =
   (typeof LEKSOKIPOS_ONESHOT_IDS)[keyof typeof LEKSOKIPOS_ONESHOT_IDS];
 
+// ─── Word-length ladder (exact-length one-shots) ──────────────────────────────
+//
+// A found word of EXACTLY N letters earns the badge for N. Detection is `===`,
+// never `>=`: a 13-letter find earns only the 13 badge, so each length is its own
+// accomplishment. The lengths live in tuning (a balance knob + the player_words
+// storage floor); the id/name/glyph per length are frozen display copy, here.
+
+/**
+ * Frozen id + display copy for each exact word length that has a badge.
+ *
+ * `tier` maps each length onto a rung of the Μακρυλέξης ladder (below). The four
+ * lengths remain four independent earned facts — only their *presentation* is
+ * laddered, so nothing about detection or storage changes.
+ */
+const WORD_LENGTH_BADGE_META: Record<
+  number,
+  { id: OneShotAchievementId; name: string; glyph: string; tier: TierName }
+> = {
+  10: { id: LEKSOKIPOS_ONESHOT_IDS.sidirodromos, name: "Σιδηρόδρομος", glyph: "🚂", tier: "chalkino" },
+  11: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength11,  name: "Υπερταχεία",   glyph: "🚄", tier: "asimenio" },
+  12: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength12,  name: "Νταλίκα",      glyph: "🚛", tier: "chryso" },
+  13: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength13,  name: "Σεντόνι",      glyph: "🛏️", tier: "diamanti" },
+};
+
+/**
+ * The exact-length ladder, in the configured order. Lengths come from tuning; the
+ * per-length id/copy come from the frozen meta above. If tuning ever lists a length
+ * with no meta entry it throws at module load — a loud, immediate failure rather
+ * than a silently missing badge.
+ */
+export const WORD_LENGTH_BADGES: readonly {
+  length: number;
+  id:     OneShotAchievementId;
+  name:   string;
+  glyph:  string;
+  tier:   TierName;
+}[] = TUNING.wordLengthBadges.map((length) => {
+  const meta = WORD_LENGTH_BADGE_META[length];
+  if (!meta) throw new Error(`No word-length badge meta for length ${length}`);
+  return { length, ...meta };
+});
+
 export type AchievementKind = "oneshot" | "tiered";
 
-export type TierName = "chalkino" | "asimenio" | "chryso";
+/**
+ * Tier rungs. The three metal names are the podium set used by the cumulative
+ * badges (points, pangrams). `diamanti` is a fourth rung above gold, currently used
+ * only by the word-length ladder, whose top rung (13 letters) is rarer than any
+ * gold. Adding a name here requires a TIER_MEDALS entry — the Record type enforces it.
+ */
+export type TierName = "chalkino" | "asimenio" | "chryso" | "diamanti";
 
 export interface AchievementTier {
   /** Frozen award id — the player_achievements.achievement_id for this tier. */
@@ -51,7 +104,7 @@ export interface Achievement {
   /** Single-emoji badge art — interim, swappable to icons later without a schema change. */
   glyph:  string;
   kind:   AchievementKind;
-  tiers?: AchievementTier[];
+  tiers?: readonly AchievementTier[];
 }
 
 // ─── Detection ─────────────────────────────────────────────────────────────
@@ -86,8 +139,9 @@ export function detectEarnedAchievements(ctx: AchievementContext): OneShotAchiev
     earned.push(LEKSOKIPOS_ONESHOT_IDS.firstDaily);
   }
 
-  if (ctx.foundWords.some((w) => w.length >= TUNING.sidirodromosMinLetters)) {
-    earned.push(LEKSOKIPOS_ONESHOT_IDS.sidirodromos);
+  // Word-length ladder — a word of EXACTLY N letters earns the N badge (not ≥).
+  for (const { length, id } of WORD_LENGTH_BADGES) {
+    if (ctx.foundWords.some((w) => w.length === length)) earned.push(id);
   }
 
   if (
@@ -110,6 +164,28 @@ export const SYLLEKTIS_PONTON_ID = "leksokipos-syllektis-ponton";
 /** Frozen id of the lifetime-pangram tiered badge — shared by the catalog + detector. */
 export const KYNIGOS_PANGRAM_ID = "leksokipos-kynigos-pangram";
 
+/**
+ * Frozen id of the word-length ladder — the base id a player selects for display.
+ * NOTE: this base id is never itself awarded; only its rungs (the frozen
+ * leksokipos-sidirodromos / -word-11 / -word-12 / -word-13 ids) are earned facts.
+ */
+export const MAKRYLEXIS_ID = "leksokipos-makrylexis";
+
+/**
+ * The ladder's rungs, ascending — one per exact length, reusing the FROZEN
+ * word-length ids as tier ids so no row in player_achievements changes meaning.
+ * `threshold` is the word length itself, which lets the generic tier helpers work
+ * unchanged. Unlike the cumulative badges these rungs are earned by exact-length
+ * match, so they are not monotonic: a player can hold rung 13 without rung 10, and
+ * resolveDisplayBadge's highest-earned-wins walk still shows the rarest one held.
+ */
+const MAKRYLEXIS_TIERS: readonly AchievementTier[] = WORD_LENGTH_BADGES.map((b) => ({
+  id:        b.id,
+  tier:      b.tier,
+  threshold: b.length,
+  label:     b.name,
+}));
+
 export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
   {
     id:   LEKSOKIPOS_ONESHOT_IDS.firstDaily,
@@ -125,12 +201,17 @@ export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
     glyph: "👑",
     kind: "oneshot",
   },
+  // Word-length ladder — ONE badge with a rung per exact length. Each rung is still
+  // its own frozen earned fact (detection is unchanged); grouping them here means the
+  // player picks/displays one climbing badge instead of four unrelated ones, and the
+  // rarest rung is the one that shows.
   {
-    id:   LEKSOKIPOS_ONESHOT_IDS.sidirodromos,
-    name: "Σιδηρόδρομος",
-    hint: `Βρες μια λέξη με ${TUNING.sidirodromosMinLetters}+ γράμματα.`,
-    glyph: "🚂",
-    kind: "oneshot",
+    id:   MAKRYLEXIS_ID,
+    name: "Μακρυλέξης",
+    hint: "Βρες μεγάλες λέξεις — όσο πιο μεγάλες, τόσο πιο ψηλά.",
+    glyph: WORD_LENGTH_BADGES[WORD_LENGTH_BADGES.length - 1]?.glyph ?? "🚂",
+    kind: "tiered",
+    tiers: MAKRYLEXIS_TIERS,
   },
   {
     id:   LEKSOKIPOS_ONESHOT_IDS.theristis,
@@ -264,6 +345,8 @@ export const TIER_MEDALS: Record<TierName, string> = {
   chalkino: "🥉",
   asimenio: "🥈",
   chryso:   "🥇",
+  // Above gold — currently only the word-length ladder's top rung reaches it.
+  diamanti: "💠",
 };
 
 /**

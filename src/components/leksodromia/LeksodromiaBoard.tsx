@@ -26,7 +26,7 @@ import {
   getTotalSteps,
   isSecondChance,
 } from "@/games/leksodromia/lib/leksodromiaReducer";
-import { computeWordPoints } from "@/games/leksodromia/lib/scoring";
+import { computeDecayFraction, computeWordPoints } from "@/games/leksodromia/lib/scoring";
 import { useLeksodromiaRound } from "@/games/leksodromia/hooks/useLeksodromiaRound";
 import { normalizeLetters } from "@/lib/normalize";
 import { todayISO } from "@/lib/puzzleDate";
@@ -144,9 +144,15 @@ export function LeksodromiaBoard({
   const scramble     = getCurrentScramble(state);
   const secondChance = isSecondChance(state);
   const input        = getCurrentInput(state);
-  const length      = (answer.length || 4) as LeksodromiaLength;
-  const livePoints  = computeWordPoints(elapsedMs, length, state.hintsUsed);
-  const usedTiles   = new Set([...state.lockedTileIdxs, ...state.picked]);
+  const length       = (answer.length || 4) as LeksodromiaLength;
+  const livePoints   = computeWordPoints(elapsedMs, length, state.hintsUsed);
+  // The guaranteed minimum for this word (full decay) — a solve never scores 0,
+  // so a fully-drained bar is reassurance, not failure.
+  const floorPoints  = computeWordPoints(Number.POSITIVE_INFINITY, length, state.hintsUsed);
+  // Reverse loading bar: 1 → 0 over the decay window, base-independent (drains at
+  // the same visual pace on every word length, unlike the raw points number).
+  const decayFill    = computeDecayFraction(elapsedMs);
+  const usedTiles    = new Set([...state.lockedTileIdxs, ...state.picked]);
 
   // Rack laid out in two rows; the top row keeps the extra tile on an odd count.
   const rackTiles = [...scramble].map((letter, i) => ({ letter, i }));
@@ -184,12 +190,32 @@ export function LeksodromiaBoard({
             </span>
           )}
         </span>
-        <span className="tabular-nums" aria-label="Πόντοι λέξης">
+        <span className="tabular-nums flex items-baseline gap-1" aria-label="Πόντοι λέξης">
           ⏱️ <span className="font-mono font-bold text-foreground">{livePoints}</span>
+          <span className="text-xs text-muted/70">ελάχ. {floorPoints}</span>
         </span>
         <span className="tabular-nums">
           Σύνολο <span className="font-mono font-bold text-foreground">{totalScore}</span>
         </span>
+      </div>
+
+      {/* Reverse loading bar — the word's points draining to the floor. Calm accent
+          (never red) and it empties fully, but the points above stay ≥ ελάχ., so
+          running out is not a loss. Base-independent, so it drains at one steady
+          pace on every word — the raw number's slope scaled with word length. */}
+      <div
+        className="relative h-2 w-full rounded-full bg-border overflow-hidden"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(decayFill * 100)}
+        aria-label="Πόντοι λέξης που απομένουν"
+      >
+        <div
+          data-testid="decay-bar-fill"
+          className="h-full rounded-full bg-game-accent transition-[width] duration-300 ease-linear"
+          style={{ width: `${decayFill * 100}%` }}
+        />
       </div>
 
       <div className="h-8">

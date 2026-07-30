@@ -35,7 +35,7 @@ afterEach(()  => { _rpc = null; _rpcResult = { data: [], error: null }; });
 
 describe("GET /api/profile/words", () => {
   it("aggregates via the RPC and returns bucketed per-length counts", async () => {
-    _rpcResult = { data: [{ length: 4, count: 10 }, { length: 5, count: 3 }, { length: 12, count: 2 }], error: null };
+    _rpcResult = { data: [{ length: 10, count: 10 }, { length: 11, count: 3 }, { length: 15, count: 2 }], error: null };
     const res = await GET(makeGetReq("?device_uuid=device-1"));
     expect(res.status).toBe(200);
 
@@ -46,9 +46,9 @@ describe("GET /api/profile/words", () => {
     const body = await res.json();
     expect(body.total).toBe(15);
     const byKey = Object.fromEntries(body.buckets.map((b: { key: string; count: number }) => [b.key, b.count]));
-    expect(byKey["4"]).toBe(10);
-    expect(byKey["5"]).toBe(3);
-    expect(byKey["10+"]).toBe(2);
+    expect(byKey["10"]).toBe(10);
+    expect(byKey["11"]).toBe(3);
+    expect(byKey["13+"]).toBe(2); // 15 folds into the tail
   });
 
   it("returns an all-zero shape when the device has found nothing", async () => {

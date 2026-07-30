@@ -4,15 +4,25 @@
 // The read side aggregates in Postgres: player_words_by_length(device) returns one
 // { length, count } row per distinct length the device has found (sparse — a length
 // with no finds is simply absent). This turns that into the card's stable shape:
-// every length from MIN_WORD_LENGTH up to WORDS_TAIL_START-1 individually, then a
+// every length from WORDS_MIN_TRACKED up to WORDS_TAIL_START-1 individually, then a
 // single "N+" tail summing every longer find. Lengths with no finds still appear
-// (count 0) so the card's rows never reflow. The starting range (4…9 + "10+") is a
-// display choice, tunable against real data — adjust WORDS_TAIL_START, not callers.
+// (count 0) so the card's rows never reflow.
+//
+// Only long words are tracked: player_words no longer stores finds shorter than
+// WORDS_MIN_TRACKED (the shortest word-length badge — a word that long is itself a
+// one-shot achievement; see achievements.ts + the /api/words floor). Both bounds are
+// DERIVED from the badge-length ladder so the card, the badges, and the storage floor
+// can never drift — adjust achievementTuning.wordLengthBadges, not these.
 
-import { LEKSOKIPOS } from "@/config/gameRules";
+import { LEKSOKIPOS_ACHIEVEMENT_TUNING } from "@/config/achievementTuning";
+
+const BADGE_LENGTHS = LEKSOKIPOS_ACHIEVEMENT_TUNING.wordLengthBadges;
+
+/** Shortest tracked length — the ≥N floor for player_words (finds below it are dropped). */
+export const WORDS_MIN_TRACKED = Math.min(...BADGE_LENGTHS);
 
 /** First length folded into the "N+" tail bucket (lengths ≥ this are aggregated). */
-export const WORDS_TAIL_START = 10;
+export const WORDS_TAIL_START = Math.max(...BADGE_LENGTHS);
 
 /** One row of the Postgres per-length aggregate. */
 export interface WordLengthCount {
@@ -22,7 +32,7 @@ export interface WordLengthCount {
 
 /** One rendered bucket: a stable key, the smallest length it covers, and its count. */
 export interface LengthBucket {
-  /** "4"…"9" for individual lengths, "10+" for the tail. */
+  /** "10"…"12" for individual lengths, "13+" for the tail. */
   key:       string;
   /** Smallest length in the bucket — the sort/identity anchor. */
   minLength: number;
@@ -35,7 +45,7 @@ export interface WordsByLength {
 }
 
 export function bucketWordsByLength(rows: WordLengthCount[]): WordsByLength {
-  const min = LEKSOKIPOS.MIN_WORD_LENGTH;
+  const min = WORDS_MIN_TRACKED;
 
   // Seed every individual bucket (min…tail-1) plus the tail, all zeroed, so the
   // card's rows are present and ordered regardless of what the device has found.

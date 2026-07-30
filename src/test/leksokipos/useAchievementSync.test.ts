@@ -86,7 +86,7 @@ describe("useAchievementSync — posting", () => {
   it("posts the ids detected for the current snapshot", () => {
     renderHook(() => useAchievementSync({
       ...BASE,
-      foundWords: ["γατα", "παρακολουθηση"], // 13 letters → sidirodromos
+      foundWords: ["γατα", "ελικοπτερο"], // exactly 10 letters → sidirodromos
     }));
     expect(postAchievements).toHaveBeenCalledTimes(1);
     const arg = postAchievements.mock.calls[0][0];
@@ -114,7 +114,7 @@ describe("useAchievementSync — posting", () => {
     });
     postAchievements.mockClear();
 
-    rerender({ ...BASE, foundWords: ["γατα", "παρακολουθηση"] }); // adds sidirodromos
+    rerender({ ...BASE, foundWords: ["γατα", "ελικοπτερο"] }); // exactly 10 → adds sidirodromos
     expect(postAchievements).toHaveBeenCalledTimes(1);
     expect(postAchievements.mock.calls[0][0].achievementIds).toEqual(["leksokipos-sidirodromos"]);
   });
@@ -277,9 +277,9 @@ describe("useAchievementSync — unlock toast surfacing", () => {
   it("toasts only the newly-earned badge, suppressing ones earned in a prior session", async () => {
     fetchEarnedAchievementIds.mockResolvedValue(["leksokipos-first-daily"]);
     const onAchievementEarned = vi.fn();
-    // γατα → first-daily (already earned); παρακολουθηση (13) → sidirodromos (new)
+    // γατα → first-daily (already earned); ελικοπτερο (exactly 10) → sidirodromos (new)
     renderHook(() =>
-      useAchievementSync({ ...BASE, foundWords: ["γατα", "παρακολουθηση"], onAchievementEarned }),
+      useAchievementSync({ ...BASE, foundWords: ["γατα", "ελικοπτερο"], onAchievementEarned }),
     );
 
     await waitFor(() =>
@@ -357,7 +357,7 @@ describe("useAchievementSync — gating", () => {
     renderHook(() => useAchievementSync({
       ...BASE,
       enabled: false,
-      foundWords: ["γατα", "παρακολουθηση"], // would earn first-daily + sidirodromos if enabled
+      foundWords: ["γατα", "ελικοπτερο"], // would earn first-daily + sidirodromos if enabled
       foundPangrams: ["παρακολουθηση"],
       onAchievementEarned,
     }));

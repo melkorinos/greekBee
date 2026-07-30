@@ -9,7 +9,12 @@
 export const LEKSOKIPOS = {
   MIN_WORD_LENGTH: 4,
   PANGRAM_BONUS:   7,
-  SCORE_SCALE:     0.85,
+  // Fraction of a puzzle's raw total that the rank ladder is measured against.
+  // This is the ONLY knob that reaches every puzzle, including the ~25% whose
+  // scaled total never touches SOFT_CAP_KNEE (softCap is a pure no-op for them).
+  // Lowering it is therefore the lever for "small gardens demand too much" —
+  // the cap cannot do that job. Rebalanced 0.85 → 0.75 (2026-07-30).
+  SCORE_SCALE:     0.75,
   // Soft cap on a puzzle's rank-defining max score. Below SOFT_CAP_KNEE the
   // scaled score passes through unchanged; above it the excess is compressed
   // logarithmically toward the theoretical max — no hard ceiling — so the
@@ -17,8 +22,29 @@ export const LEKSOKIPOS = {
   // variety) while a word-dense "monster" garden never demands a runaway total.
   // SOFT_CAP_K sets the compression strength (higher = more headroom for big
   // puzzles). See softCap() in games/leksokipos/lib/scoring.ts.
+  //
+  // The cap is what makes rank fairness UNEQUAL across puzzles: without it every
+  // puzzle would demand exactly SCORE_SCALE × topRank% of its own garden, but the
+  // tedium on a 558-word garden would be unplayable (p90 would run to ~214 words).
+  // So the cap is deliberately kept — it trades some fairness for a tedium
+  // ceiling — and K was widened 250 → 400 so rich gardens are discounted less.
   SOFT_CAP_KNEE:   400,
-  SOFT_CAP_K:      250,
+  SOFT_CAP_K:      400,
+  // ── Puzzle-quality gates (generation-time filters, not scoring) ────────────
+  // Enforced by scripts/lib/leksokipos/puzzleQuality.ts, applied by both
+  // generators and pinned on the committed corpus by a guard test. These do NOT
+  // affect how a played puzzle scores — they only decide which letter sets are
+  // allowed to become puzzles at all.
+  //
+  // Aesthetic gate: a letter set permitting this many pangrams is not a puzzle,
+  // it is unbounded compounding (the pre-trim corpus had one with 110).
+  MAX_PANGRAMS:        20,
+  // Tedium ceiling, in "realistic words to the top rank" — see
+  // realisticWordsToGenius(). A RELATIVE difficulty index, not a literal word
+  // count a player will type: it assumes the average find is worth the puzzle's
+  // mean word score, while real players take cheap short words first. Never put
+  // this number in player-facing copy.
+  MAX_WORDS_TO_GENIUS: 107,
 } as const;
 
 export const LEKSIARXEIO = {
@@ -58,7 +84,7 @@ export const LEKSOPLEGMA = {
 
 export const TOPOTHESIES = {
   // Stage 1: guess the regional unit from its silhouette.
-  SHAPE_GUESSES:   4,
+  SHAPE_GUESSES:   5,
   // Stage 2 (bonus): guess that unit's capital.
   CAPITAL_GUESSES: 3,
   // Scoring: points scale with guesses remaining at the moment of the correct
@@ -69,6 +95,52 @@ export const TOPOTHESIES = {
   // real max pairwise centroid distance, NOT the globe. Computed by the data
   // pipeline (scripts/generateTopothesies.ts) from the emitted answers.json.
   PROXIMITY_MAX_KM: 938,
+} as const;
+
+export const POSOKANEI = {
+  // Daily "guess the supermarket price" game. N guesses; win = land within the
+  // puzzle's own tolerance band (a per-puzzle fraction of the price, so generic
+  // commodities can carry a wider band than specific SKUs — set in the data).
+  MAX_GUESSES: 6,
+  // Scoring: points scale with guesses remaining at the correct guess (solve on
+  // the first try → full points; each earlier wrong guess costs one step).
+  POINTS_PER_GUESS_LEFT: 100,  // ×(MAX_GUESSES − wrongGuesses)
+  // Proximity hint scaling: closeness% is 1 − (relativeError / PROXIMITY_MAX_REL),
+  // clamped to 0–100. A guess off by this fraction of the price (or more) reads
+  // 0%; an exact guess reads 100%. Kept generous so early guesses feel informative.
+  PROXIMITY_MAX_REL: 1.0,      // 100% relative error → 0% proximity
+  // Share-grid tier: a wrong guess at/above this proximity is a "close" 🟨,
+  // below it a "far" ⬛ (a correct guess is always 🟩). Purely cosmetic.
+  CLOSE_PROXIMITY_PCT: 70,
+} as const;
+
+export const LOGOPAIGNIO = {
+  // Daily "guess the Greek company from its name-stripped logo mark" game.
+  // Each wrong guess de-blurs the mark one step; solve on the first (fully
+  // blurred) look → full points, each wrong guess costs one step, give-up → 0.
+  MAX_GUESSES: 6,
+  // Scoring: points scale with guesses remaining at the correct guess.
+  POINTS_PER_GUESS_LEFT: 100,  // ×(MAX_GUESSES − wrongGuesses)
+  // Progressive de-blur: the CSS blur radius (px) applied to the mark at each
+  // count of wrong guesses so far. Index = wrongGuesses (0 = first, hardest
+  // look); a solved/revealed mark uses 0. Length MUST equal MAX_GUESSES. Tune
+  // freely — difficulty is a data knob, no code change needed.
+  BLUR_STEP_RADII_PX: [16, 12, 8, 5, 3, 1] as const,
+  // Every shipped mark is normalised onto ONE square canvas before it enters
+  // puzzles-el.json (operator decision, 2026-07-27). Square because a
+  // name-stripped mark is square-ish in practice — the three PoC crops came out
+  // at ratios 1.00 / 1.00 / 0.74, while the *full* logos they came from were
+  // 4.53 / 3.48 / 4.89 wide. The wide ratios belong to the wordmark, which the
+  // crop removes.
+  //
+  // This is a difficulty invariant, not just styling: BLUR_STEP_RADII_PX is in
+  // FIXED PIXELS, so on an un-normalised pool the same 16px first look erases a
+  // thin 11:1 strip while barely hazing a large square — difficulty would depend
+  // on a logo's shape rather than how recognizable it is.
+  MARK_CANVAS_PX: 512,
+  // Fraction of the canvas left empty around the mark, so marks with differing
+  // bounding boxes still read as the same visual weight in the frame.
+  MARK_PADDING_RATIO: 0.12,
 } as const;
 
 export const LEKSODROMIA = {

@@ -55,7 +55,7 @@ afterEach(()  => { _callQueue = []; _lastUpsert = null; _lastEq = null; _lastSel
 const VALID_POST = {
   device_uuid: "device-1",
   puzzle_date: "2026-07-06",
-  words:       ["γατα", "διακοπτης"],
+  words:       ["ελικοπτερο", "παρακολουθηση"], // 10 and 13 letters — both tracked
 };
 
 // ── happy path ──────────────────────────────────────────────────────────────
@@ -75,8 +75,8 @@ describe("POST /api/words — happy path", () => {
     });
     // length is derived server-side from the normalized word, never trusted from the body.
     expect(_lastUpsert?.rows).toEqual([
-      { device_uuid: "device-1", puzzle_date: "2026-07-06", word: "γατα", length: 4 },
-      { device_uuid: "device-1", puzzle_date: "2026-07-06", word: "διακοπτησ", length: 9 },
+      { device_uuid: "device-1", puzzle_date: "2026-07-06", word: "ελικοπτερο", length: 10 },
+      { device_uuid: "device-1", puzzle_date: "2026-07-06", word: "παρακολουθηση", length: 13 },
     ]);
     // Count is a HEAD exact count scoped to the device (lifetime, all dates).
     expect(_lastSelect?.opts).toMatchObject({ count: "exact", head: true });
@@ -89,20 +89,34 @@ describe("POST /api/words — happy path", () => {
     const res = await POST(makePostReq({
       device_uuid: "device-1",
       puzzle_date: "2026-07-06",
-      words:       ["Γάτα", "χι", "<script>"],
+      words:       ["Ελικόπτερο", "χι", "<script>"], // normalizes to a 10-letter word + junk
     }));
     expect(res.status).toBe(200);
     expect(_lastUpsert?.rows).toEqual([
-      { device_uuid: "device-1", puzzle_date: "2026-07-06", word: "γατα", length: 4 },
+      { device_uuid: "device-1", puzzle_date: "2026-07-06", word: "ελικοπτερο", length: 10 },
     ]);
   });
 
-  it("skips the write but still returns the current count when no valid word is posted", async () => {
+  it("drops finds below the ≥10 tracking floor — only long words reach the table", async () => {
+    enqueue({ error: null });
+    enqueue({ count: 1, error: null });
+    const res = await POST(makePostReq({
+      device_uuid: "device-1",
+      puzzle_date: "2026-07-06",
+      words:       ["γατα", "διακοπτης", "ελικοπτερο"], // 4, 9, 10 — only the 10 is tracked
+    }));
+    expect(res.status).toBe(200);
+    expect(_lastUpsert?.rows).toEqual([
+      { device_uuid: "device-1", puzzle_date: "2026-07-06", word: "ελικοπτερο", length: 10 },
+    ]);
+  });
+
+  it("skips the write but still returns the current count when nothing clears the floor", async () => {
     enqueue({ count: 5, error: null }); // only the COUNT(*) query runs
     const res = await POST(makePostReq({
       device_uuid: "device-1",
       puzzle_date: "2026-07-06",
-      words:       ["χι", "α"],
+      words:       ["γατα", "διακοπτης"], // 4 and 9 letters — both below the ≥10 floor
     }));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ count: 5 });

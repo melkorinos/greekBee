@@ -1,13 +1,21 @@
 "use client";
 
-// useLeksoplegmaRound — the round spine: reducer + persistence. No clock
-// anywhere (points-only scoring). Persists { puzzleId, foundRequired,
-// foundBonus, hintsUsed, status } under the puzzle date so a refresh restores
-// the dimmed board exactly (soft collapse is derived from foundRequired).
+// useLeksoplegmaRound — the round spine for Λεξόπλεγμα, as a thin adapter over the
+// shared slot-fill spine (useSlotFillRound, ADR 0019). The spine owns the reducer
+// → live-vs-restore → snapshot → persistence plumbing; this file supplies only
+// what is leksoplegma-specific: its reducer/initial-state factory and the two pure
+// mappings between state and the persisted snapshot.
+//
+// Leksoplegma's one genuine difference from the other slot-fill members is inside
+// its reducer, not here: RESTORE_STATE filters every restored word against the
+// CURRENT puzzle (a stale saved word from another board is dropped). `wrongTrace`
+// is transient UI state — deliberately absent from the snapshot and reset on
+// restore. No clock anywhere (points-only scoring); `status` is re-derived by the
+// reducer, so the snapshot persists it only for the write-guard's convenience.
 
-import { useCallback, useMemo, useReducer, useRef } from "react";
+import { useCallback } from "react";
 
-import { useRoundPersistence } from "@/hooks/useRoundPersistence";
+import { useSlotFillRound } from "@/hooks/useSlotFillRound";
 
 import type { LeksoplegmaPuzzle, LeksoplegmaState } from "../types";
 import {
@@ -27,59 +35,49 @@ interface RoundSnapshot {
 interface LeksoplegmaRound {
   state:    LeksoplegmaState;
   dispatch: (action: LeksoplegmaAction) => void;
-  /**
-   * Whether the player has made a live (non-restored) action this session.
-   * The spine owns the restore vs. live distinction — it issues RESTORE_STATE
-   * itself — so score-posting eligibility no longer leaks into the Board.
-   */
+  /** Whether the player has made a live (non-restored) action this session. */
   hasLiveActed: () => boolean;
 }
 
 export function useLeksoplegmaRound(puzzle: LeksoplegmaPuzzle, today: string): LeksoplegmaRound {
-  const [state, rawDispatch] = useReducer(
-    leksoplegmaReducer,
-    undefined,
-    () => makeInitialLeksoplegmaState(today, puzzle),
+  // The reducer's initial-state factory takes the puzzle id first; `today` is that
+  // id (the reducer only stores it as state.puzzleId). The spine passes the puzzle
+  // OBJECT into makeInitialState, so we close over `today` for the id and take the
+  // object as the parameter — matching the spine's makeInitialState(puzzle) shape.
+  const makeInitialState = useCallback(
+    (p: LeksoplegmaPuzzle) => makeInitialLeksoplegmaState(today, p),
+    [today],
   );
 
-  // Any dispatch the Board issues (TRACE_WORD) is a live action; the internal
-  // RESTORE_STATE below goes through rawDispatch, so a pure restore never flips.
-  const hasLiveActedRef = useRef(false);
-  const dispatch = useCallback((action: LeksoplegmaAction) => {
-    hasLiveActedRef.current = true;
-    rawDispatch(action);
-  }, []);
-  const hasLiveActed = useCallback(() => hasLiveActedRef.current, []);
-
-  const onRestore = useCallback((saved: RoundSnapshot) => {
-    rawDispatch({
+  const makeRestoreAction = useCallback(
+    (snap: RoundSnapshot): LeksoplegmaAction => ({
       type:          "RESTORE_STATE",
-      foundRequired: saved.foundRequired,
+      foundRequired: snap.foundRequired,
       // Snapshots saved by the brief bonus-less build lack foundBonus.
-      foundBonus:    saved.foundBonus ?? [],
-      hintsUsed:     saved.hintsUsed,
-    });
-  }, []);
+      foundBonus:    snap.foundBonus ?? [],
+      hintsUsed:     snap.hintsUsed,
+    }),
+    [],
+  );
 
-  const snapshot = useMemo<RoundSnapshot>(() => ({
-    puzzleId:      state.puzzleId,
-    foundRequired: state.foundRequired,
-    foundBonus:    state.foundBonus,
-    hintsUsed:     state.hintsUsed,
-    status:        state.status,
-  }), [state.puzzleId, state.foundRequired, state.foundBonus, state.hintsUsed, state.status]);
-
-  useRoundPersistence<RoundSnapshot>(
-    "leksoplegma",
-    today,
-    snapshot,
-    onRestore,
+  return useSlotFillRound<LeksoplegmaState, LeksoplegmaAction, RoundSnapshot, LeksoplegmaPuzzle>({
+    gameId:     "leksoplegma",
+    sessionKey: today,
+    puzzle,
+    reducer:    leksoplegmaReducer,
+    makeInitialState,
+    toSnapshot: (state) => ({
+      puzzleId:      state.puzzleId,
+      foundRequired: state.foundRequired,
+      foundBonus:    state.foundBonus,
+      hintsUsed:     state.hintsUsed,
+      status:        state.status,
+    }),
+    makeRestoreAction,
     // Never clobber a saved round with the pristine pre-hydration state.
-    (snap) =>
+    hasProgress: (snap) =>
       snap.foundRequired.length > 0 ||
       snap.foundBonus.length > 0 ||
       snap.hintsUsed.length > 0,
-  );
-
-  return { state, dispatch, hasLiveActed };
+  });
 }

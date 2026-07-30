@@ -22,6 +22,7 @@ import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
 import { getSupabaseClient, table } from "@/lib/supabase";
 import { isISODate } from "@/games/leksokipos/lib/puzzle";
 import { sanitizeFoundWords } from "@/games/leksokipos/lib/words";
+import { WORDS_MIN_TRACKED } from "@/lib/wordsByLength";
 
 export const runtime = "edge";
 
@@ -41,7 +42,12 @@ export async function POST(req: NextRequest) {
     return jsonMessage("Missing or invalid fields");
   }
 
-  const clean = sanitizeFoundWords(words);
+  // Only long words are tracked: finds below the ≥10 floor are not stored at all
+  // (a word that long is itself a one-shot badge; the profile card counts them per
+  // length). This keeps player_words — the fastest-growing fact table — small, and
+  // the floor is DERIVED from the badge-length ladder so it can never drift from the
+  // card/badges (achievementTuning.wordLengthBadges).
+  const clean = sanitizeFoundWords(words).filter((w) => w.length >= WORDS_MIN_TRACKED);
   const supabase = getSupabaseClient();
 
   if (clean.length > 0) {

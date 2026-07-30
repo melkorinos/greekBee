@@ -7,6 +7,7 @@
 import { GAME_REGISTRY } from "@/config/games";
 import { PLATFORM_NAME } from "@/config/platform";
 import { FeedbackModal } from "./FeedbackModal";
+import { ProfileToggleButton } from "./ProfileToggleButton";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
@@ -46,7 +47,7 @@ interface ShellProps {
 }
 
 // Games shown in the main nav section; leksikastirio is in its own community section.
-const GAME_IDS      = ["leksokipos", "leksiarxeio", "leksindeseis", "vrestifrasi", "leksodromia", "leksoplegma", "stavrolekso", "topothesies"] as const;
+const GAME_IDS      = ["leksokipos", "leksiarxeio", "leksindeseis", "vrestifrasi", "leksodromia", "leksoplegma", "stavrolekso", "topothesies", "posokanei", "logopaignio"] as const;
 const COMMUNITY_IDS = ["leksikastirio"] as const;
 
 // Under-construction (wip) games move to their own drawer section, keeping the
@@ -84,14 +85,9 @@ export function Shell({ children }: ShellProps) {
           </Link>
 
           <div className="flex items-center gap-1">
-            {/* Profile — always-visible entry point to /profile */}
-            <Link
-              href="/profile"
-              aria-label="Το προφίλ μου"
-              className="flex items-center justify-center w-9 h-9 rounded-full text-muted hover:bg-surface-raised active:bg-border transition-colors text-base leading-none"
-            >
-              👤
-            </Link>
+            {/* Profile — toggle: opens /profile, and while on /profile returns you
+                to the page you came from (ProfileToggleButton). */}
+            <ProfileToggleButton />
 
             {/* Theme toggle */}
             <button
