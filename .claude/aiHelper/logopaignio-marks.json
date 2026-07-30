@@ -1,0 +1,2830 @@
+[
+  {
+    "file": "3e.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 15,
+    "markBox": [
+      0.10000014305114746,
+      0,
+      30.799999475479126,
+      46.599998474121094
+    ],
+    "cutAxis": 0,
+    "cutAt": 37.39999866485596
+  },
+  {
+    "file": "ab-vassilopoulos.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 14,
+    "markBox": [
+      0,
+      0,
+      25.808380126953125,
+      28.357147216796875
+    ],
+    "cutAxis": 0,
+    "cutAt": 29.55938720703125
+  },
+  {
+    "file": "acs.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 5,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "aegean-oil.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 3,
+    "markBox": [
+      -0.0038146961014717817,
+      -0.03794682025909424,
+      57.87671279790811,
+      58.05205738544464
+    ],
+    "cutAxis": 0,
+    "cutAt": 62.340898513793945
+  },
+  {
+    "file": "aegean.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 10,
+    "markBox": [
+      194.26499938964844,
+      1.8489699363708496,
+      29.382003784179688,
+      42.2802300453186
+    ],
+    "cutAxis": 0,
+    "cutAt": 186.33999633789062
+  },
+  {
+    "file": "agno.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "239×247",
+    "background": "διαφανές"
+  },
+  {
+    "file": "aktor.png",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 9,
+    "markBox": [
+      21,
+      136,
+      8,
+      90
+    ],
+    "cutAxis": 0,
+    "cutAt": 45.5,
+    "pixels": "348×348",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "aktor.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 3,
+    "markBox": [
+      0,
+      0,
+      87.21002197265625,
+      88.06500244140625
+    ],
+    "cutAxis": 0,
+    "cutAt": 95.33250427246094
+  },
+  {
+    "file": "alfa-beer.svg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 18,
+    "markBox": [
+      23.18000030517578,
+      10.180000305175781,
+      74.30999755859375,
+      93.25
+    ],
+    "cutAxis": 1,
+    "cutAt": 106.68999862670898
+  },
+  {
+    "file": "allatini.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "200×315",
+    "background": "διαφανές"
+  },
+  {
+    "file": "alpha-bank.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 5,
+    "markBox": [
+      -2.220446049250313e-16,
+      0,
+      53.14500045776367,
+      53.150001525878906
+    ],
+    "cutAxis": 0,
+    "cutAt": 59.50148963928223
+  },
+  {
+    "file": "alpha-tv.svg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "altis.webp",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 4,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "250×100",
+    "background": "διαφανές"
+  },
+  {
+    "file": "alumil.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 13,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "aluminion-ellados.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 28,
+    "markBox": [
+      16.23370361328125,
+      9.800000190734863,
+      522.0203247070312,
+      526.2999753952026
+    ],
+    "cutAxis": 0,
+    "cutAt": 588.0270080566406
+  },
+  {
+    "file": "amita.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "100×100",
+    "background": "διαφανές"
+  },
+  {
+    "file": "amstel.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "388×99",
+    "background": "διαφανές"
+  },
+  {
+    "file": "anek-lines.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": [
+      0,
+      57,
+      225,
+      105
+    ],
+    "cutAxis": 1,
+    "cutAt": 180.5,
+    "pixels": "225×225",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "ant1.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "apivita.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": [
+      99,
+      420,
+      825,
+      377
+    ],
+    "cutAxis": 1,
+    "cutAt": 382.5,
+    "pixels": "1024×1024",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "art-tv.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "512×512",
+    "background": "διαφανές"
+  },
+  {
+    "file": "athens-deejay.svg",
+    "kind": "vertical",
+    "ambiguous": true,
+    "elements": 13,
+    "markBox": [
+      177.5,
+      254,
+      426.699951171875,
+      124.79998779296875
+    ],
+    "cutAxis": 1,
+    "cutAt": 393.1499938964844
+  },
+  {
+    "file": "athinaiki-zythopoiia.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 3,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "240×69",
+    "background": "διαφανές"
+  },
+  {
+    "file": "attica-bank.png",
+    "kind": "vertical",
+    "ambiguous": true,
+    "elements": 1,
+    "markBox": [
+      21,
+      69,
+      112,
+      69
+    ],
+    "cutAxis": 1,
+    "cutAt": 64.5,
+    "pixels": "150×148",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "attica-group.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 21,
+    "markBox": [
+      77.34300231933594,
+      8.524374961853027,
+      102.6435546875,
+      77.04776096343994
+    ],
+    "cutAxis": 0,
+    "cutAt": 74.59400177001953
+  },
+  {
+    "file": "attica-stores.jpg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 8,
+    "markBox": [
+      49,
+      47,
+      219,
+      111
+    ],
+    "cutAxis": 1,
+    "cutAt": 168,
+    "pixels": "300×300",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "avin.svg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 6,
+    "markBox": [
+      31.5,
+      5.421010862427522e-20,
+      73.29998779296875,
+      42.400001525878906
+    ],
+    "cutAxis": 1,
+    "cutAt": 45.19999694824219
+  },
+  {
+    "file": "avra.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "449×88",
+    "background": "διαφανές"
+  },
+  {
+    "file": "barba-stathis.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "252×128",
+    "background": "διαφανές"
+  },
+  {
+    "file": "barbayanni.svg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 398,
+    "markBox": [
+      0.003906209021806717,
+      0.029693603515625,
+      419.96173099800944,
+      147.23219299316406
+    ],
+    "cutAxis": 1,
+    "cutAt": 152.74913024902344
+  },
+  {
+    "file": "bazaar.svg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 5,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "best-radio.jpg",
+    "kind": "horizontal",
+    "ambiguous": true,
+    "elements": 2,
+    "markBox": [
+      129,
+      77,
+      1,
+      239
+    ],
+    "cutAxis": 0,
+    "cutAt": 140.5,
+    "pixels": "494×404",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "bet365.svg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 10,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "betsson.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 9,
+    "markBox": [
+      439.8499755859375,
+      -13.562897682189941,
+      111.9764404296875,
+      91.63520908355713
+    ],
+    "cutAxis": 0,
+    "cutAt": 428.76136779785156
+  },
+  {
+    "file": "blue-star-ferries.svg",
+    "kind": "horizontal",
+    "ambiguous": true,
+    "elements": 19,
+    "markBox": [
+      3.469446951953614e-18,
+      0,
+      122.13999938964844,
+      29.538000106811523
+    ],
+    "cutAxis": 0,
+    "cutAt": 126.17500305175781
+  },
+  {
+    "file": "boutari.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 5,
+    "markBox": [
+      0,
+      0,
+      306,
+      79
+    ],
+    "cutAxis": 1,
+    "cutAt": 88,
+    "pixels": "306×148",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "box.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 10,
+    "markBox": [
+      307,
+      80,
+      411,
+      178
+    ],
+    "cutAxis": 1,
+    "cutAt": 292.5,
+    "pixels": "1024×500",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "car-gr.jpg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "225×225",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "chipita.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "196×148",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "cobalt-music.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 11,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "192×192",
+    "background": "διαφανές"
+  },
+  {
+    "file": "coffee-island.jpg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 3,
+    "markBox": [
+      232,
+      74,
+      49,
+      156
+    ],
+    "cutAxis": 0,
+    "cutAt": 223,
+    "pixels": "300×300",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "coffee-lab.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 6,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "463×431",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "coral.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "cosmos-aluminium.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "201×36",
+    "background": "διαφανές"
+  },
+  {
+    "file": "cosmote.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 10,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "creta-farms.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "400×257",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "dei.svg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 10,
+    "markBox": [
+      0.17125001549720764,
+      -1.1368683094535245e-13,
+      117.89250120520592,
+      58.407505035400504
+    ],
+    "cutAxis": 1,
+    "cutAt": 61.15437889099121
+  },
+  {
+    "file": "delta.svg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 11,
+    "markBox": [
+      -0.0099945068359375,
+      -0.009996414184570312,
+      204.09999084472656,
+      90.81099891662598
+    ],
+    "cutAxis": 1,
+    "cutAt": 97.55550003051758
+  },
+  {
+    "file": "depa.png",
+    "kind": "unreadable",
+    "elements": 0,
+    "ambiguous": false
+  },
+  {
+    "file": "dhl.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 13,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "diesi.jpg",
+    "kind": "horizontal",
+    "ambiguous": true,
+    "elements": 3,
+    "markBox": [
+      50,
+      134,
+      144,
+      179
+    ],
+    "cutAxis": 0,
+    "cutAt": 214.5,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "dodoni.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 3,
+    "markBox": [
+      71,
+      123,
+      304,
+      109
+    ],
+    "cutAxis": 1,
+    "cutAt": 243.5,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "doubles.png",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 18,
+    "markBox": [
+      19,
+      25,
+      50,
+      53
+    ],
+    "cutAxis": 0,
+    "cutAt": 75.5,
+    "pixels": "200×100",
+    "background": "διαφανές"
+  },
+  {
+    "file": "dromos-fm.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "300×300",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "efood.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 4,
+    "markBox": [
+      -0.0009746241848915815,
+      -0.0012957273283973336,
+      40.99746891739778,
+      40.93264643533621
+    ],
+    "cutAxis": 0,
+    "cutAt": 45.08534812927246
+  },
+  {
+    "file": "eko.png",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 4,
+    "markBox": [
+      69,
+      0,
+      312,
+      377
+    ],
+    "cutAxis": 0,
+    "cutAt": 478.5,
+    "pixels": "1874×377",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "elin.svg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 9,
+    "markBox": [
+      5.200004577636719,
+      44.29999923706055,
+      148.49999237060547,
+      57.79999923706055
+    ],
+    "cutAxis": 1,
+    "cutAt": 42.49999809265137
+  },
+  {
+    "file": "elta-courier.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "162×86",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "elta.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "679×452",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "en-lefko.webp",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "288×290",
+    "background": "διαφανές"
+  },
+  {
+    "file": "epirus.jpg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "epsa.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "173×148",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "ergo.svg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 29,
+    "markBox": [
+      20.850000381469727,
+      -0.010001420974731445,
+      118.85001182556152,
+      34.790000200271606
+    ],
+    "cutAxis": 1,
+    "cutAt": 42.78999900817871
+  },
+  {
+    "file": "ert.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 5,
+    "markBox": [
+      221.3000030517578,
+      0,
+      164.6999969482422,
+      106
+    ],
+    "cutAxis": 0,
+    "cutAt": 206.90000915527344
+  },
+  {
+    "file": "eteka.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "192×192",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "etem.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "1122×157",
+    "background": "διαφανές"
+  },
+  {
+    "file": "etem.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "ethniki-asfalistiki.jpg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 24,
+    "markBox": [
+      50,
+      228,
+      259,
+      378
+    ],
+    "cutAxis": 0,
+    "cutAt": 406.5,
+    "pixels": "1200×629",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "ethniki-trapeza.png",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 8,
+    "markBox": [
+      23,
+      94,
+      19,
+      256
+    ],
+    "cutAxis": 0,
+    "cutAt": 54.5,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "eurobank.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 10,
+    "markBox": [
+      0,
+      -0.00040703886770643294,
+      25.389019012451172,
+      23.000407038867706
+    ],
+    "cutAxis": 0,
+    "cutAt": 31.73600959777832
+  },
+  {
+    "file": "eurolife.png",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 17,
+    "markBox": [
+      824,
+      333,
+      39,
+      170
+    ],
+    "cutAxis": 0,
+    "cutAt": 806,
+    "pixels": "1200×800",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "evga.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "309×277",
+    "background": "διαφανές"
+  },
+  {
+    "file": "evian.svg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "eyath.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 6,
+    "markBox": [
+      8.399999618530273,
+      3.6000008583068848,
+      48.49999809265137,
+      48.20000219345093
+    ],
+    "cutAxis": 0,
+    "cutAt": 69.79999732971191
+  },
+  {
+    "file": "eydap.png",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 5,
+    "markBox": [
+      0,
+      0,
+      38,
+      37
+    ],
+    "cutAxis": 0,
+    "cutAt": 44,
+    "pixels": "164×37",
+    "background": "διαφανές"
+  },
+  {
+    "file": "factory-outlet.png",
+    "kind": "vertical",
+    "ambiguous": true,
+    "elements": 4,
+    "markBox": [
+      3,
+      55,
+      143,
+      44
+    ],
+    "cutAxis": 1,
+    "cutAt": 50.5,
+    "pixels": "149×100",
+    "background": "διαφανές"
+  },
+  {
+    "file": "fage.svg",
+    "kind": "horizontal",
+    "ambiguous": true,
+    "elements": 6,
+    "markBox": [
+      683.0999755859375,
+      166.90000915527344,
+      27.79998779296875,
+      27.699996948242188
+    ],
+    "cutAxis": 0,
+    "cutAt": 656.6499938964844
+  },
+  {
+    "file": "fanta.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 9,
+    "markBox": [
+      947.5999755859375,
+      414.8992919921875,
+      48.5,
+      48.401397705078125
+    ],
+    "cutAxis": 0,
+    "cutAt": 771.5499877929688
+  },
+  {
+    "file": "fast-ferries.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "215×215",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "fix-hellas.svg",
+    "kind": "vertical",
+    "ambiguous": true,
+    "elements": 46,
+    "markBox": [
+      171.11900329589844,
+      161.4669952392578,
+      1104.018814086914,
+      520.4100189208984
+    ],
+    "cutAxis": 1,
+    "cutAt": 734.1639404296875
+  },
+  {
+    "file": "flocafe.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 3,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "346×120",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "fm-records.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "200×196",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "fonbet.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "180×180",
+    "background": "διαφανές"
+  },
+  {
+    "file": "forthnet.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 4,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "frezyderm.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 5,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "207×205",
+    "background": "διαφανές"
+  },
+  {
+    "file": "galaxias.png",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 8,
+    "markBox": [
+      5,
+      6,
+      73,
+      76
+    ],
+    "cutAxis": 0,
+    "cutAt": 94,
+    "pixels": "350×87",
+    "background": "διαφανές"
+  },
+  {
+    "file": "gek-terna.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 29,
+    "markBox": [
+      -0.0000030399373827094678,
+      0.10006783157587051,
+      38.29748076210535,
+      38.32317664474249
+    ],
+    "cutAxis": 0,
+    "cutAt": 40.347341537475586
+  },
+  {
+    "file": "geniki-taxydromiki.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": [
+      0,
+      255,
+      1200,
+      163
+    ],
+    "cutAxis": 1,
+    "cutAt": 153,
+    "pixels": "1200×630",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "giannotiko.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "gioutis.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 3,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "golden-star-ferries.jpg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": [
+      0,
+      90,
+      584,
+      271
+    ],
+    "cutAxis": 1,
+    "cutAt": 385.5,
+    "pixels": "584×525",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "goodys.svg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 24,
+    "markBox": [
+      1,
+      0,
+      226.66200256347656,
+      60.09960174560547
+    ],
+    "cutAxis": 1,
+    "cutAt": 63.10459899902344
+  },
+  {
+    "file": "heaven-music.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": [
+      0,
+      0,
+      503,
+      498
+    ],
+    "cutAxis": 1,
+    "cutAt": 524.5,
+    "pixels": "503×670",
+    "background": "διαφανές"
+  },
+  {
+    "file": "heaven-music.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 9,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "heineken.svg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 19,
+    "markBox": [
+      257.1579895019531,
+      -0.0009999796748161316,
+      328.1310729980469,
+      256.6023183390498
+    ],
+    "cutAxis": 1,
+    "cutAt": 276.4431610107422
+  },
+  {
+    "file": "hellenic-seaways.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 19,
+    "markBox": [
+      1.056879997253418,
+      1.0673799514770508,
+      49.93932056427002,
+      30.776320457458496
+    ],
+    "cutAxis": 0,
+    "cutAt": 54.73959922790527
+  },
+  {
+    "file": "hellenic-train.svg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "helleniq-energy.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 16,
+    "markBox": [
+      0,
+      0,
+      200.0143585205078,
+      200
+    ],
+    "cutAxis": 0,
+    "cutAt": 220.0466766357422
+  },
+  {
+    "file": "hondos-center.png",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 3,
+    "markBox": [
+      58,
+      516,
+      403,
+      1016
+    ],
+    "cutAxis": 0,
+    "cutAt": 566,
+    "pixels": "2048×2048",
+    "background": "διαφανές"
+  },
+  {
+    "file": "icc-courier.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "300×112",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "ifantis.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "1461×442",
+    "background": "διαφανές"
+  },
+  {
+    "file": "ikea.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 3,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "interamerican.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 5,
+    "markBox": [
+      5.5,
+      3.200000047683716,
+      33.5,
+      31.2992103099823
+    ],
+    "cutAxis": 0,
+    "cutAt": 44.39999961853027
+  },
+  {
+    "file": "interlife.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 4,
+    "markBox": [
+      0,
+      1,
+      192,
+      35
+    ],
+    "cutAxis": 1,
+    "cutAt": 38.5,
+    "pixels": "192×60",
+    "background": "διαφανές"
+  },
+  {
+    "file": "intersport.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 12,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "interwetten.svg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "ioli.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": [
+      84,
+      34,
+      467,
+      244
+    ],
+    "cutAxis": 1,
+    "cutAt": 300.5,
+    "pixels": "601×511",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "ion.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": [
+      1,
+      4,
+      119,
+      33
+    ],
+    "cutAxis": 1,
+    "cutAt": 39,
+    "pixels": "121×60",
+    "background": "διαφανές"
+  },
+  {
+    "file": "iraklis.jpg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "352×195",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "ivi.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "jetoil.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "128×128",
+    "background": "διαφανές"
+  },
+  {
+    "file": "jumbo.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "kino.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "kiss-fm.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "knorr.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 13,
+    "markBox": [
+      90.53521728515625,
+      31.714462280273438,
+      6.6652984619140625,
+      6.752719879150391
+    ],
+    "cutAxis": 0,
+    "cutAt": 85.25932312011719
+  },
+  {
+    "file": "korpi.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 3,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "592×352",
+    "background": "διαφανές"
+  },
+  {
+    "file": "korres.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 6,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "1280×223",
+    "background": "διαφανές"
+  },
+  {
+    "file": "kotsovolos-2.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "490×625",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "kotsovolos.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "500×500",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "kri-kri.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "350×350",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "kritikos.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "kyknos.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "534×374",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "lacta.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "lanes.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 12,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "lay-s.svg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 14,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "lazaridi.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 113,
+    "markBox": [
+      818.8068237304688,
+      273.1556396484375,
+      110.15643310546875,
+      264.1500244140625
+    ],
+    "cutAxis": 0,
+    "cutAt": 777.6480407714844
+  },
+  {
+    "file": "leroy-merlin.svg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 12,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "levante-ferries.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 28,
+    "markBox": [
+      25.737163543701172,
+      25.44151496887207,
+      102.16443252563477,
+      100.97048759460449
+    ],
+    "cutAxis": 0,
+    "cutAt": 151.25180053710938
+  },
+  {
+    "file": "lidl-hellas.svg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 9,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "lipton-ice-tea.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "1799×820",
+    "background": "διαφανές"
+  },
+  {
+    "file": "loumidis.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "loux.svg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 8,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "mad-tv.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "1000×954",
+    "background": "διαφανές"
+  },
+  {
+    "file": "malamatina.webp",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 6,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "1000×1000",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "masoutis.svg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 35,
+    "markBox": [
+      4.5,
+      10.700000762939453,
+      981.7130126953125,
+      120.49999618530273
+    ],
+    "cutAxis": 1,
+    "cutAt": 135.79998779296875
+  },
+  {
+    "file": "mega-channel.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "melissa.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "554×554",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "melodia-fm.webp",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "2835×2835",
+    "background": "διαφανές"
+  },
+  {
+    "file": "metaxa.svg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 29,
+    "markBox": [
+      0,
+      0,
+      400.5520324707031,
+      70.31700134277344
+    ],
+    "cutAxis": 1,
+    "cutAt": 74.35400009155273
+  },
+  {
+    "file": "metlen.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 28,
+    "markBox": [
+      16.23370361328125,
+      9.800000190734863,
+      522.0203247070312,
+      526.2999753952026
+    ],
+    "cutAxis": 0,
+    "cutAt": 588.0270080566406
+  },
+  {
+    "file": "mevgal.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": [
+      394,
+      538,
+      2720,
+      1043
+    ],
+    "cutAxis": 1,
+    "cutAt": 1654,
+    "pixels": "3508×2481",
+    "background": "διαφανές"
+  },
+  {
+    "file": "mikel.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "512×512",
+    "background": "διαφανές"
+  },
+  {
+    "file": "minerva.png",
+    "kind": "horizontal",
+    "ambiguous": true,
+    "elements": 2,
+    "markBox": [
+      0,
+      0,
+      1,
+      1880
+    ],
+    "cutAxis": 0,
+    "cutAt": 86,
+    "pixels": "1315×2560",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "minetta.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 40,
+    "markBox": [
+      221.56295776367188,
+      0,
+      89.43313598632812,
+      59
+    ],
+    "cutAxis": 0,
+    "cutAt": 213.35446166992188
+  },
+  {
+    "file": "minoan-lines.svg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 30,
+    "markBox": [
+      0.020000001415610313,
+      0.16699999570846558,
+      297.39400146342814,
+      49.56200009584427
+    ],
+    "cutAxis": 1,
+    "cutAt": 53.052499771118164
+  },
+  {
+    "file": "minos-emi.png",
+    "kind": "vertical",
+    "ambiguous": true,
+    "elements": 3,
+    "markBox": [
+      16,
+      16,
+      144,
+      32
+    ],
+    "cutAxis": 1,
+    "cutAt": 51.5,
+    "pixels": "175×140",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "misko.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "192×192",
+    "background": "διαφανές"
+  },
+  {
+    "file": "moustakas.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "209×185",
+    "background": "διαφανές"
+  },
+  {
+    "file": "my-market.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "180×180",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "mythos.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "328×304",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "nescafe.svg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 8,
+    "markBox": [
+      296.265869140625,
+      0.000008939009603636805,
+      34.848846435546875,
+      31.198700548905435
+    ],
+    "cutAxis": 1,
+    "cutAt": 34.75648212432861
+  },
+  {
+    "file": "nestea.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "192×192",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "netbet.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 5,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "675×128",
+    "background": "διαφανές"
+  },
+  {
+    "file": "nikas.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "nissos.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "444×446",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "notos-galleries.jpg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 14,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "730×380",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "nounou.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "600×212",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "nova.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 4,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "novalife.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 8,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "553×168",
+    "background": "διαφανές"
+  },
+  {
+    "file": "novibet.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "256×256",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "oasa.svg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "olympic-airways.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 13,
+    "markBox": [
+      193.72012329101562,
+      125.03963470458984,
+      85.34085083007812,
+      8.921348571777344
+    ],
+    "cutAxis": 0,
+    "cutAt": 136.5475616455078
+  },
+  {
+    "file": "olympos.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "216×162",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "olympus-tyri.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "84×67",
+    "background": "διαφανές"
+  },
+  {
+    "file": "olympus-tyri.svg",
+    "kind": "horizontal",
+    "ambiguous": true,
+    "elements": 3,
+    "markBox": [
+      -0.000024457229301333427,
+      3.7872848510742188,
+      296.92061771894805,
+      467.27490997314453
+    ],
+    "cutAxis": 0,
+    "cutAt": 325.04209899902344
+  },
+  {
+    "file": "opap.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 16,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "optima-bank.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "ote.svg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "pamestoixima.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "1024×1024",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "panik-records.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "552×552",
+    "background": "διαφανές"
+  },
+  {
+    "file": "papadopoulou.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "papoutsanis.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 7,
+    "markBox": [
+      48,
+      143,
+      351,
+      105
+    ],
+    "cutAxis": 1,
+    "cutAt": 256,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "pavlidis.jpg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 3,
+    "markBox": [
+      66,
+      35,
+      491,
+      298
+    ],
+    "cutAxis": 1,
+    "cutAt": 344,
+    "pixels": "637×430",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "peiraios.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 3,
+    "markBox": [
+      -0.9558000564575195,
+      -0.7092800140380859,
+      15.869315147399902,
+      15.90127182006836
+    ],
+    "cutAxis": 0,
+    "cutAt": 16.389866828918457
+  },
+  {
+    "file": "pepsi.svg",
+    "kind": "unreadable",
+    "elements": 0,
+    "ambiguous": false
+  },
+  {
+    "file": "pitsos.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 7,
+    "markBox": [
+      0.13062500953674316,
+      0.3212500214576721,
+      13.293749570846558,
+      13.332500398159027
+    ],
+    "cutAxis": 0,
+    "cutAt": 16.88374948501587
+  },
+  {
+    "file": "pizza-fan.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "144×144",
+    "background": "διαφανές"
+  },
+  {
+    "file": "plaisio.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 6,
+    "markBox": [
+      134,
+      0,
+      25,
+      25
+    ],
+    "cutAxis": 0,
+    "cutAt": 122
+  },
+  {
+    "file": "plomari.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "1047×1341",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "praktiker.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "public-cinemas.svg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": [
+      17.053699493408203,
+      -0.0009764999849721789,
+      132.70598983764648,
+      96.50099938816857
+    ],
+    "cutAxis": 1,
+    "cutAt": 107.53750991821289
+  },
+  {
+    "file": "public.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "red-fm.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "290×260",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "revoil.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 3,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "80×70",
+    "background": "διαφανές"
+  },
+  {
+    "file": "revolut.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "400×400",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "rise-tv.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "512×512",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "rythmos.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": [
+      40,
+      23,
+      147,
+      143
+    ],
+    "cutAxis": 1,
+    "cutAt": 172,
+    "pixels": "225×225",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "sarantis.png",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 21,
+    "markBox": [
+      1,
+      14,
+      74,
+      159
+    ],
+    "cutAxis": 0,
+    "cutAt": 87,
+    "pixels": "404×191",
+    "background": "διαφανές"
+  },
+  {
+    "file": "seajets.jpg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "694×288",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "second-cup.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 22,
+    "markBox": [
+      36.336090087890625,
+      6.4421539306640625,
+      13.5791015625,
+      11.965591430664062
+    ],
+    "cutAxis": 0,
+    "cutAt": 35.191322326660156
+  },
+  {
+    "file": "septem.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "204×72",
+    "background": "διαφανές"
+  },
+  {
+    "file": "sevendays.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "silkoil.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": [
+      17,
+      1,
+      123,
+      49
+    ],
+    "cutAxis": 1,
+    "cutAt": 53.5,
+    "pixels": "156×90",
+    "background": "διαφανές"
+  },
+  {
+    "file": "simply-burgers.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "180×180",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "skag.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": [
+      7,
+      0,
+      1069,
+      486
+    ],
+    "cutAxis": 1,
+    "cutAt": 511.5,
+    "pixels": "1076×636",
+    "background": "διαφανές"
+  },
+  {
+    "file": "skai.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 6,
+    "markBox": [
+      0,
+      1.9600000381469727,
+      24.049999237060547,
+      32.999999046325684
+    ],
+    "cutAxis": 0,
+    "cutAt": 27.75999927520752
+  },
+  {
+    "file": "sklavenitis-cash.jpg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 4,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "200×200",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "sklavenitis.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 3,
+    "markBox": [
+      0.5299999713897705,
+      0.9000000357627869,
+      60.47000002861023,
+      52.75018459558487
+    ],
+    "cutAxis": 0,
+    "cutAt": 67.86000061035156
+  },
+  {
+    "file": "skroutz.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 7,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "sky-express.svg",
+    "kind": "horizontal",
+    "ambiguous": true,
+    "elements": 9,
+    "markBox": [
+      96.30000305175781,
+      97.0999755859375,
+      198.99998474121094,
+      381.9000244140625
+    ],
+    "cutAxis": 0,
+    "cutAt": 306.9499816894531
+  },
+  {
+    "file": "souroti.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 23,
+    "markBox": [
+      96.33000183105469,
+      -1.4210854715202004e-14,
+      198.0500030517578,
+      192.1500244140625
+    ],
+    "cutAxis": 0,
+    "cutAt": 84.8650016784668
+  },
+  {
+    "file": "spicy-music.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 5,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "160×72",
+    "background": "διαφανές"
+  },
+  {
+    "file": "spitogatos.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "192×192",
+    "background": "διαφανές"
+  },
+  {
+    "file": "sprite.svg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "star-channel.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 4,
+    "markBox": [
+      408.6124267578125,
+      43.33333206176758,
+      89.38754272460938,
+      160.4607048034668
+    ],
+    "cutAxis": 0,
+    "cutAt": 400.6314239501953
+  },
+  {
+    "file": "starbucks.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "256×256",
+    "background": "διαφανές"
+  },
+  {
+    "file": "stasy.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "171×187",
+    "background": "διαφανές"
+  },
+  {
+    "file": "stoiximan.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 12,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "subway.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 2,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "superfast-ferries.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "taf-coffee.webp",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "1184×864",
+    "background": "διαφανές"
+  },
+  {
+    "file": "terkenlis.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 4,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "640×479",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "theoni.jpg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": [
+      40,
+      113,
+      374,
+      178
+    ],
+    "cutAxis": 1,
+    "cutAt": 298,
+    "pixels": "447×447",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "three-cents.png",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 9,
+    "markBox": [
+      4,
+      2,
+      45,
+      93
+    ],
+    "cutAxis": 0,
+    "cutAt": 55.5,
+    "pixels": "208×95",
+    "background": "διαφανές"
+  },
+  {
+    "file": "titan.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 17,
+    "markBox": [
+      9.19999885559082,
+      7.289172649383545,
+      68.59998893737793,
+      67.11082887649536
+    ],
+    "cutAxis": 0,
+    "cutAt": 83.39999389648438
+  },
+  {
+    "file": "tsakiris.jpg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "491×407",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "tsipouro-tirnavou.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 13,
+    "markBox": [
+      1,
+      1,
+      178,
+      38
+    ],
+    "cutAxis": 1,
+    "cutAt": 42.5,
+    "pixels": "180×65",
+    "background": "διαφανές"
+  },
+  {
+    "file": "tzoker.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 9,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "540×282",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "venetis.png",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 3,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "738×303",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "vergina-beer.svg",
+    "kind": "emblem",
+    "ambiguous": false,
+    "elements": 56,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "vianex.jpg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 5,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "500×184",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "vikos.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 7,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  },
+  {
+    "file": "viohalco.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 9,
+    "markBox": [
+      28.729999542236328,
+      11.85200023651123,
+      27.751998901367188,
+      16.37600040435791
+    ],
+    "cutAxis": 0,
+    "cutAt": 61.93149757385254
+  },
+  {
+    "file": "vouli-tileorasi.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": [
+      28,
+      22,
+      242,
+      148
+    ],
+    "cutAxis": 1,
+    "cutAt": 183.5,
+    "pixels": "300×310",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "wakam.jpg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 5,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "1024×537",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "wind-hellas.svg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 22,
+    "markBox": [
+      361.3999938964844,
+      262.33270263671875,
+      119.5,
+      83.46728515625
+    ],
+    "cutAxis": 1,
+    "cutAt": 362.8999786376953
+  },
+  {
+    "file": "wolt.png",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null,
+    "pixels": "625×625",
+    "background": "αδιαφανές"
+  },
+  {
+    "file": "xe-gr.svg",
+    "kind": "horizontal",
+    "ambiguous": false,
+    "elements": 19,
+    "markBox": [
+      0,
+      0,
+      93.04959869384766,
+      42
+    ],
+    "cutAxis": 0,
+    "cutAt": 96.42274856567383
+  },
+  {
+    "file": "ydrogios.png",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 1,
+    "markBox": [
+      4,
+      8,
+      174,
+      109
+    ],
+    "cutAxis": 1,
+    "cutAt": 121,
+    "pixels": "180×144",
+    "background": "διαφανές"
+  },
+  {
+    "file": "zagori.svg",
+    "kind": "vertical",
+    "ambiguous": false,
+    "elements": 30,
+    "markBox": [
+      0.10000000149011612,
+      0.20000112056732178,
+      190.99997558444738,
+      66.99999582767487
+    ],
+    "cutAxis": 1,
+    "cutAt": 69.5
+  },
+  {
+    "file": "zara.svg",
+    "kind": "wordmark",
+    "ambiguous": false,
+    "elements": 4,
+    "markBox": null,
+    "cutAxis": null,
+    "cutAt": null
+  }
+]

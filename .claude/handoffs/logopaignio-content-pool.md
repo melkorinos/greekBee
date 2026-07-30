@@ -1,7 +1,7 @@
 # Handoff: Λογοπαίγνιο — content pool (source, curate, grow to 150–200)
 
-**Date:** 2026-07-27 (updated after expansion #2 — the operator's category cull + brand additions)
-**Status:** Game code shipped (`wip:true`, single placeholder). **207/218 candidates have an asset** after the operator's first 53-image drop. Sourcing is essentially done; the work left is curation.
+**Date:** 2026-07-28 (sourcing complete; the work has moved to mark isolation)
+**Status:** Game code shipped (`wip:true`, single placeholder). **207 of 208 brands have an asset.** **Sourcing is DONE** — the current stage is isolating each logo's symbol from its wordmark. See "Next stage" below.
 **Goal:** Curate real puzzles up to **150–200** brands so the daily rotation doesn't repeat for months. First **~30** unlocks a proper wip build; 150 is the launch floor.
 **Owner:** Human-led with agent assist.
 
@@ -11,24 +11,24 @@
 
 | | Count |
 |---|---|
-| Candidate brands in the seed list | **218** (+1 variant row) |
+| Candidate brands in the seed list | **208** (+1 variant row) |
 | With an asset | **207** |
-| — operator-supplied (Plan F) | 53 |
-| — automated (Plans A–E) | 154 |
-| **Still awaiting an image** | **12** |
-| Cards clean / flagged in the preview | 61 / 146 |
+| — operator-supplied (Plan F) | 55 |
+| — automated (Plans A–E) | 152 |
+| **Still awaiting an image** | **2** |
+| Marks isolated (the next stage) | **0** |
 
-*The flagged count jumped because operator-supplied images are rasters, and every raster now carries the "needs a manual crop" warning. That is a **format** note, not a quality judgement — it does not mean 146 cards are wrong.*
+*Most cards carry a warning, and that is expected: every raster asset gets a "needs a manual crop" note. It is a **format** flag, not a quality judgement.*
 
 **Nothing has been approved yet.** Every asset is in gitignored staging (`public/logopaignio/_raw/`); `puzzles-el.json` still holds only the fake «Δείγμα» placeholder. The eye check is the next human step.
 
-**Review surface:** `.claude/aiHelper/logopaignio-preview.html` — 219 cards grouped by sector, with filter buttons (Όλα / Καθαρά / Με προειδοποίηση / Προβληματικά / Χωρίς αρχείο / **Θέλουν εικόνα από εσένα**). Regenerate with `npm run logopaignio:preview`.
+**Review surface:** `.claude/aiHelper/logopaignio-preview.html` — 209 cards grouped by sector, with filter buttons (Όλα / Καθαρά / Με προειδοποίηση / Προβληματικά / Χωρίς αρχείο / **Θέλουν εικόνα από εσένα**). Regenerate with `npm run logopaignio:preview`.
 
 ---
 
 ## Expansion #2 (2026-07-27) — what changed
 
-The operator culled the B2B-heavy sectors and added consumer categories. Net: 159 → 230 rows (24 deleted, 95 added); later passes dropped the duplicate Goody's sub-brand, added 10 radio stations, then cut 21 more brands — landing at **218**.
+The operator culled the B2B-heavy sectors and added consumer categories. Net: 159 → 230 rows (24 deleted, 95 added); later passes dropped the duplicate Goody's sub-brand, added 10 radio stations, then cut 31 more brands across two culls — landing at **208**.
 
 **Sectors deleted outright:** «Αεροπορική εταιρεία», «Κατασκευές», «Ενέργεια», «Τηλεπικοινωνίες», «Φαρμακευτικά». **«Βιομηχανία» culled to four** — ΤΙΤΑΝ, Πίτσος, Alumil, Ηρακλής.
 
@@ -42,9 +42,9 @@ The operator culled the B2B-heavy sectors and added consumer categories. Net: 15
 - «Γαλακτοκομικά» + «Τυριά & αλλαντικά» → **«Τρόφιμα»**
 - «Ασφάλειες» + «Ύδρευση» + «Ηλεκτρονικό εμπόριο» + «Λιανική» + «Βιομηχανία» + «Ψυχαγωγία» → **«Εταιρείες»**
 
-Shape after the third cull (218 rows, 13 sectors): Υγρά 41, Τρόφιμα 36, Εταιρείες 36, **Μέσα ενημέρωσης 20**, Εστίαση 16, Μεταφορές 14, Τυχερά 12, Delivery 9, Καύσιμα 9, Σούπερ μάρκετ 8, Τράπεζα 7, Μουσική 6, Καλλυντικά 5.
+**Final shape (208 rows, 13 sectors):** Τρόφιμα 36, Υγρά 36, Εταιρείες 34, Μέσα ενημέρωσης 20, Μεταφορές 14, Εστίαση 13, Τυχερά παιχνίδια 11, Καύσιμα 9, Delivery 9, Σούπερ μάρκετ 8, Τράπεζα 7, Μουσική 6, Καλλυντικά 5.
 
-**Radio stations added to Μέσα ενημέρωσης** (2026-07-28, operator request): Εν Λευκώ, Ρυθμός, Red 96.3, Δρόμος, Μελωδία, Athens DeeJay, Kiss, Δίεση, Best (Σφαίρα was added then cut in the third cull) — making the sector TV+radio rather than TV-only. Station marks suit the icon-only filter well (a frequency dial or monogram is often the whole logo). Four resolved cleanly (Red, Δρόμος, Μελωδία, Σφαίρα); Athens DeeJay resolved but is a **pure wordmark**, so it likely fails the filter on review. Two traps worth remembering: Commons returned **KIIS FM of Los Angeles** for Kiss 92.9, and **rythmos.gr is not the station at all** — it serves Burg-Wächter, a German lock manufacturer.
+**Radio stations added to Μέσα ενημέρωσης** (2026-07-28, operator request): Εν Λευκώ, Ρυθμός, Red 96.3, Δρόμος, Μελωδία, Athens DeeJay, Kiss, Δίεση, Best (Σφαίρα was added then cut in the third cull) — making the sector TV+radio rather than TV-only. Station marks suit the icon-only filter well (a frequency dial or monogram is often the whole logo). Red, Δρόμος and Μελωδία resolved cleanly; Athens DeeJay resolved but is a **pure wordmark**, so it likely fails the filter on review. Two traps worth remembering: Commons returned **KIIS FM of Los Angeles** for Kiss 92.9, and **rythmos.gr is not the station at all** — it serves Burg-Wächter, a German lock manufacturer.
 
 > **A reservation on «Εταιρείες», recorded because it was raised and overruled.** The fold puts Jumbo, IKEA, Zara and attica — shops a player pictures instantly — in the same hint bucket as ΕΥΔΑΠ and Alumil. Since the sector *is* the free hint, a 36-row bucket spanning "shop you visit" to "aluminium extruder" tells the player almost nothing, and «Εταιρείες» is additionally near-vacuous (every brand in the pool is a company). If daily play shows the hint feels useless, splitting the retail rows back out is the first thing to try.
 
@@ -52,7 +52,7 @@ Shape after the third cull (218 rows, 13 sectors): Υγρά 41, Τρόφιμα 3
 
 ---
 
-## The pipeline (three commands)
+## The pipeline (six passes)
 
 ```
 npm run logopaignio:fetch      # Plan A  Wikimedia Commons  → _raw/ + manifest.json
@@ -63,7 +63,7 @@ npm run logopaignio:import     # Plan F  operator-supplied images ← the remain
 npm run logopaignio:preview    # renders the eye-check page from the manifest
 ```
 
-**Plan F is where the remaining brands get resolved.** Drop images into `public/logopaignio/_manual/` (gitignored), named after either the **seed id** (`mythos.png`) or the **display name** (`Μύθος.png`) — accents, case and spacing are folded away. A trailing number («Κωτσόβολος 2.jpg») keeps an alternative side by side as `kotsovolos-2`. The preview prints the exact filename on every purple "ΘΕΛΕΙ ΕΙΚΟΝΑ ΑΠΟ ΕΣΕΝΑ" card, so it can be copied straight off the page; the **«Θέλουν εικόνα από εσένα» filter button** lists them all. The importer validates by magic bytes (an HTML error page saved as `.png` is rejected — that has bitten this project), enforces the same 64px floor as the automated passes, and refuses a filename it cannot resolve to exactly one brand, so a typo (or an ambiguous name like «7Days», claimed by both Chipita and 7Days) fails loudly instead of silently overwriting the wrong row.
+**Plan F closed the pool.** 55 operator-supplied images landed this way — more than any single automated plan. Drop images into `public/logopaignio/_manual/` (gitignored), named after either the **seed id** (`mythos.png`) or the **display name** (`Μύθος.png`) — accents, case and spacing are folded away. A trailing number («Κωτσόβολος 2.jpg») keeps an alternative side by side as `kotsovolos-2`. The preview prints the exact filename on every purple "ΘΕΛΕΙ ΕΙΚΟΝΑ ΑΠΟ ΕΣΕΝΑ" card, so it can be copied straight off the page; the **«Θέλουν εικόνα από εσένα» filter button** lists them all. The importer validates by magic bytes (an HTML error page saved as `.png` is rejected — that has bitten this project), enforces the same 64px floor as the automated passes, and refuses a filename it cannot resolve to exactly one brand, so a typo (or an ambiguous name like «7Days», claimed by both Chipita and 7Days) fails loudly instead of silently overwriting the wrong row.
 
 Run them in that order; D and E only chase brands that still have no asset, so they are cheap to re-run. **Plans D and E have materially worse precision than A–C** — see their yields below — and every row they produce is warning-flagged in the preview on purpose.
 
@@ -72,7 +72,7 @@ Run them in that order; D and E only chase brands that still have no asset, so t
 **Social media (Facebook/Instagram profile pictures) was considered and dropped** — both now require authentication for profile images, so there is no unauthenticated route. That was the last untried automated source; what remains genuinely needs a human.
 
 Data files:
-- `scripts/lib/logopaignio/seedBrands.mjs` — the 218 candidates (id, brand, sector, accept-list, Commons search terms). **`search: null` pins a brand to manual sourcing**, so no future automated run re-fetches an asset already judged wrong.
+- `scripts/lib/logopaignio/seedBrands.mjs` — the 208 candidates (id, brand, sector, accept-list, Commons search terms). **`search: null` pins a brand to manual sourcing**, so no future automated run re-fetches an asset already judged wrong.
 - `scripts/lib/logopaignio/officialSites.mjs` — ~165 domain mappings for Plan B
 - `public/logopaignio/_raw/manifest.json` — machine-readable result of every attempt (gitignored)
 
@@ -129,19 +129,17 @@ Other automatic checks: HTML-error-pages-saved-as-images are rejected (this bit 
 
 ---
 
-## The 12 still awaiting an image
+## Sourcing outcome
 
-The operator's 53-image drop cleared 31 of the previous 43. These remain — all automated plans have been run against each, so they need a supplied image or removal:
+The operator's image drops (55 files) plus the second cull closed every gap but two. **`elite-tsakiris` and `roast-bakery`** remain — listed under "Next stage" above.
 
-`attica-bank` · `chipita` · `elite-tsakiris` (Ελίτ) · `evropi-asfalistiki` · `grigoris` (Γρηγόρης) · `kaiafas` · `kourtaki` (Κουρτάκη) · `loutraki` · `roast-bakery` · `ta-adelfia` · `voreia` · `winmasters`
-
-**`attica-bank` and `chipita` are new gaps, not old ones** — both had assets until the accept-list collision above rerouted their images to the correct brands (`attica-stores`, `sevendays`). They need their own logos now.
-
-**Two are brand-selection questions, not sourcing failures.** `ta-adelfia` resolves to a single souvlaki shop in Heraklion rather than a chain, and `loutraki` turns out to name several different bottlers (Υδρία, Αιώνιο) rather than one brand. Neither is really a national brand; consider dropping them rather than sourcing them. `roast-bakery` has no findable web presence at all.
+`attica-bank` and `chipita` were briefly gaps of our own making: the accept-list collision described below rerouted their images to the correct brands (`attica-stores`, `sevendays`), leaving the originals empty. The operator supplied both, and the hardened matcher now files all four correctly on a re-run.
 
 ### Third cull + the first image drop (2026-07-28)
 
-**21 brands removed** by the operator: Κορφή, Τσάνταλη, Ευ Ελληνικόν, Καραλής, Molto, Ρούσσας, Τρικαλινός, Σφαίρα 102.2, Cosmos Sport, Δύναμις, ΕΛΠΑ Ασφάλειες, Euroins, Groupama, Ορίζων, KFC, Domino's, Grigoris Coffee, Pizza Hut, McDonald's, Κοτομπάιτς, Coffeeright. **Βενέτης moved** from the old cheese/deli grouping to «Εστίαση» — it is a bakery chain. Pool: 239 → 218.
+**31 brands removed** across two culls. First: Κορφή, Τσάνταλη, Ευ Ελληνικόν, Καραλής, Molto, Ρούσσας, Τρικαλινός, Σφαίρα 102.2, Cosmos Sport, Δύναμις, ΕΛΠΑ Ασφάλειες, Euroins, Groupama, Ορίζων, KFC, Domino's, Grigoris Coffee, Pizza Hut, McDonald's, Κοτομπάιτς, Coffeeright. Then: Καϊάφας, Κουρτάκη, Λουτράκι, Βορεία, Ευρώπη Ασφαλιστική, Winmasters, Γρηγόρης, Τα Αδέρφια, Everest, Cavino. **Βενέτης moved** from the old cheese/deli grouping to «Εστίαση» — it is a bakery chain. Pool: 239 → 208.
+
+Most of the second cull were brands automation had already failed on, so the removals and the "needs an image" list converged — the operator cut the tail rather than sourcing it, which is the right trade when a brand is marginal anyway.
 
 > Worth knowing if Εστίαση later feels thin: the cull removed the four foreign fast-food brands (McDonald's, KFC, Domino's, Pizza Hut) that carried the sector's most icon-only marks — the arches and the roundel are textbook name-strippable logos. Εστίαση is now 16 and mostly Greek coffee chains. The operator was told this before the cull and confirmed it.
 
@@ -178,14 +176,40 @@ What they were actually holding is a useful catalogue of how logo sourcing goes 
 
 ---
 
-## Next actions
+## Next stage: ISOLATE THE MARKS ← current work
 
-1. **Name review first** (the operator's stated priority): read the 219 cards for *brand selection* — is this brand worth a puzzle, is it in the right sector, is the sector name right? «Υγρά» and «Εταιρείες» are both working labels awaiting better names.
-2. **Batch eye-check** the same cards. For each: is this the right company, and does it have a separable non-text symbol? Pure wordmarks are **rejected** — the icon-only filter is what keeps the game playable. Pay extra attention to **sector-mates with shared words** (see the Pizza Hut/Pizza Fan trap above).
-3. **Strip the wordmarks.** Many assets are the *full* logo, name included. Still the main remaining craft work. Layered SVGs can often be cropped by clipping the `viewBox` alone; PNG/JPGs need a manual crop.
-4. **Normalise approved marks** onto the 512×512 canvas (script not yet written — mechanical, no per-brand judgment).
-5. **Graduate approved rows** into `src/data/logopaignio/puzzles-el.json` with their mark in `public/logopaignio/`, then flip `wip:false` once ~30 are live.
-6. **Manual-source the 36** if the pool needs them to clear 150 — read the caution in that section first.
+**Sourcing is done. The pool is 208 brands, 207 with an asset.** The next stage — and the one that decides whether the game is playable — is turning each staged file into a **mark-only image**: the symbol alone, no company name, centred on the 512×512 canvas (`gameRules.LOGOPAIGNIO.MARK_CANVAS_PX` / `MARK_PADDING_RATIO`).
+
+This is the step the whole icon-only filter exists for. A logo with its name still attached is not a puzzle — the answer is written on it.
+
+### What the 207 assets actually are
+
+| Format | Count | How the mark gets isolated |
+|---|---|---|
+| SVG, multi-path | 46 | **Clip the `viewBox`** — symbol and wordmark are separate paths at separate x-ranges. Scriptable, no redraw. |
+| SVG, single/flattened path | 31 | Manual — the paths are merged, so clipping cannot separate them. |
+| PNG | 93 | Manual crop. |
+| JPEG | 32 | Manual crop, and **JPEG has no transparency** — a white box around the mark will show on the game's background unless it is keyed out. |
+| WebP | 5 | Manual crop. |
+
+So **46 are scriptable and ~161 need a human hand** — the same split that made this stage the bottleneck all along. Most operator-supplied images are square social-media avatars (447×447 is the recurring size), which are usually *already* close to mark-only; those may need only a background key, not a crop.
+
+### Suggested order of work
+
+1. **Eye-check while isolating, not before.** The two passes are the same pass: you cannot decide "is this the right company / does it have a separable symbol" without looking at the image, and once you are looking you may as well crop. Doing them separately means looking at 207 cards twice.
+2. **Write the viewBox-clipper for the 46 multi-path SVGs.** Mechanical, no per-brand judgement, and it is the largest single automatable chunk left. It needs a per-brand "which x-range is the symbol" input, which the operator supplies by eye once per logo.
+3. **Then the rasters**, worst-first: the 9 assets over 100 KB (`apivita`, `barbayanni`, `lazaridi`, `lipton-ice-tea`, `mevgal`, `mikel`, `minerva`, `pamestoixima`) need re-sourcing or heavy compression regardless, since the game ships these to clients.
+4. **Normalise onto 512×512** (script not yet written — mechanical once the marks exist).
+5. **Graduate into `src/data/logopaignio/puzzles-el.json`**, mark files into `public/logopaignio/`, then flip `wip:false` once ~30 are live.
+
+### Two things to decide before cropping in bulk
+
+- **Transparency.** 32 JPEGs have opaque backgrounds. Decide now whether marks are PNG-with-alpha (cleanest, works on any game background) or composited onto a fixed colour — retrofitting this across 200 files later is painful.
+- **Blur radii are in fixed pixels.** `BLUR_STEP_RADII_PX` does not scale with the mark, which is exactly why the 512×512 normalisation is not optional: an un-normalised pool makes difficulty depend on a logo's shape rather than on how recognizable it is.
+
+### Still without an asset (2)
+
+`elite-tsakiris` (Ελίτ) and `roast-bakery` (Roast). Both have exhausted every automated plan; `roast-bakery` has no findable web presence at all and is probably better dropped than sourced.
 
 ---
 
@@ -220,10 +244,10 @@ This does not change the ship-anyway posture, but the ticket-04 legal note must 
 - [ ] 150 (launch floor)
 - [ ] 200 (comfortable)
 
-*Sourcing is effectively done: **207 of 218 staged, 0 approved**. With 218 candidates the pool clears the 150 launch floor **if roughly 70% survive the eye check**, so curation alone now decides whether the game launches.*
+*Sourcing is finished: **207 of 208 staged, 0 isolated, 0 approved**. At 208 candidates the pool clears the 150 launch floor **if ~72% survive the eye check** — so the icon-only verdict, not sourcing, now decides whether the game launches.*
 
 **Two independent bottlenecks remain**, and they can proceed in parallel:
-1. **Operator supplies the last 12 images** → `public/logopaignio/_manual/` → `npm run logopaignio:import` (two of the twelve are probably better dropped — see that section).
-2. **Operator eye-checks the 207 already staged** — name review, then the icon-only call, then wordmark stripping.
+1. **Isolate the marks** — strip each wordmark, normalise to 512×512. This is the current stage; see the section above.
+2. **Eye-check as part of the same pass** — the icon-only verdict and the crop are one decision made while looking at the image, not two.
 
 A warning the session earned the hard way: **a card showing an asset is not a card with the right asset.** Of the 13 brands the operator flagged, every one had a plausible-looking image that was a web agency's logo, a certification badge, a parent company, a different company of the same name, or a photograph. The automated guards catch unrelated matches and photographs; they cannot catch a real logo belonging to the wrong company. Only the eye check can.
