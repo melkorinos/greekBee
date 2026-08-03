@@ -48,6 +48,37 @@ Tickets 01 (foundation) + 02 (playable UI, s127) shipped `wip:true` on one place
 - **Pool reachability — eased, and the bottleneck MOVED (s130).** 144 assets are staged against a 150 floor, helped by dropping the Greek-origin rule. Sourcing is no longer the risk; **curation is**: 0 of 144 are approved, and many are still full logos with the name attached. The remaining work is the eye check + wordmark stripping, which no script can do. Watch for the temptation to bank "144" as progress toward 150 — the honest number is 0 until marks are cropped and approved. If the pool still stalls, relax "recognizable" before "icon-only" (relaxing icon-only breaks the game outright). Blur difficulty stays a `BLUR_STEP_RADII_PX` knob.
 - **Automated sourcing is confidently wrong, and only verification catches it (s130).** Commons search matched ΔΕΗ to "Namibia Power Corporation" and ΣΤΑΣΥ to a Lithuanian choir — plausible-looking files, downloaded and presented as correct. Two of my *own* checks were also wrong until measured: the duplicate detector reported 48 false duplicates, and an HTML error page was saved as `logo.svg`. Nothing here is covered by the test suite (it is all `scripts/`), so the only defence is measuring the artifact rather than trusting the response. Any future expansion of this pipeline should assume its own output is wrong until checked.
 
+### 🟡 `coverageMap.md` had MOVED, and a missing file is not the same as a lost one (s132)
+
+The Dream gate broke because the map sat at `.claude/aiHelper/test-audit/coverageMap.md` — one
+directory below where `CLAUDE.md` and `soul.md` point. **Moved back to
+`.claude/aiHelper/coverageMap.md` on 2026-08-03**; the rules were always right and stay.
+
+The process lesson is mine, not the repo's. I grepped the mandated path, got nothing, ran
+`git log` on **that same missing path** (which reports commits for the containing directory, not
+the file), and concluded "deleted, never committed" — then wrote a reflection recommending the rules
+be deleted. A one-line `git ls-files`/`find` on the basename would have found it immediately.
+**When a mandated artifact is missing, search for it by name before concluding it does not exist**,
+and never propose deleting a rule on the strength of a single unresolved path.
+
+Residual gap: the map is ~31 files stale (it covered 153 of 184 test files at the move). s132's own
+rows are logged; the remainder is for a future Dream to reconcile.
+
+### 🟡 Offline Mode ships unverified where it is most likely to fail (s132)
+
+The feature is code-complete and every automated gate passes, but the two things that decide whether
+it actually works for a player cannot be tested here:
+- **Next 16 router-cache lifetime.** Prefetch populates a cache with its own expiry. If it evicts
+  during a long flight, cross-game navigation dies exactly when the feature is supposed to be
+  earning its keep. ADR 0010 already flags this as the likeliest under-delivery; handoff §13-D is
+  the test. If it fails, the design needs revisiting, not patching.
+- **The `beforeunload` + flush interaction on a real mobile browser.** iOS Safari is inconsistent
+  about `beforeunload`, and a tab killed by the OS never fires it — the mount-flush safety net is
+  the only thing standing between that and a lost score.
+
+Resist the temptation to mark this "done" on green gates alone. The honest status is
+*built, awaiting the operator's offline pass* — the same posture topothesies and posokanei sat in.
+
 ### 🟡 Two round spines — the split must be defended, not drifted into (s128)
 
 `useSlotFillRound` (topothesies/posokanei/logopaignio/leksoplegma) now sits beside `useGuessRound` (leksiarxeio/vrestifrasi) as a deliberate **sibling**, not a generalisation — ADR 0019 states why. Three things to watch:

@@ -42,7 +42,8 @@ Ship a polished multi-game **Greek games platform** — beginning with word game
 - **Community pipeline** — one `communityPuzzleLifecycle` owning submit → approve/reject → consume across Leksiarxeio / Leksindeseis / Vres Tin Frasi (+ never-consumed Stavrolekso); Leksikastirio review tabs.
 - **Design system** — CSS semantic tokens + per-game accent (ADR 0008/0009); recipe files; palette guard test.
 - **Cost work** — Vercel Fluid CPU mitigations (daily-combo prerender, lazy word-list, Edge routes); Vercel Pro.
-- **Leksokipos** — rank ladder + variable soft-cap genius bar; share card. (**Offline Lock + Score Outbox are NOT built** — design complete only: ADR 0010 + `offlineFeature-handoff.md`; no `useOfflineLock`/outbox code exists.)
+- **Leksokipos** — rank ladder + variable soft-cap genius bar; share card.
+- **Offline Mode + Score Outbox — BUILT (2026-08-03, ADR 0010)**: drawer toggle, activation prefetch, `beforeunload` refresh guard, nav confirmation off the prefetched set, `useDayChange` suppression + banner, and Leksokipos score queueing via `postScoreAwaitable`. **Awaiting the operator's manual DevTools-offline pass** (handoff §13). **Item D is a GO/NO-GO, not a checklist line:** if prefetched routes evict from the Next router cache during a long offline session, prefetching is the wrong mechanism and ADR 0010's "no service worker" call reopens — run D before merging to `main`. Cross-game score queueing is deferred (issue 15).
 
 ---
 

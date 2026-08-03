@@ -37,7 +37,29 @@ no open question stands between here and pressing the button.
 
 <!-- one line per closed ticket: gist + link -->
 
-_(none yet — the map was charted 2026-07-31)_
+- **2026-08-03 — Offline Lock: GO, rescoped to platform-wide Offline Mode, and it does NOT ship
+  before launch.** Ticket 07 resolved and deleted. Both of its open questions are answered: lock
+  state lives in a **React context at Shell level** (the localStorage+`storage` option is rejected —
+  `storage` does not fire in the originating tab, and it would add a second localStorage writer
+  beside `useGameStore`), and the toggle sits in the **Shell drawer**, not in game chrome. Scope
+  widened from Leksokipos-only to **all 8 `wip:false` games**, warm start only — cold start
+  re-examined against the operator's "on the plane" framing and **rejected a second time** (every
+  game page is `force-dynamic`, so cold start needs a service worker *plus* a rendering
+  rearchitecture). Score queueing stays **Leksokipos-only** in the first pass; the rest is deferred
+  to [issue 15](../issues/15-offline-cross-game-score-queueing.md). Brief:
+  `.claude/handoffs/offlineFeature-handoff.md`; ADR 0010 amended.
+  **BUILT 2026-08-03 (s132)** — implemented via `/tdd`, all automated gates green, awaiting the
+  operator's manual DevTools-offline pass (handoff §13). Still **not on the launch path**: this
+  changes nothing about the sequencing decision above. Two handoff/registry contradictions were
+  resolved during the build (offline set is **6** games, not 8; nav confirmation fires only off the
+  prefetched set) — see ADR 0010.
+
+> **Process note.** Ticket 07 was worked *before* [Launch checklist](01-launch-checklist-what-does-launch-actually-require.md),
+> which this map declares should come first. That was an operator call on 2026-08-03 and the
+> sequencing rule otherwise stands — nothing else should jump the checklist. It did not cost
+> anything here: the outcome was to take Offline Mode **off** the launch path, so the checklist's
+> verdict on it can only confirm, not contradict. Ticket 07's `Blocked by` on the checklist is
+> therefore discharged rather than ignored.
 
 ## Not yet specified
 

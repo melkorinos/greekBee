@@ -29,7 +29,7 @@
 | `groupGrid.test.tsx` | Render, solved groups, selection, disabled |
 | `dataLoader.test.ts` (leksindeseis) | `getTodaysLeksindeseisPuzzle` — date match, fallback, shape |
 | `persistence.test.ts` | `useRoundPersistence` — hydration, saving, clear(), shouldSave |
-| `useScoreSubmission.test.ts` | Unified hook — submit/submitWithName (Leksokipos, Leksindeseis, Vres Tin Frasi): dedup guard, enabled gate, is_perfect latch |
+| `useScoreSubmission.test.ts` | Unified hook — submit/submitWithName (Leksokipos, Leksindeseis, Vres Tin Frasi): dedup guard, enabled gate, is_perfect latch. **+ Offline Mode (s132):** queues to the Offline Score Outbox instead of POSTing, keyed overwrite as the score climbs, name saves, disabled = queues nothing, and the **dedup boundary regression** — a score queued offline must still POST once online (`lastPostedRef` must NOT advance on the offline path) |
 | `useLiveScorePost.test.ts` | Shared round-game posting policy — restored/untouched never posts (+never opens leaderboard), posts live score on every change, opens leaderboard once after delay on finish, custom delay |
 | `useLeksiarxeioScoreSubmission.test.ts` | Leksiarxeio per-length posting — attempts→points mapping, deviceId gate, name ref |
 | `useGuessRound.test.ts` | Shared guess-game spine — score-only-on-end, onGameEnd once, persist `{guesses,status}` + restore, save guard, per-puzzle sessions |
@@ -40,7 +40,7 @@
 | `useGameIdentity.test.ts` | SSR-safe DeviceId + DisplayName init, setter state updates |
 | `usePlayerIdentity.test.ts` | Bundled identity module — migration-runs-before-device-read ordering, scalar fields from store, complete `leaderboardProps` bundle + wiring, `saveName` persists |
 | `useGameStore.test.ts` | readSlice, writeSlice, clearSlice, deviceId, displayName, profileLinked, migration |
-| `Shell.test.tsx` | Hamburger open/close/Escape, nav links, theme toggle, profile-button toggle (opens /profile; back-vs-home on /profile via `window.history.state.idx`) |
+| `Shell.test.tsx` | Hamburger open/close/Escape, nav links, theme toggle, profile-button toggle (opens /profile; back-vs-home on /profile via `window.history.state.idx`). **+ Offline Mode (s132):** drawer toggle render/activate/deactivate + `aria-pressed`, activation prefetch, the pre-activation explanation copy, and the nav guard — confirms only for destinations **outside** the prefetched set, never game-to-game |
 | `profileNav.test.ts` | `resolveProfileNav` — open /profile from elsewhere; back() on /profile with in-app history; "/" fallback with none |
 | `letterPickerModal.test.tsx` | Center/outer selection, quality rules (vowel center, ≥2 vowels, consonants) |
 | `feedbackMessage.test.tsx` | Valid/pangram/error statuses, suggest button |
@@ -79,7 +79,7 @@
 | `leaderboardBadge.test.tsx` | `LeaderboardBadge` chip — glyph, medal only for tiered, distinct element after the name |
 | `achievementToast.test.tsx` | AchievementToast render + dismiss |
 | `useAchievementSync.test.ts` | The detection lanes — posting, points tier, pangram delta-post, unlock-toast surfacing (earned-at-mount suppression), gating |
-| `useDayChange.test.ts` | Day-rollover redirect — today's puzzle, past-puzzle leaderboard nav, custom puzzles |
+| `useDayChange.test.ts` | Day-rollover redirect — today's puzzle, past-puzzle leaderboard nav, custom puzzles. **+ Offline Mode (s132):** `router.replace` suppressed while active (offline the force-dynamic page can't load, so the redirect would kill the round), `dayChangedWhileOffline` flag raised for the banner, normal redirect resumes once off |
 | `useGameState.test.ts` | Cross-device server restore — gates, success, error handling, `restoreFromServer` |
 | `missedWordsList.test.tsx` | MissedWordsList (give-up reveal) |
 | `pangrams.test.ts` (leksokipos) | `sanitizePangramWords` shape guards (ADR 0013 B2) |
@@ -113,7 +113,9 @@
 | `noLiteralColumnWidth.test.ts` | Column-width guard — no literal `max-w-sm` in shipped `.tsx`; the platform column is `max-w-game` (`--container-game`), no allowlist |
 | `performance.test.ts` | Hotpath timing budgets — computeValidWords, buildCustomPuzzle cache, prebuilt scan |
 | `placement.test.ts` | `countPodiumFinishes` (`{first,second,third}`, competition ranking — 90/90/80 ⇒ no 2nd) + `countFirstPlaceFinishes` wrapper |
-| `postScore.test.ts` | `sanitizeDisplayName` |
+| `postScore.test.ts` | `sanitizeDisplayName`; **`postScoreAwaitable`** (s132) — true on ok, false on non-ok/rejection/throw, JSON wire shape, never throws. The async sibling the outbox flush needs; `postScore` itself stays fire-and-forget and untested here beyond the name helper |
+| `offlineOutbox.test.ts` | **Offline Score Outbox** (s132) — keyed overwrite by `(gameId, puzzleDate)` incl. the second-game regression, `outboxKey`, per-entry clear, corrupt-payload tolerance, `setOutboxDisplayName` across all entries, and `flushOutbox`: success clears, **failure KEEPS**, partial success, throwing post, empty no-op, and no-clobber of a score queued mid-flush |
+| `useOfflineMode.test.tsx` | **Offline Mode** hook + provider (s132) — `OFFLINE_GAME_IDS` derivation (excludes wip + the server-backed community surfaces), activate/prefetch-all/`preparing` gating, best-effort prefetch rejection, `beforeunload` registered only while active + cancels the event + removed on deactivate, flush on deactivate, keep-on-failure, **mount-time flush safety net**, shared state across consumers, and the inert no-provider fallback |
 | `premadeDataConsistency.test.ts` | ADR 0015 drift guard — every game, both directions (stale removal + missed addition), byte-identical write path |
 | `profileSectionFunnel.test.tsx` / `profileSectionSignIn.test.tsx` | ProfileSection — /profile funnel link; Google sign-in offered whenever not AuthLinked (ADR 0012) |
 | `profileStatsRoute.test.ts` | `GET /api/profile/stats` |

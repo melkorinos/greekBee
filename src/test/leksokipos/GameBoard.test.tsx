@@ -564,3 +564,29 @@ describe("Leaderboard button", () => {
     expect(screen.queryByTestId("btn-leaderboard")).toBeNull();
   });
 });
+
+// ── Offline Mode day-boundary banner ──────────────────────────────────────────
+
+describe("GameBoard — day changed while Offline Mode is active", () => {
+  // The puzzle rotates at 03:00. Offline Mode suppresses useDayChange's redirect
+  // (the force-dynamic page could not load without a connection), so the board must
+  // explain the staleness instead of silently serving yesterday's puzzle.
+
+  it("shows the unlock banner when the day rolled over offline", async () => {
+    vi.resetModules();
+    vi.doMock("@/games/leksokipos/hooks/useDayChange", () => ({
+      useDayChange: () => ({ dayChangedWhileOffline: true }),
+    }));
+    const { GameBoard: Board } = await import("@/components/leksokipos/GameBoard");
+
+    render(<Board puzzle={puzzle} />);
+
+    expect(screen.getByText(/άλλαξε/i)).toBeInTheDocument();
+    vi.doUnmock("@/games/leksokipos/hooks/useDayChange");
+  });
+
+  it("shows no banner on a normal round", () => {
+    setup();
+    expect(screen.queryByText(/άλλαξε/i)).not.toBeInTheDocument();
+  });
+});

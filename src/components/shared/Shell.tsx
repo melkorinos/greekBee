@@ -9,8 +9,10 @@ import { PLATFORM_NAME } from "@/config/platform";
 import { FeedbackModal } from "./FeedbackModal";
 import { ProfileToggleButton } from "./ProfileToggleButton";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
+import { useOfflineMode } from "@/hooks/useOfflineMode";
+import { chipWarning } from "@/styles/recipes";
 
 // ── Hamburger icon ────────────────────────────────────────────────────────────
 function HamburgerIcon({ open }: { open: boolean }) {
@@ -60,6 +62,35 @@ export function Shell({ children }: ShellProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const { theme, toggle } = useTheme();
 
+  const {
+    active: offlineActive,
+    preparing: offlinePreparing,
+    activate: activateOffline,
+    deactivate: deactivateOffline,
+    isOfflineRoute,
+  } = useOfflineMode();
+
+  // Leaving a route that was NOT prefetched ends the round while offline: every page
+  // is force-dynamic, so without a connection it cannot load. Navigation between the
+  // prefetched games is the whole point of the feature and is never intercepted.
+  const guardNavigation = useCallback(
+    (href: string) => (e: React.MouseEvent) => {
+      if (!offlineActive || isOfflineRoute(href)) {
+        setDrawerOpen(false);
+        return;
+      }
+      const leave = window.confirm(
+        "Είσαι σε λειτουργία εκτός σύνδεσης. Αν φύγεις από εδώ χωρίς σύνδεση, ο γύρος σου χάνεται. Να συνεχίσω;",
+      );
+      if (!leave) {
+        e.preventDefault();
+        return;
+      }
+      setDrawerOpen(false);
+    },
+    [offlineActive, isOfflineRoute],
+  );
+
   useEffect(() => {
     if (!drawerOpen) return;
     function onKey(e: KeyboardEvent) {
@@ -79,6 +110,7 @@ export function Shell({ children }: ShellProps) {
         <div className="flex items-center justify-between max-w-game mx-auto">
           <Link
             href="/"
+            onClick={guardNavigation("/")}
             className="text-sm font-semibold text-foreground hover:opacity-80 transition-colors"
           >
             🎮 {PLATFORM_NAME}
@@ -133,7 +165,7 @@ export function Shell({ children }: ShellProps) {
                   <li key={id}>
                     <Link
                       href={game.href}
-                      onClick={() => setDrawerOpen(false)}
+                      onClick={guardNavigation(game.href)}
                       className={navLinkClass}
                     >
                       {game.label}
@@ -155,7 +187,7 @@ export function Shell({ children }: ShellProps) {
                   <li key={id}>
                     <Link
                       href={game.href}
-                      onClick={() => setDrawerOpen(false)}
+                      onClick={guardNavigation(game.href)}
                       className={navLinkClass}
                     >
                       {game.label}
@@ -179,7 +211,7 @@ export function Shell({ children }: ShellProps) {
                       <li key={id}>
                         <Link
                           href={game.href}
-                          onClick={() => setDrawerOpen(false)}
+                          onClick={guardNavigation(game.href)}
                           className={navLinkClass}
                         >
                           {game.label}
@@ -190,6 +222,39 @@ export function Shell({ children }: ShellProps) {
                 </ul>
               </>
             )}
+
+            <hr className="my-4 border-zinc-700" />
+
+            {/* Offline Mode — a platform-wide switch, so it lives here beside the
+                theme toggle rather than in any game's chrome. The explanation is
+                part of the control: the browser's refresh dialog cannot be worded,
+                so this is the player's only chance to learn the rules first. */}
+            <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-4 px-2">
+              Σύνδεση
+            </p>
+            <ul className="space-y-1">
+              <li>
+                <button
+                  onClick={() => {
+                    void (offlineActive ? deactivateOffline() : activateOffline());
+                  }}
+                  disabled={offlinePreparing}
+                  aria-pressed={offlineActive}
+                  className={`${navLinkClass} w-full text-left disabled:opacity-50`}
+                >
+                  {offlinePreparing
+                    ? "⏳ Προετοιμασία…"
+                    : offlineActive
+                      ? "✅ Εκτός σύνδεσης — ενεργό"
+                      : "✈️ Εκτός σύνδεσης"}
+                </button>
+              </li>
+            </ul>
+            <p className={`${chipWarning} mt-2 mx-2 rounded-lg px-2.5 py-2 text-xs leading-snug`}>
+              {offlineActive
+                ? "Ενεργό: μη κάνεις ανανέωση (refresh) της σελίδας χωρίς σύνδεση — ο γύρος σου θα χαθεί. Απενεργοποίησέ το μόλις βρεις σύνδεση για να σταλεί το σκορ σου."
+                : "Ενεργοποίησέ το ΟΣΟ ΕΧΕΙΣ ΣΥΝΔΕΣΗ για να παίζεις χωρίς δίκτυο. Όσο είναι ενεργό, οι ανανεώσεις (refresh) της σελίδας μπλοκάρονται: χωρίς σύνδεση η σελίδα δεν ξαναφορτώνει και ο γύρος χάνεται."}
+            </p>
 
             <hr className="my-4 border-zinc-700" />
 
