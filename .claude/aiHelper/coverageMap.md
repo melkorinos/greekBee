@@ -55,6 +55,7 @@
 | `useLeaderboardProfile.test.ts` | Profile-aware save (unlinked→create+createError, linked→save) + `useLeaderboardProfileSlot` bundle (ProfileSection wiring, saveButtonAlwaysActive) |
 | `dataLoader.test.ts` (vrestifrasi) | `getTodaysVresTinFrasiPuzzle` — community consume, static rotation fallback, `buildPuzzle` accent normalisation + wordLengths |
 | `scoring.test.ts` (vrestifrasi) | `scoreVresTinFrasi` — 6→1 by attempts, 0 on loss, floor guard |
+| `phraseCorpusPlayable.test.ts` (vrestifrasi) | **Corpus↔pool contract** — drives the real reducer with the real assembled pool over EVERY phrase: correct answer must win, word lengths within `VRESTIFRASI.MIN/MAX_WORD_LENGTH`, pool covers every length used (incl. the authored 1-letter end), phrase word-counts within `MIN/MAX_PHRASE_WORDS`. Nothing else ties authored phrases to the fixed-length lists |
 | `mobileLayout.test.tsx` | HowToPlayModal-specific overflow contracts only (list max-height/scroll, card clipping) — modal *shell* contracts live in `modal.test.tsx` |
 | `modal.test.tsx` (shared) | Modal primitive — open/close gating, center/sheet variants, overlay-click + stopPropagation, close button, testid/aria pass-through (ADR 0009) |
 | `recipes.test.ts` (shared) | Platform recipes — non-empty, button/leaderboard token contracts, no `dark:` pairs |
