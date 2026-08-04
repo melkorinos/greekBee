@@ -12,6 +12,13 @@ Known mitigations applied (Session 25):
 Stripping `validWords` from `puzzles-el.json` was evaluated and rejected: saving ~4–10 ms of JSON
 parse time is outweighed by adding ~50–200 ms of dictionary computation on first request per puzzle.
 
+### 🟡 Authored content vs derived word lists (the s133 class of bug)
+Vres Tin Frasi shipped with 29% of its phrase corpus unsolvable — the game rejected its own answers — because **authored content (`phrases-el.json`) and the derived guess pool (fixed-length `words-N.json` lists) have no structural link.** A phrase can be written using any word; the pool only stocks lengths 1–8, and only what the dictionary happens to contain. Nothing failed loudly: the puzzle rendered fine and only the correct answer was refused.
+
+`phraseCorpusPlayable.test.ts` now closes it for this game, but **the same shape exists wherever authored data meets a derived list.** Leksindeseis puzzles, Topothesies answer names, and the Leksoplegma/Leksodromia reuse of Leksiarxeio's answer pools all pair hand-written content against generated data. Worth a sweep: does each of those have a test that drives the *real* validator over the *whole* authored corpus? A per-item unit test does not catch this — only the full-corpus pass does.
+
+Related trap, same session: a derived file can be **regenerated empty**. `words-1.json` had to be authored and deliberately placed outside `src/data/leksiarxeio/`, because the re-sync adapter rebuilds those from `words-el.json`, which has no single-letter entries. Any future "just add a list" instinct should first ask whether a re-sync owns that directory.
+
 ### Leksindeseis puzzle supply (`puzzles-connections.json`)
 Community-submitted Leksindeseis puzzles are the primary source, with `puzzles-connections.json` as the static fallback. The fallback pool is thin — operator must manually add new dated entries. No reminder system exists. Add a cron check or at minimum document the procedure clearly before going to production.
 
@@ -98,7 +105,14 @@ acceptance test for whatever replaces the mechanism. Two things to hold onto:
 - **Single-page protection is genuinely useful** and is what ships. Don't let the failed half
   discredit the half that works — the round-loss-on-refresh problem is real and now solved.
 - Still unverified on a real device: `beforeunload` on iOS Safari, and OS tab eviction (which never
-  fires it at all — the mount-flush safety net is the only cover). Checklist in issue 15.
+  fires it at all — the mount-flush safety net is the only cover). Checklist in
+  `.claude/aiHelper/offlineFeature-handoff.md`.
+- **PARKED 2026-08-04.** Operator chose hide-don't-revert: the code is proven isolated (every
+  touchpoint is an `if (offlineActive)` branch, default false), so hiding the toggle is enough to
+  unblock a production push while keeping a working implementation to revive. The risk to watch is
+  **dormant code rotting** — nothing exercises the offline branches now except the unit tests, so a
+  future refactor can silently break them and no gate will complain. The parked-state Shell tests
+  are the tripwire for a *partial* revival (toggle back without the nav guard = lost rounds).
 
 ### 🟡 Two round spines — the split must be defended, not drifted into (s128)
 

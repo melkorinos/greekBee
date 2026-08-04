@@ -46,15 +46,15 @@ no open question stands between here and pressing the button.
   re-examined against the operator's "on the plane" framing and **rejected a second time** (every
   game page is `force-dynamic`, so cold start needs a service worker *plus* a rendering
   rearchitecture). Score queueing stays **Leksokipos-only** in the first pass; the rest is deferred
-  to [issue 15](../issues/15-offline-cross-game-score-queueing.md). Brief:
-  ADR 0010 amended. *(Handoff deleted on completion; the surviving detail lives in ADR 0010 and
-  issue 15.)*
+  to [the parked handoff](../../aiHelper/offlineFeature-handoff.md). Brief:
+  ADR 0010 amended. *(The surviving detail lives in ADR 0010 and the handoff.)*
   **BUILT 2026-08-03 (s132), then SCOPE-REDUCED the same day.** Cross-game offline play — the
   feature's headline promise — **does not work**: `force-dynamic` payloads are not cached, so
   prefetching cannot make another game load offline (proven in `e2e/offlineMode.spec.ts`). What
   ships is **single-page round protection**, which does work. Multi-game offline needs a service
-  worker and reopens ADR 0010. Still **not on the launch path**, so this changes nothing about the
-  sequencing above.
+  worker and reopens ADR 0010. **PARKED 2026-08-04 (s133)** — the drawer toggle is removed so the
+  feature is unreachable and production can ship without it; the code stays dormant. Still **not on
+  the launch path**, so this changes nothing about the sequencing above.
 
 > **Process note.** Ticket 07 was worked *before* [Launch checklist](01-launch-checklist-what-does-launch-actually-require.md),
 > which this map declares should come first. That was an operator call on 2026-08-03 and the

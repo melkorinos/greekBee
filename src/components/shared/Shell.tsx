@@ -7,13 +7,10 @@
 import { GAME_REGISTRY } from "@/config/games";
 import { PLATFORM_NAME } from "@/config/platform";
 import { FeedbackModal } from "./FeedbackModal";
-import { Modal } from "./Modal";
 import { ProfileToggleButton } from "./ProfileToggleButton";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
-import { useOfflineMode } from "@/hooks/useOfflineMode";
-import { chipWarning } from "@/styles/recipes";
 
 // ── Hamburger icon ────────────────────────────────────────────────────────────
 function HamburgerIcon({ open }: { open: boolean }) {
@@ -59,41 +56,21 @@ const MAIN_GAME_IDS = GAME_IDS.filter((id) => !GAME_REGISTRY[id].wip);
 const WIP_GAME_IDS  = GAME_IDS.filter((id) =>  GAME_REGISTRY[id].wip);
 
 export function Shell({ children }: ShellProps) {
-  const [drawerOpen,      setDrawerOpen]      = useState(false);
-  const [feedbackOpen,    setFeedbackOpen]    = useState(false);
-  const [offlineHelpOpen, setOfflineHelpOpen] = useState(false);
+  const [drawerOpen,   setDrawerOpen]   = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const { theme, toggle } = useTheme();
 
-  const {
-    active: offlineActive,
-    preparing: offlinePreparing,
-    activate: activateOffline,
-    deactivate: deactivateOffline,
-  } = useOfflineMode();
-
-  // Leaving this page while offline ends the round: every page is force-dynamic, so
-  // without a connection it cannot load — and that includes the "prefetched" games,
-  // since a dynamic route's payload is not served from cache (verified 2026-08-03,
-  // e2e/offlineMode.spec.ts). So EVERY in-app link is confirmed while Offline Mode is
-  // on, not just the ones outside the offline set. When a real caching mechanism lands
-  // and cross-game navigation becomes safe again, this takes an href once more and
-  // exempts `isOfflineRoute(href)` — the hook still exports it for that.
+  // Offline Mode is PARKED (2026-08-04) — the drawer toggle and its help modal are
+  // removed, so the mode can never be activated and this guard has nothing to guard.
+  // The hook, provider and outbox stay wired and inert (`active` defaults to false).
+  // See .claude/aiHelper/offlineFeature-handoff.md before reviving: the guard must
+  // come back with the toggle, and it confirms on EVERY in-app link until a real
+  // caching mechanism makes cross-game navigation survivable (ADR 0010).
   const guardNavigation = useCallback(
-    () => (e: React.MouseEvent) => {
-      if (!offlineActive) {
-        setDrawerOpen(false);
-        return;
-      }
-      const leave = window.confirm(
-        "Είσαι σε λειτουργία εκτός σύνδεσης. Αν φύγεις από εδώ χωρίς σύνδεση, ο γύρος σου χάνεται. Να συνεχίσω;",
-      );
-      if (!leave) {
-        e.preventDefault();
-        return;
-      }
+    () => () => {
       setDrawerOpen(false);
     },
-    [offlineActive],
+    [],
   );
 
   useEffect(() => {
@@ -230,55 +207,6 @@ export function Shell({ children }: ShellProps) {
 
             <hr className="my-4 border-zinc-700" />
 
-            {/* Offline Mode — a platform-wide switch, so it lives here beside the
-                theme toggle rather than in any game's chrome. The rules live behind
-                the ? rather than in a permanent warning block: the drawer is a nav
-                surface, and a wall of red text on every open reads as an error. */}
-            <div className="flex items-center justify-between mb-4 px-2">
-              <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">
-                Σύνδεση
-              </p>
-              <button
-                onClick={() => setOfflineHelpOpen(true)}
-                aria-label="Τι είναι η λειτουργία εκτός σύνδεσης;"
-                className="flex items-center justify-center w-5 h-5 rounded-full border border-zinc-600 text-zinc-400 text-xs hover:bg-zinc-700 hover:text-zinc-200 transition-colors"
-              >
-                ?
-              </button>
-            </div>
-            <ul className="space-y-1">
-              <li>
-                <button
-                  onClick={() => {
-                    void (offlineActive ? deactivateOffline() : activateOffline());
-                  }}
-                  disabled={offlinePreparing}
-                  role="switch"
-                  aria-checked={offlineActive}
-                  aria-label="Λειτουργία εκτός σύνδεσης"
-                  className={`${navLinkClass} w-full justify-between disabled:opacity-50`}
-                >
-                  <span>Εκτός σύνδεσης</span>
-                  {/* Track + knob: a plain switch, so the control reads as a state
-                      rather than as an action with a decorative icon. */}
-                  <span
-                    aria-hidden="true"
-                    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
-                      offlineActive ? "bg-success" : "bg-zinc-600"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
-                        offlineActive ? "translate-x-[1.125rem]" : "translate-x-[0.1875rem]"
-                      }`}
-                    />
-                  </span>
-                </button>
-              </li>
-            </ul>
-
-            <hr className="my-4 border-zinc-700" />
-
             <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-4 px-2">
               Βοήθεια
             </p>
@@ -295,42 +223,6 @@ export function Shell({ children }: ShellProps) {
           </nav>
         </>
       )}
-
-      {/* ── Offline Mode help ─────────────────────────────────────────────── */}
-      {/* The browser's refresh dialog cannot be worded, so this is the only place a
-          player can learn the rules before they act on them. */}
-      <Modal
-        isOpen={offlineHelpOpen}
-        onClose={() => setOfflineHelpOpen(false)}
-        closeLabel="Κλείσιμο"
-        ariaLabel="Τι είναι η λειτουργία εκτός σύνδεσης"
-      >
-        <div className="p-5">
-          <h2 className="text-lg font-semibold text-foreground mb-3">
-            Λειτουργία εκτός σύνδεσης
-          </h2>
-          <div className="space-y-3 text-sm text-muted leading-relaxed">
-            <p>
-              Προστατεύει τον γύρο που παίζεις όταν χάσεις το δίκτυο — π.χ. σε αεροπλάνο,
-              τούνελ ή με κακό σήμα.
-            </p>
-            <p>
-              <strong className="text-foreground">Ενεργοποίησέ τη ΟΣΟ ΕΧΕΙΣ ΣΥΝΔΕΣΗ</strong>,
-              μέσα στο παιχνίδι που θέλεις να παίξεις. Όσο είναι ενεργή, μπλοκάρονται οι
-              κατά λάθος ανανεώσεις της σελίδας και το σκορ σου φυλάσσεται στη συσκευή.
-            </p>
-            <p>
-              Μόλις ξαναβρείς σύνδεση, απενεργοποίησέ τη για να σταλεί το σκορ σου στην
-              κατάταξη.
-            </p>
-            <p className={`${chipWarning} rounded-lg px-3 py-2`}>
-              Η αλλαγή παιχνιδιού χωρίς δίκτυο <strong>ΔΕΝ υποστηρίζεται</strong>. Μείνε
-              στη σελίδα του παιχνιδιού σου — αν φύγεις ή κάνεις ανανέωση χωρίς σύνδεση,
-              η σελίδα δεν ξαναφορτώνει και ο γύρος χάνεται.
-            </p>
-          </div>
-        </div>
-      </Modal>
 
       {/* ── Feedback modal ────────────────────────────────────────────────── */}
       <FeedbackModal isOpen={feedbackOpen} onClose={() => setFeedbackOpen(false)} />

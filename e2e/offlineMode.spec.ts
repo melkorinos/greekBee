@@ -53,6 +53,12 @@ async function navigateToGame(
 // cut — navigating to it offline lands on `chrome-error://chromewebdata/`, exactly the
 // connection error the operator hit in Firefox.
 //
+// PARKED 2026-08-04: the drawer toggle these tests drive has been removed, so
+// `activateOfflineMode` below can no longer find it — the suite would fail on a
+// missing selector rather than on the real limitation. It stays skipped and intact
+// as the acceptance criteria for the revival; whoever restores the toggle restores
+// this suite's ability to run. See .claude/aiHelper/offlineFeature-handoff.md.
+//
 // Do NOT delete these tests and do NOT "fix" them by loosening the assertions. They
 // are the acceptance criteria for whatever mechanism replaces route prefetching
 // (realistically a service worker — see ADR 0010, which rejected one twice on the
