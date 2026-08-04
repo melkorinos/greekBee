@@ -62,6 +62,18 @@ export const VRESTIFRASI = {
   // LEKSIARXEIO.LENGTHS: each length has exactly one owning re-sync adapter
   // (ADR 0015), and resyncVrestifrasi.test.ts pins that.
   SHORT_WORD_LENGTHS: [2, 3] as const,
+  // Guess-word length bounds. 1 is the standalone articles «η»/«ο», which live in
+  // the AUTHORED src/data/vrestifrasi/words-1.json — NOT in a dictionary-derived
+  // list, because words-el.json holds no single-letter entries and the re-sync
+  // adapter would regenerate the file empty, silently re-breaking every phrase
+  // that opens with an article. 8 is a deliberate ceiling: phrases are authored
+  // to fit the pool, so no 9+ list is loaded.
+  MIN_WORD_LENGTH: 1,
+  MAX_WORD_LENGTH: 8,
+  // Phrase word-count bounds, mirroring the shipped corpus: 5-word phrases are
+  // the norm and the classic proverbs reach 9.
+  MIN_PHRASE_WORDS: 2,
+  MAX_PHRASE_WORDS: 9,
 } as const;
 
 export const LEKSINDESEIS = {

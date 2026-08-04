@@ -77,6 +77,13 @@ const STATICALLY_IMPORTED_DATA_FILES = [
   "src/data/leksiarxeio/answers-6.json",
   "src/data/leksiarxeio/answers-7.json",
   "src/data/leksiarxeio/answers-8.json",
+  // Vres Tin Frasi — authored phrase corpus (static rotation fallback), plus the
+  // authored 1-letter guess pool. words-1.json is NOT dictionary-derived: the
+  // master list has no single-letter entries, so it is hand-authored («η», «ο»)
+  // and deliberately sits outside src/data/leksiarxeio/ where the re-sync
+  // adapter would regenerate it empty.
+  "src/data/vrestifrasi/phrases-el.json",
+  "src/data/vrestifrasi/words-1.json",
   // Leksindeseis
   "src/data/leksindeseis/puzzles-connections.json",
   // Leksoplegma — committed generator batch (bonus words precomputed offline)

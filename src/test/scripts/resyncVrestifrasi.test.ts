@@ -81,8 +81,14 @@ describe("vrestifrasiAdapter.resync", () => {
     expect(report.changed).toHaveLength(0);
   });
 
+  // Length 1 is deliberately NOT here. The adapter regenerates its lists from
+  // words-el.json, which holds no single-letter entries — a derived words-1.json
+  // would be rewritten empty on the next re-sync, silently re-breaking every
+  // phrase that opens with «η»/«ο». That list is authored content instead, and
+  // lives in src/data/vrestifrasi/ to keep it out of this adapter's reach.
   it("covers exactly the configured short lengths", () => {
     expect([...VRESTIFRASI.SHORT_WORD_LENGTHS]).toEqual([2, 3]);
+    expect([...VRESTIFRASI.SHORT_WORD_LENGTHS]).not.toContain(1);
   });
 
   it("reports no warnings — every guess-pool edit is auto-fixable", () => {
