@@ -9,7 +9,7 @@ import { PLATFORM_NAME } from "@/config/platform";
 import { FeedbackModal } from "./FeedbackModal";
 import { ProfileToggleButton } from "./ProfileToggleButton";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
 
 // ── Hamburger icon ────────────────────────────────────────────────────────────
@@ -60,6 +60,19 @@ export function Shell({ children }: ShellProps) {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const { theme, toggle } = useTheme();
 
+  // Offline Mode is PARKED (2026-08-04) — the drawer toggle and its help modal are
+  // removed, so the mode can never be activated and this guard has nothing to guard.
+  // The hook, provider and outbox stay wired and inert (`active` defaults to false).
+  // See .claude/aiHelper/offlineFeature-handoff.md before reviving: the guard must
+  // come back with the toggle, and it confirms on EVERY in-app link until a real
+  // caching mechanism makes cross-game navigation survivable (ADR 0010).
+  const guardNavigation = useCallback(
+    () => () => {
+      setDrawerOpen(false);
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!drawerOpen) return;
     function onKey(e: KeyboardEvent) {
@@ -79,6 +92,7 @@ export function Shell({ children }: ShellProps) {
         <div className="flex items-center justify-between max-w-game mx-auto">
           <Link
             href="/"
+            onClick={guardNavigation()}
             className="text-sm font-semibold text-foreground hover:opacity-80 transition-colors"
           >
             🎮 {PLATFORM_NAME}
@@ -133,7 +147,7 @@ export function Shell({ children }: ShellProps) {
                   <li key={id}>
                     <Link
                       href={game.href}
-                      onClick={() => setDrawerOpen(false)}
+                      onClick={guardNavigation()}
                       className={navLinkClass}
                     >
                       {game.label}
@@ -155,7 +169,7 @@ export function Shell({ children }: ShellProps) {
                   <li key={id}>
                     <Link
                       href={game.href}
-                      onClick={() => setDrawerOpen(false)}
+                      onClick={guardNavigation()}
                       className={navLinkClass}
                     >
                       {game.label}
@@ -179,7 +193,7 @@ export function Shell({ children }: ShellProps) {
                       <li key={id}>
                         <Link
                           href={game.href}
-                          onClick={() => setDrawerOpen(false)}
+                          onClick={guardNavigation()}
                           className={navLinkClass}
                         >
                           {game.label}

@@ -42,7 +42,8 @@ Ship a polished multi-game **Greek games platform** — beginning with word game
 - **Community pipeline** — one `communityPuzzleLifecycle` owning submit → approve/reject → consume across Leksiarxeio / Leksindeseis / Vres Tin Frasi (+ never-consumed Stavrolekso); Leksikastirio review tabs.
 - **Design system** — CSS semantic tokens + per-game accent (ADR 0008/0009); recipe files; palette guard test.
 - **Cost work** — Vercel Fluid CPU mitigations (daily-combo prerender, lazy word-list, Edge routes); Vercel Pro.
-- **Leksokipos** — rank ladder + variable soft-cap genius bar; share card. (**Offline Lock + Score Outbox are NOT built** — design complete only: ADR 0010 + `offlineFeature-handoff.md`; no `useOfflineLock`/outbox code exists.)
+- **Leksokipos** — rank ladder + variable soft-cap genius bar; share card.
+- **Offline Mode + Score Outbox — BUILT (2026-08-03, ADR 0010), scope reduced by a failed premise**: drawer toggle (plain switch + `?` help modal), `beforeunload` refresh guard, nav confirmation on every in-app link, `useDayChange` suppression + banner, Leksokipos score queueing via `postScoreAwaitable`. **Cross-game offline play does NOT work** — `force-dynamic` routes aren't cached, and prefetching cannot fix it (proven in `e2e/offlineMode.spec.ts`, skipped-and-failing as the acceptance test). What ships is single-page round protection. Multi-game offline needs a service worker → reopens ADR 0010. **PARKED 2026-08-04** — toggle removed from the drawer so the feature is unreachable and production can ship; code left dormant. Revival paths, sizing, manual device pass and cross-game queueing all tracked in `.claude/aiHelper/offlineFeature-handoff.md`.
 
 ---
 

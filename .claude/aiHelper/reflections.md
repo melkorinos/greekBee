@@ -12,6 +12,13 @@ Known mitigations applied (Session 25):
 Stripping `validWords` from `puzzles-el.json` was evaluated and rejected: saving ~4–10 ms of JSON
 parse time is outweighed by adding ~50–200 ms of dictionary computation on first request per puzzle.
 
+### 🟡 Authored content vs derived word lists (the s133 class of bug)
+Vres Tin Frasi shipped with 29% of its phrase corpus unsolvable — the game rejected its own answers — because **authored content (`phrases-el.json`) and the derived guess pool (fixed-length `words-N.json` lists) have no structural link.** A phrase can be written using any word; the pool only stocks lengths 1–8, and only what the dictionary happens to contain. Nothing failed loudly: the puzzle rendered fine and only the correct answer was refused.
+
+`phraseCorpusPlayable.test.ts` now closes it for this game, but **the same shape exists wherever authored data meets a derived list.** Leksindeseis puzzles, Topothesies answer names, and the Leksoplegma/Leksodromia reuse of Leksiarxeio's answer pools all pair hand-written content against generated data. Worth a sweep: does each of those have a test that drives the *real* validator over the *whole* authored corpus? A per-item unit test does not catch this — only the full-corpus pass does.
+
+Related trap, same session: a derived file can be **regenerated empty**. `words-1.json` had to be authored and deliberately placed outside `src/data/leksiarxeio/`, because the re-sync adapter rebuilds those from `words-el.json`, which has no single-letter entries. Any future "just add a list" instinct should first ask whether a re-sync owns that directory.
+
 ### Leksindeseis puzzle supply (`puzzles-connections.json`)
 Community-submitted Leksindeseis puzzles are the primary source, with `puzzles-connections.json` as the static fallback. The fallback pool is thin — operator must manually add new dated entries. No reminder system exists. Add a cron check or at minimum document the procedure clearly before going to production.
 
@@ -47,6 +54,65 @@ Tickets 01 (foundation) + 02 (playable UI, s127) shipped `wip:true` on one place
 - **Matching complaints.** Even with `normalizeAnswer` (accent/case-fold + whitespace-strip) + per-brand `accept[]`, expect "I knew it but it said wrong" reports on bilingual names. Lever = generous accept-lists; if it persists, add a post-solve "we also accept: …" line. Budget puzzle-authoring time on accept-lists, not on finding companies.
 - **Pool reachability — eased, and the bottleneck MOVED (s130).** 144 assets are staged against a 150 floor, helped by dropping the Greek-origin rule. Sourcing is no longer the risk; **curation is**: 0 of 144 are approved, and many are still full logos with the name attached. The remaining work is the eye check + wordmark stripping, which no script can do. Watch for the temptation to bank "144" as progress toward 150 — the honest number is 0 until marks are cropped and approved. If the pool still stalls, relax "recognizable" before "icon-only" (relaxing icon-only breaks the game outright). Blur difficulty stays a `BLUR_STEP_RADII_PX` knob.
 - **Automated sourcing is confidently wrong, and only verification catches it (s130).** Commons search matched ΔΕΗ to "Namibia Power Corporation" and ΣΤΑΣΥ to a Lithuanian choir — plausible-looking files, downloaded and presented as correct. Two of my *own* checks were also wrong until measured: the duplicate detector reported 48 false duplicates, and an HTML error page was saved as `logo.svg`. Nothing here is covered by the test suite (it is all `scripts/`), so the only defence is measuring the artifact rather than trusting the response. Any future expansion of this pipeline should assume its own output is wrong until checked.
+
+### 🟡 `coverageMap.md` had MOVED, and a missing file is not the same as a lost one (s132)
+
+The Dream gate broke because the map sat at `.claude/aiHelper/test-audit/coverageMap.md` — one
+directory below where `CLAUDE.md` and `soul.md` point. **Moved back to
+`.claude/aiHelper/coverageMap.md` on 2026-08-03**; the rules were always right and stay.
+
+The process lesson is mine, not the repo's. I grepped the mandated path, got nothing, ran
+`git log` on **that same missing path** (which reports commits for the containing directory, not
+the file), and concluded "deleted, never committed" — then wrote a reflection recommending the rules
+be deleted. A one-line `git ls-files`/`find` on the basename would have found it immediately.
+**When a mandated artifact is missing, search for it by name before concluding it does not exist**,
+and never propose deleting a rule on the strength of a single unresolved path.
+
+Residual gap: the map is ~31 files stale (it covered 153 of 184 test files at the move). s132's own
+rows are logged; the remainder is for a future Dream to reconcile.
+
+### 🔴 I mocked the API instead of checking it, and shipped a no-op (s132)
+
+Offline Mode passed 2276 tests, eslint, build and Playwright — and failed on the operator's first
+real use. `router.prefetch` returns **`void`**; I wrote `await Promise.allSettled(...)` around six
+`undefined`s and called the result "ready". **My unit test mocked prefetch as promise-returning, so
+it could only ever confirm my assumption.** A mock is a claim about someone else's contract; if the
+claim is wrong the test is worse than absent, because it manufactures confidence. One
+`grep` of the `.d.ts` — which took ten seconds once I finally did it — would have caught it.
+
+This is the third time this pattern has bitten this project (s130's Commons metadata, s130's own
+duplicate detector, now this). The rule that keeps being re-learned: **measure the artifact, don't
+trust the response.** For an external API that means reading its type signature before mocking it,
+and it means at least one test that touches the real thing.
+
+**What made it recoverable was the e2e loop** — a real browser with `context.setOffline(true)`. It
+found a second, worse problem the unit tests structurally could not: `force-dynamic` payloads are
+not cached, so cross-game offline play is impossible by prefetch at all. Note the loop needed three
+harness fixes before its verdict meant anything; a red test proving the wrong thing is its own trap.
+
+**Standing consequence:** any feature whose value depends on browser/runtime behaviour (caching,
+storage eviction, lifecycle events) needs one real-browser test before it is called done. Unit tests
+with mocks cannot speak to it, and green gates will actively mislead.
+
+### 🟡 ADR 0010's premise is dead; the ADR is not (s132)
+
+Both service-worker rejections rest on "warm start needs only route prefetching." That is false.
+The ADR now carries a ⛔ block, and `e2e/offlineMode.spec.ts` is skipped-and-failing as the
+acceptance test for whatever replaces the mechanism. Two things to hold onto:
+- **Don't patch around it.** Re-prefetch timers, retry wrappers and longer warm-up loops all depend
+  on the same cache expiry we don't control. The honest options are a service worker or accepting
+  single-page scope.
+- **Single-page protection is genuinely useful** and is what ships. Don't let the failed half
+  discredit the half that works — the round-loss-on-refresh problem is real and now solved.
+- Still unverified on a real device: `beforeunload` on iOS Safari, and OS tab eviction (which never
+  fires it at all — the mount-flush safety net is the only cover). Checklist in
+  `.claude/aiHelper/offlineFeature-handoff.md`.
+- **PARKED 2026-08-04.** Operator chose hide-don't-revert: the code is proven isolated (every
+  touchpoint is an `if (offlineActive)` branch, default false), so hiding the toggle is enough to
+  unblock a production push while keeping a working implementation to revive. The risk to watch is
+  **dormant code rotting** — nothing exercises the offline branches now except the unit tests, so a
+  future refactor can silently break them and no gate will complain. The parked-state Shell tests
+  are the tripwire for a *partial* revival (toggle back without the nav guard = lost rounds).
 
 ### 🟡 Two round spines — the split must be defended, not drifted into (s128)
 

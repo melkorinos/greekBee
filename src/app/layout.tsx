@@ -4,6 +4,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 
 import type { Metadata, Viewport } from "next";
 import { Shell } from "@/components/shared/Shell";
+import { OfflineModeProvider } from "@/hooks/useOfflineMode";
 import { PLATFORM_NAME, PLATFORM_DESCRIPTION } from "@/config/platform";
 
 // Greek subset is mandatory — this is a Greek word-game platform. Without it,
@@ -56,7 +57,11 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
-        <Shell>{children}</Shell>
+        {/* Offline Mode state is shared platform-wide: the Shell intercepts its own
+            nav links, and Leksokipos suppresses its day-rollover redirect. */}
+        <OfflineModeProvider>
+          <Shell>{children}</Shell>
+        </OfflineModeProvider>
       </body>
     </html>
   );

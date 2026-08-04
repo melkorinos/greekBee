@@ -14,8 +14,9 @@ test.describe("Profile page — layout chrome", () => {
     // Shell is the only source of <header>. Two = the nested-Shell regression.
     await expect(page.locator("header")).toHaveCount(1);
 
-    // The 👤 entry point lives once, in the Shell header.
-    await expect(page.getByRole("link", { name: "Το προφίλ μου" })).toHaveCount(1);
+    // The 👤 entry point lives once, in the Shell header. It is a <button>
+    // (ProfileToggleButton), not a link — it toggles back off /profile.
+    await expect(page.getByRole("button", { name: "Το προφίλ μου" })).toHaveCount(1);
   });
 });
 
@@ -25,7 +26,7 @@ test.describe("Landing page — profile entry point", () => {
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
 
     // Only the Shell header's 👤 — the redundant ProfileChip was removed.
-    await expect(page.getByRole("link", { name: "Το προφίλ μου" })).toHaveCount(1);
+    await expect(page.getByRole("button", { name: "Το προφίλ μου" })).toHaveCount(1);
 
     // The chip's "Σύνδεση" nudge no longer appears on the landing page.
     await expect(page.getByText("Σύνδεση", { exact: true })).toHaveCount(0);

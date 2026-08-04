@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/shared/Modal";
+import { VRESTIFRASI } from "@/config/gameRules";
 import { btnCancel, btnModalPrimary, btnModalSubmit, inputClass, labelClass, labelOptionalClass } from "@/styles/recipes";
 
 interface Props {
@@ -73,7 +74,8 @@ export function CommunityVresTinFrasiSubmitModal({ isOpen, onClose }: Props) {
     <Modal isOpen={isOpen} onClose={handleClose} closeLabel="Close" cardClassName="max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-bold text-foreground mb-1">Υποβολή Φράσης</h2>
         <p className="text-xs text-muted mb-5 leading-relaxed">
-          Πρότεινε μια ελληνική φράση (3–4 λέξεις, κάθε λέξη 2–8 γράμματα).
+          Πρότεινε μια ελληνική φράση ({VRESTIFRASI.MIN_PHRASE_WORDS}–{VRESTIFRASI.MAX_PHRASE_WORDS} λέξεις,
+          κάθε λέξη {VRESTIFRASI.MIN_WORD_LENGTH}–{VRESTIFRASI.MAX_WORD_LENGTH} γράμματα).
           Θα γίνει το παζλ Vres Tin Frasi για μία ολόκληρη μέρα αν εγκριθεί.
         </p>
 

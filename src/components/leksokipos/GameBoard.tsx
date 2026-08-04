@@ -23,7 +23,7 @@ import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { ScoreBar } from "./ScoreBar";
 import { NominationModal } from "@/components/shared/NominationModal";
 import { WordInput } from "./WordInput";
-import { btnSecondary } from "@/styles/recipes";
+import { btnSecondary, chipWarning } from "@/styles/recipes";
 import { todayISO } from "@/lib/puzzleDate";
 import { useAchievementSync } from "@/games/leksokipos/hooks/useAchievementSync";
 import { FEATURE_FLAGS } from "@/config/featureFlags";
@@ -68,7 +68,9 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
   const isGodMode = useIsGodMode();
 
   // Redirect to today's puzzle if this page is a stale daily puzzle (day rolled over).
-  useDayChange(puzzle);
+  // While Offline Mode is active the redirect is suppressed and this flag is raised
+  // instead — the banner below explains why the puzzle is stale.
+  const { dayChangedWhileOffline } = useDayChange(puzzle);
 
   // ── Endgame / all words found ───────────────────────────────────────────────
   const isDaily   = isDailyPuzzle(activePuzzle);
@@ -182,6 +184,19 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
 
   return (
     <div data-testid="game-board" className={containerClass}>
+      {/* Day rolled over while Offline Mode was active. The redirect that normally
+          fetches the new puzzle is suppressed, so tell the player what happened and
+          what to do — refreshing without a connection would end this round. */}
+      {dayChangedWhileOffline && (
+        <p
+          data-testid="offline-day-changed"
+          className={`${chipWarning} mb-3 rounded-lg px-3 py-2 text-sm leading-snug`}
+        >
+          Το σημερινό παζλ άλλαξε — τελείωσε τον γύρο σου και απενεργοποίησε τη
+          λειτουργία εκτός σύνδεσης για να σταλεί το σκορ, μετά κάνε ανανέωση για το νέο παζλ.
+        </p>
+      )}
+
       {/* Unlock toasts — fixed stack, one per genuinely-new badge, self-dismissing.
           Gated behind the achievements flag; with it off the sync hook is inert and
           this list never fills, but gate the render too so intent is explicit. */}

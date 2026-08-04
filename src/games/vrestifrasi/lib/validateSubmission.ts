@@ -1,8 +1,12 @@
 // validateSubmission — the Vres Tin Frasi Community Puzzle validation adapter.
 //
-// Submission: one Phrase string. Validated: 3–4 words, each word 2–8 letters,
+// Submission: one Phrase string. Validated: 2–9 words, each word 1–8 letters,
 // each word in the word pool. The Phrase is stored in display form (accented,
 // natural case); normalisation happens only for pool lookup.
+//
+// The bounds mirror the shipped static corpus (`phrases-el.json`) rather than a
+// stricter ideal: 5-word phrases are the norm there and the classic proverbs run
+// to 9, so a narrower rule would reject phrases the daily game itself serves.
 //
 // Deliberately NOT exported from the lib barrel: the word-pool JSON imports are
 // heavy, and this module must only ever be pulled in by the Vres Tin Frasi
@@ -10,6 +14,8 @@
 
 import type { SubmissionValidation } from "@/lib/communityPuzzleLifecycle";
 import { normalizeLetters } from "@/lib/normalize";
+import { VRESTIFRASI } from "@/config/gameRules";
+import words1 from "@/data/vrestifrasi/words-1.json";
 import words2 from "@/data/leksiarxeio/words-2.json";
 import words3 from "@/data/leksiarxeio/words-3.json";
 import words4 from "@/data/leksiarxeio/words-4.json";
@@ -19,6 +25,7 @@ import words7 from "@/data/leksiarxeio/words-7.json";
 import words8 from "@/data/leksiarxeio/words-8.json";
 
 const WORD_POOL: Record<number, Set<string>> = {
+  1: new Set(words1 as string[]),
   2: new Set(words2 as string[]),
   3: new Set(words3 as string[]),
   4: new Set(words4 as string[]),
@@ -29,7 +36,8 @@ const WORD_POOL: Record<number, Set<string>> = {
 };
 
 function isValidPhraseWord(word: string): boolean {
-  if (word.length < 2 || word.length > 8) return false;
+  if (word.length < VRESTIFRASI.MIN_WORD_LENGTH) return false;
+  if (word.length > VRESTIFRASI.MAX_WORD_LENGTH) return false;
   return WORD_POOL[word.length]?.has(word) ?? false;
 }
 
@@ -49,15 +57,25 @@ export function validateVresTinFrasiSubmission(body: unknown): SubmissionValidat
   const rawWords = normalizedPhrase.split(/\s+/).filter(Boolean);
   const words    = rawWords.map((w) => normalizeLetters(w));
 
-  if (words.length < 3 || words.length > 4) {
-    return { ok: false, status: 422, body: { error: "Η φράση πρέπει να έχει 3–4 λέξεις" } };
+  if (
+    words.length < VRESTIFRASI.MIN_PHRASE_WORDS ||
+    words.length > VRESTIFRASI.MAX_PHRASE_WORDS
+  ) {
+    return {
+      ok: false,
+      status: 422,
+      body: {
+        error: `Η φράση πρέπει να έχει ${VRESTIFRASI.MIN_PHRASE_WORDS}–${VRESTIFRASI.MAX_PHRASE_WORDS} λέξεις`,
+      },
+    };
   }
 
   const wordErrors: Record<string, string> = {};
   for (let i = 0; i < words.length; i++) {
     const w = words[i];
-    if (w.length < 2 || w.length > 8) {
-      wordErrors[String(i)] = `Κάθε λέξη πρέπει να έχει 2–8 γράμματα`;
+    if (w.length < VRESTIFRASI.MIN_WORD_LENGTH || w.length > VRESTIFRASI.MAX_WORD_LENGTH) {
+      wordErrors[String(i)] =
+        `Κάθε λέξη πρέπει να έχει ${VRESTIFRASI.MIN_WORD_LENGTH}–${VRESTIFRASI.MAX_WORD_LENGTH} γράμματα`;
     } else if (!isValidPhraseWord(w)) {
       wordErrors[String(i)] = `"${rawWords[i]}" δεν βρέθηκε στη λίστα`;
     }

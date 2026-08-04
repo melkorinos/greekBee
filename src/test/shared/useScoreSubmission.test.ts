@@ -7,8 +7,19 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
+import { readOutbox } from "@/lib/offlineOutbox";
 
-afterEach(() => vi.restoreAllMocks());
+// While Offline Mode is active a post would fail silently and lose the Score, so
+// submissions are queued to the Offline Score Outbox instead (ADR 0010).
+let offlineActive = false;
+vi.mock("@/hooks/useOfflineMode", () => ({
+  useOfflineMode: () => ({ active: offlineActive }),
+}));
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  offlineActive = false;
+});
 
 function mockFetch() {
   return vi.spyOn(globalThis, "fetch").mockResolvedValue({
@@ -217,5 +228,92 @@ describe("useScoreSubmission — submitWithName()", () => {
     await act(async () => { result.current.submitWithName(10, "Νέος"); });
 
     expect(spy).not.toHaveBeenCalled();
+  });
+});
+
+// ── Offline Mode ────────────────────────────────────────────────────────────
+
+describe("useScoreSubmission — while Offline Mode is active", () => {
+  it("queues the Score to the outbox instead of POSTing", async () => {
+    offlineActive = true;
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission(BASE));
+
+    await act(async () => { result.current.submit(10); });
+
+    expect(spy).not.toHaveBeenCalled();
+    expect(readOutbox()).toEqual([{
+      gameId:      "leksokipos",
+      puzzleDate:  "2026-05-20",
+      deviceId:    "device-abc",
+      score:       10,
+      displayName: "Άννα",
+    }]);
+  });
+
+  it("overwrites the queued entry as the Score climbs, keeping only the latest", async () => {
+    offlineActive = true;
+    mockFetch();
+    const { result } = renderHook(() => useScoreSubmission(BASE));
+
+    await act(async () => { result.current.submit(10); });
+    await act(async () => { result.current.submit(25); });
+
+    const entries = readOutbox();
+    expect(entries).toHaveLength(1);
+    expect(entries[0]!.score).toBe(25);
+  });
+
+  it("queues a name save against the new name", async () => {
+    offlineActive = true;
+    mockFetch();
+    const { result } = renderHook(() => useScoreSubmission(BASE));
+
+    await act(async () => { result.current.submitWithName(10, "Νέος"); });
+
+    expect(readOutbox()[0]!.displayName).toBe("Νέος");
+  });
+
+  it("queues nothing when posting is disabled — a Custom Puzzle has no leaderboard", async () => {
+    offlineActive = true;
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission({ ...BASE, enabled: false }));
+
+    await act(async () => { result.current.submit(10); });
+
+    expect(spy).not.toHaveBeenCalled();
+    expect(readOutbox()).toEqual([]);
+  });
+
+  it("resumes POSTing once Offline Mode is off", async () => {
+    offlineActive = false;
+    const spy = mockFetch();
+    const { result } = renderHook(() => useScoreSubmission(BASE));
+
+    await act(async () => { result.current.submit(10); });
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(readOutbox()).toEqual([]);
+  });
+});
+
+describe("useScoreSubmission — the offline/online dedup boundary", () => {
+  it("still POSTs the same score after coming back online", async () => {
+    // Regression: the strictly-increasing guard is about avoiding duplicate POSTs.
+    // A queued-offline score never reached the server, so advancing the guard on it
+    // would silently block the real post once the player is back online.
+    const spy = mockFetch();
+    const { result, rerender } = renderHook(() => useScoreSubmission(BASE));
+
+    offlineActive = true;
+    rerender();
+    await act(async () => { result.current.submit(10); });
+    expect(spy).not.toHaveBeenCalled();
+
+    offlineActive = false;
+    rerender();
+    await act(async () => { result.current.submit(10); });
+
+    expect(spy).toHaveBeenCalledOnce();
   });
 });

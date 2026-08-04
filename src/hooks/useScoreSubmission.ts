@@ -17,6 +17,8 @@
 import { useCallback, useEffect, useRef } from "react";
 
 import { postScore, sanitizeDisplayName } from "@/lib/postScore";
+import { writeOutboxEntry } from "@/lib/offlineOutbox";
+import { useOfflineMode } from "@/hooks/useOfflineMode";
 
 interface UseScoreSubmissionOptions {
   /** Which game's leaderboard to post to. */
@@ -43,12 +45,36 @@ export function useScoreSubmission({
 
   const lastPostedRef = useRef(0);
 
+  // While Offline Mode is active a real post fails silently and the Score is lost, so
+  // it is queued to the Offline Score Outbox and flushed on deactivate (ADR 0010).
+  // Read through a ref so toggling Offline Mode does not change the identity of
+  // submit/submitWithName — GameBoard posts from an effect keyed on them.
+  const { active: offlineActive } = useOfflineMode();
+  const offlineRef = useRef(offlineActive);
+  useEffect(() => { offlineRef.current = offlineActive; }, [offlineActive]);
+
   // ── Leksokipos + Leksindeseis ──────────────────────────────────────────────
 
   const submit = useCallback(
     (score: number, data?: Record<string, number>) => {
       if (!enabled || !deviceId) return;
       if (score <= 0 || score <= lastPostedRef.current) return;
+
+      if (offlineRef.current) {
+        // Deliberately does NOT advance lastPostedRef: the guard exists to suppress
+        // duplicate POSTs, and a queued Score never reached the server. Advancing it
+        // here would block the real post once the player is back online — and if the
+        // flush failed, the Score would be lost with nothing left to retry.
+        writeOutboxEntry({
+          gameId:      gameId,
+          puzzleDate:  puzzleDate,
+          deviceId,
+          score,
+          displayName: sanitizeDisplayName(displayNameRef.current),
+        });
+        return;
+      }
+
       lastPostedRef.current = score;
       const body: Record<string, unknown> = {
         game_id:      gameId,
@@ -67,6 +93,18 @@ export function useScoreSubmission({
   const submitWithName = useCallback(
     (score: number, name: string, data?: Record<string, number>) => {
       if (!enabled || !deviceId || score <= 0) return;
+
+      if (offlineRef.current) {
+        writeOutboxEntry({
+          gameId:      gameId,
+          puzzleDate:  puzzleDate,
+          deviceId,
+          score,
+          displayName: sanitizeDisplayName(name),
+        });
+        return;
+      }
+
       const body: Record<string, unknown> = {
         game_id:      gameId,
         puzzle_date:  puzzleDate,
