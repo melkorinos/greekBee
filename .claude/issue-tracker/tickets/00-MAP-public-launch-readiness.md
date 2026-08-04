@@ -47,12 +47,14 @@ no open question stands between here and pressing the button.
   game page is `force-dynamic`, so cold start needs a service worker *plus* a rendering
   rearchitecture). Score queueing stays **Leksokipos-only** in the first pass; the rest is deferred
   to [issue 15](../issues/15-offline-cross-game-score-queueing.md). Brief:
-  `.claude/handoffs/offlineFeature-handoff.md`; ADR 0010 amended.
-  **BUILT 2026-08-03 (s132)** — implemented via `/tdd`, all automated gates green, awaiting the
-  operator's manual DevTools-offline pass (handoff §13). Still **not on the launch path**: this
-  changes nothing about the sequencing decision above. Two handoff/registry contradictions were
-  resolved during the build (offline set is **6** games, not 8; nav confirmation fires only off the
-  prefetched set) — see ADR 0010.
+  ADR 0010 amended. *(Handoff deleted on completion; the surviving detail lives in ADR 0010 and
+  issue 15.)*
+  **BUILT 2026-08-03 (s132), then SCOPE-REDUCED the same day.** Cross-game offline play — the
+  feature's headline promise — **does not work**: `force-dynamic` payloads are not cached, so
+  prefetching cannot make another game load offline (proven in `e2e/offlineMode.spec.ts`). What
+  ships is **single-page round protection**, which does work. Multi-game offline needs a service
+  worker and reopens ADR 0010. Still **not on the launch path**, so this changes nothing about the
+  sequencing above.
 
 > **Process note.** Ticket 07 was worked *before* [Launch checklist](01-launch-checklist-what-does-launch-actually-require.md),
 > which this map declares should come first. That was an operator call on 2026-08-03 and the

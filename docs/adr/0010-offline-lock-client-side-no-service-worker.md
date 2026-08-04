@@ -1,5 +1,26 @@
 # ADR 0010 — Offline Mode: client-side, warm-start only, no service worker
 
+> # ⛔ BUILT 2026-08-03 — and the core premise turned out to be WRONG.
+>
+> **Cross-game navigation while offline does not work.** Route prefetching does not make a
+> `force-dynamic` page survive a network cut: its payload is not served from cache on navigation, so
+> switching games offline lands on the browser's connection-error page. Verified against both
+> `next dev` and a production build — `e2e/offlineMode.spec.ts`, skipped and failing on purpose as
+> the acceptance test for any fix.
+>
+> **This invalidates the reasoning below, not the code.** Both rejections of a service worker
+> (original, and the 2026-08-03 amendment) rest on "warm start needs only route prefetching."
+> That premise is false. A service worker is now the *only* known way to deliver the multi-game
+> offline play this ADR promises — **reopen this decision rather than patching around it**;
+> re-prefetch timers and retry wrappers depend on the same uncontrolled cache expiry.
+>
+> **What actually ships** is single-page offline protection: activate inside one game, keep playing
+> *that* game with refreshes blocked and the score preserved. That works and is genuinely useful.
+> The UI says so; the nav guard confirms on **every** in-app link, exempting nothing. Tracked in
+> `.claude/issue-tracker/issues/15-offline-cross-game-score-queueing.md`.
+>
+> Everything below is preserved as the record of what was decided and why it was wrong.
+
 > **BUILT 2026-08-03.** Implemented as described below. Two ambiguities in the handoff were
 > resolved during implementation and are now part of this decision:
 >
@@ -27,7 +48,8 @@
 > covers every `wip:false` game rather than Leksokipos alone, the outbox is keyed per game, and the
 > term is now **Offline Mode** (the original "Offline Lock" named a Leksokipos-only toggle). The
 > original text is preserved below under *Original decision*; the amendment is authoritative where
-> the two differ. Implementation brief: `.claude/handoffs/offlineFeature-handoff.md`.
+> the two differ. *(The implementation brief `offlineFeature-handoff.md` was deleted once built —
+> its surviving detail is in this ADR and in issue 15.)*
 
 Deliberate offline play is implemented as a client-side **Offline Mode** rather than a service worker
 or installable PWA. When the player activates it — **while still online** — the app prefetches the

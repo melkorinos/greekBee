@@ -43,7 +43,7 @@ Ship a polished multi-game **Greek games platform** — beginning with word game
 - **Design system** — CSS semantic tokens + per-game accent (ADR 0008/0009); recipe files; palette guard test.
 - **Cost work** — Vercel Fluid CPU mitigations (daily-combo prerender, lazy word-list, Edge routes); Vercel Pro.
 - **Leksokipos** — rank ladder + variable soft-cap genius bar; share card.
-- **Offline Mode + Score Outbox — BUILT (2026-08-03, ADR 0010)**: drawer toggle, activation prefetch, `beforeunload` refresh guard, nav confirmation off the prefetched set, `useDayChange` suppression + banner, and Leksokipos score queueing via `postScoreAwaitable`. **Awaiting the operator's manual DevTools-offline pass** (handoff §13). **Item D is a GO/NO-GO, not a checklist line:** if prefetched routes evict from the Next router cache during a long offline session, prefetching is the wrong mechanism and ADR 0010's "no service worker" call reopens — run D before merging to `main`. Cross-game score queueing is deferred (issue 15).
+- **Offline Mode + Score Outbox — BUILT (2026-08-03, ADR 0010), scope reduced by a failed premise**: drawer toggle (plain switch + `?` help modal), `beforeunload` refresh guard, nav confirmation on every in-app link, `useDayChange` suppression + banner, Leksokipos score queueing via `postScoreAwaitable`. **Cross-game offline play does NOT work** — `force-dynamic` routes aren't cached, and prefetching cannot fix it (proven in `e2e/offlineMode.spec.ts`, skipped-and-failing as the acceptance test). What ships is single-page round protection. Multi-game offline needs a service worker → reopens ADR 0010. Manual device pass + cross-game queueing tracked in issue 15.
 
 ---
 

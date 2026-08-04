@@ -16,10 +16,17 @@ import { readOutbox, writeOutboxEntry } from "@/lib/offlineOutbox";
 
 // ── Mocks ───────────────────────────────────────────────────────────────────
 
-const prefetch = vi.fn();
+// IMPORTANT: the App Router's prefetch is `(href, options?) => void` — it returns
+// NOTHING, not a promise. Mocking it as promise-returning is what let the original
+// implementation ship a no-op: `Promise.allSettled` over six `undefined`s resolves
+// instantly, so the toggle reported "ready" before a single byte was fetched and a
+// player who went offline on that cue found nothing cached. The mock is deliberately
+// void-returning so the test cannot re-acquire that blind spot.
+const prefetch = vi.fn<(href: string, options?: unknown) => void>(() => undefined);
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ prefetch }),
 }));
+
 
 const postScoreAwaitable = vi.fn();
 vi.mock("@/lib/postScore", async (importOriginal) => ({
@@ -45,7 +52,7 @@ const ENTRY = {
 
 beforeEach(() => {
   prefetch.mockClear();
-  prefetch.mockResolvedValue(undefined);
+  prefetch.mockImplementation(() => undefined);
   postScoreAwaitable.mockReset();
   postScoreAwaitable.mockResolvedValue(true);
 });
@@ -56,7 +63,7 @@ afterEach(() => {
   // so the provider threw during render and every result.current came back null.
   vi.restoreAllMocks();
   prefetch.mockReset();
-  prefetch.mockResolvedValue(undefined);
+  prefetch.mockImplementation(() => undefined);
 });
 
 // ── The offline game set ────────────────────────────────────────────────────
@@ -112,35 +119,22 @@ describe("useOfflineMode — activation", () => {
     expect(prefetch).toHaveBeenCalledTimes(OFFLINE_GAME_IDS.length);
   });
 
-  it("does not report ready until the prefetches settle", async () => {
-    const releases: Array<() => void> = [];
-    prefetch.mockImplementation(
-      () => new Promise<void>((res) => { releases.push(() => res()); }),
-    );
-
+  it("does not treat prefetch as awaitable — it returns void", async () => {
+    // Regression (2026-08-03): activation used `await Promise.allSettled(hrefs.map(
+    // async (h) => router.prefetch(h)))`. Since prefetch returns undefined, that
+    // resolved immediately and `preparing` flipped false before anything was cached,
+    // so the UI told the player "ready" and they cut the network on a false cue.
+    // Any future readiness signal must come from something that actually resolves.
     const { result } = renderOfflineMode();
+    await act(async () => { await result.current.activate(); });
 
-    // Start activation but hold every prefetch open. Not awaited yet — the point of
-    // the test is the window BEFORE the prefetches settle.
-    let activation!: Promise<void>;
-    await act(async () => {
-      activation = result.current.activate();
-    });
-
-    expect(result.current.preparing).toBe(true);
-    expect(result.current.active).toBe(false);
-
-    await act(async () => {
-      releases.forEach((release) => release());
-      await activation;
-    });
-
-    expect(result.current.preparing).toBe(false);
-    expect(result.current.active).toBe(true);
+    for (const returned of prefetch.mock.results) {
+      expect(returned.value).toBeUndefined();
+    }
   });
 
-  it("still activates when a prefetch rejects — prefetch is best-effort", async () => {
-    prefetch.mockRejectedValue(new Error("offline already"));
+  it("still activates when prefetch throws — prefetch is best-effort", async () => {
+    prefetch.mockImplementation(() => { throw new Error("offline already"); });
     const { result } = renderOfflineMode();
     await act(async () => { await result.current.activate(); });
     expect(result.current.active).toBe(true);

@@ -106,11 +106,30 @@ export function OfflineModeProvider({ children }: { children: React.ReactNode })
 
   const activate = useCallback(async () => {
     setPreparing(true);
-    // Best-effort: a rejected prefetch must not block activation, but we wait for all
-    // of them so the toggle does not claim "ready" while a route is still missing.
-    await Promise.allSettled(
-      OFFLINE_GAME_HREFS.map(async (href) => router.prefetch(href)),
-    );
+
+    // `router.prefetch` is `(href, options?) => void` — it returns NOTHING, so it
+    // cannot be awaited. Awaiting it resolved instantly and the toggle reported
+    // "ready" before anything was cached. It is still called (it is what populates
+    // the router cache when the route is cacheable at all) but it cannot be the
+    // readiness signal.
+    //
+    // KNOWN LIMITATION (verified 2026-08-03, e2e/offlineMode.spec.ts): every game page
+    // is `force-dynamic`, so its payload is NOT served from cache on navigation. Both
+    // prefetch and an awaited `fetch` warm-up leave the route cold, and navigating to
+    // it offline lands on the browser's connection-error page. Cross-game navigation
+    // offline therefore DOES NOT WORK. The e2e spec is skipped, not deleted — it is
+    // the acceptance test for whatever mechanism replaces this. See ADR 0010.
+    for (const href of OFFLINE_GAME_HREFS) {
+      // Best-effort and individually guarded: prefetch throws synchronously when the
+      // network is already down, and one bad route must not abort the rest or leave
+      // the toggle stuck in `preparing`.
+      try {
+        router.prefetch(href);
+      } catch {
+        // ignore — a cold route is the known limitation above, not a crash
+      }
+    }
+
     setPreparing(false);
     setActive(true);
   }, [router]);

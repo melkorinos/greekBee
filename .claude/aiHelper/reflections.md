@@ -64,20 +64,41 @@ and never propose deleting a rule on the strength of a single unresolved path.
 Residual gap: the map is ~31 files stale (it covered 153 of 184 test files at the move). s132's own
 rows are logged; the remainder is for a future Dream to reconcile.
 
-### 🟡 Offline Mode ships unverified where it is most likely to fail (s132)
+### 🔴 I mocked the API instead of checking it, and shipped a no-op (s132)
 
-The feature is code-complete and every automated gate passes, but the two things that decide whether
-it actually works for a player cannot be tested here:
-- **Next 16 router-cache lifetime.** Prefetch populates a cache with its own expiry. If it evicts
-  during a long flight, cross-game navigation dies exactly when the feature is supposed to be
-  earning its keep. ADR 0010 already flags this as the likeliest under-delivery; handoff §13-D is
-  the test. If it fails, the design needs revisiting, not patching.
-- **The `beforeunload` + flush interaction on a real mobile browser.** iOS Safari is inconsistent
-  about `beforeunload`, and a tab killed by the OS never fires it — the mount-flush safety net is
-  the only thing standing between that and a lost score.
+Offline Mode passed 2276 tests, eslint, build and Playwright — and failed on the operator's first
+real use. `router.prefetch` returns **`void`**; I wrote `await Promise.allSettled(...)` around six
+`undefined`s and called the result "ready". **My unit test mocked prefetch as promise-returning, so
+it could only ever confirm my assumption.** A mock is a claim about someone else's contract; if the
+claim is wrong the test is worse than absent, because it manufactures confidence. One
+`grep` of the `.d.ts` — which took ten seconds once I finally did it — would have caught it.
 
-Resist the temptation to mark this "done" on green gates alone. The honest status is
-*built, awaiting the operator's offline pass* — the same posture topothesies and posokanei sat in.
+This is the third time this pattern has bitten this project (s130's Commons metadata, s130's own
+duplicate detector, now this). The rule that keeps being re-learned: **measure the artifact, don't
+trust the response.** For an external API that means reading its type signature before mocking it,
+and it means at least one test that touches the real thing.
+
+**What made it recoverable was the e2e loop** — a real browser with `context.setOffline(true)`. It
+found a second, worse problem the unit tests structurally could not: `force-dynamic` payloads are
+not cached, so cross-game offline play is impossible by prefetch at all. Note the loop needed three
+harness fixes before its verdict meant anything; a red test proving the wrong thing is its own trap.
+
+**Standing consequence:** any feature whose value depends on browser/runtime behaviour (caching,
+storage eviction, lifecycle events) needs one real-browser test before it is called done. Unit tests
+with mocks cannot speak to it, and green gates will actively mislead.
+
+### 🟡 ADR 0010's premise is dead; the ADR is not (s132)
+
+Both service-worker rejections rest on "warm start needs only route prefetching." That is false.
+The ADR now carries a ⛔ block, and `e2e/offlineMode.spec.ts` is skipped-and-failing as the
+acceptance test for whatever replaces the mechanism. Two things to hold onto:
+- **Don't patch around it.** Re-prefetch timers, retry wrappers and longer warm-up loops all depend
+  on the same cache expiry we don't control. The honest options are a service worker or accepting
+  single-page scope.
+- **Single-page protection is genuinely useful** and is what ships. Don't let the failed half
+  discredit the half that works — the round-loss-on-refresh problem is real and now solved.
+- Still unverified on a real device: `beforeunload` on iOS Safari, and OS tab eviction (which never
+  fires it at all — the mount-flush safety net is the only cover). Checklist in issue 15.
 
 ### 🟡 Two round spines — the split must be defended, not drifted into (s128)
 

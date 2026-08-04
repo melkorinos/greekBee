@@ -21,6 +21,11 @@ vi.mock("next/navigation", () => ({
 const { Shell }               = await import("@/components/shared/Shell");
 const { OfflineModeProvider } = await import("@/hooks/useOfflineMode");
 
+// The toggle's accessible name. Kept as a constant because the visible label is a
+// plain switch now — no emoji, no state words baked into the text — so tests must
+// match on the stable name rather than on whatever the label currently reads.
+const OFFLINE_TOGGLE_NAME = /λειτουργία εκτός σύνδεσης/i;
+
 // ── cleanup ───────────────────────────────────────────────────────────────────
 // Theme toggle modifies document.documentElement and localStorage; reset between tests.
 beforeEach(() => {
@@ -239,22 +244,59 @@ describe("Offline Mode toggle", () => {
   it("renders an inactive toggle in the drawer", async () => {
     const { user } = setupOffline();
     const nav = await openDrawer(user);
-    expect(within(nav).getByRole("button", { name: /εκτός σύνδεσης/i })).toBeInTheDocument();
+    expect(within(nav).getByRole("switch", { name: OFFLINE_TOGGLE_NAME })).toBeInTheDocument();
   });
 
-  it("explains what Offline Mode does before the player enables it", async () => {
+  it("shows no warning block in the drawer — the explanation moved into the help modal", async () => {
     const { user } = setupOffline();
     const nav = await openDrawer(user);
-    // The player must learn that refreshing without a connection ends the round
-    // here, because the browser dialog cannot tell them.
-    expect(within(nav).getByText(/ανανεώσεις/i)).toBeInTheDocument();
+    expect(within(nav).queryByText(/ανανεώσεις/i)).not.toBeInTheDocument();
+    expect(within(nav).queryByText(/ΔΕΝ υποστηρίζεται/i)).not.toBeInTheDocument();
+  });
+
+  it("renders the toggle label without decorative emoji in either state", async () => {
+    const { user } = setupOffline();
+    const nav = await openDrawer(user);
+    const toggle = within(nav).getByRole("switch", { name: OFFLINE_TOGGLE_NAME });
+
+    expect(toggle.textContent).not.toMatch(/[✈✅⏳]/u);
+
+    await user.click(toggle);
+    expect(
+      within(nav).getByRole("switch", { name: OFFLINE_TOGGLE_NAME }).textContent,
+    ).not.toMatch(/[✈✅⏳]/u);
+  });
+
+  it("opens a help modal from the question mark, explaining what the mode does", async () => {
+    const { user } = setupOffline();
+    const nav = await openDrawer(user);
+
+    await user.click(within(nav).getByRole("button", { name: /τι είναι/i }));
+
+    const dialog = screen.getByRole("dialog");
+    // The two things a player must know before enabling it: refreshing offline ends
+    // the round, and switching games offline does not work.
+    expect(within(dialog).getByText(/ανανεώσ/i)).toBeInTheDocument();
+    expect(within(dialog).getByText(/ΔΕΝ υποστηρίζεται/i)).toBeInTheDocument();
+  });
+
+  it("closes the help modal without activating Offline Mode", async () => {
+    const { user } = setupOffline();
+    const nav = await openDrawer(user);
+
+    await user.click(within(nav).getByRole("button", { name: /τι είναι/i }));
+    await user.click(screen.getByRole("button", { name: /κλείσιμο/i }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(within(nav).getByRole("switch", { name: OFFLINE_TOGGLE_NAME }))
+      .toHaveAttribute("aria-checked", "false");
   });
 
   it("prefetches the offline games when activated", async () => {
     const { user } = setupOffline();
     const nav = await openDrawer(user);
 
-    await user.click(within(nav).getByRole("button", { name: /εκτός σύνδεσης/i }));
+    await user.click(within(nav).getByRole("switch", { name: OFFLINE_TOGGLE_NAME }));
 
     const prefetched = prefetch.mock.calls.map(([href]) => href);
     expect(prefetched).toContain("/leksokipos");
@@ -265,21 +307,21 @@ describe("Offline Mode toggle", () => {
     const { user } = setupOffline();
     const nav = await openDrawer(user);
 
-    await user.click(within(nav).getByRole("button", { name: /εκτός σύνδεσης/i }));
+    await user.click(within(nav).getByRole("switch", { name: OFFLINE_TOGGLE_NAME }));
 
-    expect(within(nav).getByRole("button", { name: /εκτός σύνδεσης/i }))
-      .toHaveAttribute("aria-pressed", "true");
+    expect(within(nav).getByRole("switch", { name: OFFLINE_TOGGLE_NAME }))
+      .toHaveAttribute("aria-checked", "true");
   });
 
   it("deactivates on a second click", async () => {
     const { user } = setupOffline();
     const nav = await openDrawer(user);
-    const toggle = () => within(nav).getByRole("button", { name: /εκτός σύνδεσης/i });
+    const toggle = () => within(nav).getByRole("switch", { name: OFFLINE_TOGGLE_NAME });
 
     await user.click(toggle());
     await user.click(toggle());
 
-    expect(toggle()).toHaveAttribute("aria-pressed", "false");
+    expect(toggle()).toHaveAttribute("aria-checked", "false");
   });
 });
 
@@ -290,18 +332,24 @@ describe("Offline Mode navigation guard", () => {
     vi.unstubAllGlobals();
   });
 
-  it("does not intercept navigation between prefetched games — that is the point of the feature", async () => {
-    const confirmSpy = vi.fn(() => true);
+  it("confirms before navigating to ANOTHER GAME — a force-dynamic route cannot load offline", async () => {
+    // Changed 2026-08-03. This originally asserted the opposite (game-to-game nav was
+    // waved through as "the point of the feature"). A real-browser test proved those
+    // routes do NOT survive a network cut — `force-dynamic` payloads are not served
+    // from cache, so prefetch does not make them navigable. Waving the link through
+    // sent the player straight to a connection-error page and lost the round, so the
+    // guard now covers every in-app link. See e2e/offlineMode.spec.ts + ADR 0010.
+    const confirmSpy = vi.fn(() => false);
     vi.stubGlobal("confirm", confirmSpy);
 
     const { user } = setupOffline();
     const nav = await openDrawer(user);
-    await user.click(within(nav).getByRole("button", { name: /εκτός σύνδεσης/i }));
+    await user.click(within(nav).getByRole("switch", { name: OFFLINE_TOGGLE_NAME }));
 
     const drawer = screen.getByRole("navigation", { name: /game navigation/i });
     await user.click(within(drawer).getByRole("link", { name: /leksiarxeio/i }));
 
-    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(confirmSpy).toHaveBeenCalledTimes(1);
   });
 
   it("confirms before leaving for a route that was not prefetched", async () => {
@@ -310,7 +358,7 @@ describe("Offline Mode navigation guard", () => {
 
     const { user } = setupOffline();
     const nav = await openDrawer(user);
-    await user.click(within(nav).getByRole("button", { name: /εκτός σύνδεσης/i }));
+    await user.click(within(nav).getByRole("switch", { name: OFFLINE_TOGGLE_NAME }));
 
     const drawer = screen.getByRole("navigation", { name: /game navigation/i });
     await user.click(within(drawer).getByRole("link", { name: /leksikastirio/i }));
