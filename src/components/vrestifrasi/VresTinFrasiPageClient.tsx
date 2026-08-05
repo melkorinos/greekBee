@@ -37,7 +37,13 @@ export function VresTinFrasiPageClient({
         </HeaderIconButton>
       </GameHeader>
 
+      {/* A Session belongs to one Puzzle. The day-strip's "play this puzzle"
+          link is a client-side navigation, so without this key React keeps the
+          board mounted, the reducer's lazy initialiser never re-runs, and the
+          previous date's finished round is painted onto the new Puzzle. Every
+          game that can switch Daily Puzzles keys its board the same way. */}
       <VresTinFrasiBoard
+        key={puzzle.id}
         puzzle={puzzle}
         validWords={validWords}
         today={today}

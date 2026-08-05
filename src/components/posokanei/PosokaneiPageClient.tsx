@@ -36,7 +36,11 @@ export function PosokaneiPageClient({ target, today }: PosokaneiPageClientProps)
         </HeaderIconButton>
       </GameHeader>
 
+      {/* Keyed by date — the Session key this game persists under. A Session
+          belongs to one Puzzle, so switching Daily Puzzles remounts the board
+          rather than carrying the previous date's round across. */}
       <PosokaneiBoard
+        key={today}
         target={target}
         today={today}
         isLeaderboardOpen={lbOpen}

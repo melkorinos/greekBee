@@ -39,7 +39,11 @@ export function TopothesiesPageClient({ answers, target, shape, today, maxKm }: 
         </HeaderIconButton>
       </GameHeader>
 
+      {/* Keyed by date — the Session key this game persists under. A Session
+          belongs to one Puzzle, so switching Daily Puzzles remounts the board
+          rather than carrying the previous date's round across. */}
       <TopothesiesBoard
+        key={today}
         answers={answers}
         target={target}
         shape={shape}

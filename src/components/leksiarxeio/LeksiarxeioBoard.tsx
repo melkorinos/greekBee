@@ -267,7 +267,11 @@ export function LeksiarxeioBoard({
       {/* ── Length panels (all mounted, only active shown) ────────────────── */}
       {puzzles.map((puzzle) => (
         <LengthPanel
-          key={puzzle.length}
+          // Keyed by puzzle id, not Length: the id carries the date, so a
+          // switch of Daily Puzzle remounts each panel. Keying by Length alone
+          // is stable across dates and leaks the finished round onto the new
+          // date. A Session belongs to one Puzzle.
+          key={puzzle.id}
           puzzle={puzzle}
           validWords={wordLists[puzzle.length as LeksiarxeioLength]}
           isActive={puzzle.length === activeLength}
