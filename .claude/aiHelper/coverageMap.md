@@ -34,7 +34,8 @@
 | `useLeksiarxeioScoreSubmission.test.ts` | Leksiarxeio per-length posting — attempts→points mapping, deviceId gate, name ref |
 | `useGuessRound.test.ts` | Shared guess-game spine — score-only-on-end, onGameEnd once, persist `{guesses,status}` + restore, save guard, per-puzzle sessions |
 | `useSlotFillRound.test.ts` | Shared **slot-fill** spine (ADR 0019; topothesies/posokanei/logopaignio) — `hasLiveActed` false-on-fresh/flips-on-live/**false-after-restore**/flips-on-act-after-restore; snapshot persist+replay, derived flags replayed not persisted, give-up restore, hasProgress guard, **no re-write when only a non-persisted field changes**, per-session isolation |
-| `communityPuzzleLifecycle.test.ts` | submit/list/review handlers **+ `consumeApprovedPuzzle`** (claim oldest approved, delete by id, null on empty/error) |
+| `communityPuzzleLifecycle.test.ts` | submit/list/review handlers **+ `consumeApprovedPuzzle`** (date-keyed read, **never deletes**, idempotent across calls, date-scoped so an archive date can't serve today's row, null on miss/error) **+ approve-time scheduling** (auto-assign earliest free future date, nulls ignored, assigned date echoed, admin override honoured, today/past/malformed override → 400, schedule-read failure → 500 without approving, Stavrolekso stays undated) |
+| `communityPuzzleScheduling.test.ts` | The three data loaders as the page calls them (s134 regression) — each passes its **requested** date to the query rather than ignoring it; scheduled row served + stamped; **fall-through to the deterministic static rotation** when nothing is scheduled (expected value recomputed independently via `dateToIndex`); repeat calls for one date are stable; two dates differ |
 | `apiRoute.test.ts` | The route envelope (ADR 0016), tested once instead of per route — `jsonError` code→status + detail logged-not-leaked, `jsonMessage` verbatim copy (incl. Greek at a chosen status), `parseJson` ok/invalid_json, `requireAdmin` header match, body-borne secret rejected, never fails open on unset `ADMIN_SECRET` |
 | `leksokiposSync.test.ts` | `pushFoundWords` (wire shape, never throws) + `pullSnapshot` (rebuild snapshot+score, params, null on empty/null/error) — the cross-device sync wire |
 | `useGameIdentity.test.ts` | SSR-safe DeviceId + DisplayName init, setter state updates |
@@ -90,6 +91,7 @@
 | `rankDisplay.test.ts` | `rankProgress`, `getRankEmoji` |
 | `answerPools.test.ts` (leksiarxeio) | `LEKSIARXEIO_ANSWER_POOLS` + `getSameDayFallbackAnswers` — seam == pool[dateToIndex] all year |
 | `keyboardInteraction.test.tsx` (leksiarxeio) | On-screen keyboard letter/delete/enter dispatch end-to-end |
+| `archiveNavigation.test.tsx` (×3: vrestifrasi, leksiarxeio, posokanei) | **Day-strip navigation guard (s134)** — the leaderboard's "play this puzzle" link swaps the puzzle prop without unmounting, so `useReducer`'s lazy initialiser never re-runs and the finished round leaks onto the new date. Every board that can switch Daily Puzzles is keyed at its render site (Guess family by `puzzle.id`; Slot-Fill + Leksodromia by `today`, their Session key). Each test asserts both halves: an unplayed archive date starts fresh after today's round is finished, and returning to a played date restores *that* date's Session. Keying by anything stable across dates (Leksiarxeio was keyed by Length) reintroduces the bug. Πόσο κάνει; covers the Slot-Fill spine for all five of its games |
 | `NominationCard.test.tsx` / `page.test.tsx` (leksikastirio) | Card render, vote highlight, voting, admin controls; page rendering, tabs, optimistic voting |
 | `matching.test.ts` (leksindeseis) | `matchesGroup`, `isOneAway` |
 | `evaluatePhraseGuess.test.ts` / `letterState.test.ts` (vrestifrasi) | Two-pass cross-word evaluation (ADR 0004); `buildPhraseLetterStateMap` 4-state priority |
@@ -121,7 +123,7 @@
 | `premadeDataConsistency.test.ts` | ADR 0015 drift guard — every game, both directions (stale removal + missed addition), byte-identical write path |
 | `profileSectionFunnel.test.tsx` / `profileSectionSignIn.test.tsx` | ProfileSection — /profile funnel link; Google sign-in offered whenever not AuthLinked (ADR 0012) |
 | `profileStatsRoute.test.ts` | `GET /api/profile/stats` |
-| `puzzleDate.test.ts` | `todayISO` / `getLast7Dates` (UTC anchoring) / `normalizePuzzleDate` / `resolvePuzzleDateParam` |
+| `puzzleDate.test.ts` | `todayISO` / `getLast7Dates` (UTC anchoring) / `normalizePuzzleDate` / `resolvePuzzleDateParam` / **`nextFreeScheduledDate`** (tomorrow on an empty calendar, never today, skips a booked run, fills a mid-run gap, order-independent, ignores past bookings, tolerates nulls, month + year boundaries) |
 | `puzzleRotation.test.ts` | `dateToIndex` |
 | `rlsInvariantsLiveDb.test.ts` | Live-DB RLS posture matrix. Runs locally off `.env.local` (`vitest.config.ts` forwards the 3 Supabase keys); auto-skips in CI, where live-DB secrets are deliberately absent |
 | `scoreMerge.test.ts` | `planScoreMerge` (best-per-puzzle) + `mergeLengthScore` (Leksiarxeio fold; re-post overwrite documented) |

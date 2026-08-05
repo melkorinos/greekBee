@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           data: Json
           id: number
+          scheduled_date: string | null
           status: Database["public"]["Enums"]["community_puzzle_status"]
           submitter_name: string
         }
@@ -26,6 +27,7 @@ export type Database = {
           created_at?: string
           data: Json
           id?: number
+          scheduled_date?: string | null
           status?: Database["public"]["Enums"]["community_puzzle_status"]
           submitter_name?: string
         }
@@ -33,6 +35,7 @@ export type Database = {
           created_at?: string
           data?: Json
           id?: number
+          scheduled_date?: string | null
           status?: Database["public"]["Enums"]["community_puzzle_status"]
           submitter_name?: string
         }
@@ -43,6 +46,7 @@ export type Database = {
           created_at: string
           data: Json
           id: number
+          scheduled_date: string | null
           status: Database["public"]["Enums"]["community_puzzle_status"]
           submitter_name: string
         }
@@ -50,6 +54,7 @@ export type Database = {
           created_at?: string
           data: Json
           id?: number
+          scheduled_date?: string | null
           status?: Database["public"]["Enums"]["community_puzzle_status"]
           submitter_name?: string
         }
@@ -57,6 +62,7 @@ export type Database = {
           created_at?: string
           data?: Json
           id?: number
+          scheduled_date?: string | null
           status?: Database["public"]["Enums"]["community_puzzle_status"]
           submitter_name?: string
         }
@@ -97,6 +103,7 @@ export type Database = {
           created_at: string
           data: Json
           id: number
+          scheduled_date: string | null
           status: Database["public"]["Enums"]["community_puzzle_status"]
           submitter_name: string
         }
@@ -104,6 +111,7 @@ export type Database = {
           created_at?: string
           data: Json
           id?: number
+          scheduled_date?: string | null
           status?: Database["public"]["Enums"]["community_puzzle_status"]
           submitter_name?: string
         }
@@ -111,6 +119,7 @@ export type Database = {
           created_at?: string
           data?: Json
           id?: number
+          scheduled_date?: string | null
           status?: Database["public"]["Enums"]["community_puzzle_status"]
           submitter_name?: string
         }

@@ -1,9 +1,9 @@
 // Leksiarxeio — data loader (runs server-side via Next.js App Router).
-// Primary source: community_leksiarxeio_puzzles (approved FIFO).
+// Primary source: the community puzzle scheduled for the requested date.
 // Fallback: deterministic word-pool rotation by date.
 //
-// One community puzzle row covers all 5 lengths. The row is deleted immediately
-// on consumption so it is never served again.
+// One community puzzle row covers all 5 lengths, and is served — not consumed —
+// for the date it was scheduled for.
 
 import { consumeApprovedPuzzle } from "@/lib/communityPuzzleLifecycle";
 import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
@@ -54,10 +54,14 @@ interface LeksiarxeioDaily {
 
 /**
  * Returns all 5 daily Leksiarxeio puzzles for `date`.
- * Checks the community queue first; falls back to static word pools.
+ * A community puzzle scheduled for that date wins; otherwise the static answer
+ * pools' deterministic rotation. Both are stable across repeat calls.
  */
 export async function getAllTodaysLeksiarxeioPuzzles(date: string): Promise<LeksiarxeioDaily> {
-  const consumed = await consumeApprovedPuzzle<Record<string, string>>("community_leksiarxeio_puzzles");
+  const consumed = await consumeApprovedPuzzle<Record<string, string>>(
+    "community_leksiarxeio_puzzles",
+    date,
+  );
   if (consumed) {
     const puzzles = LEKSIARXEIO_LENGTHS.map((len): LeksiarxeioPuzzle => ({
       id:     `${date}-wordle-${len}`,

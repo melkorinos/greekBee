@@ -1,8 +1,9 @@
 // communityPuzzleLifecycle.ts — the Community Puzzle Lifecycle module.
 //
 // One implementation of the lifecycle shared by every /api/community-puzzles/*
-// route: submit → pending → approve (UPDATE status) | reject (DELETE row) →
-// consume (claim the oldest approved row when a game serves its Daily Puzzle).
+// route: submit → pending → approve (UPDATE status + assign a scheduled_date) |
+// reject (DELETE row) → serve (read the approved row scheduled for the date a
+// game is rendering, leaving the row in place).
 // Per-game variation enters through CommunityPuzzleGameConfig:
 //   - table:    which community_*_puzzles table backs the game
 //   - validate: submission validation adapter — a pure function in the game's
@@ -19,6 +20,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { jsonError, jsonMessage, parseJson, requireAdmin } from "@/lib/apiRoute";
+import { nextFreeScheduledDate, todayISO } from "@/lib/puzzleDate";
 import {
   getServiceRoleClient,
   getSupabaseClient,
@@ -33,6 +35,23 @@ import {
  * at (say) game_scores is a compile error rather than a runtime surprise.
  */
 export type CommunityPuzzleTable = Extract<TableName, `community_${string}_puzzles`>;
+
+/**
+ * The three queues that actually serve a Daily Puzzle, and so carry a
+ * `scheduled_date`. Stavrolekso is excluded structurally rather than by
+ * convention: its rows are never consumed (players browse the whole approved
+ * pool), it has no release date, and the column does not exist on its table —
+ * so pointing the schedule-aware paths at it is a compile error.
+ */
+export type ScheduledPuzzleTable = Exclude<
+  CommunityPuzzleTable,
+  "community_stavrolekso_puzzles"
+>;
+
+/** Narrows a community table to one that carries a release date. */
+function isScheduledTable(t: CommunityPuzzleTable): t is ScheduledPuzzleTable {
+  return t !== "community_stavrolekso_puzzles";
+}
 
 /** Result of a game's submission-validation adapter. */
 export type SubmissionValidation =
@@ -58,16 +77,27 @@ export interface CommunityPuzzleGameConfig {
 
 const DEFAULT_SELECT = "id, submitter_name, data, status, created_at";
 
-// ── Consume (claim the next approved Community Puzzle) ──────────────────────────
-// The fourth lifecycle transition. A game's data loader claims the oldest approved
-// row (FIFO), deletes it so it is never served again, and receives the row's jsonb
-// `data` blob plus submitter_name. Each loader maps the blob to its own Puzzle
-// shape and owns its own static fallback when the queue is empty. Returns null on
-// an empty queue or any error so the caller falls through to its fallback.
+// ── Consume (serve the Community Puzzle scheduled for a date) ───────────────────
+// The fourth lifecycle transition. A game's data loader reads the approved row
+// scheduled for the date being served and receives the row's jsonb `data` blob
+// plus submitter_name. Each loader maps the blob to its own Puzzle shape and owns
+// its own static fallback when no row is scheduled. Returns null on a miss or any
+// error so the caller falls through to that fallback.
+//
+// This is a pure READ — deliberately non-destructive. It used to claim the oldest
+// approved row FIFO and DELETE it, ignoring the date entirely; because the loaders
+// run on every page load, that made a refresh destroy a puzzle permanently, served
+// two players on the same day different puzzles, and let any archive date drain the
+// queue. A puzzle is now pinned to its scheduled_date and served from there for as
+// long as the row lives.
+//
+// Past dates never match a future-only schedule, so they fall through to the
+// deterministic static rotation — replaying an already-consumed community puzzle is
+// not supported (those rows are gone).
 //
 // Stavrolekso is excluded by design: its rows are never consumed (CONTEXT.md).
 
-/** What a loader receives when it claims an approved Community Puzzle. */
+/** What a loader receives when it serves a scheduled Community Puzzle. */
 export interface ConsumedPuzzle<TData> {
   /** The row's jsonb payload, shaped per game. */
   data:           TData;
@@ -76,25 +106,26 @@ export interface ConsumedPuzzle<TData> {
 }
 
 export async function consumeApprovedPuzzle<TData>(
-  tableName: CommunityPuzzleTable,
+  tableName: ScheduledPuzzleTable,
+  date: string,
 ): Promise<ConsumedPuzzle<TData> | null> {
   try {
-    // Claiming an approved row DELETEs it — a privileged op the anon role has no
-    // RLS policy for. Use the service-role client (server-only serve path).
+    // Several community tables grant anon no SELECT policy at all, so the serve
+    // path (server-only) reads with the service-role client.
     const supabase = getServiceRoleClient();
     const { data, error } = await table(supabase, tableName)
-      .select("id, submitter_name, data")
+      .select("id, submitter_name, data, scheduled_date")
       .eq("status", "approved")
-      .order("created_at", { ascending: true })
+      .eq("scheduled_date", date)
       .limit(1)
       .single();
 
     if (error || !data) return null;
 
-    const row = data as { id: number; submitter_name: string | null; data: TData };
-
-    // Delete immediately — consumed puzzles are never reused.
-    await table(supabase, tableName).delete().eq("id", row.id);
+    // `data` is jsonb, so the DB types it as Json; the per-game shape is the
+    // caller's TData. Same seam as the submit path's Insert widening — the row
+    // shape is pinned by each game's loader tests, not by this module.
+    const row = data as unknown as { id: number; submitter_name: string | null; data: TData };
 
     return { data: row.data, submitter_name: row.submitter_name || null };
   } catch {
@@ -183,7 +214,15 @@ export function createListHandler(config: CommunityPuzzleGameConfig) {
 
 interface ReviewPayload {
   action: "approve" | "reject";
+  /**
+   * Optional admin override for the release date (YYYY-MM-DD, strictly future).
+   * Omitted on the normal path, where approval auto-assigns the earliest free
+   * future date.
+   */
+  scheduled_date?: unknown;
 }
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export function createReviewHandler(config: Pick<CommunityPuzzleGameConfig, "table">) {
   return async function PATCH(
@@ -198,9 +237,22 @@ export function createReviewHandler(config: Pick<CommunityPuzzleGameConfig, "tab
     const parsed = await parseJson<ReviewPayload>(req);
     if (!parsed.ok) return parsed.response;
 
-    const { action } = parsed.body;
+    const { action, scheduled_date: override } = parsed.body;
     if (action !== "approve" && action !== "reject") {
       return jsonMessage("action must be 'approve' or 'reject'");
+    }
+
+    // An override is validated before any DB work: a date column will happily
+    // reject garbage, but that surfaces as an opaque db_error, and a past date
+    // is well-formed SQL for a puzzle nobody can ever play.
+    const today = todayISO();
+    if (action === "approve" && override !== undefined && override !== null) {
+      if (typeof override !== "string" || !ISO_DATE_RE.test(override)) {
+        return jsonMessage("scheduled_date must be a YYYY-MM-DD date");
+      }
+      if (override <= today) {
+        return jsonMessage("scheduled_date must be a future date");
+      }
     }
 
     // approve UPDATEs status, reject DELETEs — neither is granted to anon by RLS
@@ -215,10 +267,39 @@ export function createReviewHandler(config: Pick<CommunityPuzzleGameConfig, "tab
     const rowId = Number(id);
 
     if (action === "approve") {
-      const { error } = await table(supabase, config.table)
-        .update({ status: "approved" })
+      // Stavrolekso approvals are permanent and undated — its rows are never
+      // consumed, so it has no scheduled_date column and skips this entirely.
+      if (!isScheduledTable(config.table)) {
+        const { error } = await table(supabase, config.table)
+          .update({ status: "approved" })
+          .eq("id", rowId);
+        if (error) return jsonError("db_error", error.message);
+        return NextResponse.json({ ok: true });
+      }
+
+      // Approval is where a Daily Puzzle gets its release date. Auto-assign the
+      // earliest free future date unless the admin named one; the read of taken
+      // dates is admin-only and runs once per review, so it is not on any player
+      // hotpath.
+      const scheduledTable = config.table;
+      let scheduledDate = override as string | undefined;
+      if (!scheduledDate) {
+        const { data: booked, error: readError } = await table(supabase, scheduledTable)
+          .select("scheduled_date")
+          .eq("status", "approved");
+        if (readError) return jsonError("db_error", readError.message);
+
+        const taken = ((booked ?? []) as unknown as { scheduled_date: string | null }[])
+          .map((r) => r.scheduled_date);
+        scheduledDate = nextFreeScheduledDate(taken, today);
+      }
+
+      const { error } = await table(supabase, scheduledTable)
+        .update({ status: "approved", scheduled_date: scheduledDate })
         .eq("id", rowId);
       if (error) return jsonError("db_error", error.message);
+
+      return NextResponse.json({ ok: true, scheduled_date: scheduledDate });
     } else {
       const { error } = await table(supabase, config.table)
         .delete()

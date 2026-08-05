@@ -18,6 +18,9 @@ function makeChain(result: ChainResult) {
   const ret = () => chain;
   chain.update = ret;
   chain.delete = ret;
+  // Approve reads the already-scheduled dates before assigning one, so the chain
+  // has to survive a .select().eq() as well as the .update().eq() that follows.
+  chain.select = ret;
   chain.eq     = () => Promise.resolve(result);
   chain.then   = (resolve: (v: ChainResult) => void) => resolve(result);
   return chain;
@@ -115,13 +118,15 @@ describe("PATCH review — auth", () => {
 // ── Leksiarxeio — approve ────────────────────────────────────────────────────
 
 describe("PATCH /api/community-puzzles/leksiarxeio/[id]/review", () => {
-  it("approve → returns { ok: true }", async () => {
-    enqueue({ data: null, error: null });
+  it("approve → returns { ok: true } and the assigned release date", async () => {
+    // Two results: the schedule read, then the update.
+    enqueue({ data: [], error: null }, { data: null, error: null });
     const req = makePatchReq("leksiarxeio", "5", { action: "approve" }, CORRECT_SECRET);
     const res = await PATCH_LEKSIARXEIO(req, params("5"));
     expect(res.status).toBe(200);
-    const json = await res.json() as { ok: boolean };
+    const json = await res.json() as { ok: boolean; scheduled_date: string };
     expect(json.ok).toBe(true);
+    expect(json.scheduled_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it("reject → returns { ok: true }", async () => {
@@ -134,7 +139,7 @@ describe("PATCH /api/community-puzzles/leksiarxeio/[id]/review", () => {
   });
 
   it("approve → returns 500 on DB error", async () => {
-    enqueue({ data: null, error: { message: "db fail" } });
+    enqueue({ data: [], error: null }, { data: null, error: { message: "db fail" } });
     const req = makePatchReq("leksiarxeio", "5", { action: "approve" }, CORRECT_SECRET);
     const res = await PATCH_LEKSIARXEIO(req, params("5"));
     expect(res.status).toBe(500);
@@ -145,7 +150,7 @@ describe("PATCH /api/community-puzzles/leksiarxeio/[id]/review", () => {
 
 describe("PATCH /api/community-puzzles/leksindeseis/[id]/review", () => {
   it("approve → returns { ok: true }", async () => {
-    enqueue({ data: null, error: null });
+    enqueue({ data: [], error: null }, { data: null, error: null });
     const req = makePatchReq("leksindeseis", "7", { action: "approve" }, CORRECT_SECRET);
     const res = await PATCH_LEKSINDESEIS(req, params("7"));
     expect(res.status).toBe(200);

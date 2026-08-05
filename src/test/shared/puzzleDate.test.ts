@@ -2,7 +2,13 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { getLast7Dates, normalizePuzzleDate, resolvePuzzleDateParam, todayISO } from "@/lib/puzzleDate";
+import {
+  getLast7Dates,
+  nextFreeScheduledDate,
+  normalizePuzzleDate,
+  resolvePuzzleDateParam,
+  todayISO,
+} from "@/lib/puzzleDate";
 
 describe("todayISO", () => {
   afterEach(() => {
@@ -88,6 +94,56 @@ describe("resolvePuzzleDateParam", () => {
 
   it("falls back to today for a date-like string with extra characters", () => {
     expect(resolvePuzzleDateParam("2026-07-10T00:00:00", today)).toBe(today);
+  });
+});
+
+describe("nextFreeScheduledDate", () => {
+  const today = "2026-07-15";
+
+  it("schedules for tomorrow when nothing is booked", () => {
+    expect(nextFreeScheduledDate([], today)).toBe("2026-07-16");
+  });
+
+  it("never schedules for today, even with an empty calendar", () => {
+    // The product rule: an approved puzzle always lands on a future date, so it
+    // can never replace the puzzle players are already mid-round on.
+    expect(nextFreeScheduledDate([], today)).not.toBe(today);
+  });
+
+  it("skips past a booked tomorrow", () => {
+    expect(nextFreeScheduledDate(["2026-07-16"], today)).toBe("2026-07-17");
+  });
+
+  it("fills a gap in the middle of a booked run", () => {
+    expect(nextFreeScheduledDate(["2026-07-16", "2026-07-18"], today)).toBe("2026-07-17");
+  });
+
+  it("walks past a fully booked run to the first free day after it", () => {
+    expect(
+      nextFreeScheduledDate(["2026-07-16", "2026-07-17", "2026-07-18"], today),
+    ).toBe("2026-07-19");
+  });
+
+  it("ignores booked dates in the past — they can never collide", () => {
+    expect(nextFreeScheduledDate(["2026-07-10", "2026-07-14", today], today)).toBe("2026-07-16");
+  });
+
+  it("is order-independent — the caller's rows arrive in no guaranteed order", () => {
+    expect(
+      nextFreeScheduledDate(["2026-07-18", "2026-07-16", "2026-07-17"], today),
+    ).toBe("2026-07-19");
+  });
+
+  it("steps across a month boundary", () => {
+    expect(nextFreeScheduledDate(["2026-07-31"], "2026-07-30")).toBe("2026-08-01");
+  });
+
+  it("steps across a year boundary", () => {
+    expect(nextFreeScheduledDate([], "2026-12-31")).toBe("2027-01-01");
+  });
+
+  it("tolerates nulls in the booked list — scheduled_date is a nullable column", () => {
+    expect(nextFreeScheduledDate([null, "2026-07-16", null], today)).toBe("2026-07-17");
   });
 });
 
