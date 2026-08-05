@@ -29,6 +29,36 @@ export function getLast7Dates(today: string, n = 7): string[] {
   return dates;
 }
 
+/**
+ * The earliest date a Community Puzzle may be scheduled for, given the dates
+ * already taken — the scheduling rule behind approval.
+ *
+ * Two invariants: the result is always strictly after `today` (an approved
+ * puzzle never replaces the one players are mid-round on), and it is the
+ * *earliest* such free date, so gaps left by a hand-picked override get filled
+ * before the queue extends further out.
+ *
+ * Booked dates in the past are ignored — they can never collide — and nulls are
+ * tolerated because `scheduled_date` is a nullable column, so an approved-but-
+ * unscheduled row (only reachable by direct SQL) must not shift the calendar.
+ *
+ * Anchored to UTC like the rest of this file: "tomorrow" is UTC-tomorrow, the
+ * same boundary the daily rotation already turns on.
+ */
+export function nextFreeScheduledDate(
+  taken: readonly (string | null | undefined)[],
+  today: string,
+): string {
+  const booked = new Set(taken.filter((d): d is string => Boolean(d)));
+
+  const cursor = new Date(today + "T00:00:00Z");
+  do {
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  } while (booked.has(cursor.toISOString().slice(0, 10)));
+
+  return cursor.toISOString().slice(0, 10);
+}
+
 /** Strips a trailing locale suffix from a puzzle ID (e.g. "2026-05-22-el" → "2026-05-22"). */
 export function normalizePuzzleDate(raw: string | null | undefined): string {
   return (raw ?? "").replace(/-[a-z]{2}$/i, "");

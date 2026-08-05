@@ -37,7 +37,11 @@ export function LeksoplegmaPageClient({ puzzle, today }: LeksoplegmaPageClientPr
         </HeaderIconButton>
       </GameHeader>
 
+      {/* Keyed by date — the Session key this game persists under. A Session
+          belongs to one Puzzle, so switching Daily Puzzles remounts the board
+          rather than carrying the previous date's round across. */}
       <LeksoplegmaBoard
+        key={today}
         puzzle={puzzle}
         today={today}
         isLeaderboardOpen={lbOpen}

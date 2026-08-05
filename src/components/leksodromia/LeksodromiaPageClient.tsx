@@ -35,7 +35,13 @@ export function LeksodromiaPageClient({ puzzle, today }: LeksodromiaPageClientPr
         </HeaderIconButton>
       </GameHeader>
 
+      {/* Keyed by date — the Session key this game persists under. A Session
+          belongs to one Puzzle, so switching Daily Puzzles remounts the board
+          rather than carrying the previous date's round across (this game runs
+          its own round hook, not a Round Spine — ADR 0019 — but the rule is
+          the platform's, not the spine's). */}
       <LeksodromiaBoard
+        key={today}
         puzzle={puzzle}
         today={today}
         paused={htpOpen}

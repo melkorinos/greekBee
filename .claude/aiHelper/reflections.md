@@ -114,6 +114,36 @@ acceptance test for whatever replaces the mechanism. Two things to hold onto:
   future refactor can silently break them and no gate will complain. The parked-state Shell tests
   are the tripwire for a *partial* revival (toggle back without the nav guard = lost rounds).
 
+### 🟡 A latent defect is a design question nobody has answered yet (s134)
+
+`consumeApprovedPuzzle` ignored its date and deleted the row it served. Both were
+outright bugs, and neither had ever fired — because every queue held zero approved
+rows. The code was written for a world where "the next community puzzle" was a
+queue position, and the date was scenery. **That is what a feature looks like
+before its central question has been asked**, and the question here was never
+"FIFO or LIFO?" but "*when* does an approved puzzle go live?" — which has no
+answer in the code at all, only in the operator's head.
+
+Two things worth carrying:
+- **Zero rows is not reassurance, it is the reason to look.** The defects were
+  invisible precisely because the feature was unused; the first approval would
+  have destroyed a puzzle on the submitter's own refresh. Any lifecycle whose
+  later stages have never run in production should be read as unverified, not as
+  working. Stavrolekso's `pending` row is the live reminder — one approval away.
+- **The type system found the design boundary I had missed.** `.eq("scheduled_date")`
+  refused to compile because `CommunityPuzzleTable` includes Stavrolekso, which
+  never consumes. I first misread the truncated error as a stale build cache and
+  cleared `.next` for nothing — the error had named all four tables and I stopped
+  reading at the `...`. The fix (`ScheduledPuzzleTable`) is better than the
+  convention it replaced. **Read the whole compiler error before theorising about
+  the toolchain**; ADR 0017's generated types keep paying out, but only if I let
+  them talk.
+
+Still open: the admin approves blind (operator's call — review UI untouched), so
+there is no in-app way to see or change the schedule. If a puzzle ever lands on
+the wrong date, the only remedy today is direct SQL. Worth revisiting if approvals
+become frequent.
+
 ### 🟡 Two round spines — the split must be defended, not drifted into (s128)
 
 `useSlotFillRound` (topothesies/posokanei/logopaignio/leksoplegma) now sits beside `useGuessRound` (leksiarxeio/vrestifrasi) as a deliberate **sibling**, not a generalisation — ADR 0019 states why. Three things to watch:
