@@ -16,6 +16,7 @@ import {
   maxPairwiseCentroidKm,
   pointInPolygon,
   polygonsBestFirst,
+  selectPeelPolygons,
 } from "../../../scripts/lib/topothesies/project";
 import type { LngLat } from "../../../src/games/topothesies/types";
 
@@ -186,5 +187,50 @@ describe("polygonsBestFirst", () => {
   it("falls back to pure area order when no polygon contains the capital", () => {
     // A capital coordinate rounded to just offshore must not lose the shape.
     expect(polygonsBestFirst([small, big], [99, 99])).toEqual([big, small]);
+  });
+});
+
+describe("selectPeelPolygons", () => {
+  // The Δήμος Νάξου και Μικρών Κυκλάδων shape, in miniature: the parent's own
+  // island dwarfs everything, the child has a sibling, and a bare rock sits
+  // nearer the child's capital than that sibling does.
+  const square = (x: number, y: number, side: number): LngLat[][] => [
+    [
+      [x, y],
+      [x + side, y],
+      [x + side, y + side],
+      [x, y + side],
+    ],
+  ];
+  const parentIsland = square(0, 0, 20); // 400 — Νάξος
+  const child = square(50, 0, 4); // 16 — Άνω Κουφονήσι
+  const sibling = square(60, 0, 3); // 9, further away — Κάτω Κουφονήσι
+  const rock = square(55, 0, 1); // 1, nearer — the islet that must not win
+  const all = [parentIsland, rock, child, sibling];
+  const capital: LngLat = [51, 1]; // inside `child`
+
+  it("takes the capital's polygon when the child is a single island", () => {
+    expect(selectPeelPolygons(all, capital, 1)).toEqual([child]);
+  });
+
+  it("takes the largest SMALLER sibling second, never the parent's own island", () => {
+    // Ordering the rest by descending area (as polygonsBestFirst does) would
+    // return the 400-unit parent island here and strip Νάξος from Νάξος.
+    expect(selectPeelPolygons(all, capital, 2)).toEqual([child, sibling]);
+  });
+
+  it("prefers the larger sibling over a nearer but tiny rock", () => {
+    // Ordering by distance from the capital would return `rock`.
+    expect(selectPeelPolygons(all, capital, 2)?.[1]).not.toBe(rock);
+  });
+
+  it("returns null when the capital is inside no polygon", () => {
+    // An offshore coordinate must stop the build, not silently fall back to
+    // area — the fallback would hand the child its parent's landmass.
+    expect(selectPeelPolygons(all, [999, 999], 1)).toBeNull();
+  });
+
+  it("returns null when too few polygons are smaller than the capital's", () => {
+    expect(selectPeelPolygons([parentIsland, child], capital, 2)).toBeNull();
   });
 });

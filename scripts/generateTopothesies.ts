@@ -44,7 +44,9 @@ import {
   maxPairwiseCentroidKm,
   polygonsBestFirst,
   projectPoint,
+  ringArea,
   ringToPath,
+  selectPeelPolygons,
 } from "./lib/topothesies/project";
 import { validateEmitted } from "./lib/topothesies/validateEmitted";
 import {
@@ -52,6 +54,7 @@ import {
   CONFIRMED_SPLIT_IDS,
   DEFERRED_ANSWER_IDS,
   MAIN_ISLAND_POLYGONS,
+  POLYGON_PEELS,
 } from "./lib/topothesies/confirmedSplits";
 
 // Preview build (TOPO_PREVIEW=1): emit EVERY answer — including the deferred
@@ -135,6 +138,78 @@ function polygonsOf(f: Feature): Polygon[] {
   return f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
 }
 
+
+/** A polygon's outer-ring area in km² — diagnostics only, so the peel log is readable. */
+function polygonKm2(polygon: Polygon): number {
+  const ring = polygon[0];
+  const lat = ring.reduce((s, p) => s + p[1], 0) / ring.length;
+  return Math.abs(ringArea(ring)) * 110.574 * 111.32 * Math.cos((lat * Math.PI) / 180);
+}
+
+/**
+ * Peel POLYGON_PEELS children out of their parent's dissolved geometry.
+ *
+ * Runs AFTER the dissolve because these islands share their parent's δήμος —
+ * there is no attribute to key on at tagging time (that is what ISLAND_PEEL_WD
+ * does). No splitting is involved: a δήμος spanning several islands arrives from
+ * OSM as one polygon per island, so the child's polygons are SELECTED by its
+ * capital and REMOVED from the parent. Removal matters — a child left in both
+ * would be drawn twice and would drag the parent's centroid toward it.
+ *
+ * The child's FIRST polygon is the one holding its capital, and a capital inside no
+ * polygon THROWS — never falls back to area the way `polygonsBestFirst` does, since
+ * here that would hand the child its parent's main landmass.
+ *
+ * A child taking more than one polygon takes the largest of those SMALLER THAN its
+ * capital's — its own satellites. Both looser rules were tried and are wrong:
+ * next-nearest picks the 0.15 km² rock 2.3 km off Άνω Κουφονήσι over Κάτω
+ * Κουφονήσι (3.85 km², 4.2 km away), and next-largest picks ΝΑΞΟΣ (429 km²),
+ * which silently strips the parent of its own island. A peeled island's siblings
+ * are by definition not bigger than it is.
+ */
+function applyPolygonPeels(features: Feature[]): Feature[] {
+  const childrenOf = new Map<string, { id: string; polygons: number }[]>();
+  for (const [id, peel] of Object.entries(POLYGON_PEELS)) {
+    if (!childrenOf.has(peel.parent)) childrenOf.set(peel.parent, []);
+    childrenOf.get(peel.parent)!.push({ id, polygons: peel.polygons });
+  }
+
+  const out: Feature[] = [];
+  for (const f of features) {
+    const children = childrenOf.get(f.properties.ansid);
+    if (!children) { out.push(f); continue; }
+
+    let remaining = polygonsOf(f);
+    for (const child of children) {
+      const meta = ANSWER_META[child.id];
+      if (!meta) { console.warn(`peel "${child.id}": no ANSWER_META — skipped`); continue; }
+      const capital = meta.capitalCoord;
+      const taken = selectPeelPolygons(remaining, capital, child.polygons);
+      if (!taken) {
+        throw new Error(
+          `peel "${child.id}": could not take ${child.polygons} polygon(s) out of ` +
+            `"${f.properties.ansid}" with capitalCoord ${JSON.stringify(capital)} — either the ` +
+            `coordinate is offshore, or too few of the parent's islands are smaller than it`,
+        );
+      }
+      remaining = remaining.filter((p) => !taken.includes(p));
+      console.log(
+        `peel ${child.id} ← ${f.properties.ansid}: took ${taken
+          .map((p) => `${polygonKm2(p).toFixed(1)} km²`)
+          .join(" + ")}, ${remaining.length} polygon(s) left on the parent`,
+      );
+      out.push({
+        properties: { ansid: child.id },
+        geometry: { type: "MultiPolygon", coordinates: taken },
+      });
+    }
+    out.push({
+      properties: f.properties,
+      geometry: { type: "MultiPolygon", coordinates: remaining },
+    });
+  }
+  return out;
+}
 
 /** Nearest wd-muni regional unit to a point (spatial fallback + foreign filter). */
 function nearestMuniRu(c: LngLat, munis: Muni[]): { parentEl: string | null; dist: number } {
@@ -225,7 +300,9 @@ function main() {
   // ── 2b. Size-aware simplify: bucket each dissolved shape by its own size, then
   //        run ONE mapshaper -simplify pass per bucket. Mainland stays at 200 m;
   //        islands get islandIntervalM(diagKm). TOPO_SIMPLIFY forces one spec. ──
-  const rawFeatures = (JSON.parse(fs.readFileSync(DISSOLVED, "utf8")).features as Feature[]);
+  const rawFeatures = applyPolygonPeels(
+    JSON.parse(fs.readFileSync(DISSOLVED, "utf8")).features as Feature[],
+  );
   const bucketOf = (f: Feature): string => {
     if (SIMPLIFY_OVERRIDE) return SIMPLIFY_OVERRIDE;
     const meta = ANSWER_META[f.properties.ansid];

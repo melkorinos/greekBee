@@ -37,6 +37,22 @@ no open question stands between here and pressing the button.
 
 <!-- one line per closed ticket: gist + link -->
 
+- **2026-08-06 — Five islands added, Δήλος dropped, Topothesies is at 109 answers and the
+  handoff is retired.** Ticket 05 resolved and deleted; `.claude/handoffs/topothesies-unpeelable-and-review.md`
+  deleted with it — its last live thread. The ticket's own framing was wrong: neither a
+  `place=island` override nor connected-component splitting was needed, because a δήμος spanning
+  several islands already arrives as **one polygon per island** — the islands only had to be
+  *selected*, never split. Κουφονήσια (drawing both Άνω and Κάτω, the Παξοί precedent), Σχοινούσα,
+  Ηρακλειά, Δονούσα and Κάλαμος are live. Their outlines were **measured before the decision**, not
+  assumed: 106–243 points after the pipeline's own simplification, inside the band of shapes that
+  already ship (Καστελλόριζο 136, Αγαθονήσι 253, Λειψοί 333, Πόρος 362). **Δήλος is a permanent
+  drop** — uninhabited, no capital, and the capital stage is required of every answer. **Καστός is
+  a deliberate omission**, recorded so it does not read as an oversight. `PROXIMITY_MAX_KM` stays
+  938 and no existing shape or centroid moved — verified by diffing all 104 against HEAD. Everything
+  durable from the handoff is now in **ADR 0018's Amendments** (the OSM/QID join, the gitignored
+  re-fetch procedure, the `fetchWikidata` QID-field failure mode, the capital-not-area landmass
+  rule, and the Πόρος / Θεσσαλονίκη / Τροιζηνία-Μέθανα verdicts) plus two CONTEXT glossary terms.
+
 - **2026-08-06 — Πόρος graduated; the bug was ours, not OSM's, and the fix unblocks ticket 05.**
   Ticket 04 resolved and deleted. The `place=island` coastline override the ticket proposed was
   **not built and is not needed**: Δήμος Πόρου's dump already contains the correct island, but
@@ -45,10 +61,9 @@ no open question stands between here and pressing the button.
   picks the polygon holding the answer's capital — a no-op for all 69 other islands, verified by
   diffing every emitted shape. 104 answers, `DEFERRED_ANSWER_IDS` empty, `PROXIMITY_MAX_KM`
   still 938. **Knock-on:** the same point-in-polygon selection answers what
-  [the placeholder islands ticket](05-topothesies-cant-peel-placeholders.md) was blocked on —
-  five of its six islands are already separate polygons and need only a real capital
-  coordinate, not the connected-component splitting feature everyone assumed. Δήλος has no
-  capital and stays the permanent-drop candidate. Detail in the handoff's Threads 1 and 3.
+  ticket 05 was blocked on — five of its six islands were already separate polygons and needed
+  only a real capital coordinate, not the connected-component splitting feature everyone assumed.
+  Both were resolved the same day; see the entry above.
 
 - **2026-08-06 — Χαλκιδική un-merged and Θεσσαλονίκη dropped from Topothesies entirely.**
   Ticket 03 resolved and deleted. All three candidates were rendered from OSM and judged by eye:

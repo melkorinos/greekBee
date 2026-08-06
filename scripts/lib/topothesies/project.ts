@@ -87,6 +87,36 @@ export function polygonsBestFirst(polygons: LngLat[][][], capital: LngLat): LngL
   return [byArea[home], ...byArea.filter((_, i) => i !== home)];
 }
 
+/**
+ * The `count` polygons a peeled child island takes out of its parent's geometry:
+ * the one holding its capital, then the LARGEST polygons SMALLER than that one.
+ * Returns null when no polygon holds the capital, or when too few qualify.
+ *
+ * Not `polygonsBestFirst`. That orders the rest by descending area over the whole
+ * set, which is right when picking which landmass of one answer to draw and wrong
+ * when carving a child out of a parent — Κουφονήσια asked for two polygons of
+ * Δήμος Νάξου και Μικρών Κυκλάδων and got Άνω Κουφονήσι plus **Νάξος**, stripping
+ * the parent of its own island. Ordering by proximity instead is also wrong: the
+ * 0.15 km² rock 2.3 km off Άνω Κουφονήσι beats Κάτω Κουφονήσι (3.85 km², 4.2 km).
+ * A peeled island's siblings are smaller than it is; that is the constraint that
+ * makes the selection safe, and null (→ the caller throws) is the only honest
+ * answer when it cannot be met.
+ */
+export function selectPeelPolygons(
+  polygons: LngLat[][][],
+  capital: LngLat,
+  count: number,
+): LngLat[][][] | null {
+  const home = polygons.find((p) => pointInPolygon(capital, p));
+  if (!home) return null;
+  const homeArea = Math.abs(ringArea(home[0]));
+  const satellites = polygons
+    .filter((p) => p !== home && Math.abs(ringArea(p[0])) < homeArea)
+    .sort((a, b) => Math.abs(ringArea(b[0])) - Math.abs(ringArea(a[0])));
+  const taken = [home, ...satellites.slice(0, count - 1)];
+  return taken.length === count ? taken : null;
+}
+
 /** Ray casting: does a half-line east of `point` cross this ring an odd number of times? */
 function pointInRing([x, y]: LngLat, ring: LngLat[]): boolean {
   let inside = false;

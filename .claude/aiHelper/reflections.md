@@ -35,13 +35,29 @@ Modern messaging apps (WhatsApp, Telegram, iMessage) and all mainstream browsers
 All INSERT-capable API routes write to Supabase with no per-device throttle. RLS policies allow unlimited anon inserts. At current scale this is acceptable — the most likely abuse vector is an accidental client bug, not coordinated attack. Decision: **accept risk and monitor** (Option C). Set a Supabase row-count alert on `game_scores` at 50 000 rows and `nominations` at 5 000 rows; revisit with Redis sliding-window rate limiting when DAU exceeds ~500. Alert must be configured in the Supabase dashboard by the operator.
 *Scope sharpened 2026-07-16: this accepted risk is now **INSERT spam only**. The adjacent-but-different exposure — anon UPDATE/DELETE table-wide via the old `ALL (true)` policies (erasable trophies/pangrams/state, the `transfer_codes` device_uuid oracle) — was never part of this decision and is closed (migrations `20260716120000`/`120100`). Dedup spam via double-submit is also DB-bounded now (`120200`).*
 
-### 🟡 Topothesies — OSM swap done (s119), awaiting operator play-through
+### 🟡 Topothesies — the answer set is DONE; the gate that guards it is weaker than it looks (s136)
 
-Geometry now comes from OpenStreetMap admin_level=7 (fidelity handoff CLOSED, s119); 76 answers. The only thing between here and go-live is the manual browser play-through + flipping `topothesies.wip:false` (curation is the operator's, ADR 0018 step 7). Open threads:
-- **22 islands are deferred** (`DEFERRED_ANSWER_IDS`) because their OSM silhouette still isn't good enough — this is the live backlog (deferred handoff). Raising their fidelity needs a denser OSM extract, a physical `place=island` outline, or a manual trace. Re-add = delete the id.
-- **Final answer set is not settled**: the target is «Νομοί και Νησιά της Ελλάδας» — reconcile against the Greek-Wikipedia νομοί list and split island collections into their own units, then label it so in the help screen. Current 76 (regional units + `attica` + islands) is a waypoint, not the destination.
-- Preview gallery (`source/outlines-preview.html`) regenerated at 76 shapes for the operator's eyeball.
-- Do NOT "fix": the **share card keeps its Worldle emoji grid on purpose** (renders when players paste results into messaging apps); only the on-screen surface is de-emoji'd (s118).
+109 answers, live, `wip:false`. Every backlog list is empty (`DEFERRED_ANSWER_IDS`,
+`DEFERRED_ISLANDS`, `CANT_PEEL_PLACEHOLDERS`) and the «Νομοί και Νησιά της Ελλάδας»
+reconciliation is finished. What stays worth watching is not the content but the machinery:
+
+- **`validateEmitted` checks that the data is well-formed, not that it is right.** Two
+  different wrong polygon-selection rules shipped through it clean this session — one gave
+  Κουφονήσια a bare rock, the other gave it the island of Νάξος and quietly stripped the
+  parent. Both produced 109 answers, 109 shapes, valid ids, in-bbox centroids, no accents.
+  The gate cannot tell a correct silhouette from a plausible one, and **no gate in this repo
+  can**. What caught both was reading the generator's own diagnostic numbers — a path length
+  that made no sense for a 5.7 km² island, a simplify bucket count off by one. Any future
+  change to the geometry pipeline needs those numbers read, and the shapes eyeballed in the
+  preview; green output means nothing here.
+- **The peel is the only place a child can silently steal from its parent.** `POLYGON_PEELS`
+  removes polygons from a parent answer, so a bad selection damages *two* shapes at once and
+  the parent's damage is the invisible one (its own centroid and outline change with no error
+  anywhere). `selectPeelPolygons` returns null rather than guess, and the generator throws —
+  keep it that way. A "helpful" fallback here reintroduces exactly the failure it exists to
+  stop.
+- Do NOT "fix": the **share card keeps its Worldle emoji grid on purpose** (renders when
+  players paste results into messaging apps); only the on-screen surface is de-emoji'd (s118).
 
 ### 🟡 Πόσο κάνει; — engine built, awaiting real content (s124)
 

@@ -10,11 +10,13 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Game** — A distinct word-game mode. Currently: Leksokipos, Leksiarxeio, Leksindeseis, Vres Tin Frasi, Stavrolekso, Leksodromia, Leksoplegma. In progress (wip): Topothesies. The platform's scope widens from "Greek word games" to "Greek **games**" with Topothesies (ADR 0018).
 
-**Regional unit** *(Topothesies)* — Greek περιφερειακή ενότητα; the admin level a Topothesies answer identifies. Some island-cluster units are split into per-island entries (municipality-clean peels only in v1); see ADR 0018. (Not: prefecture, νομός — retired admin level.)
+**Regional unit** *(Topothesies)* — Greek περιφερειακή ενότητα; the admin level a Topothesies answer identifies. Island-cluster units are split into per-island entries; see ADR 0018. (Not: prefecture, νομός — retired admin level.)
 
 **Silhouette** *(Topothesies)* — The precomputed SVG outline of an answer shown as the Stage-1 prompt. Rendered from a static `path` string + self-framing `viewBox`, never a client-side projection (ADR 0018). (Not: shape, map.)
 
-**Island entry / split** *(Topothesies)* — A Topothesies answer is a place that is *either* a regional unit *or* a single recognizable island peeled off one (municipality-clean peels only in v1; sub-island islets stay inside their parent — the signoff in `topothesies-island-signoff.md`). Both kinds carry a silhouette and a capital stage. (Not: prefecture.)
+**Island entry / split** *(Topothesies)* — A Topothesies answer is a place that is *either* a regional unit *or* a single recognizable island peeled off one. Both kinds carry a silhouette and a capital stage — an island with no capital cannot be an answer, which is why Δήλος is not one. (Not: prefecture.)
+
+**Peel** *(Topothesies)* — Taking an island out of the larger unit it administratively belongs to, so it becomes its own answer. Two kinds: an **attribute peel** (`ISLAND_PEEL_WD`) claims a whole δήμος by its Wikidata QID, and a **polygon peel** (`POLYGON_PEELS`) selects one island out of a δήμος that spans several and removes it from the parent. Nothing is ever *split*: a multi-island δήμος already arrives as one polygon per island. (Not: split, merge.)
 
 **Capital stage** *(Topothesies)* — Stage 2: after the unit is guessed (or its guesses exhausted), the player guesses its capital/chief town for bonus points. Every entry keeps the capital stage. (Not: bonus round.)
 

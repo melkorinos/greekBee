@@ -30,8 +30,14 @@ export const CONFIRMED_SPLIT_IDS = [
   // Kea-Kythnos → Kea, Kythnos
   "kea",
   "kythnos",
-  // Naxos → Naxos (+deferred Lesser Cyclades) + Amorgos
+  // Naxos → Naxos + Amorgos + the four Lesser Cyclades (POLYGON_PEELS, 2026-08-06)
   "amorgos",
+  "koufonisia",
+  "schoinoussa",
+  "iraklia",
+  "donousa",
+  // Lefkada → Kalamos (POLYGON_PEELS, 2026-08-06)
+  "kalamos",
   // Magnesia (mainland) → +Sporades (skiathos/skopelos DEFERRED)
   "alonnisos",
   // Kavala (mainland) → Thasos
@@ -70,25 +76,69 @@ export const MAIN_ISLAND_POLYGONS: Readonly<Record<string, number>> = {
   alonnisos: 2, // Αλόννησος + Περιστέρα
   paxi: 2, // Παξοί = Παξός + Αντίπαξος
   thira: 2, // Θήρα + Θηρασία (the caldera crescent)
+  koufonisia: 2, // Άνω + Κάτω Κουφονήσι — the name is a plural, so both are drawn
 };
+
+/**
+ * Islands PEELED OUT of a parent answer's dissolved geometry by polygon selection
+ * rather than by δήμος attribute (2026-08-06, ticket 05). Keyed child answer id →
+ * the parent it is taken from.
+ *
+ * `ISLAND_PEEL_WD` cannot express these: they share their parent's δήμος (Δήμος
+ * Νάξου και Μικρών Κυκλάδων, Δήμος Λευκάδας), so there is no QID to key on. But
+ * nothing has to be *split* either — a δήμος spanning several islands arrives from
+ * OSM as a MultiPolygon with ONE POLYGON PER ISLAND, so the child is *selected*
+ * out and REMOVED from the parent (generateTopothesies.applyPolygonPeels). The
+ * connected-component splitting this was long assumed to need was never needed.
+ *
+ * `polygons` is how many of the parent's polygons the child takes, nearest-to-its-
+ * capital first. It is 1 for everything except Κουφονήσια, which is genuinely two
+ * islands (see MAIN_ISLAND_POLYGONS) — keep the two numbers in step, or the second
+ * island is peeled off the parent and then never drawn.
+ */
+export const POLYGON_PEELS: Readonly<Record<string, { parent: string; polygons: number }>> = {
+  koufonisia: { parent: "naxos", polygons: 2 }, // Άνω + Κάτω Κουφονήσι
+  schoinoussa: { parent: "naxos", polygons: 1 },
+  iraklia: { parent: "naxos", polygons: 1 },
+  donousa: { parent: "naxos", polygons: 1 },
+  kalamos: { parent: "lefkada", polygons: 1 },
+};
+
+/**
+ * Islands deliberately NOT emitted, with the reason — so a future session reads a
+ * decision here rather than an oversight and re-opens it.
+ *
+ * • Δήλος — uninhabited, no capital. Every answer carries a REQUIRED capital
+ *   through ANSWER_META → TopothesiesAnswer → the capital bonus stage, so the only
+ *   ways in are a fabricated capital or a nullable one threaded through the types,
+ *   the reducer and the UI. Permanent drop (operator, 2026-08-06). It is peelable —
+ *   that was never the question.
+ * • Καστός — ~6 km², roughly 50 residents; shares Δήμος Λευκάδας with Κάλαμος and
+ *   would peel by the same mechanism, but sits an order of magnitude below the
+ *   recognisability of anything live. Deliberate omission (operator, 2026-08-06).
+ */
+export const DROPPED_ISLANDS: ReadonlyArray<{ readonly name: string; readonly why: string }> = [
+  { name: "Δήλος", why: "uninhabited — no capital for the bonus round" },
+  { name: "Καστός", why: "below the recognisability floor of every live answer" },
+];
 
 /**
  * Islands knowingly PARKED (not in v1 answers.json): they can't be peeled by a
  * municipality attribute (they share a municipality with a larger island) or
  * are too small to be a fair guess. They stay as islets inside their parent
  * shape. Curation must ADD to this list, never silently merge.
+ *
+ * 2026-08-06: EMPTY. The Lesser Cyclades — the only entry this list ever held —
+ * are live answers of their own; sharing the Naxos δήμος turned out not to block a
+ * peel at all, because the δήμος already arrives as one polygon per island (see
+ * POLYGON_PEELS). Kept as the lever for the next island that genuinely cannot be
+ * produced.
  */
 export const DEFERRED_ISLANDS: ReadonlyArray<{
   readonly islands: string;
   readonly parkedInside: string;
   readonly why: string;
-}> = [
-  {
-    islands: "Lesser Cyclades (Koufonisia, Schoinoussa, Iraklia, Donousa)",
-    parkedInside: "naxos",
-    why: "share the Naxos municipality — no attribute peel possible in v1",
-  },
-];
+}> = [];
 
 /**
  * Island answer ids EXCLUDED from emission (generateTopothesies drops any feature
@@ -110,22 +160,20 @@ export const DEFERRED_ISLANDS: ReadonlyArray<{
 export const DEFERRED_ANSWER_IDS: ReadonlySet<string> = new Set<string>([]);
 
 /**
- * Islands promoted to deferred but NOT peelable in v1 — they share a δήμος with a
- * larger island, so an attribute peel can't produce them; they need connected-
- * component polygon splitting the pipeline doesn't have yet. They have no
- * ANSWER_META / geometry: the preview renders them as flagged placeholder cards so
- * the final list is complete and the polygon-split work is visible. (2026-07-22)
+ * Islands with no geometry at all — the preview renders them as flagged
+ * placeholder cards so the «Νομοί & Νησιά» list stays complete and the missing
+ * work is visible. They have no ANSWER_META and never reach the live game.
+ *
+ * 2026-08-06: EMPTY (ticket 05). All six entries are resolved. Five became real
+ * answers via POLYGON_PEELS — the premise that put them here, "they need
+ * connected-component polygon splitting the pipeline doesn't have", was simply
+ * wrong: a multi-island δήμος already arrives as one polygon per island, so they
+ * only ever needed selecting. Δήλος was dropped permanently (DROPPED_ISLANDS).
+ * Kept as the lever for the next island that has no geometry to emit.
  */
 export const CANT_PEEL_PLACEHOLDERS: ReadonlyArray<{
   readonly id: string;
   readonly name: string;
   readonly capital: string;
   readonly parkedInside: string;
-}> = [
-  { id: "koufonisia", name: "Κουφονήσια", capital: "Άνω Κουφονήσι", parkedInside: "naxos" },
-  { id: "schoinoussa", name: "Σχοινούσα", capital: "Χώρα Σχοινούσας", parkedInside: "naxos" },
-  { id: "iraklia", name: "Ηρακλειά", capital: "Άγιος Γεώργιος", parkedInside: "naxos" },
-  { id: "donousa", name: "Δονούσα", capital: "Σταυρός", parkedInside: "naxos" },
-  { id: "delos", name: "Δήλος", capital: "—", parkedInside: "mykonos" },
-  { id: "kalamos", name: "Κάλαμος", capital: "Κάλαμος", parkedInside: "lefkada" },
-];
+}> = [];
