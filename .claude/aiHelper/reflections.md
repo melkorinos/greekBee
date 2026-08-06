@@ -61,7 +61,7 @@ reconciliation is finished. What stays worth watching is not the content but the
 
 ### 🟡 Πόσο κάνει; — engine built, awaiting real content (s124)
 
-The whole slice ships `wip:true` on **one placeholder puzzle** (Αγγούρι + an authored SVG). It is functionally complete but cannot go live until real dated puzzles exist — photos (open-license / own, never the gov `image_url`) + frozen gov reference prices. Tracked in **issue 13** (carries the gov API details + item list + the unresolved branded-photo policy from the deleted `posoKanei.md` handoff; git history keeps the full text). Flip `posokanei.wip:false` only after content + an operator play-through. Placeholder honesty: the sample photo/license strings say «Δείγμα / placeholder» on purpose — don't let a real-looking price slip in without a real source.
+The whole slice ships `wip:true` on **one placeholder puzzle** (Αγγούρι + an authored SVG). It is functionally complete but cannot go live until real dated puzzles exist — photos (open-license / own, never the gov `image_url`) + frozen gov reference prices. **Nothing tracks this any more** — issue 13 and the `posoKanei.md` handoff it absorbed were both deleted on 2026-07-31 when the wayfinder map replaced the issue list, and the launch map does not carry content sourcing. The gov API details, the item list and the unresolved branded-photo policy exist only in git history; this section is the live summary. Re-file an issue before starting the work. Flip `posokanei.wip:false` only after content + an operator play-through. Placeholder honesty: the sample photo/license strings say «Δείγμα / placeholder» on purpose — don't let a real-looking price slip in without a real source.
 
 ### 🟡 Λογοπαίγνιο — foundation only, two open risks carried forward (s126)
 
@@ -122,7 +122,7 @@ acceptance test for whatever replaces the mechanism. Two things to hold onto:
   discredit the half that works — the round-loss-on-refresh problem is real and now solved.
 - Still unverified on a real device: `beforeunload` on iOS Safari, and OS tab eviction (which never
   fires it at all — the mount-flush safety net is the only cover). Checklist in
-  `.claude/aiHelper/offlineFeature-handoff.md`.
+  `.claude/handoffs/offlineFeature-handoff.md`.
 - **PARKED 2026-08-04.** Operator chose hide-don't-revert: the code is proven isolated (every
   touchpoint is an `if (offlineActive)` branch, default false), so hiding the toggle is enough to
   unblock a production push while keeping a working implementation to revive. The risk to watch is
@@ -167,6 +167,22 @@ become frequent.
 - **Leksoplegma migrated (s129) — one real non-migration left.** `useLeksoplegmaRound` is now the fourth member (arch-review → `/tdd`, under an integration safety net). Its genuine variation is inside the reducer — `RESTORE_STATE` filters restored words against the current puzzle — not in the spine; the migration preserved it (test row locks it). `useLeksodromiaRound` must **never** be migrated: its clock, reset-on-advance effect, and restore-interleaved-with-`reset()` are real machinery, not copied ceremony. Deleting that distinction would be a regression disguised as consolidation.
 - **The snapshot memo is load-bearing.** Keying it on the projected *values* (not the state object) is what keeps localStorage writes tied to real progress; memoizing on `state` writes on every keystroke. The regression test in `useSlotFillRound.test.ts` is the only thing standing between a future "simplification" and a per-keystroke write. The ref-based alternative is a dead end — `react-hooks/refs` rejects it.
 
+### 🟡 Leksindeseis is `wip:true` in code and was "Live" in every doc (found 2026-08-06)
+
+A full documentation service found that `leksindeseis` has carried `wip: true` in
+`src/config/games.ts` since the registry was first written, and has never been flipped — so
+the picker and the Shell drawer file a finished, community-backed game under
+«Υπό κατασκευή», while README, `memory.md`, `goals.md` and `CONTEXT.md` all called it Live.
+Operator's call on 2026-08-06: **the code is right, the docs were wrong**; all four now say wip.
+
+What this is really an instance of: **`wip` is a one-word flag with no gate behind it.** Nothing
+tests that a game's documented status matches its registry row, and nothing prompts for the flip
+when a game finishes — Topothesies needed an explicit session (s121) to remember it, and the same
+session had to add the game to `Shell.tsx GAME_IDS` by hand because the flag alone would not have
+shown it. Two lessons: **read the registry, never the prose, when you need a game's real status**,
+and when a game does graduate, the flip is a checklist (registry flag + `GAME_IDS` + HomeTrophy
+branch + docs), not a one-line edit.
+
 ### 🟡 Word-length ladder may be near-unearnable + a thin card (s125)
 
 The word-length badges are **exact length** (operator's choice): a word of exactly 12 or 13 letters is genuinely rare on a Leksokipos board, so the 12/13 rungs may almost never earn, and a 14+ monster earns nothing at all. Same reason the "Λέξεις ανά μήκος" card (now 10/11/12/13+ only) will read near-empty for most players — most of a round's finds are short. Both are acceptable given the change's real goal (cap `player_words` growth, resolved issue 14), but if the badges feel dead or the card feels barren post-launch, the lever is `achievementTuning.wordLengthBadges` (drop to `[10,11,12]`, or make the top rung "13+") — everything (buckets, floor, detection, catalog) re-derives from that one array.
@@ -179,6 +195,6 @@ The word-length badges are **exact length** (operator's choice): a word of exact
 
 - **`dark:` Tailwind classes** — re-enabled safely via `@custom-variant dark (&:where(.dark, .dark *))` in `globals.css`. The prefix fires only when `.dark` is on `<html>` (never from `prefers-color-scheme`). `useTheme` hook owns the toggle; preference lives in `localStorage["theme-preference"]` outside the game-state envelope. ADR 0002 documents the decision ✅
 - **`FeedbackBanner` graduation** — triggered by Leksindeseis needing it; graduated cleanly with `theme` prop ✅
-- **`normalizeLetters` cross-game utility** — stays in `src/games/leksokipos/lib/normalize.ts` for now; Leksiarxeio imports it directly. Graduate to `src/lib/normalize.ts` when a third game needs it ✅ (tracked)
+- **`normalizeLetters` cross-game utility** — graduated: the real implementation is now `src/lib/normalize.ts` and every caller imports `@/lib/normalize`. `src/games/leksokipos/lib/normalize.ts` survives only as a two-line re-export shim ✅
 - **Leksiarxeio answer pool quality** — `answers-5.json` curated subset created; obscure words excluded ✅
 

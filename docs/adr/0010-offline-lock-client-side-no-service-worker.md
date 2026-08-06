@@ -6,7 +6,7 @@
 > and every guard is inert. The hook, outbox and provider stay wired but dormant. This unblocks a
 > production push without reverting working code.
 >
-> **`.claude/aiHelper/offlineFeature-handoff.md` is the live document** — it holds the revival paths,
+> **`.claude/handoffs/offlineFeature-handoff.md` is the live document** — it holds the revival paths,
 > their sizing, and what is still owed. Read it before touching this feature.
 >
 > One correction to the analysis below, found while parking: the routes are `force-dynamic` because
@@ -32,7 +32,7 @@
 > **What actually ships** is single-page offline protection: activate inside one game, keep playing
 > *that* game with refreshes blocked and the score preserved. That works and is genuinely useful.
 > The UI says so; the nav guard confirms on **every** in-app link, exempting nothing. Tracked in
-> `.claude/aiHelper/offlineFeature-handoff.md`.
+> `.claude/handoffs/offlineFeature-handoff.md`.
 >
 > Everything below is preserved as the record of what was decided and why it was wrong.
 
@@ -111,7 +111,7 @@ flush-and-unlock would surprise a player deliberately staying offline.
 - **A refresh while offline is unrecoverable**, because the pages are `force-dynamic`. This is why the feature blocks refresh via `beforeunload` rather than merely warning. The browser's dialog copy is not customisable, so the explanation must live in the activating UI.
 - **Cross-game navigation works only for routes prefetched at activation time.** Prefetch is best-effort and the Next router cache has its own lifetime — a long offline session may outlive it. This is the feature's most likely under-delivery and must be verified against a real offline session.
 - The Offline Score Outbox is a localStorage record **keyed by `(gameId, puzzleDate)`**, overwriting per key: `{ gameId, puzzleDate, deviceId, score, displayName }`. It is not a queue — `game_scores` upserts by `(device_id, game_id, puzzle_date)`, so only the latest score matters. *(Originally a single global entry; keyed from the start to avoid a stored-data migration and to stop a second game silently discarding the first game's pending score.)*
-- **Only Leksokipos scores are queued** in the first pass. The other finished games are playable offline but their scores are lost — a conscious deferral tracked in `.claude/aiHelper/offlineFeature-handoff.md`.
+- **Only Leksokipos scores are queued** in the first pass. The other finished games are playable offline but their scores are lost — a conscious deferral tracked in `.claude/handoffs/offlineFeature-handoff.md`.
 - Flushing requires a **success signal that `postScore` does not provide** — it is fire-and-forget and returns `void`. An async sibling `postScoreAwaitable` is added; `postScore` stays untouched so the eight games posting through it keep its "never crash the game" guarantee.
 - `game_state` (found-words cross-device sync) is not queued. It self-heals: the first word found after reconnect triggers a push of the full `foundWords` array via the existing `useGameStateSync` path.
 - **Score queueing** is restricted to Leksokipos Daily Puzzles. Custom Puzzles have no leaderboard and no `puzzleDate` to key an outbox entry on — they remain playable offline, they simply queue nothing.

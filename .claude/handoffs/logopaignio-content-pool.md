@@ -22,7 +22,7 @@
 
 **Nothing has been approved yet.** Every asset is in gitignored staging (`public/logopaignio/_raw/`); `puzzles-el.json` still holds only the fake «Δείγμα» placeholder. The eye check is the next human step.
 
-**Review surface:** `.claude/aiHelper/logopaignio-preview.html` — 209 cards grouped by sector, with filter buttons (Όλα / Καθαρά / Με προειδοποίηση / Προβληματικά / Χωρίς αρχείο / **Θέλουν εικόνα από εσένα**). Regenerate with `npm run logopaignio:preview`.
+**Review surface:** `.claude/aiHelper/html/logopaignio-preview.html` — 209 cards grouped by sector, with filter buttons (Όλα / Καθαρά / Με προειδοποίηση / Προβληματικά / Χωρίς αρχείο / **Θέλουν εικόνα από εσένα**). Regenerate with `npm run logopaignio:preview`.
 
 ---
 

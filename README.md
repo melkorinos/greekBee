@@ -4,16 +4,21 @@ A multi-game browser platform for Greek (and English) word games, built with **N
 
 ## Games
 
+Status comes from the `wip` flag in [`src/config/games.ts`](src/config/games.ts) — that registry is the source of truth if this table drifts. A `wip: true` game still renders and is playable, but the picker and the shell drawer file it under «Υπό κατασκευή».
+
 | Game | Route | Status | Description |
 |------|-------|--------|-------------|
 | 🌸 Leksokipos | `/leksokipos` | Live | 7-letter flower grid — find words containing the center letter |
-| 🟩 Leksiarxeio | `/leksiarxeio` | Live | Guess a hidden Greek word (4–8 letters) in 6 attempts — switch length in-game |
-| 🔗 Leksindeseis | `/leksindeseis` | Live | Group 16 curated words into 4 categories of 4 |
-| 💬 Vres Tin Frasi | `/vres-tin-frasi` | Live | Guess the daily Greek phrase (3–4 words) tile-by-tile |
-| ✏️ Stavrolekso | `/stavrolekso` | Live | Browse & solve community-submitted Greek crosswords |
-| 🏃 Leksodromia | `/leksodromia` | Live | Daily anagram sprint — unscramble 10 words against a decaying-points clock |
+| ✏️ Leksiarxeio | `/leksiarxeio` | Live | Guess a hidden Greek word (4–8 letters) in 6 attempts — switch length in-game |
+| 💬 Vres Tin Frasi | `/vres-tin-frasi` | Live | Guess the daily Greek phrase (2–9 words) tile-by-tile |
+| ♟️ Stavrolekso | `/stavrolekso` | Live | Browse & solve community-submitted Greek crosswords |
+| 🏁 Leksodromia | `/leksodromia` | Live | Daily anagram sprint — unscramble 10 words against a decaying-points clock |
 | 🕸️ Leksoplegma | `/leksoplegma` | Live | Daily word-web — trace authored words across a 4×4 tile grid (no timer) |
+| 🗺️ Topothesies | `/topothesies` | Live | Guess the Greek regional unit from its silhouette, then its capital |
 | ⚖️ Leksikastirio | `/leksikastirio` | Live | Community word court — vote on words to add or remove from the dictionary |
+| 🔗 Leksindeseis | `/leksindeseis` | wip | Group 16 curated words into 4 categories of 4 |
+| 🛒 Πόσο κάνει; | `/posokanei` | wip | Guess a supermarket product's price in 6 guesses — awaiting real content |
+| 🔎 Λογοπαίγνιο | `/logopaignio` | wip | Guess the Greek company from its de-blurring, name-stripped logo mark |
 
 All games share a common shell (hamburger navigation menu), a unified persistence layer, and a consistent design foundation. Each game's logic, state, and data are fully isolated.
 
@@ -46,8 +51,8 @@ npm run apply-nominations
 The script reads `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` from `.env.local`.
 
 It writes `src/data/words-el.json` and re-syncs every game whose premade data is
-derived from it (Leksokipos, Leksiarxeio, Leksoplegma, Leksodromia) — see
-ADR 0015. Anything it cannot safely auto-fix (curated Leksoplegma grid geometry,
+derived from it (Leksokipos, Leksiarxeio, Leksoplegma, Leksodromia, and Vres Tin
+Frasi's short guess pools) — see ADR 0015 and `scripts/lib/resync/registry.ts`. Anything it cannot safely auto-fix (curated Leksoplegma grid geometry,
 curated Leksodromia answer pools) is reported under `⚠ Manual action required`
 instead of being silently rewritten. Review the git diff, then build and deploy.
 
@@ -77,6 +82,10 @@ This project is managed with a dedicated AI coding agent using **Claude Code**. 
 | `.claude/aiHelper/goals.md` | Roadmap — completed phases + current focus |
 | `.claude/aiHelper/log.md` | Per-session changelog |
 | `.claude/aiHelper/reflections.md` | Post-session risks, tensions, and open questions |
+| `.claude/aiHelper/coverageMap.md` | Per-file test coverage map — loaded on demand, never at session start |
+| `.claude/aiHelper/skillsNotes.md` | Skill install/fork/junction traps — read before any skill maintenance |
+
+Longer-lived working documents live outside `aiHelper/`: `.claude/handoffs/` holds parked feature briefs (monetization, offline mode, the Λογοπαίγνιο content pool, badge ideas, the engagement epic), and `.claude/issue-tracker/` holds issues and the wayfinder decision map.
 
 ### Claude Code workflow
 
@@ -101,10 +110,14 @@ All commands live in `.claude/skills/`.
 | `/diagnosing-bugs` | Disciplined debugging loop — reproduce → minimise → hypothesise → instrument → fix → regression-test (formerly `/diagnose`) |
 | `/tdd` | Test-driven development with red-green-refactor vertical slices |
 | `/handoff` | Compact the current conversation into a handoff document for the next agent session |
+| `/wayfinder` | Chart a chunk of work too big for one session as a map of decision tickets, then resolve them one at a time |
+| `/code-review` | Two-axis review of a diff (Standards + Spec) in parallel sub-agents. **Shadows the Claude Code built-in of the same name**, including `/code-review ultra` |
+| `/research` | Background agent investigates a question against primary sources and writes the findings to a Markdown file |
+| `/prototype` | Build a throwaway prototype to answer one design question |
 | `/setup-matt-pocock-skills` | One-time setup: configure issue tracker, triage labels, and domain doc layout |
 | `/writing-great-skills` | Reference for writing/editing skills well (formerly `/write-a-skill`) |
 
-The skill set was pruned to this curated list on 2026-07-16 (plus three base skills with no slash command of their own: `grilling`, `domain-modeling`, `codebase-design`). `CLAUDE.md` is the authoritative copy of this table — if the two disagree, trust `CLAUDE.md`.
+The skill set was pruned to a curated list on 2026-07-16 and extended on 2026-07-17 with `/wayfinder`, `/code-review`, `/research` and `/prototype`. Three base skills have no slash command of their own and exist only to back the wrappers: `grilling`, `domain-modeling`, `codebase-design`. **This table is the authoritative list** — `CLAUDE.md` states the standing rules about skills and points here. Install/fork/junction traps live in [`.claude/aiHelper/skillsNotes.md`](.claude/aiHelper/skillsNotes.md); read it before any skill maintenance.
 
 ---
 
@@ -145,7 +158,7 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
 
 ## How the game works — step by step
 
-> This describes the **Leksokipos** flow. Leksiarxeio and Leksindeseis follow the same shell/persistence patterns but have their own pure-logic modules under `src/games/`.
+> This describes the **Leksokipos** flow. Every other game follows the same shell/persistence patterns but has its own pure-logic modules under `src/games/`; the round-based games additionally share one of the two round spines (ADR 0019).
 
 1. **Puzzle load** (`src/app/leksokipos/page.tsx` — server component)
    - The server reads the `?puzzle=YYYY-MM-DD` query param (or uses today's date).
@@ -174,7 +187,7 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
    - 4-letter word → 1 pt
    - 5+ letter word → 1 pt per letter
    - Pangram (uses all 7 letters) → above + 7 bonus pts
-   - `maxScore` = sum of all word scores, scaled to 85%, then a soft cap (`softCap`) compresses totals above the knee so each puzzle's rank bar tracks its richness (no hard ceiling). Knobs: `SOFT_CAP_KNEE`, `SOFT_CAP_K`.
+   - `maxScore` = sum of all word scores, scaled by `SCORE_SCALE` (0.75), then a soft cap (`softCap`) compresses totals above the knee so each puzzle's rank bar tracks its richness (no hard ceiling). Knobs live in `src/config/gameRules.ts`: `SCORE_SCALE`, `SOFT_CAP_KNEE`, `SOFT_CAP_K` — that file is the source of truth if these numbers drift.
 
 7. **Rank calculation** (`src/games/leksokipos/lib/ranking.ts`)
    - Score is compared against thresholds as a % of `maxScore`:
@@ -221,17 +234,24 @@ src/
     stavrolekso/    Community crossword browser + maker (/[id], /maker)
     leksodromia/    Daily anagram sprint (decay-to-floor scoring)
     leksoplegma/    Daily word-web (trace words across a 4×4 grid, no timer)
+    topothesies/    Daily Greek geography (silhouette → regional unit → capital)
+    posokanei/      Daily guess-the-price (wip)
+    logopaignio/    Daily guess-the-logo (wip)
     profile/        Player identity, Lifetime Stats, Trophy Case
     leksikastirio/  Community word-court (public voting + admin review)
-    api/            Edge routes: game-scores, game-state, profile, transfer, nominations, community-puzzles, pangrams, auth
+    api/            Edge routes: game-scores, game-state, profile, transfer, nominations, community-puzzles, pangrams, words, auth
   components/
-    shared/         Cross-game UI primitives (Shell, FeedbackBanner, HowToPlayModal, LetterPickerModal)
+    shared/         Cross-game UI primitives (Shell, GamePageShell, GameHeader, Modal, FeedbackBanner, FramedMedia, GameLeaderboardModal, LetterPickerModal)
     leksokipos/     Leksokipos components (LeksokiposLayout, GameBoard, FlowerGrid, FlowerGridPlayground, ScoreBar, LeaderboardModal, …)
     leksiarxeio/    Leksiarxeio components (LeksiarxeioBoard, GuessGrid, Tile, Keyboard)
     leksindeseis/   Leksindeseis components (GroupGrid, WordCard, CategoryReveal, ConnectionsBoard, ConnectionsLeaderboardModal)
     vrestifrasi/    Vres Tin Frasi components (board, phrase tiles, leaderboard modal)
     leksodromia/    Leksodromia components (board, tile rack, recap, leaderboard modal)
     leksoplegma/    Leksoplegma components (board, SVG live edges, hint chips, recap)
+    topothesies/    Topothesies components (silhouette, guess autocomplete, board, name reveal, result)
+    posokanei/      Πόσο κάνει; components (board, price input, result) — wip
+    logopaignio/    Λογοπαίγνιο components (de-blurring logo reveal, typed guess field, board, result) — wip
+    profile/        Profile Page cards (Lifetime Stats strip, Trophy Case, Words by Length)
     leksikastirio/  Community word-court admin / voting UI
   games/            Pure logic — one folder per game, zero React imports
     leksokipos/
@@ -261,6 +281,18 @@ src/
       lib/          graph, scoring, generator (offline generator core), dataLoader
       hooks/        useLeksoplegmaRound, leksoplegmaReducer
       types.ts
+    topothesies/
+      lib/          geo (haversine/arrow/proximity), selectDailyPuzzle, evaluateGuess, scoring, topothesiesReducer, shareText
+      hooks/        useTopothesiesRound
+      types.ts
+    posokanei/
+      lib/          evaluateGuess (price proximity), format, selectDailyPuzzle, scoring, posokaneiReducer, shareText
+      hooks/        usePosokaneiRound
+      types.ts
+    logopaignio/
+      lib/          evaluateGuess (accept-list brand matching), blur, selectDailyPuzzle, scoring, logopaignioReducer, shareText
+      hooks/        useLogopaignioRound
+      types.ts
   hooks/
     useGameStore.ts        Unified localStorage envelope — the only code that touches localStorage
     usePlayerIdentity.ts   Bundles migrate + useGameIdentity + useProfile + useAuth for side-effect-free surfaces
@@ -269,6 +301,9 @@ src/
     useLiveScorePost.ts    Continuous-post + finish-once-open policy shared by the round games
     useRoundPersistence.ts Generic per-session persistence hook (hydrate/save/clear)
     useGameStateSync.ts    Cross-device sync hook — pushes Leksokipos state on valid word submit
+    useGuessRound.ts       Round spine for the guess family (leksiarxeio, vrestifrasi) — ADR 0019
+    useSlotFillRound.ts    Round spine for the slot-fill family (topothesies, posokanei, logopaignio, leksoplegma) — ADR 0019
+    useOfflineMode.tsx     Offline Mode context — PARKED (ADR 0010), wired but unreachable
   data/
     leksokipos/     puzzles-el.json (daily puzzles), index.ts
     leksiarxeio/    words-2..8.json (per-length guess lists), answers-4..8.json (curated answer pools), answerPools.ts (same-day-answer seam), index.ts
@@ -276,16 +311,23 @@ src/
     vrestifrasi/    phrases-el.json (static phrase fallback), index.ts
     leksoplegma/    puzzles-el.json (committed generator batch, npm run generate-leksoplegma), index.ts
     leksodromia/    anagramAlternates.json (anagram credit for curated answers), index.ts (words derived from the leksiarxeio answer pools)
+    topothesies/    answers.json + shapes.json (precomputed SVG silhouette paths, ADR 0018), index.ts
+    posokanei/      puzzles-el.json (placeholder pool), index.ts
+    logopaignio/    puzzles-el.json (placeholder pool), index.ts
     words-el.json   ~795k normalised Greek words (no accents, ς→σ)
   lib/
     apiRoute.ts     The route envelope — parseJson, requireAdmin, jsonError/jsonMessage (ADR 0016)
     greeklish.ts    Bijective Greek↔greeklish codec for clean ASCII custom URLs
-    postScore.ts    Fire-and-forget POST utility — silently swallows network errors
+    normalize.ts    normalizeLetters() — the platform's single Greek normalisation point
+    postScore.ts    Fire-and-forget POST utility (+ postScoreAwaitable for the offline flush)
     supabase.ts     Typed Supabase clients (anon / token-scoped / service-role, ADR 0017)
-    communityPuzzleLifecycle.ts  Submit → approve/reject → consume, shared by all community-puzzle games
-    puzzleDate.ts   todayISO() and friends — the platform's single clock
+    communityPuzzleLifecycle.ts  Submit → approve/reject → serve, shared by all community-puzzle games
+    puzzleDate.ts   todayISO(), nextFreeScheduledDate() — the platform's single clock
+    placement.ts    Podium/first-place counts derived from full game_scores history
+    scoreMerge.ts / achievementMerge.ts / pangramMerge.ts / wordsMerge.ts  Sign-in Restore merge planners (ADR 0012/0013)
+    offlineOutbox.ts             Pending offline scores (PARKED with Offline Mode, ADR 0010)
   types/            Shared types: Language, SliceId, PersistenceEnvelope
-scripts/            Puzzle generation & curation CLIs (batch-generate, curate-answers, …)
+scripts/            Puzzle generation & curation CLIs (batch-generate, curate-answers, generate-topothesies, logopaignio fetchers, …)
 ```
 
 **Key design principles:**
@@ -302,13 +344,17 @@ scripts/            Puzzle generation & curation CLIs (batch-generate, curate-an
 
 **Leksiarxeio** — live. Rolling 7-day daily leaderboard via Supabase (`game_scores` with `game_id = "leksiarxeio"`, per-length rows via `word_length`). Score = sum of in-game points across all 5 lengths (4–8) for a given day (6 pts for a 1st-guess solve … 1 pt at the 6th); higher = better. Failed/unplayed length = 0. Players appear on the board as soon as they finish at least one length.
 
-**Leksindeseis** — live. Per-puzzle leaderboard via Supabase (`game_scores` with `game_id = "leksindeseis"`). Score = mistakes remaining (1–4) when won; higher = better. Lost games do not appear on the board.
+**Leksindeseis** — board wired, game still `wip: true`. Per-puzzle leaderboard via Supabase (`game_scores` with `game_id = "leksindeseis"`). Score = mistakes remaining (1–4) when won; higher = better. Lost games do not appear on the board.
 
 **Vres Tin Frasi** — live. Per-day leaderboard via Supabase (`game_scores` with `game_id = "vrestifrasi"`). Score = points from `scoreVresTinFrasi` (6 pts for a 1-guess win … 1 pt for a 6-guess win; loss = 0); higher = better (ADR 0014 — every leaderboard is higher-is-better).
 
 **Leksodromia** — live. Per-day leaderboard (`game_id = "leksodromia"`). Score = decay-scoring points across the 10-word run (perfect round = 1000); higher = better.
 
 **Leksoplegma** — live. Per-day leaderboard (`game_id = "leksoplegma"`). Score = required-word + extra-word points minus hint costs; higher = better.
+
+**Topothesies** — live. Per-day leaderboard (`game_id = "topothesies"`). Score = 100 per remaining shape guess (of 5) + 40 per remaining capital guess (of 3); a failed stage scores nothing but the other still counts. Higher = better.
+
+**Πόσο κάνει;** and **Λογοπαίγνιο** — wired into the same board (`posokanei` / `logopaignio`), 100 points per remaining guess, but both games are still `wip: true` and run on a single placeholder puzzle.
 
 ---
 
@@ -319,9 +365,10 @@ Tracked as individual issues in [`.claude/issue-tracker/issues/`](.claude/issue-
 | # | Issue | Status |
 |---|-------|--------|
 | 02 | [No disaster-recovery backups](.claude/issue-tracker/issues/02-no-disaster-recovery-backups.md) | needs-triage |
-| 03 | [Unit tests never run in CI](.claude/issue-tracker/issues/03-unit-tests-never-run-in-ci.md) | needs-triage |
-| 04 | [Stavrolekso edit PIN readable by anon](.claude/issue-tracker/issues/04-stavrolekso-edit-pin-readable-by-anon.md) | ready-for-agent |
-| 05 | [words-2/3.json missed by nomination re-sync](.claude/issue-tracker/issues/05-vrestifrasi-short-word-lists-missed-by-resync.md) | needs-triage |
+
+### Open decisions (wayfinder map)
+
+Larger open *questions* — the ones that must be answered before work can be ticketed — live in a separate directory, [`.claude/issue-tracker/tickets/`](.claude/issue-tracker/tickets/), as a wayfinder map. The live map is [Public launch readiness](.claude/issue-tracker/tickets/00-MAP-public-launch-readiness.md); its open tickets are the launch checklist (01), the UI redesign scope (02) and the launch sequencing (09). Resolved tickets are folded into the map's "Decisions so far" and deleted.
 
 ---
 
@@ -332,7 +379,7 @@ npm run test              # single run, all files
 npm run test:watch        # watch mode (re-runs on save)
 ```
 
-The authoritative, per-file **Test Coverage Map** lives in [`.claude/aiHelper/memory.md`](.claude/aiHelper/memory.md) (single source of truth — grep its `describe` column before writing a new test). It is kept current every session; this README does not duplicate it.
+The authoritative, per-file **Test Coverage Map** lives in [`.claude/aiHelper/coverageMap.md`](.claude/aiHelper/coverageMap.md) (single source of truth — grep its `describe` column before writing a new test). It is deliberately *not* loaded at session start; this README does not duplicate it.
 
 End-to-end (Playwright):
 

@@ -20,6 +20,10 @@ export const GAME_REGISTRY = {
     href:        "/leksiarxeio",
     wip:         false,
   },
+  // Fully built and community-backed, but DELIBERATELY still wip:true — confirmed
+  // by the operator on 2026-08-06, when a docs audit found every doc calling it
+  // Live. Do not "fix" this flag; promoting it is a launch decision (see the
+  // wayfinder map, .claude/issue-tracker/tickets/).
   leksindeseis: {
     label:       "🔗 Leksindeseis",
     emoji:       "🔗",
@@ -81,7 +85,8 @@ export const GAME_REGISTRY = {
   },
   // Daily "guess the supermarket price" game. Ships wip:true (single placeholder
   // puzzle + sample photo); flip to false once real content is sourced (photos +
-  // gov reference prices — handoff posoKanei.md).
+  // gov reference prices). No handoff or issue tracks that work any more — the
+  // live summary is the «Πόσο κάνει;» section of .claude/aiHelper/reflections.md.
   posokanei: {
     label:       "🛒 Πόσο κάνει;",
     emoji:       "🛒",
@@ -92,7 +97,8 @@ export const GAME_REGISTRY = {
   },
   // Daily "guess the Greek company from its name-stripped logo mark" game. Ships
   // wip:true (single placeholder puzzle); flip to false once ~30 real brands are
-  // sourced (mark assets + accept-lists — handoff logopaignio-content-pool.md).
+  // sourced (mark assets + accept-lists). Brief:
+  // .claude/handoffs/logopaignio-content-pool.md — deliberately off the launch map.
   logopaignio: {
     label:       "🔎 Λογοπαίγνιο",
     emoji:       "🔎",

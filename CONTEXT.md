@@ -8,7 +8,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Platform** — The entire application: shell, navigation, persistence, and all games. Named **Leksarxeia** (the brand shown in the Shell header and picker). (Not: app, site)
 
-**Game** — A distinct word-game mode. Currently: Leksokipos, Leksiarxeio, Leksindeseis, Vres Tin Frasi, Stavrolekso, Leksodromia, Leksoplegma. In progress (wip): Topothesies. The platform's scope widens from "Greek word games" to "Greek **games**" with Topothesies (ADR 0018).
+**Game** — A distinct game mode. Live: Leksokipos, Leksiarxeio, Vres Tin Frasi, Stavrolekso, Leksodromia, Leksoplegma, Topothesies (plus the Leksikastirio word-court, which is not a Game). In progress (`wip: true` in `src/config/games.ts`, still rendered but filed under «Υπό κατασκευή»): Leksindeseis, Πόσο κάνει;, Λογοπαίγνιο. The platform's scope widened from "Greek word games" to "Greek **games**" with Topothesies (ADR 0018). (Not: app mode, level)
 
 **Regional unit** *(Topothesies)* — Greek περιφερειακή ενότητα; the admin level a Topothesies answer identifies. Island-cluster units are split into per-island entries; see ADR 0018. (Not: prefecture, νομός — retired admin level.)
 
@@ -39,7 +39,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Leaderboard** — Ranked Scores for a specific Daily Puzzle, 7-day rolling window. Only Daily Puzzles have one. (Not: rankings)
 
-**Puzzle** — A single playable instance of a Game on a given date. Types: `LeksokiposPuzzle`, `LeksiarxeioPuzzle`, `LeksindeseisPuzzle`, `VresTinFrasiPuzzle`, `LeksoplegmaPuzzle`. Leksodromia has no stored puzzle type — its daily round is derived deterministically from the Leksiarxeio Word Pools. (Not: board, level)
+**Puzzle** — A single playable instance of a Game on a given date. Types: `LeksokiposPuzzle`, `LeksiarxeioPuzzle`, `LeksindeseisPuzzle`, `VresTinFrasiPuzzle`, `LeksoplegmaPuzzle`, `PosokaneiPuzzle`, `LogopaignioPuzzle`. Topothesies has no `…Puzzle` type — its daily round is a `TopothesiesAnswer` plus its `TopothesiesShape`. Leksodromia has no stored puzzle type — its daily round is derived deterministically from the Leksiarxeio Word Pools. (Not: board, level)
 
 **Daily Puzzle** — A Puzzle shared by all players on a given day (date-scoped ID).
 
@@ -67,7 +67,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Score** *(Leksokipos)* — Accumulated points: 4-letter words = 1 pt; 5+ = 1 pt/letter; Pangram +7 pt bonus.
 
-**Max Score** *(Leksokipos)* — Sum of all Valid Word scores, scaled to 85%, then passed through a soft cap: unchanged below the knee (`SOFT_CAP_KNEE`), logarithmically compressed above it (`SOFT_CAP_K`) so the value keeps rising with a puzzle's richness instead of pinning to one number — no hard ceiling. Used for Rank thresholds and as the Endgame Zone trigger.
+**Max Score** *(Leksokipos)* — Sum of all Valid Word scores, scaled by `SCORE_SCALE` (0.75 since the 2026-07-30 rebalance), then passed through a soft cap: unchanged below the knee (`SOFT_CAP_KNEE`), logarithmically compressed above it (`SOFT_CAP_K`) so the value keeps rising with a puzzle's richness instead of pinning to one number — no hard ceiling. Used for Rank thresholds and as the Endgame Zone trigger.
 
 **Endgame Zone** *(Leksokipos)* — Scoring range entered when `score ≥ maxScore` (daily puzzles only). The rank-ladder popup is replaced by an endgame panel showing: total Valid Words remaining, pangrams remaining, and a count per word length (longest first). No hints are given.
 
@@ -93,7 +93,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Leaderboard Score** *(Leksiarxeio)* — Sum of In-game Points across all 5 Lengths for a given date. Higher is better. Failed/unplayed length = 0 pts. API field named `score`. Display label: "Σκορ".
 
-**Phrase** *(Vres Tin Frasi)* — The daily answer: a 3–4 word Greek saying or common expression. Each word is 2–8 letters. The phrase must have cultural/linguistic coherence — not random words. Stored as display form (accented, natural case); normalised at runtime for evaluation. (Not: sentence, expression)
+**Phrase** *(Vres Tin Frasi)* — The daily answer: a 2–9 word Greek saying or common expression (`MIN/MAX_PHRASE_WORDS`; five words is the norm and the classic proverbs reach nine). Each word is 1–8 letters (`MIN/MAX_WORD_LENGTH` — 1 is the standalone articles «η»/«ο», 8 is a deliberate ceiling the corpus is authored to fit). The phrase must have cultural/linguistic coherence — not random words. Stored as display form (accented, natural case); normalised at runtime for evaluation. (Not: sentence, expression)
 
 **Phrase Pool** *(Vres Tin Frasi)* — Source of daily Phrases. Community-approved phrases take priority; static JSON of ~500 pre-computed Greek phrases is the fallback. Stored in `community_vrestifrasi_puzzles` (community) and `phrases-el.json` (static).
 
@@ -205,11 +205,11 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Offline Mode** — A deliberate, platform-wide client-side state, toggled from the Shell drawer, that protects **the round the player is currently in** when the network drops. Activated **while still online**; it blocks browser refresh (`beforeunload`), confirms before **every** in-app navigation, and holds the score in the Offline Score Outbox until manual deactivation flushes it. **Single-page only — switching games offline does not work** and the UI says so: every game page is `force-dynamic`, so its payload is not served from cache and a navigation offline hits the browser's connection-error page. Route prefetching does not change this (proven 2026-08-03, `e2e/offlineMode.spec.ts`); delivering the originally-designed multi-game offline play needs a service worker, which reopens ADR 0010. *(Renamed from **Offline Lock**, the superseded Leksokipos-only toggle.)* (Not: airplane mode, PWA, service worker, cold start, cross-game offline play)
 
-**Offline Score Outbox** — A localStorage record (`wordgames:offline-outbox`) holding pending Scores earned during Offline Mode, **keyed by `(gameId, puzzleDate)`** and overwriting per key: `{ gameId, puzzleDate, deviceId, score, displayName }`. Not an append queue — `game_scores` upserts by `(device_id, game_id, puzzle_date)`, so only the latest Score per key matters; keying per game stops a second game played offline from discarding the first game's pending Score. Flushed to `game_scores` on deactivate, or on the next page mount if an entry exists (the safety net for a player who forgot to deactivate). Kept on flush failure and retried. Flushing bypasses `useScoreSubmission` and calls `postScoreAwaitable` directly, since `postScore` is fire-and-forget and cannot report failure. The **one documented exception** to "`useGameStore` is the only localStorage writer" — it is not game state, so it gets its own key. **Only Leksokipos queues today**; the other games are playable offline but their Scores are lost. **Offline Mode is PARKED (2026-08-04)** — the drawer toggle is removed, so nothing can reach the outbox; the flush-on-mount stays live to rescue any entry stranded from the preview period. See `.claude/aiHelper/offlineFeature-handoff.md`. (Not: queue, cache, retry buffer)
+**Offline Score Outbox** — A localStorage record (`wordgames:offline-outbox`) holding pending Scores earned during Offline Mode, **keyed by `(gameId, puzzleDate)`** and overwriting per key: `{ gameId, puzzleDate, deviceId, score, displayName }`. Not an append queue — `game_scores` upserts by `(device_id, game_id, puzzle_date)`, so only the latest Score per key matters; keying per game stops a second game played offline from discarding the first game's pending Score. Flushed to `game_scores` on deactivate, or on the next page mount if an entry exists (the safety net for a player who forgot to deactivate). Kept on flush failure and retried. Flushing bypasses `useScoreSubmission` and calls `postScoreAwaitable` directly, since `postScore` is fire-and-forget and cannot report failure. The **one documented exception** to "`useGameStore` is the only localStorage writer" — it is not game state, so it gets its own key. **Only Leksokipos queues today**; the other games are playable offline but their Scores are lost. **Offline Mode is PARKED (2026-08-04)** — the drawer toggle is removed, so nothing can reach the outbox; the flush-on-mount stays live to rescue any entry stranded from the preview period. See `.claude/handoffs/offlineFeature-handoff.md`. (Not: queue, cache, retry buffer)
 
 ---
 
-## Database tables (13)
+## Database tables (14)
 
 > **Authoritative schema** — columns, types, constraints, RLS policies and indexes live in `supabase/migrations/` (the `*_baseline_remote_schema.sql` baseline plus any later migrations), **not here**. Change the schema only via a new migration file applied with `npx supabase db push`; never edit the live DB without one, or the repo drifts. This table documents each table's **purpose** and the shape of its `jsonb` blobs (which the DDL can't express).
 

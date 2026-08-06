@@ -1,9 +1,15 @@
-# ADR 0018 — Topothesies: regional-unit silhouettes from static CC-BY geodata
+# ADR 0018 — Topothesies: regional-unit silhouettes from static, precomputed geodata
 
 **Status**: Accepted — **amended 2026-08-06** (see "Amendments" at the end). The
 data source, the landmass-selection rule and the "no polygon splitting" limit have
 all moved since this was written; decisions 1, 2 and `PROXIMITY_MAX_KM` below are
 superseded there. Everything else still holds.
+
+> **Licence, current:** the shipped boundaries are **OpenStreetMap `admin_level=7`
+> δήμοι under ODbL** — the swap happened in session 119. The "CC-BY" framing in the
+> original title and in decision 2 below describes the *rejected* geodata.gov.gr
+> source and is kept only for the record. Attribution lives in `attribution.ts` and
+> the HowToPlay modal.
 
 ## Context
 

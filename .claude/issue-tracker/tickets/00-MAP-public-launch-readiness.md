@@ -111,7 +111,7 @@ no open question stands between here and pressing the button.
   re-examined against the operator's "on the plane" framing and **rejected a second time** (every
   game page is `force-dynamic`, so cold start needs a service worker *plus* a rendering
   rearchitecture). Score queueing stays **Leksokipos-only** in the first pass; the rest is deferred
-  to [the parked handoff](../../aiHelper/offlineFeature-handoff.md). Brief:
+  to [the parked handoff](../../handoffs/offlineFeature-handoff.md). Brief:
   ADR 0010 amended. *(The surviving detail lives in ADR 0010 and the handoff.)*
   **BUILT 2026-08-03 (s132), then SCOPE-REDUCED the same day.** Cross-game offline play — the
   feature's headline promise — **does not work**: `force-dynamic` payloads are not cached, so
@@ -142,9 +142,11 @@ no open question stands between here and pressing the button.
 - **Content supply after launch.** `reflections.md` flags the thin Leksindeseis static-fallback
   pool and there is no reminder system. A public audience burns puzzle pools faster than a
   private one. Not yet sharp: unclear whether this is a launch blocker or a week-two problem.
-- **Which games launch.** All 8+ are live on the picker, but Λογοπαίγνιο is `wip:true` and
-  deferred. Whether it stays visible-but-wip, hidden, or gated is a decision that hangs on the
-  launch checklist.
+- **Which games launch.** Eleven games are registered; **three are `wip: true`** and render under
+  «Υπό κατασκευή» — Λογοπαίγνιο and Πόσο κάνει; (both awaiting real content) and **Leksindeseis**,
+  which is fully built and whose flag was simply never flipped (confirmed deliberate by the
+  operator on 2026-08-06). Whether each stays visible-but-wip, hidden, gated, or is promoted is a
+  decision that hangs on the launch checklist.
 - **E2E coverage depth.** `goals.md` wants happy-path coverage per game. Whether the current
   Playwright suite is sufficient for a launch gate is unclear until the checklist exists.
 
