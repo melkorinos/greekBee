@@ -22,7 +22,7 @@ import { NextRequest } from "next/server";
 
 interface ScoreRow { id: number; game_id: string; puzzle_date: string; score: number }
 interface AchievementRow { id: number; achievement_id: string }
-interface PangramRow { id: number; puzzle_date: string; word: string }
+interface MilestoneRow { id: number; puzzle_date: string; kind: string; detail: string }
 interface Anchor   { device_uuid: string; display_name: string }
 
 interface DbState {
@@ -34,8 +34,8 @@ interface DbState {
   scoresByDevice?:  Record<string, ScoreRow[]>;
   /** player_achievements rows by device_uuid. */
   achievementsByDevice?: Record<string, AchievementRow[]>;
-  /** player_pangrams rows by device_uuid. */
-  pangramsByDevice?: Record<string, PangramRow[]>;
+  /** player_milestones rows by device_uuid. */
+  milestonesByDevice?: Record<string, MilestoneRow[]>;
   failUpsert?:      boolean;
   failAuditInsert?: boolean;
 }
@@ -78,9 +78,9 @@ function resolveRead(table: string, eqs: [string, unknown][]) {
     const device = eqVal(eqs, "device_uuid") as string;
     return { data: _db.achievementsByDevice?.[device] ?? [], error: null };
   }
-  if (table === "player_pangrams") {
+  if (table === "player_milestones") {
     const device = eqVal(eqs, "device_uuid") as string;
-    return { data: _db.pangramsByDevice?.[device] ?? [], error: null };
+    return { data: _db.milestonesByDevice?.[device] ?? [], error: null };
   }
   return { data: null, error: null };
 }
@@ -348,36 +348,68 @@ describe("POST /api/auth/link — restore mode", () => {
     expect(_writes.some((w) => w.table === "player_achievements" && w.op === "update")).toBe(false);
   });
 
-  // ── Pangram merge (ADR 0013 lane C): the append-only find set must union on Restore ──
+  // ── Milestone merge (ADR 0013): the append-only fact set must union on Restore ──
+  //
+  // One merge covers all four kinds — pangram/word finds and the two day counters —
+  // replacing the separate pangram and word merges the two dropped tables each had.
 
-  it("re-points the old device's pangrams onto the canonical identity (union)", async () => {
+  it("re-points the old device's milestones onto the canonical identity (union)", async () => {
     signedInAs("auth-abc");
     _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
-    _db.pangramsByDevice = {
-      d1:    [{ id: 1, puzzle_date: "2026-07-06", word: "διακοπτησ" },
-              { id: 2, puzzle_date: "2026-07-07", word: "παρακολουθηση" }],
-      canon: [{ id: 9, puzzle_date: "2026-07-05", word: "θαλασσινοσ" }],
+    _db.milestonesByDevice = {
+      d1:    [{ id: 1, puzzle_date: "2026-07-06", kind: "pangram", detail: "διακοπτησ" },
+              { id: 2, puzzle_date: "2026-07-07", kind: "word", detail: "παρακολουθηση" },
+              { id: 3, puzzle_date: "2026-07-07", kind: "top_rank", detail: "" }],
+      canon: [{ id: 9, puzzle_date: "2026-07-05", kind: "pangram", detail: "θαλασσινοσ" }],
     };
     await POST(makePostReq(BASE));
 
-    const repoint = _writes.find((w) => w.table === "player_pangrams" && w.op === "update");
+    const repoint = _writes.find((w) => w.table === "player_milestones" && w.op === "update");
     expect(repoint?.payload).toEqual({ device_uuid: "canon" });
-    expect(repoint?.ins.find(([c]) => c === "id")?.[1]).toEqual(expect.arrayContaining([1, 2]));
-    expect(_writes.some((w) => w.table === "player_pangrams" && w.op === "delete")).toBe(false);
+    expect(repoint?.ins.find(([c]) => c === "id")?.[1]).toEqual(expect.arrayContaining([1, 2, 3]));
+    expect(_writes.some((w) => w.table === "player_milestones" && w.op === "delete")).toBe(false);
   });
 
-  it("drops the old duplicate pangram when the canonical already has the same day+word", async () => {
+  it("drops the old duplicate when the canonical already has the same day+kind+detail", async () => {
     signedInAs("auth-abc");
     _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
-    _db.pangramsByDevice = {
-      d1:    [{ id: 1, puzzle_date: "2026-07-06", word: "διακοπτησ" }],
-      canon: [{ id: 9, puzzle_date: "2026-07-06", word: "διακοπτησ" }], // exact overlap
+    _db.milestonesByDevice = {
+      d1:    [{ id: 1, puzzle_date: "2026-07-06", kind: "pangram", detail: "διακοπτησ" }],
+      canon: [{ id: 9, puzzle_date: "2026-07-06", kind: "pangram", detail: "διακοπτησ" }], // overlap
     };
     await POST(makePostReq(BASE));
 
-    const del = _writes.find((w) => w.table === "player_pangrams" && w.op === "delete");
+    const del = _writes.find((w) => w.table === "player_milestones" && w.op === "delete");
     expect(del?.ins).toContainEqual(["id", [1]]);
-    expect(_writes.some((w) => w.table === "player_pangrams" && w.op === "update")).toBe(false);
+    expect(_writes.some((w) => w.table === "player_milestones" && w.op === "update")).toBe(false);
+  });
+
+  it("keeps a day counter that differs from the canonical's only by kind", async () => {
+    // top_rank and tzimani both carry detail '' — merging on (date, detail) alone
+    // would silently delete one of them as a duplicate.
+    signedInAs("auth-abc");
+    _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
+    _db.milestonesByDevice = {
+      d1:    [{ id: 1, puzzle_date: "2026-07-06", kind: "tzimani", detail: "" }],
+      canon: [{ id: 9, puzzle_date: "2026-07-06", kind: "top_rank", detail: "" }],
+    };
+    await POST(makePostReq(BASE));
+
+    const repoint = _writes.find((w) => w.table === "player_milestones" && w.op === "update");
+    expect(repoint?.ins).toContainEqual(["id", [1]]);
+    expect(_writes.some((w) => w.table === "player_milestones" && w.op === "delete")).toBe(false);
+  });
+
+  it("runs one milestone merge, not one per kind", async () => {
+    signedInAs("auth-abc");
+    _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
+    _db.milestonesByDevice = {
+      d1: [{ id: 1, puzzle_date: "2026-07-06", kind: "pangram", detail: "διακοπτησ" },
+           { id: 2, puzzle_date: "2026-07-06", kind: "word", detail: "παρακολουθηση" }],
+    };
+    await POST(makePostReq(BASE));
+
+    expect(_writes.filter((w) => w.table === "player_milestones" && w.op === "update")).toHaveLength(1);
   });
 });
 
@@ -400,7 +432,7 @@ describe("POST /api/auth/link — occupied-device guard", () => {
     // Resident history present — the bug would merge it into the caller.
     _db.scoresByDevice       = { d1: [{ id: 1, game_id: "leksokipos", puzzle_date: "2026-07-01", score: 40 }] };
     _db.achievementsByDevice = { d1: [{ id: 7, achievement_id: "leksokipos-theristis" }] };
-    _db.pangramsByDevice     = { d1: [{ id: 8, puzzle_date: "2026-07-01", word: "διακοπτησ" }] };
+    _db.milestonesByDevice   = { d1: [{ id: 8, puzzle_date: "2026-07-01", kind: "pangram", detail: "διακοπτησ" }] };
 
     const res = await POST(makePostReq(BASE));
     expect(res.status).toBe(200);
@@ -408,10 +440,10 @@ describe("POST /api/auth/link — occupied-device guard", () => {
       device_uuid: "canonB", display_name: "PlayerB", restored: true,
     });
     // Resident A is fully untouched: no score merge, no achievement merge, no
-    // pangram merge, no profile delete or upsert.
+    // milestone merge, no profile delete or upsert.
     expect(writesTo("game_scores")).toHaveLength(0);
     expect(writesTo("player_achievements")).toHaveLength(0);
-    expect(writesTo("player_pangrams")).toHaveLength(0);
+    expect(writesTo("player_milestones")).toHaveLength(0);
     expect(writesTo("player_profiles")).toHaveLength(0);
   });
 

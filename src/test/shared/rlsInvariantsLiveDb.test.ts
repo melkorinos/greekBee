@@ -115,15 +115,18 @@ describe.skipIf(!canRun)("live DB — game_scores RLS invariants", () => {
   });
 });
 
-// ── player_achievements / player_pangrams / game_state ───────────────────────
+// ── player_achievements / player_milestones / game_state ─────────────────────
 //
 // Migration 20260716120100 narrowed the anon ALL-true policies to the commands
-// the app uses: SELECT+INSERT on the two ADR 0013 fact tables, SELECT+INSERT+
+// the app uses: SELECT+INSERT on the ADR 0013 fact tables, SELECT+INSERT+
 // UPDATE on game_state. The invariant locked here is the removal: anon DELETE
 // matches zero rows table-wide (silently — no error), and the game_state
 // upsert (the restore path) still works.
+//
+// player_milestones (20260807120000) inherits that posture from the tables it
+// absorbed — player_pangrams and player_words — so the same locks apply to it.
 
-describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/pangrams/game_state)", () => {
+describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/milestones/game_state)", () => {
   let anon:    SupabaseClient;
   let service: SupabaseClient;
 
@@ -131,8 +134,7 @@ describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/pangr
 
   async function wipeSentinelRows() {
     await table(service, "player_achievements").delete().like("device_uuid", "__rls_%");
-    await table(service, "player_pangrams").delete().like("device_uuid", "__rls_%");
-    await table(service, "player_words").delete().like("device_uuid", "__rls_%");
+    await table(service, "player_milestones").delete().like("device_uuid", "__rls_%");
     await table(service, "game_state").delete().like("device_uuid", "__rls_%");
   }
 
@@ -159,27 +161,14 @@ describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/pangr
     expect(count).toBe(1);
   });
 
-  it("blocks anon from DELETE-ing player_pangrams rows", async () => {
-    const { error: seedErr } = await table(service, "player_pangrams")
-      .insert({ device_uuid: DEVICE, puzzle_date: PUZZLE_DATE, word: "__rls_test__" });
+  it("blocks anon from DELETE-ing player_milestones rows", async () => {
+    const { error: seedErr } = await table(service, "player_milestones")
+      .insert({ device_uuid: DEVICE, puzzle_date: PUZZLE_DATE, kind: "pangram", detail: "__rls_test__" });
     expect(seedErr).toBeNull();
 
-    await table(anon, "player_pangrams").delete().eq("device_uuid", DEVICE);
+    await table(anon, "player_milestones").delete().eq("device_uuid", DEVICE);
 
-    const { count } = await table(service, "player_pangrams")
-      .select("id", { count: "exact", head: true })
-      .eq("device_uuid", DEVICE);
-    expect(count).toBe(1);
-  });
-
-  it("blocks anon from DELETE-ing player_words rows", async () => {
-    const { error: seedErr } = await table(service, "player_words")
-      .insert({ device_uuid: DEVICE, puzzle_date: PUZZLE_DATE, word: "__rls_test__", length: 11 });
-    expect(seedErr).toBeNull();
-
-    await table(anon, "player_words").delete().eq("device_uuid", DEVICE);
-
-    const { count } = await table(service, "player_words")
+    const { count } = await table(service, "player_milestones")
       .select("id", { count: "exact", head: true })
       .eq("device_uuid", DEVICE);
     expect(count).toBe(1);
@@ -239,37 +228,71 @@ describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/pangr
     expect(second.error).toBeNull();
   });
 
-  it("still allows the anon insert-if-absent write on player_words", async () => {
+  it("still allows the anon insert-if-absent write on player_milestones", async () => {
     const device = `__rls_${crypto.randomUUID()}`;
-    const row    = { device_uuid: device, puzzle_date: PUZZLE_DATE, word: "__rls_test__", length: 11 };
+    const row    = { device_uuid: device, puzzle_date: PUZZLE_DATE, kind: "pangram", detail: "__rls_test__" };
+    const conflict = { onConflict: "device_uuid,puzzle_date,kind,detail", ignoreDuplicates: true };
 
-    const first = await table(anon, "player_words").upsert(
-      [row], { onConflict: "device_uuid,puzzle_date,word", ignoreDuplicates: true },
-    );
+    const first = await table(anon, "player_milestones").upsert([row], conflict);
     expect(first.error).toBeNull();
 
-    // Re-submitting the same find is a no-op, not an error (DO NOTHING).
-    const second = await table(anon, "player_words").upsert(
-      [row], { onConflict: "device_uuid,puzzle_date,word", ignoreDuplicates: true },
-    );
+    // Re-submitting the same milestone is a no-op, not an error (DO NOTHING).
+    const second = await table(anon, "player_milestones").upsert([row], conflict);
     expect(second.error).toBeNull();
   });
 
-  it("lets anon call the player_words_by_length aggregate (invoker-rights RPC)", async () => {
+  it("insert-if-absent still holds for a milestone whose detail defaults to ''", async () => {
+    // The two day counters carry detail ''. If the column were NULLable, Postgres
+    // would treat each NULL as distinct in the unique index and the same day would
+    // insert twice — the failure mode NOT NULL DEFAULT '' exists to prevent.
     const device = `__rls_${crypto.randomUUID()}`;
-    await table(service, "player_words").insert([
-      { device_uuid: device, puzzle_date: PUZZLE_DATE, word: "__rls_a__", length: 9 },
-      { device_uuid: device, puzzle_date: PUZZLE_DATE, word: "__rls_b__", length: 9 },
-      { device_uuid: device, puzzle_date: PUZZLE_DATE, word: "__rls_c__", length: 11 },
+    const row    = { device_uuid: device, puzzle_date: PUZZLE_DATE, kind: "top_rank" };
+    const conflict = { onConflict: "device_uuid,puzzle_date,kind,detail", ignoreDuplicates: true };
+
+    await table(anon, "player_milestones").upsert([row], conflict);
+    await table(anon, "player_milestones").upsert([row], conflict);
+
+    const { count } = await table(service, "player_milestones")
+      .select("id", { count: "exact", head: true })
+      .eq("device_uuid", device);
+    expect(count).toBe(1);
+  });
+
+  it("lets anon call the player_milestones_by_length aggregate (invoker-rights RPC)", async () => {
+    const device = `__rls_${crypto.randomUUID()}`;
+    await table(service, "player_milestones").insert([
+      { device_uuid: device, puzzle_date: PUZZLE_DATE, kind: "word", detail: "__rls_a__", value: 10 },
+      { device_uuid: device, puzzle_date: PUZZLE_DATE, kind: "word", detail: "__rls_b__", value: 10 },
+      { device_uuid: device, puzzle_date: PUZZLE_DATE, kind: "word", detail: "__rls_c__", value: 11 },
+      // Not a word row — must not appear in a per-LENGTH aggregate.
+      { device_uuid: device, puzzle_date: PUZZLE_DATE, kind: "pangram", detail: "__rls_d__" },
     ]);
 
-    const { data, error } = await anon.rpc("player_words_by_length", { p_device_uuid: device });
+    const { data, error } = await anon.rpc("player_milestones_by_length", { p_device_uuid: device });
     expect(error).toBeNull();
     const byLen = Object.fromEntries(
       ((data as { length: number; count: number }[]) ?? []).map((r) => [r.length, Number(r.count)]),
     );
-    expect(byLen[9]).toBe(2);
+    expect(byLen[10]).toBe(2);
     expect(byLen[11]).toBe(1);
+  });
+
+  it("lets anon call the player_milestone_counts aggregate, grouped by kind", async () => {
+    const device = `__rls_${crypto.randomUUID()}`;
+    await table(service, "player_milestones").insert([
+      { device_uuid: device, puzzle_date: PUZZLE_DATE, kind: "pangram", detail: "__rls_a__" },
+      { device_uuid: device, puzzle_date: PUZZLE_DATE, kind: "pangram", detail: "__rls_b__" },
+      { device_uuid: device, puzzle_date: PUZZLE_DATE, kind: "top_rank" },
+    ]);
+
+    const { data, error } = await anon.rpc("player_milestone_counts", { p_device_uuid: device });
+    expect(error).toBeNull();
+    const byKind = Object.fromEntries(
+      ((data as { kind: string; count: number }[]) ?? []).map((r) => [r.kind, Number(r.count)]),
+    );
+    expect(byKind["pangram"]).toBe(2);
+    expect(byKind["top_rank"]).toBe(1);
+    expect(byKind["word"]).toBeUndefined();
   });
 });
 

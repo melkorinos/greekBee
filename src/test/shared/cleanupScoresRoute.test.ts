@@ -84,12 +84,13 @@ describe("GET /api/cleanup-scores — never touches append-forever tables", () =
     expect(deletedTables.has("game_scores")).toBe(false);
   });
 
-  it("does not issue a delete against the lifetime fact tables (achievements, pangrams)", async () => {
-    // player_pangrams (B2) and player_achievements are append-forever lifetime
+  it("does not issue a delete against the lifetime fact tables (achievements, milestones)", async () => {
+    // player_milestones and player_achievements are append-forever lifetime
     // substrate (ADR 0013) — the same stance as game_scores. Sweeping either would
-    // silently shrink a player's earned/progress history.
+    // silently shrink a player's earned/progress history. The one sanctioned wipe is
+    // the operator-run launch reset, which is not this cron.
     await GET(makeReq(`Bearer ${TEST_SECRET}`));
-    expect(deletedTables.has("player_pangrams")).toBe(false);
+    expect(deletedTables.has("player_milestones")).toBe(false);
     expect(deletedTables.has("player_achievements")).toBe(false);
   });
 

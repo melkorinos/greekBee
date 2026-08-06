@@ -1,9 +1,9 @@
 // profileWordsRoute.test.ts — unit tests for GET /api/profile/words.
 //
 // Supabase is mocked; no real network. The read aggregates in Postgres via the
-// player_words_by_length RPC (one { length, count } row per distinct length the
-// device found — zero data rows transferred, so it scales on the fastest-growing
-// fact table on the platform). The route folds that into the fixed display buckets
+// player_milestones_by_length RPC (one { length, count } row per distinct length
+// the device found, over the kind='word' rows — zero data rows transferred, so it
+// scales as milestones accumulate). The route folds that into the display buckets
 // (bucketWordsByLength, covered in wordsByLength.test.ts) and returns { total,
 // buckets }. Missing device_uuid → 400; RPC error → 500.
 
@@ -40,7 +40,7 @@ describe("GET /api/profile/words", () => {
     expect(res.status).toBe(200);
 
     // The RPC is called with the device as its parameter (invoker-rights, RLS-scoped).
-    expect(_rpc?.fn).toBe("player_words_by_length");
+    expect(_rpc?.fn).toBe("player_milestones_by_length");
     expect(_rpc?.params).toEqual({ p_device_uuid: "device-1" });
 
     const body = await res.json();

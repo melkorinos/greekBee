@@ -1,9 +1,9 @@
 "use client";
 
-// useAchievementSync — detects earned achievements from the live game snapshot
-// and posts fresh ids to /api/achievements. Detection is pure (achievements.ts);
-// this hook owns only the effects, the gating, the once-per-session dedup, and
-// surfacing genuinely-new badges to the unlock toast.
+// useAchievementSync — detects earned achievements and milestones from the live
+// game snapshot and posts them. Detection is pure (achievements.ts); this hook owns
+// only the effects, the gating, the once-per-session dedup, and surfacing
+// genuinely-new badges to the unlock toast.
 //
 // Rules:
 //   - Daily puzzles only, never in god mode, and only with a known device id.
@@ -18,11 +18,22 @@
 //     badge never re-toasts on every visit. Detections that land before that set
 //     loads are held pending and flushed once it arrives (race-safe).
 //   - Fire-and-forget: earning never affects gameplay.
+//
+// Three of the lanes below write to ONE endpoint (POST /api/milestones), each with
+// its own dedup granularity, because that is what each kind actually needs:
+//   pangram / word — per WORD (a find is a find; the same word on another day counts
+//                    again), so the ref holds words.
+//   top_rank / tzimani — per (puzzle_date, KIND). These are day facts, not find
+//                    facts: the lane re-runs on every foundWords/rank change, so a
+//                    per-word ref would post the same day's milestone on every
+//                    submit. Insert-if-absent makes those no-ops server-side, but
+//                    they would still be requests nobody needs.
 
 import { useCallback, useEffect, useRef } from "react";
 
 import {
   describeAchievement,
+  detectDayMilestones,
   detectEarnedAchievements,
   detectEarnedPangramTiers,
   detectEarnedPointsTiers,
@@ -33,14 +44,14 @@ import {
   fetchEarnedAchievementIds,
   fetchLifetimeStats,
   postAchievements,
-  postPangrams,
-  postWords,
+  postMilestones,
 } from "@/games/leksokipos/sync";
+import { WORDS_MIN_TRACKED } from "@/lib/wordsByLength";
 
 interface UseAchievementSyncOptions {
   /**
    * Master switch — false makes the whole hook inert: no detection, no toasts, and
-   * (crucially) no POSTs to /api/achievements or /api/pangrams. Defaults to true so
+   * (crucially) no POSTs to /api/achievements or /api/milestones. Defaults to true so
    * existing callers/tests are unchanged; GameBoard passes FEATURE_FLAGS.achievements
    * so the feature stays fully dark in prod until launch.
    */
@@ -52,7 +63,7 @@ interface UseAchievementSyncOptions {
   foundWords:     string[];
   /** Pangram words found this round (GameBoard derives via isPangram; memoize it). */
   foundPangrams:  string[];
-  /** ISO date of the active daily puzzle — the pangram rows' puzzle_date. */
+  /** ISO date of the active daily puzzle — the milestone rows' puzzle_date. */
   puzzleDate:     string;
   validWordCount: number;
   rank:           RankName;
@@ -76,8 +87,11 @@ export function useAchievementSync({
   const postedRef = useRef<Set<string>>(new Set());
   // Pangram words already delta-posted this session — per-word, so each find posts once.
   const postedPangramWordsRef = useRef<Set<string>>(new Set());
-  // Valid words already delta-posted this session — per-word, so each find posts once.
+  // Long words already delta-posted this session — per-word, so each find posts once.
   const postedWordsRef = useRef<Set<string>>(new Set());
+  // Day milestones already posted this session, keyed `${puzzleDate}::${kind}` —
+  // the day counters are per-day facts, not per-find ones.
+  const postedDayMilestonesRef = useRef<Set<string>>(new Set());
   // Ids earned before this session (server truth at mount). null = not loaded yet.
   const earnedAtMountRef = useRef<Set<string> | null>(null);
   // Ids detected but not yet decidable for the toast (earned set still loading).
@@ -155,11 +169,15 @@ export function useAchievementSync({
     return () => { cancelled = true; };
   }, [enabled, isDaily, isGodMode, deviceId, commitEarned]);
 
-  // Pangram-tier lane (Κυνηγός Πανγκράμ) — delta-post the pangrams found this session
+  // Pangram lane (Κυνηγός Πανγκράμ) — delta-post the pangrams found this session
   // that we haven't posted yet, and read the crossing off the returned lifetime count
   // (no lag: the POST just inserted them). Per-word ref → each find posts once; a
   // failed POST is re-derived from foundWords on a later mount of the still-current
   // puzzle (R6). foundPangrams must be memoized by the caller (referential stability).
+  //
+  // An absent `pangram` count means the server inserted nothing new (every posted
+  // find was already on record), so no total moved and there is no crossing to
+  // check — the mount self-heal covers that case.
   useEffect(() => {
     if (!enabled || !isDaily || isGodMode || !deviceId) return;
     const unposted = foundPangrams.filter((w) => !postedPangramWordsRef.current.has(w));
@@ -167,27 +185,69 @@ export function useAchievementSync({
     for (const w of unposted) postedPangramWordsRef.current.add(w);
 
     let cancelled = false;
-    postPangrams({ deviceUuid: deviceId, puzzleDate, words: unposted }).then((count) => {
-      if (cancelled || count === null) return;
+    postMilestones({
+      deviceUuid: deviceId,
+      puzzleDate,
+      milestones: unposted.map((detail) => ({ kind: "pangram" as const, detail })),
+    }).then((counts) => {
+      if (cancelled || !counts) return;
+      const count = counts.pangram;
+      if (typeof count !== "number") return;
       commitEarned(deviceId, detectEarnedPangramTiers(count));
     });
     return () => { cancelled = true; };
   }, [enabled, foundPangrams, puzzleDate, isDaily, isGodMode, deviceId, commitEarned]);
 
-  // Words-capture lane (Λέξεις ανά μήκος) — delta-post the valid words found this
-  // session that we haven't posted yet, so player_words accrues one row per find.
-  // Display-only: no tier is derived from word finds, so the returned count is
-  // ignored (postWords returns it only for symmetry with postPangrams). A failed
-  // POST is re-derived from foundWords on a later mount of the still-current puzzle
-  // — the per-word ref starts empty each mount, so the whole found set re-posts and
-  // insert-if-absent makes the overlap a no-op (the mount self-heal). Same gates as
-  // the pangram lane; foundWords is the store's referentially-stable found list.
+  // Word lane (Λέξεις ανά μήκος) — delta-post the long words found this session that
+  // we haven't posted yet, so the milestone set accrues one row per qualifying find.
+  //
+  // FILTERED TO THE ≥WORDS_MIN_TRACKED FLOOR BEFORE POSTING. The server enforces the
+  // same floor and remains the authoritative rule; this filter is an optimisation.
+  // Without it the lane fires per find and posts ~30 requests a game that write
+  // nothing, because a Leksokipos round is mostly short words — a qualifying find
+  // happens a few times a WEEK. The floor derives from achievementTuning, so the
+  // client filter, the server floor and the display buckets cannot drift apart.
+  //
+  // Display-only: no tier is derived from word finds, so the returned counts are
+  // ignored. A failed POST is re-derived from foundWords on a later mount of the
+  // still-current puzzle — the per-word ref starts empty each mount, so the whole
+  // qualifying set re-posts and insert-if-absent makes the overlap a no-op (the
+  // mount self-heal). foundWords is the store's referentially-stable found list.
   useEffect(() => {
     if (!enabled || !isDaily || isGodMode || !deviceId) return;
-    const unposted = foundWords.filter((w) => !postedWordsRef.current.has(w));
+    const unposted = foundWords.filter(
+      (w) => w.length >= WORDS_MIN_TRACKED && !postedWordsRef.current.has(w),
+    );
     if (unposted.length === 0) return;
     for (const w of unposted) postedWordsRef.current.add(w);
 
-    postWords({ deviceUuid: deviceId, puzzleDate, words: unposted });
+    postMilestones({
+      deviceUuid: deviceId,
+      puzzleDate,
+      milestones: unposted.map((detail) => ({ kind: "word" as const, detail })),
+    });
   }, [enabled, foundWords, puzzleDate, isDaily, isGodMode, deviceId]);
+
+  // Day-milestone lane (Στην Κορυφή / Τζιμάνι) — record the day this player reached
+  // the top rank and the day they crossed the found-word ratio. Both conditions are
+  // monotonic within a session, so posting the moment one first holds is safe, and
+  // this lane re-runs on every foundWords/rank change exactly like the one-shot lane.
+  //
+  // Dedup is per (puzzle_date, kind), NOT per find: these are facts about a day. The
+  // ref starts empty each mount, so a failed POST re-posts next mount and
+  // insert-if-absent makes the overlap a no-op.
+  //
+  // The returned counts are ignored here: the tiered badges that read them are
+  // TICKET-02's work. This lane's job is to make sure the days are on record from
+  // now on — a day that passes unrecorded can never be recovered.
+  useEffect(() => {
+    if (!enabled || !isDaily || isGodMode || !deviceId) return;
+
+    const unposted = detectDayMilestones({ isDaily, foundWords, validWordCount, rank })
+      .filter((m) => !postedDayMilestonesRef.current.has(`${puzzleDate}::${m.kind}`));
+    if (unposted.length === 0) return;
+    for (const m of unposted) postedDayMilestonesRef.current.add(`${puzzleDate}::${m.kind}`);
+
+    postMilestones({ deviceUuid: deviceId, puzzleDate, milestones: unposted });
+  }, [enabled, foundWords, rank, validWordCount, puzzleDate, isDaily, isGodMode, deviceId]);
 }

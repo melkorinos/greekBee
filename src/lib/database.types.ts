@@ -295,27 +295,33 @@ export type Database = {
         }
         Relationships: []
       }
-      player_pangrams: {
+      player_milestones: {
         Row: {
+          created_at: string
+          detail: string
           device_uuid: string
-          found_at: string
           id: number
+          kind: string
           puzzle_date: string
-          word: string
+          value: number | null
         }
         Insert: {
+          created_at?: string
+          detail?: string
           device_uuid: string
-          found_at?: string
           id?: never
+          kind: string
           puzzle_date: string
-          word: string
+          value?: number | null
         }
         Update: {
+          created_at?: string
+          detail?: string
           device_uuid?: string
-          found_at?: string
           id?: never
+          kind?: string
           puzzle_date?: string
-          word?: string
+          value?: number | null
         }
         Relationships: []
       }
@@ -349,36 +355,6 @@ export type Database = {
         }
         Relationships: []
       }
-      player_words: {
-        Row: {
-          created_at: string
-          device_uuid: string
-          game_id: string
-          id: number
-          length: number
-          puzzle_date: string
-          word: string
-        }
-        Insert: {
-          created_at?: string
-          device_uuid: string
-          game_id?: string
-          id?: never
-          length: number
-          puzzle_date: string
-          word: string
-        }
-        Update: {
-          created_at?: string
-          device_uuid?: string
-          game_id?: string
-          id?: never
-          length?: number
-          puzzle_date?: string
-          word?: string
-        }
-        Relationships: []
-      }
       transfer_codes: {
         Row: {
           code: string
@@ -408,7 +384,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      player_words_by_length: {
+      player_milestone_counts: {
+        Args: { p_device_uuid: string }
+        Returns: { kind: string; count: number }[]
+      }
+      player_milestones_by_length: {
         Args: { p_device_uuid: string }
         Returns: { length: number; count: number }[]
       }

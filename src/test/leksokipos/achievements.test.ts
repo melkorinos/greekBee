@@ -15,6 +15,7 @@ import {
   qualifyingEarnedIds,
   resolveDisplayBadge,
   detectEarnedAchievements,
+  detectDayMilestones,
   detectEarnedPointsTiers,
   detectEarnedPangramTiers,
   nextPangramTierThreshold,
@@ -180,20 +181,92 @@ describe("WORD_LENGTH_BADGES — the exact-length ladder", () => {
 });
 
 describe("detectEarnedAchievements — Θεριστής (≥ 80% of words found)", () => {
-  it("earns at exactly 80% of the puzzle's words", () => {
+  it("earns at exactly 70% of the puzzle's words", () => {
     const ctx = makeCtx({
-      foundWords:     Array.from({ length: 16 }, (_, i) => `word${i}`),
-      validWordCount: 20, // 16 / 20 = 0.80
+      foundWords:     Array.from({ length: 14 }, (_, i) => `word${i}`),
+      validWordCount: 20, // 14 / 20 = 0.70
     });
     expect(detectEarnedAchievements(ctx)).toContain("leksokipos-theristis");
   });
 
-  it("does not earn below 80%", () => {
+  it("does not earn below 70%", () => {
     const ctx = makeCtx({
-      foundWords:     Array.from({ length: 15 }, (_, i) => `word${i}`),
-      validWordCount: 20, // 15 / 20 = 0.75
+      foundWords:     Array.from({ length: 13 }, (_, i) => `word${i}`),
+      validWordCount: 20, // 13 / 20 = 0.65
     });
     expect(detectEarnedAchievements(ctx)).not.toContain("leksokipos-theristis");
+  });
+});
+
+// ── Day milestones (player_milestones counters) ───────────────────────────────
+//
+// The two lifetime day-counters the rebuilt catalog tiers on. Detection is pure and
+// lives beside the one-shots; the sync lane owns posting them. A milestone is
+// recorded for the DAY, so the qualifying condition is all that matters here.
+
+describe("detectDayMilestones", () => {
+  const kinds = (ctx: AchievementContext) => detectDayMilestones(ctx).map((m) => m.kind);
+
+  it("records top_rank on reaching the top of the ladder", () => {
+    expect(kinds(makeCtx({ rank: "Απολυτότητα" }))).toContain("top_rank");
+  });
+
+  it("does not record top_rank below the top rank", () => {
+    expect(kinds(makeCtx({ rank: "Θηρίο" }))).not.toContain("top_rank");
+  });
+
+  it("records tzimani at the configured found-word ratio", () => {
+    const ctx = makeCtx({
+      foundWords:     Array.from({ length: 14 }, (_, i) => `word${i}`),
+      validWordCount: 20, // 14 / 20 = 0.70
+    });
+    expect(kinds(ctx)).toContain("tzimani");
+  });
+
+  it("does not record tzimani below the ratio", () => {
+    const ctx = makeCtx({
+      foundWords:     Array.from({ length: 13 }, (_, i) => `word${i}`),
+      validWordCount: 20, // 0.65
+    });
+    expect(kinds(ctx)).not.toContain("tzimani");
+  });
+
+  it("carries the achieved percentage so the ratio can be re-tuned from real data", () => {
+    const ctx = makeCtx({
+      foundWords:     Array.from({ length: 18 }, (_, i) => `word${i}`),
+      validWordCount: 20, // 90%
+    });
+    expect(detectDayMilestones(ctx)).toContainEqual({ kind: "tzimani", value: 90 });
+  });
+
+  it("gives top_rank no value — a day either reached it or did not", () => {
+    expect(detectDayMilestones(makeCtx({ rank: "Απολυτότητα" })))
+      .toContainEqual({ kind: "top_rank" });
+  });
+
+  it("records both when a round qualifies for each", () => {
+    const ctx = makeCtx({
+      foundWords:     Array.from({ length: 20 }, (_, i) => `word${i}`),
+      validWordCount: 20,
+      rank:           "Απολυτότητα",
+    });
+    expect(kinds(ctx).sort()).toEqual(["top_rank", "tzimani"]);
+  });
+
+  it("records nothing on a custom or random puzzle", () => {
+    // Milestones are keyed on a puzzle_date, so only daily rounds can produce one.
+    const ctx = makeCtx({
+      isDaily:        false,
+      foundWords:     Array.from({ length: 20 }, (_, i) => `word${i}`),
+      validWordCount: 20,
+      rank:           "Απολυτότητα",
+    });
+    expect(detectDayMilestones(ctx)).toEqual([]);
+  });
+
+  it("records nothing for a puzzle with no valid words", () => {
+    expect(detectDayMilestones(makeCtx({ foundWords: [], validWordCount: 0, rank: "Θηρίο" })))
+      .toEqual([]);
   });
 });
 

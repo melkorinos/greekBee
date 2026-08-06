@@ -19,8 +19,22 @@ export const LEKSOKIPOS_ACHIEVEMENT_TUNING = {
    */
   wordLengthBadges: [10, 11, 12, 13],
 
-  /** Θεριστής (one-shot) — fraction of a puzzle's valid words that must be found. */
-  theristisFoundRatio: 0.8,
+  /**
+   * Fraction of a puzzle's valid words that must be found to qualify the day.
+   *
+   * Two readers, deliberately sharing one number: the Θεριστής one-shot, and the
+   * `kind='tzimani'` milestone that TICKET-02's tiered Τζιμάνι badge counts days of.
+   * Lowered 0.8 → 0.7 ahead of that rebuild, because milestone rows are only written
+   * as days are played — a day that passes under the old bar can never be recorded
+   * retroactively, so waiting to lower it would permanently lose every qualifying
+   * day in between. Lowering is the safe direction (earned rows are immutable, so a
+   * threshold can be lowered but never effectively raised).
+   *
+   * At 0.8 only 2 of 34 beta devices ever qualified once. 0.7 is still a guess: the
+   * found-word ratio was not stored anywhere, which is why the milestone row now
+   * carries the achieved percentage in `value`.
+   */
+  theristisFoundRatio: 0.7,
 
   /** Κυνηγός Πανγκράμ (tiered, Epic B) — lifetime distinct pangrams per tier. */
   pangramTierThresholds: { chalkino: 10, asimenio: 20, chryso: 50 },

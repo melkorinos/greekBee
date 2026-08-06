@@ -211,3 +211,45 @@ and the Trophy Case states are all specified in `.claude/handoffs/badgeVisualSys
 **Note the structural consequence of §3 + §4:** with Πρώτα Βήματα gone and Στην Κορυφή and Τζιμάνι tiered,
 **every remaining badge is tiered** — the catalog has no one-shot entries left. The tier treatment is therefore
 not decoration on some badges; it is how every badge in the game reads.
+
+---
+
+## Amendment — 2026-08-07: `player_milestones` replaces `player_pangrams` and `player_words`
+
+Recorded by TICKET-01, which made it true. The catalog, threshold and launch-reset amendments the
+2026-08-06 revision owes remain with TICKET-02; this entry covers the storage seam only.
+
+**One table now holds every countable badge input.** `player_pangrams` and `player_words` are dropped;
+`player_milestones(device_uuid, puzzle_date, kind, detail, value, created_at)` replaces both and adds the two
+lifetime day counters (`kind='top_rank'`, `kind='tzimani'`) that no table previously captured. Every property
+this ADR rests on is unchanged: immutable rows, insert-if-absent against a UNIQUE, append-forever, anon
+SELECT+INSERT only, zero server-side detection, and a merge that is a set union rather than a counter.
+
+Four things worth not re-deriving:
+
+- **`detail` is `NOT NULL DEFAULT ''`.** Postgres treats NULLs as *distinct* in a unique index, so a nullable
+  `detail` on the two detail-less kinds would let the same day insert twice and silently break
+  insert-if-absent — the guarantee this ADR is built on.
+- **There is no `game_id` column.** A second earning game must add it **and** widen the UNIQUE to
+  `(device_uuid, game_id, puzzle_date, kind, detail)` in the *same* migration. The column present but outside
+  the key is the one shape that loses data with no error: game B's row for the same word and date collides
+  with game A's and `ON CONFLICT DO NOTHING` swallows it.
+- **The write path is one route.** `POST /api/milestones` replaces `/api/pangrams` and `/api/words`, returning
+  fresh counts **only for the kinds it actually inserted** and skipping the count query outright when nothing
+  was new. `planPangramMerge` + `planWordsMerge` collapse into `planMilestoneMerge`, keyed on
+  `(puzzle_date, kind, detail)`.
+- **The beta rows were dropped, not migrated** (operator's call): 292 pangram + 104 word rows. No
+  `player_achievements` row depends on them, so nothing was un-earned — only progress bars restart at zero,
+  and the launch reset would have cleared them regardless.
+
+`theristisFoundRatio` moved 0.8 → 0.7 here rather than in TICKET-02, because milestone rows are only written
+as days are played: a qualifying day that passes under the old bar can never be recorded retroactively. The
+`tzimani` row now also stores the achieved percentage in `value` — the calibration signal the 2026-08-06
+revision recorded as deliberately forgone, which became free once a row was being written anyway. It shows the
+distribution **above** the threshold only; near-misses are still unrecorded, knowingly.
+
+**Client-asserted, unbounded (accepted).** `top_rank` and `tzimani` are day counts with no shape bound, unlike
+words and pangrams whose text is regex-bounded. A scripted loop over 365 dates earns gold instantly. Same
+client-trust model as scores, consistent with "the server runs zero detection". Also unbounded by design:
+playing a *past* daily puzzle records that date's milestone, so catching up on a missed week can bank several
+days at once — correct, since those days were genuinely played.

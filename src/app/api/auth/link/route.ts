@@ -32,8 +32,7 @@ import { getServiceRoleClient, getSupabaseClient, table, type BoundTable } from 
 type Db = BoundTable;
 import { planScoreMerge, type MergeRow } from "@/lib/scoreMerge";
 import { planAchievementMerge, type AchievementMergeRow } from "@/lib/achievementMerge";
-import { planPangramMerge, type PangramMergeRow } from "@/lib/pangramMerge";
-import { planWordsMerge, type WordsMergeRow } from "@/lib/wordsMerge";
+import { planMilestoneMerge, type MilestoneMergeRow } from "@/lib/milestoneMerge";
 
 export const runtime = "edge";
 
@@ -238,43 +237,28 @@ async function restore(db: Db, oldDevice: string, anchor: Anchor) {
     await db("player_achievements").delete().in("id", achPlan.deleteOld);
   }
 
-  // Merge the pangram find-set too (ADR 0013 lane C, B2): union onto the canonical
-  // identity. Same shape as the achievement merge, but the dedup key is the
-  // composite (puzzle_date, word) — the same word on a different day is a distinct
-  // find. Carry over what canonical lacks; drop duplicates the
-  // UNIQUE(device_uuid, puzzle_date, word) constraint would otherwise reject.
-  const { data: oldPan }   = await db("player_pangrams")
-    .select("id, puzzle_date, word").eq("device_uuid", oldDevice) as { data: PangramMergeRow[] | null };
-  const { data: canonPan } = await db("player_pangrams")
-    .select("id, puzzle_date, word").eq("device_uuid", canonical) as { data: PangramMergeRow[] | null };
+  // Merge the milestone fact-set too (ADR 0013): union onto the canonical identity.
+  // Same shape as the achievement merge, but the dedup key is the composite
+  // (puzzle_date, kind, detail) — the same word on a different day is a distinct
+  // find, and the two detail-less day counters are separated by kind alone. Carry
+  // over what canonical lacks; drop duplicates the
+  // UNIQUE(device_uuid, puzzle_date, kind, detail) constraint would otherwise reject.
+  //
+  // One merge for all four kinds: this replaces the separate pangram and word
+  // merges the two absorbed tables each needed.
+  const { data: oldMilestones }   = await db("player_milestones")
+    .select("id, puzzle_date, kind, detail").eq("device_uuid", oldDevice) as { data: MilestoneMergeRow[] | null };
+  const { data: canonMilestones } = await db("player_milestones")
+    .select("id, puzzle_date, kind, detail").eq("device_uuid", canonical) as { data: MilestoneMergeRow[] | null };
 
-  const panPlan = planPangramMerge(oldPan ?? [], canonPan ?? []);
-  if (panPlan.repoint.length) {
-    await db("player_pangrams")
+  const milestonePlan = planMilestoneMerge(oldMilestones ?? [], canonMilestones ?? []);
+  if (milestonePlan.repoint.length) {
+    await db("player_milestones")
       .update({ device_uuid: canonical })
-      .in("id", panPlan.repoint);
+      .in("id", milestonePlan.repoint);
   }
-  if (panPlan.deleteOld.length) {
-    await db("player_pangrams").delete().in("id", panPlan.deleteOld);
-  }
-
-  // Merge the word find-set too (ADR 0013 lane C sibling): union onto the canonical
-  // identity, identical shape to the pangram merge (dedup key (puzzle_date, word)).
-  // Carry over what canonical lacks; drop duplicates the
-  // UNIQUE(device_uuid, puzzle_date, word) constraint would otherwise reject.
-  const { data: oldWords }   = await db("player_words")
-    .select("id, puzzle_date, word").eq("device_uuid", oldDevice) as { data: WordsMergeRow[] | null };
-  const { data: canonWords } = await db("player_words")
-    .select("id, puzzle_date, word").eq("device_uuid", canonical) as { data: WordsMergeRow[] | null };
-
-  const wordsPlan = planWordsMerge(oldWords ?? [], canonWords ?? []);
-  if (wordsPlan.repoint.length) {
-    await db("player_words")
-      .update({ device_uuid: canonical })
-      .in("id", wordsPlan.repoint);
-  }
-  if (wordsPlan.deleteOld.length) {
-    await db("player_words").delete().in("id", wordsPlan.deleteOld);
+  if (milestonePlan.deleteOld.length) {
+    await db("player_milestones").delete().in("id", milestonePlan.deleteOld);
   }
 
   // Drop this device's now-merged profile row (unique device_uuid index).

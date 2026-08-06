@@ -158,6 +158,50 @@ export function detectEarnedAchievements(ctx: AchievementContext): OneShotAchiev
   return earned;
 }
 
+// ─── Day milestones (player_milestones counters) ──────────────────────────────
+//
+// The one-shots above answer "has this player ever…". The rebuilt catalog also
+// wants "on how many DAYS has this player…", which no end-of-game snapshot can
+// know — it needs a row per qualifying day on the server (ADR 0013). Detection of
+// the qualifying condition is still pure and still client-side; this returns what
+// the round earned, and the sync lane owns posting it.
+//
+// Both conditions are monotonic within a session (finding more words never drops
+// the ratio, and rank never falls), so posting the moment one first holds is safe.
+
+/** A milestone this round qualifies for, ready to POST to /api/milestones. */
+export interface DayMilestone {
+  kind: "top_rank" | "tzimani";
+  /**
+   * Percentage of the puzzle's words found, on tzimani only. The one calibration
+   * signal the 70% threshold can be re-tuned from later — nothing else records the
+   * found-word ratio. Absent on top_rank: a day either reached the top or did not.
+   */
+  value?: number;
+}
+
+/**
+ * The day-milestones this end-of-game snapshot qualifies for. Empty for a
+ * non-daily puzzle (milestones are keyed on a puzzle_date) and for a puzzle with no
+ * valid words. Insert-if-absent on the server makes re-posting a no-op.
+ */
+export function detectDayMilestones(ctx: AchievementContext): DayMilestone[] {
+  if (!ctx.isDaily || ctx.validWordCount <= 0) return [];
+
+  const milestones: DayMilestone[] = [];
+
+  if (ctx.rank === TOP_RANK) {
+    milestones.push({ kind: "top_rank" });
+  }
+
+  const foundRatio = ctx.foundWords.length / ctx.validWordCount;
+  if (foundRatio >= TUNING.theristisFoundRatio) {
+    milestones.push({ kind: "tzimani", value: Math.round(foundRatio * 100) });
+  }
+
+  return milestones;
+}
+
 /** Frozen id of the lifetime-points tiered badge — shared by the catalog + detector. */
 export const SYLLEKTIS_PONTON_ID = "leksokipos-syllektis-ponton";
 

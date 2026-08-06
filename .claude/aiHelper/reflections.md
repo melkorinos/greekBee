@@ -183,6 +183,33 @@ shown it. Two lessons: **read the registry, never the prose, when you need a gam
 and when a game does graduate, the flip is a checklist (registry flag + `GAME_IDS` + HomeTrophy
 branch + docs), not a one-line edit.
 
+### 🟡 A spec's stated *reason* can be false while its *decision* is right (s139)
+
+TICKET-01 justified dropping the beta capture rows with "the beta word capture is dark behind
+`FEATURE_FLAGS.achievements`." That flag has been `true` since **s112**. The capture was live, had
+been for weeks, and the sentence had survived a grill, an architecture review and a documentation
+service that all read the file.
+
+The decision it defended was still correct — no `player_achievements` row depends on those rows, so
+dropping them un-earns nothing — but the operator was about to approve it on a premise that was not
+true. **A one-line grep of the config was the whole check**, and the reason it never happened is that
+the claim was plausible and load-bearing-sounding, which is exactly the profile of a claim worth
+checking. Related to the standing "measure the artifact, don't trust the response" rule, with a twist:
+here the unreliable narrator was *the repo's own spec*, not an external API.
+
+Two things worth carrying:
+- **Feature-flag claims in prose rot silently.** Nothing tests that a doc's description of a flag
+  matches the flag. This is the same shape as the s138 `leksindeseis wip:true` find — **read the
+  config, never the prose, for a flag's real value.**
+- **The timing question the spec never asked.** The genuinely important find of this session was not
+  the flag: it was that `theristisFoundRatio` had to move to 0.7 *now* rather than in TICKET-02,
+  because milestone rows are only written as days are played. The spec had the threshold change
+  correctly scoped to the later ticket and never noticed that **deferring a threshold on a
+  live-capture counter destroys data**. The immutability rule everyone had internalised ("lower is
+  safe, raise is not") is about *earned rows*; it says nothing about *unwritten* ones. Any future
+  counter added ahead of the badge that reads it needs the same question asked: what is not being
+  recorded in the gap?
+
 ### 🟡 Word-length ladder may be near-unearnable + a thin card (s125)
 
 The word-length badges are **exact length** (operator's choice): a word of exactly 12 or 13 letters is genuinely rare on a Leksokipos board, so the 12/13 rungs may almost never earn, and a 14+ monster earns nothing at all. Same reason the "Λέξεις ανά μήκος" card (now 10/11/12/13+ only) will read near-empty for most players — most of a round's finds are short. Both are acceptable given the change's real goal (cap `player_words` growth, resolved issue 14), but if the badges feel dead or the card feels barren post-launch, the lever is `achievementTuning.wordLengthBadges` (drop to `[10,11,12]`, or make the top rung "13+") — everything (buckets, floor, detection, catalog) re-derives from that one array.

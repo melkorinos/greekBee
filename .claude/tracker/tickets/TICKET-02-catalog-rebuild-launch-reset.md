@@ -1,7 +1,15 @@
 # Catalog rebuild + the launch reset — the release gate
 
 **Status:** ready
-**Blocked by:** [TICKET-01](TICKET-01-player-milestones-table.md) — two badges read counters it creates.
+**Blocked by:** nothing in the repo — `player_milestones`, `POST /api/milestones` and the day-counter sync
+lane shipped on 2026-08-07 (TICKET-01, file deleted per the standing rule; see ADR 0013's 2026-08-07
+amendment). **Still blocked operationally on `npx supabase db push` of `20260807120000`** — until that runs,
+the counters this ticket reads do not exist in the database.
+
+Two things TICKET-01 already did that this ticket's Scope below still lists: `theristisFoundRatio` is
+**already 0.7** (moved early so qualifying days were not lost in the gap), and the `tzimani` milestone already
+stores the achieved percentage in `value` — so the "0.7 is a guess and stays one" note below is now only half
+true: the distribution *above* the threshold is being captured.
 **Spec:** [`.claude/handoffs/badgeIdeas.md`](../../handoffs/badgeIdeas.md) · ADR 0013 amendment 2026-08-06 §§3–6
 
 ## Why it is one ticket and not two
