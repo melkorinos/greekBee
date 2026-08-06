@@ -2,26 +2,22 @@
 //
 // Read-only lifetime stats for one device: total points and puzzles played
 // (cross-game), plus leksokipos_points (leksokipos-only) from the game_scores
-// aggregate, pangram_count — a parallel COUNT(*) over the separate
-// player_pangrams table (B2) — and leksokipos_first_place_count, derived from a
-// cross-device Leksokipos fetch (ADR 0014). Supabase is mocked; the pure reduces
-// themselves are covered by lifetimeStats.test.ts / placement.test.ts.
+// aggregate and pangram_count — a parallel COUNT(*) over the separate
+// player_pangrams table (B2). Supabase is mocked; the pure reduce itself is
+// covered by lifetimeStats.test.ts.
 //
-// The route issues TWO game_scores selects: the device aggregate (columns
-// "game_id, score") and the cross-device placement fetch (columns
-// "device_id, puzzle_date, score"). The mock branches on the requested columns.
+// Both queries are device-scoped: one game_scores aggregate and one
+// player_pangrams head count. The mock branches on the table name.
 
 import { describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { holder, mockScoresEq, mockPangramEq, mockLeksokiposEq, mockLt } = vi.hoisted(() => {
+const { holder, mockScoresEq, mockPangramEq, mockLt } = vi.hoisted(() => {
   const holder = {
     rows: [] as unknown[],
-    leksokiposRows: [] as unknown[],
     pangramCount: 0 as number | null,
     scoresError: null as { message: string } | null,
     pangramError: null as { message: string } | null,
-    leksokiposError: null as { message: string } | null,
   };
   // game_scores device aggregate: .eq() is terminal. .lt() is exposed so the test
   // can prove the route never applies a date filter — a filter would window-cap
@@ -32,11 +28,9 @@ const { holder, mockScoresEq, mockPangramEq, mockLeksokiposEq, mockLt } = vi.hoi
     p.lt = mockLt;
     return p;
   });
-  // game_scores placement fetch: eq("game_id", "leksokipos"), returns all rows.
-  const mockLeksokiposEq = vi.fn(() => Promise.resolve({ data: holder.leksokiposRows, error: holder.leksokiposError }));
   // player_pangrams: HEAD exact count scoped to the device — returns { count }.
   const mockPangramEq = vi.fn(() => Promise.resolve({ count: holder.pangramCount, error: holder.pangramError }));
-  return { holder, mockScoresEq, mockPangramEq, mockLeksokiposEq, mockLt };
+  return { holder, mockScoresEq, mockPangramEq, mockLt };
 });
 
 vi.mock("@/lib/supabase", () => ({
@@ -45,10 +39,7 @@ vi.mock("@/lib/supabase", () => ({
     from: (table: string) =>
       table === "player_pangrams"
         ? { select: () => ({ eq: mockPangramEq }) }
-        : { select: (cols: string) =>
-            cols.includes("puzzle_date")
-              ? { eq: mockLeksokiposEq }
-              : { eq: mockScoresEq } },
+        : { select: () => ({ eq: mockScoresEq }) },
   }),
 }));
 
@@ -60,14 +51,11 @@ function req(query: string) {
 
 function reset() {
   holder.rows = [];
-  holder.leksokiposRows = [];
   holder.pangramCount = 0;
   holder.scoresError = null;
   holder.pangramError = null;
-  holder.leksokiposError = null;
   mockScoresEq.mockClear();
   mockPangramEq.mockClear();
-  mockLeksokiposEq.mockClear();
   mockLt.mockClear();
 }
 
@@ -78,42 +66,27 @@ describe("GET /api/profile/stats", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns aggregated stats + pangram_count + first-place count for the device", async () => {
+  it("returns aggregated stats + pangram_count for the device", async () => {
     reset();
     holder.rows = [
       { game_id: "leksokipos",  score: 120 },
       { game_id: "leksiarxeio", score: 30  },
     ];
     holder.pangramCount = 7;
-    // Cross-device Leksokipos rows: dev-A tops 2026-07-10 (1st), is 2nd of two on
-    // 2026-07-11, and is 3rd behind two others on 2026-07-12.
-    holder.leksokiposRows = [
-      { device_id: "dev-A", puzzle_date: "2026-07-10", score: 120 },
-      { device_id: "dev-B", puzzle_date: "2026-07-10", score: 40 },
-      { device_id: "dev-A", puzzle_date: "2026-07-11", score: 30 },
-      { device_id: "dev-B", puzzle_date: "2026-07-11", score: 99 },
-      { device_id: "dev-B", puzzle_date: "2026-07-12", score: 99 },
-      { device_id: "dev-C", puzzle_date: "2026-07-12", score: 80 },
-      { device_id: "dev-A", puzzle_date: "2026-07-12", score: 50 },
-    ];
     const res = await GET(req("?device_uuid=dev-A"));
     expect(res.status).toBe(200);
     expect(mockScoresEq).toHaveBeenCalledWith("device_id", "dev-A");
     expect(mockPangramEq).toHaveBeenCalledWith("device_uuid", "dev-A");
-    expect(mockLeksokiposEq).toHaveBeenCalledWith("game_id", "leksokipos");
     expect(await res.json()).toEqual({
       total_points: 150, puzzles_played: 2,
       leksokipos_points: 120, pangram_count: 7,
-      leksokipos_first_place_count: 1,
-      leksokipos_second_place_count: 1,
-      leksokipos_third_place_count: 1,
     });
     expect(res.headers.get("Cache-Control")).toBe("private, max-age=60");
   });
 
-  it("500 when the cross-device Leksokipos placement query errors", async () => {
+  it("500 when the game_scores aggregate query errors", async () => {
     reset();
-    holder.leksokiposError = { message: "placement fetch failed" };
+    holder.scoresError = { message: "scores fetch failed" };
     const res = await GET(req("?device_uuid=dev-A"));
     expect(res.status).toBe(500);
   });
