@@ -99,3 +99,115 @@ Grilled and shipped the same day (two slices). Every catalog entry now carries a
 - **Storage floor derived from the ladder.** `WORDS_MIN_TRACKED = min(wordLengthBadges) = 10` and `WORDS_TAIL_START = max(...) = 13` both derive from the same config, so the card buckets (10/11/12 + "13+"), the badges, and the write floor **cannot drift**. `POST /api/words` drops any find below `WORDS_MIN_TRACKED` after `sanitizeFoundWords` (sanitize is unchanged — it still floors at the game's `MIN_WORD_LENGTH`; the ≥10 rule is a distinct business filter in the route). The `useAchievementSync` capture lane still posts the whole found set; the server is the single authoritative floor.
 - **One-shot cleanup.** Migration `20260726120000` runs `DELETE FROM player_words WHERE length < 10` — idempotent, small (the table is dark behind `FEATURE_FLAGS.achievements` and launch-reset class anyway). Kept in sync with `WORDS_MIN_TRACKED` by comment; SQL can't import the constant.
 - **Unchanged:** the `player_words` schema (the `length` column already exists), the merge (`planWordsMerge`), retention (never swept), and the tiered-badge medal system (this is four one-shots, so the 3-medal `TierName` is untouched).
+
+## Amendment (2026-08-06) — the catalog rebuild: one milestones table, two frozen-id exceptions, and the podium lane deleted
+
+Grilled from ticket 08 (podium badges) and the operator's follow-on catalog review. The ticket asked a narrow
+question — which podium tiers, which thresholds — and the answer turned out to be **no podium badge at all**,
+which then exposed a set of larger calls about what the catalog is and how its inputs are stored. All of it is
+recorded here because every item below is hard to reverse *after launch* and free before it.
+
+**The pre-launch window is what makes this affordable.** All beta trophy data is wiped at official release
+(already this ADR's stance), so ids are cheap to change *right now* and permanently expensive the day after.
+Every id decision below deliberately spends that window rather than carrying a compromise forever.
+
+### 1. Podium badges: rejected, and the lane behind them is deleted
+
+Tiered podium badges do **not** ship. The operator's reason is the load-bearing one: **podium slots are fixed
+at three while the audience grows**, so any "finished top-N" badge gets strictly harder over time — first place
+worst, top-three the same failure three times slower. Measured on 2026-08-06: 44 days, 365 scores, 8.3 players
+per day, top device 16 firsts in 28 days played. Those numbers make the badge look easy today and make it
+unreachable at public scale; that is a metric problem, not a threshold problem, so no tuning fixes it.
+
+A percentile metric ("top 10% of the day's board") *is* audience-proof, and was rejected too: at 8 players a
+day the top 10% is one player, so it would be **harsher than first place** until real traffic arrives.
+
+**Consequence — the whole podium lane is removed, not just the badge.** The Βάθρο cell on the Profile page
+(`LifetimeStatsStrip`), the three `leksokipos_*_place_count` response fields, the cross-device query in
+`/api/profile/stats`, `src/lib/placement.ts` (`countPodiumFinishes` / `countFirstPlaceFinishes`), their tests,
+and the **Podium Finish** + **Podium Counts** glossary terms in `CONTEXT.md` all go. That query is the one part
+of the stats route that fetches **every device's** Leksokipos rows — its own comment flags it as the piece to
+re-engineer before scale — so with nothing consuming it, deleting it retires a launch scaling risk rather than
+leaving a paid query feeding a deleted cell. The reserved `leksokipos-first-place-*` id prefix is released
+unused; no row ever carried it.
+
+### 2. `player_milestones` — one table for every countable input
+
+Two badges become tiered (§3) and **neither has a counter**. Points and pangrams have sources; "reached the top
+rank" has none, and it is **not derivable from `game_scores`** — rank needs each puzzle's genius threshold,
+which the server never sees. So new capture was unavoidable, and taking one migration to also consolidate the
+existing set tables was cheaper than adding a third one beside them.
+
+`player_milestones(device_uuid text, puzzle_date date, kind text, detail text)`, `UNIQUE(device_uuid,
+puzzle_date, kind, detail)`, insert-if-absent, append-forever, never swept — the same posture as every table in
+this ADR. It absorbs **`player_pangrams`** (`kind='pangram'`, `detail`=the word) and **`player_words`**
+(`kind='word'`, `detail`=the word, keeping the ≥10 floor of the 2026-07-26 amendment), and adds
+`kind='top_rank'` and `kind='tzimani'` with an **empty** `detail`.
+
+- **The trap, and it is a real one:** Postgres treats `NULL`s as **distinct** in a unique index, so a null
+  `detail` would let the same milestone insert twice and silently break insert-if-absent — the exact guarantee
+  this ADR is built on. Use `''` for detail-less kinds, or declare the index `NULLS NOT DISTINCT` (Postgres 15+;
+  the project is on 17, so both are available). Do not leave it nullable and untreated.
+- **Points stay out.** Lifetime points is a `SUM` over `game_scores` — derived, never stored (`CONTEXT.md`
+  data-class 2). There are no rows to move, and materialising the total would create a second source of truth
+  that can drift from the scores it is computed from.
+- **`player_achievements` stays separate.** It holds earned *badges* — the output. `player_milestones` holds the
+  *inputs* the tier crossings are computed from. Merging them would put a derived conclusion in the same table
+  as its evidence.
+
+### 3. Two one-shots become tiered; both feed off `player_milestones`
+
+- **Στην Κορυφή** — was a one-shot on reaching the top rank; becomes tiered at **1 / 10 / 25** lifetime
+  top-rank days (`kind='top_rank'`).
+- **Θεριστής → Τζιμάνι** — the 80%-of-words one-shot becomes tiered at **1 / 5 / 10** lifetime qualifying days
+  (`kind='tzimani'`). **`achievementTuning.theristisFoundRatio` stays 0.8**: the ladder counts *days at 80%*,
+  it does not climb the ratio. A 90/100% ladder was rejected — a 100% rung is the old perfect-round concept
+  back under a new name, which this ADR retired in the 2026-07-18 amendment.
+
+Both thresholds live in `achievementTuning.ts` as balance knobs, like every other tier.
+
+### 4. Frozen-id rule — the second and third deliberate exceptions
+
+The frozen-id rule (Decision §1, Consequences) has one prior exception, `leksokipos-tzimani` in the 2026-07-18
+amendment. Two more are granted here, both licensed by the pre-launch wipe and by nothing else:
+
+- **`leksokipos-first-daily` (Πρώτα Βήματα) is removed** — catalog entry deleted, id retired permanently, never
+  reused. "You played once" is not an accomplishment worth a tile.
+- **`leksokipos-tzimani` is revived** for the tiered 80% badge, in preference to keeping
+  `leksokipos-theristis` with new display copy. Reviving it costs nothing while the data is wiped, and it
+  avoids an id and a name that disagree forever. Tier ids are `leksokipos-tzimani-chalkino/-asimenio/-chryso`.
+  **This resolves parked item 1 of `.claude/handoffs/badgeIdeas.md`** — that item asked for exactly this, Τζιμάνι
+  re-awarded under less demanding conditions than "found all the words".
+
+**After launch this window shuts.** Post-release, the rule is absolute again: an id may be added, never renamed,
+removed, or revived.
+
+### 5. Tier ladder: three rungs, with one standing exception
+
+Three rungs everywhere — `chalkino` / `asimenio` / `chryso`. A longer ladder was considered for pangrams and
+points and rejected for now. **Μακρυλέξης keeps its fourth rung** (`diamanti`, the 13-letter word): its rungs
+are exact word lengths, not a cumulative count, so dropping 13 would delete a real accomplishment to satisfy a
+number. `TierName` therefore keeps all four names.
+
+### 6. Display Badge: exactly one, permanently
+
+A player displays **one** badge. This was previously parked as "multiple displayed badges + precedence rules";
+it is now a **closed question, not a deferred one** — no precedence system will be built, so nothing downstream
+needs to anticipate one. Already the shipped behaviour (`player_profiles.selected_badge_id`, singular), so this
+records intent rather than changing code.
+
+### 7. Badge art: emoji glyphs are retired, but not by this ADR
+
+The operator's verdict on emoji glyphs: they read as cheap and they do not scale cleanly. They also collide
+with player names — `display_name` has **zero validation** (`/api/profile` does `trim()` and falls back to
+`Ανώνυμος`), so an emoji in a name sits beside an emoji badge and the two are indistinguishable. Emoji in names
+stays **allowed**; the badge changes instead.
+
+Every `glyph` becomes a drawn SVG mark, and tiers stop using the 🥉🥈🥇 `TIER_MEDALS` in favour of a tier
+treatment on the mark itself. **Art is display copy — no id, no schema, and no earned row depends on it**, so
+this is fully decoupled and can land whenever. Scope, the five marks, the tier treatment, the leaderboard chip
+and the Trophy Case states are all specified in `.claude/handoffs/badgeVisualSystem.md`.
+
+**Note the structural consequence of §3 + §4:** with Πρώτα Βήματα gone and Στην Κορυφή and Τζιμάνι tiered,
+**every remaining badge is tiered** — the catalog has no one-shot entries left. The tier treatment is therefore
+not decoration on some badges; it is how every badge in the game reads.

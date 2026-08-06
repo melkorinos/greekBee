@@ -1,6 +1,6 @@
 # Handoff: Parked Badge Ideas
 
-**Date:** 2026-07-30
+**Date:** 2026-08-06 (was 2026-07-30)
 **Status:** Idea backlog — none of this is committed scope; each item needs its own grill before any build
 **Goal:** hold the badge/achievement ideas that keep outliving their containers, until one is promoted
 
@@ -14,79 +14,99 @@ It kept getting filed as a tracker issue and never triaged — because it isn't 
 is the honest home.
 
 Everything below is built on **ADR 0013** (`player_achievements` immutable fact rows; lanes
-A client-live / B deferred-server / C append-only-set). The shipped **pangram tier** is the lane-C reference
-implementation — mirror it rather than inventing a new shape. Badge display shipped in session 112
+A client-live / B deferred-server / C append-only-set). Badge display shipped in session 112
 (`glyph` field, Trophy Case, `player_profiles.selected_badge_id`, `LeaderboardBadge` chip,
 `FEATURE_FLAGS.achievements` = `true`).
 
-Verified still accurate on 2026-07-30: nothing in this list has shipped since it was written.
+**Read the ADR 0013 amendment dated 2026-08-06 before touching anything here.** It rebuilt the catalog and
+closed or resolved half of this document; the surviving items are re-scoped against it below.
+
+## What the 2026-08-06 grill settled
+
+Ticket `08-podium-badges-tiers-and-thresholds.md` was folded into this doc and deleted. It asked which podium
+tiers and thresholds to build; the answer was **no podium badge**, and the follow-on catalog review then
+settled far more than the ticket scoped. Full reasoning is in the ADR — the short version:
+
+- **Podium badges rejected**, and the podium lane is deleted with them (see Removal slice below).
+- **`player_milestones`** replaces `player_pangrams` + `player_words` and adds the two new counters.
+- **Στην Κορυφή** → tiered 1/10/25. **Θεριστής** → renamed **Τζιμάνι**, tiered 1/5/10, ratio still 80%.
+- **Πρώτα Βήματα removed** permanently; **`leksokipos-tzimani` revived**. Both licensed only by the
+  pre-launch data wipe — that window shuts at launch.
+- **Three tier rungs**, Μακρυλέξης keeps its fourth as the standing exception.
+- **One displayed badge, permanently** — no precedence system will ever be built.
+- **Emoji glyphs retired** in favour of drawn SVG marks → `.claude/handoffs/badgeVisualSystem.md`.
 
 ## The parked items
 
-### 1. New Τζιμάνι conditions
+### 1. New Τζιμάνι conditions — ✅ RESOLVED 2026-08-06
 
-`leksokipos-tzimani` was freed in session 108 (catalog entry removed; prod already held 0 rows — ADR 0013
-records the frozen-id exception). The operator wants the badge re-awarded **under different, less demanding
-conditions** than "found all the words". Define those conditions in the grill; the frozen-id rule applies
-again the moment it re-ships. The in-game completion mechanic survives (board lock + ΤΟ ΠΕΘΑΝΕΣ,
-`allWordsFound`) — only the reward is gone.
+Τζιμάνι returns as the tiered 80%-of-words badge, reviving the freed `leksokipos-tzimani` id. This item asked
+for exactly that: the badge re-awarded under less demanding conditions than "found all the words". Specified
+in ADR 0013 §3–4; nothing further to decide. Kept here only so the resolution is visible where the question
+was asked.
 
-### 2. Placement / podium badges ⭐ — agreed next promotion (2026-07-18 grill)
+### 2. Placement / podium badges — ❌ REJECTED 2026-08-06
 
-The most build-ready item in this doc. Lifetime 1st/2nd/3rd counts already flow from `/api/profile/stats`
-since session 109 (`countPodiumFinishes` — see [route.ts](src/app/api/profile/stats/route.ts) and
-[placement.ts](src/lib/placement.ts)), so **tiered** podium badges can ride the same stats read-back as the
-points tiers: lane-C-style crossing detection, no new capture, no migration.
+Was the recommended promotion; it did not survive contact. **Podium slots are fixed at three while the
+audience grows**, so any "finished top-N" badge gets strictly harder over time — no threshold fixes a metric
+problem. A percentile metric is audience-proof but backfires at current scale. Rationale, the measured data,
+and the deleted lane are all in the ADR. **Do not re-promote this** without a new argument about the metric,
+not the thresholds.
 
-A *live* "you finished 1st today" badge is a different and much larger thing — it needs the lane-B deferred
-puzzle-close job. Open questions there: where the job runs (Vercel cron route; there are no Supabase edge
-functions in this project), what "close" means against puzzle rollover, tie handling, and idempotency
-(insert-if-absent, since crons retry).
+### 3. Additional cumulative-stat badges (lane C) — still parked, now cheaper
 
-**If you promote one item from this doc, promote the tiered half of this one.**
+"Reached rank N this many times" etc. **`player_milestones` is the home for these now** — a new cumulative
+badge is a new `kind` value, not a new table, so the migration cost this item used to carry is gone. Still
+open per item: the qualifying event, the `kind` string, and the thresholds. Note the ADR's `NULLS NOT
+DISTINCT` trap if the new kind has no `detail`.
 
-### 3. Additional cumulative-stat badges (lane C)
+### 4. Words-by-length badges — still parked
 
-"Reached rank N this many times" etc. — mirror the pangram tier exactly: set-table + insert-if-absent route
-+ Restore union + sync lane + thresholds in `achievementTuning.ts`. Open per item: the qualifying event, the
-unique-constraint columns (keep the `puzzle_date` dimension so future pivots stay query changes rather than
-migrations), and the thresholds.
+A tiered "long-word hunter" over the `player_words` counts. Same crossing pattern as the other tiers. Note
+the capture moved: `player_words` is absorbed into `player_milestones` as `kind='word'`, so this item now
+counts rows there.
 
-### 4. Words-by-length badges
+### 5. Pangram tier threshold balance pass — still blocked
 
-Once pickup-03 data accrues — e.g. a tiered "long-word hunter" over the `player_words` counts. Same
-stats-read-back crossing pattern as the points and pangram tiers. The capture lane already exists
-(session 110: `player_words`, `POST /api/words`, `WordsByLengthCard`).
-
-### 5. Pangram tier threshold balance pass — blocked
-
-`pangramTierThresholds` (10/20/50 in [achievementTuning.ts](src/config/achievementTuning.ts)) were
+`pangramTierThresholds` (10/20/50 in [achievementTuning.ts](../../src/config/achievementTuning.ts)) were
 placeholders. Re-tune once real pangram-rate data exists — **that data does not exist yet, so this is
-blocked, not merely parked.** When unblocked it's a tuning/query edit only, no migration.
+blocked, not merely parked.** When unblocked it's a tuning edit only, no migration. A longer-than-three
+ladder was considered on 2026-08-06 and deferred, so this stays a three-number edit.
 
-### 6. Badge display follow-ups
+### 6. Badge display follow-ups — split three ways
 
-Deliberately cut from the shipped 2026-07-18 slice: multiple displayed badges + precedence rules, custom
-icon art (emoji glyphs are interim — operator: "will improve later"), and badge earning outside Leksokipos.
+- **Multiple displayed badges + precedence rules — ❌ CLOSED.** One badge, permanently. Not deferred, decided.
+- **Custom icon art — ✅ PROMOTED** to `.claude/handoffs/badgeVisualSystem.md`.
+- **Badge earning outside Leksokipos — still parked.** Leksokipos-only at launch, and the Profile page must
+  say so (see below).
 
-## Recommended next step
+## Owed build work
 
-Promote **item 2 (tiered podium badges)** when there's appetite — it's the only item with its data already
-in place and a proven pattern to copy. Grill it into a scoped slice first; do not build straight from this
-doc, and do not promote more than one item at a time.
+Decided on 2026-08-06, specified, **not built**. None of it is on the launch path unless the launch
+checklist puts it there.
 
-Items 1, 3, 4 and 6 stay parked. Item 5 stays blocked until pangram-rate data exists.
+1. **Removal slice — podium lane.** Delete the Βάθρο cell (`LifetimeStatsStrip`), the three
+   `leksokipos_*_place_count` fields and the cross-device query in `/api/profile/stats`,
+   `src/lib/placement.ts`, their tests, and the **Podium Finish** + **Podium Counts** terms in `CONTEXT.md`.
+   Retires a known scaling risk — that query fetches every device's Leksokipos rows.
+2. **`player_milestones` migration** + the absorption of `player_pangrams` and `player_words`. Watch the
+   `NULLS NOT DISTINCT` trap.
+3. **Catalog rebuild** — remove Πρώτα Βήματα, tier Στην Κορυφή and Τζιμάνι, wire both to the new counters.
+4. **Profile page scoping** — a labelled Leksokipos section holding the Trophy Case and Λέξεις ανά μήκος, so
+   it is unambiguous that badges are Leksokipos-only. A **section, not tabs** — tabs when a second game earns.
+5. **Pre-launch data wipe** — deferred, operator-owned, but items 3 and 4 of the ADR's frozen-id exceptions
+   depend on it happening before release.
 
 ## Suggested skills
 
-- `/grill-with-docs` — pin the conditions/thresholds for whichever item gets promoted, and update the domain
-  docs inline. Required before any build; every item here is under-specified by design.
-- `/to-tickets` — break the grilled result into vertical-slice tickets.
-- `/tdd` — build the slice red-green-refactor, mirroring the pangram tier lane.
+- `/to-tickets` — break the owed build work into vertical slices. Item 1 (removal) is independent of the
+  rest and can go first.
+- `/tdd` — build each slice red-green-refactor.
+- `/grill-with-docs` — only for items 3 and 4 above, which are still under-specified by design.
 
 ## Related
 
-- **ADR 0013** — `player_achievements`, the three lanes, the frozen-id rule
-- The old item 5 pointed at issue `11-pangram-tier-prod-smoke-check.md` for a pending human toast/chip
-  check — that issue no longer exists as of 2026-07-30, so treat the smoke check as done or re-verify it.
+- **ADR 0013** — `player_achievements`, the three lanes, the frozen-id rule, and the 2026-08-06 amendment
+  that supersedes most of this doc
+- `.claude/handoffs/badgeVisualSystem.md` — the promoted icon-art work
 - `.claude/aiHelper/log.md` sessions 66, 69, 107–113 — the achievements build history

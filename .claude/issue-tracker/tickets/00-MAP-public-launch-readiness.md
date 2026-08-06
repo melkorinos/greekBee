@@ -37,6 +37,23 @@ no open question stands between here and pressing the button.
 
 <!-- one line per closed ticket: gist + link -->
 
+- **2026-08-06 — Podium badges rejected, and the grill rebuilt the achievement catalog instead.**
+  Ticket 08 resolved and folded back into `.claude/handoffs/badgeIdeas.md`, then deleted. The ticket asked
+  which podium tiers and thresholds to build; the answer is **none**. **Podium slots are fixed at three
+  while the audience grows**, so any "finished top-N" badge gets strictly harder over time — a metric
+  problem no threshold fixes. Measured before deciding: 44 days, 365 scores, 8.3 players/day, top device 16
+  firsts in 28 days played. A percentile metric is audience-proof but backfires at this scale (10% of 8
+  players is one player, harsher than first place). **The whole podium lane is deleted with the badge** —
+  including the cross-device query in `/api/profile/stats` that fetches every device's Leksokipos rows,
+  which retires a known scaling risk rather than leaving a paid query feeding a deleted cell. The follow-on
+  catalog review then settled much more: **`player_milestones`** absorbs `player_pangrams` + `player_words`
+  and carries the two new counters; **Στην Κορυφή** and **Θεριστής→Τζιμάνι** become tiered; **Πρώτα Βήματα
+  is removed** and **`leksokipos-tzimani` revived** (frozen-id exceptions two and three, licensed only by
+  the pre-launch wipe); **one displayed badge, permanently**; **emoji glyphs retired** for drawn SVG marks.
+  All of it in **ADR 0013's 2026-08-06 amendment**, with the owed build work listed in the handoff and the
+  art work promoted to `.claude/handoffs/badgeVisualSystem.md`. **Nothing was built** — this ticket also
+  jumped the launch checklist, by operator call, the same way ticket 07 did.
+
 - **2026-08-06 — Five islands added, Δήλος dropped, Topothesies is at 109 answers and the
   handoff is retired.** Ticket 05 resolved and deleted; `.claude/handoffs/topothesies-unpeelable-and-review.md`
   deleted with it — its last live thread. The ticket's own framing was wrong: neither a
