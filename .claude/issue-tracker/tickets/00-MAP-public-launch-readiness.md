@@ -23,11 +23,11 @@ no open question stands between here and pressing the button.
 - **Skills every session should consult:** `/grill-with-docs` for anything under-specified
   (most tickets here are), `/to-tickets` to break a resolved decision into build slices,
   `/tdd` for the builds themselves, `/project-mcp` before any Supabase/Vercel MCP call.
-- **This map plans; it mostly does not build.** Tickets resolve decisions. Where a ticket is a
-  `task` type it does real work, but only to unblock a decision. Actual feature builds are
-  handed off to `/to-tickets` + `/tdd` afterwards — **with one deliberate exception**: where a
-  decision's entire consequence is under ~30 lines (the monetization crawl), the ticket may
-  carry the build, because splitting it costs more than doing it.
+- **This map plans; it does not build.** Tickets resolve decisions. Where a ticket is a `task`
+  type it does real work, but only to unblock a decision. Actual feature builds are handed off
+  to `/to-tickets` + `/tdd` afterwards. *(There used to be one exception — a ticket could carry
+  its own build when the whole consequence was under ~30 lines. Its only claimant, the
+  monetization crawl, is off the map, so no ticket carries a build now.)*
 - **Never `git push`.** Standing rule. Sessions stop after committing.
 - **Source handoffs** live in `.claude/handoffs/`. A ticket that resolves a handoff thread
   should say so, and the handoff doc gets deleted once all its threads are resolved or ruled
@@ -36,6 +36,16 @@ no open question stands between here and pressing the button.
 ## Decisions so far
 
 <!-- one line per closed ticket: gist + link -->
+
+- **2026-08-06 — Monetization is off the launch path. Ticket 06 deleted, nothing built.**
+  Operator call: the crawl step (Ko-fi account, `SUPPORT_URL` in `platform.ts`, «Στήριξε το
+  παιχνίδι» drawer link) was blocked on human work — creating the account and an accountant's
+  read — and none of it gates a go/no-go. No code ever existed, so there is nothing to revert.
+  Everything the ticket held is folded back into `.claude/handoffs/HANDOFF-monetization.md`:
+  the locked decision table, the operator's human half, the tax flag now spelling out that it
+  gates *receiving* money rather than shipping the link, the Κοινότητα-section placement, the
+  `npm run test:e2e` requirement (the drawer is shared chrome), and the traffic-costs-money
+  rationale. Resumable as written whenever the operator wants it.
 
 - **2026-08-03 — Offline Lock: GO, rescoped to platform-wide Offline Mode, and it does NOT ship
   before launch.** Ticket 07 resolved and deleted. Both of its open questions are answered: lock
@@ -72,8 +82,8 @@ no open question stands between here and pressing the button.
   says whether legal pages are in the definition.
 - **Operational readiness under stranger traffic.** Error monitoring, Vercel cost headroom
   when traffic is no longer three friends, Supabase connection limits, and what happens on the
-  first real spike. Sharpens once the launch checklist fixes the definition — the crawl
-  monetization link exists precisely because traffic costs money.
+  first real spike. Sharpens once the launch checklist fixes the definition. Note the cost side
+  now has no funding counterpart on the map — monetization is off it entirely.
 - **Content supply after launch.** `reflections.md` flags the thin Leksindeseis static-fallback
   pool and there is no reminder system. A public audience burns puzzle pools faster than a
   private one. Not yet sharp: unclear whether this is a launch blocker or a week-two problem.
@@ -94,6 +104,7 @@ no open question stands between here and pressing the button.
   content work.
 - **The engagement epic** (`.claude/handoffs/engagementEpic.md`) — explicitly excluded by the
   operator when this map was charted. Retention/engagement work is a post-launch effort.
-- **Monetization "walk" and "run" levers** — the transparency page, sponsor slot, ethical ads,
-  memberships. The handoff itself sequences these after the crawl; none is a launch blocker,
-  and the ads path additionally depends on an unverified eligibility question.
+- **Monetization, entirely** — the crawl (Ko-fi link) as well as the "walk" and "run" levers
+  (transparency page, sponsor slot, ethical ads, memberships). Removed from the map on
+  2026-08-06; see the Decisions entry below. `.claude/handoffs/HANDOFF-monetization.md` stays
+  intact and holds every locked decision. **Do not delete that handoff.**

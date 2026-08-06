@@ -2,6 +2,10 @@
 
 > Source: `/grill-with-docs` session, 2026-07-15. This is a **plan**, not implemented code.
 > Ethos: the platform should pay for its own servers. Hobby project, not a business.
+>
+> **Status 2026-08-06: off the launch path.** Ticket 06 (monetization crawl) was deleted from
+> the wayfinder map by operator call — nothing here blocks a go/no-go. The plan stays whole and
+> resumable; the locked decisions below are still not to be re-litigated when it is picked up.
 
 ---
 
@@ -34,15 +38,26 @@ anonymous identity model** and no new DB tables.
 ## Recommended sequencing
 
 ### Crawl — build this first (near-zero code)
+
+**Why it is worth doing at all:** traffic costs money, and the operator's ethos is that the
+platform pays for its own servers. The link is more useful the day traffic arrives than a
+month later — which is the argument for building it near a launch, not long after one.
+
+**Human half, operator only:** create the Ko-fi account (or confirm a different platform —
+the code is identical either way) and hand back the URL; confirm the payout stays
+personal/individual; see the tax flag below.
+
 1. Add a `SUPPORT_URL` constant to `src/config/platform.ts` (single-source rule — CLAUDE.md).
    Default it to a Ko-fi URL (to be created/confirmed by the operator).
-2. Add a «Στήριξε το παιχνίδι» link in the **Shell drawer**, near the existing
-   Βοήθεια/Feedback entry point (the drawer already has Παιχνίδια/Κοινότητα sections —
-   see `Shell` component). External `<a target="_blank" rel="noopener">`.
+2. Add a «Στήριξε το παιχνίδι» link in the **Shell drawer**, in the **Κοινότητα section**
+   next to the existing Βοήθεια/Feedback entry point (see `Shell` component). External
+   `<a target="_blank" rel="noopener">`.
 3. Copy tone: honest server-cost framing. Use semantic tokens/recipes — no raw palette,
    no inline styles (ADR 0008 + CLAUDE.md standing rules).
 4. Post-feature protocol still applies: a small render/interaction test for the drawer
    link (it's UI), then `npm run test -- --run` / `npx eslint .` / `npm run build` green.
+   The drawer is shared chrome, so **`npm run test:e2e` is also required** before calling
+   the branch ready.
 5. Likely a light CONTEXT.md glossary term **"Support"** when built (external donation
    link; not persisted; distinct from Feedback and Nomination).
 
@@ -67,6 +82,8 @@ anonymous identity model** and no new DB tables.
 
 1. **Tax (prerequisite).** Even tiny personal income is declarable in Greece. Get an
    accountant's read before any real inflow. This is a real-world task, not a code task.
+   It gates *receiving* money, not shipping the link — so whoever picks this up must decide
+   explicitly whether the drawer link ships before the accountant answers or after.
 2. **Ethical-ad eligibility is unverified.** EthicalAds / Carbon Ads curate for
    developer/tech-doc audiences; a Greek consumer word-game may be rejected. **Research
    item — do not promise a network.** If they reject, the only "non-invasive ad" path is a
