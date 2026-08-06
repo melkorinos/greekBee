@@ -47,10 +47,14 @@ async function main() {
     OPTIONAL { ?m wdt:P131 ?parent. OPTIONAL { ?parent rdfs:label ?parentEl. FILTER(LANG(?parentEl)="el") } }
   }`;
   const r = await sparql(q);
-  const byQ: Record<string, { el: string | null; coord: [number, number] | null; parentEl: string | null }> = {};
+  // `q` (the QID) must survive into the row: generateTopothesies joins OSM δήμοι
+  // to their regional unit BY QID (curation.assignOsm), and falls back to
+  // spatial-nearest only for the few munis missing here. Dropping it makes every
+  // join miss silently and the whole feed degrade to the spatial fallback.
+  const byQ: Record<string, { q: string; el: string | null; coord: [number, number] | null; parentEl: string | null }> = {};
   for (const b of r.results.bindings) {
     const id = b.m.value.split("/").pop()!;
-    const row = { el: b.mEl?.value ?? null, coord: coord(b.coord?.value), parentEl: b.parentEl?.value ?? null };
+    const row = { q: id, el: b.mEl?.value ?? null, coord: coord(b.coord?.value), parentEl: b.parentEl?.value ?? null };
     const prev = byQ[id];
     if (!prev) { byQ[id] = row; continue; }
     prev.el ??= row.el;

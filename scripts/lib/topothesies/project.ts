@@ -53,6 +53,52 @@ export function computeViewBox(points: [number, number][], pad = 0): string {
   return `${r(minX - px)} ${r(minY - py)} ${r(w + 2 * px)} ${r(h + 2 * py)}`;
 }
 
+/**
+ * Is [lng,lat] inside this polygon? Ray casting against the outer ring, minus
+ * any hole the point falls in. Used to pick WHICH landmass of a multi-polygon
+ * answer is the one to draw: an island δήμος can include a mainland strip that
+ * is fractionally LARGER than the island itself (Πόρος: 24.3 km² of Argolid
+ * coast vs the 22.4 km² island), so "largest polygon" silently draws the wrong
+ * shape. The polygon holding the answer's capital is the right one.
+ */
+export function pointInPolygon(point: LngLat, polygon: LngLat[][]): boolean {
+  const [outer, ...holes] = polygon;
+  if (!pointInRing(point, outer)) return false;
+  return !holes.some((h) => pointInRing(point, h));
+}
+
+/**
+ * An answer's polygons, best-first: the one holding its CAPITAL leads, then the
+ * rest by descending area. Callers that draw only the main landmass take the
+ * head; `MAIN_ISLAND_POLYGONS` answers take the first N.
+ *
+ * Area alone is not enough. A δήμος can straddle water — Δήμος Πόρου owns a
+ * 24.3 km² strip of the Argolid coast as well as the 22.4 km² island — so
+ * "largest polygon" drew the mainland hook, and Πόρος read as an unrecognisable
+ * C-shape (the reason it sat deferred). Falls back to pure area when no polygon
+ * contains the capital, e.g. a capital coordinate rounded to just offshore.
+ */
+export function polygonsBestFirst(polygons: LngLat[][][], capital: LngLat): LngLat[][][] {
+  const byArea = polygons
+    .slice()
+    .sort((a, b) => Math.abs(ringArea(b[0])) - Math.abs(ringArea(a[0])));
+  const home = byArea.findIndex((p) => pointInPolygon(capital, p));
+  if (home <= 0) return byArea;
+  return [byArea[home], ...byArea.filter((_, i) => i !== home)];
+}
+
+/** Ray casting: does a half-line east of `point` cross this ring an odd number of times? */
+function pointInRing([x, y]: LngLat, ring: LngLat[]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    // Only edges straddling the point's latitude can be crossed.
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
 /** Signed shoelace area of a ring in [lng,lat] units (CCW positive). */
 export function ringArea(ring: LngLat[]): number {
   let sum = 0;

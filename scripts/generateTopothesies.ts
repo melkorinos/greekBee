@@ -42,8 +42,8 @@ import {
   centroidLngLat,
   computeViewBox,
   maxPairwiseCentroidKm,
+  polygonsBestFirst,
   projectPoint,
-  ringArea,
   ringToPath,
 } from "./lib/topothesies/project";
 import { validateEmitted } from "./lib/topothesies/validateEmitted";
@@ -134,6 +134,7 @@ function roughCentroid(f: Feature): LngLat {
 function polygonsOf(f: Feature): Polygon[] {
   return f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
 }
+
 
 /** Nearest wd-muni regional unit to a point (spatial fallback + foreign filter). */
 function nearestMuniRu(c: LngLat, munis: Muni[]): { parentEl: string | null; dist: number } {
@@ -229,11 +230,11 @@ function main() {
     if (SIMPLIFY_OVERRIDE) return SIMPLIFY_OVERRIDE;
     const meta = ANSWER_META[f.properties.ansid];
     if (!meta?.isIsland) return "interval=200"; // mainland — untouched
-    // Bucket by the drawn landmass (largest polygon), matching the keep=1 island render.
-    const polys = polygonsOf(f);
-    const largest = polys.reduce((a, b) => (Math.abs(ringArea(b[0])) > Math.abs(ringArea(a[0])) ? b : a));
-    const xs = largest[0].map((p) => p[0]);
-    const ys = largest[0].map((p) => p[1]);
+    // Bucket by the DRAWN landmass, so this must use the same choice the render
+    // makes below — capital first, not merely largest.
+    const drawn = polygonsBestFirst(polygonsOf(f), meta.capitalCoord)[0];
+    const xs = drawn[0].map((p) => p[0]);
+    const ys = drawn[0].map((p) => p[1]);
     const diagKm = haversineKm([Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]);
     return `interval=${islandIntervalM(diagKm)}`;
   };
@@ -276,10 +277,7 @@ function main() {
     const polygons =
       keep === undefined
         ? polygonsOf(f)
-        : polygonsOf(f)
-            .slice()
-            .sort((a, b) => Math.abs(ringArea(b[0])) - Math.abs(ringArea(a[0])))
-            .slice(0, keep);
+        : polygonsBestFirst(polygonsOf(f), meta.capitalCoord).slice(0, keep);
     const allPts = polygons.flat(2) as LngLat[];
     const refLat = allPts.reduce((s, p) => s + p[1], 0) / allPts.length;
 

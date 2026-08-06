@@ -14,6 +14,8 @@ import {
   ringArea,
   centroidLngLat,
   maxPairwiseCentroidKm,
+  pointInPolygon,
+  polygonsBestFirst,
 } from "../../../scripts/lib/topothesies/project";
 import type { LngLat } from "../../../src/games/topothesies/types";
 
@@ -110,5 +112,79 @@ describe("maxPairwiseCentroidKm", () => {
     const max = maxPairwiseCentroidKm(centroids);
     expect(max).toBeGreaterThan(280);
     expect(max).toBeLessThan(320);
+  });
+});
+
+describe("pointInPolygon", () => {
+  // A 10×10 square with a 4×4 hole punched out of the middle.
+  const square: LngLat[][] = [
+    [
+      [0, 0],
+      [10, 0],
+      [10, 10],
+      [0, 10],
+    ],
+    [
+      [3, 3],
+      [7, 3],
+      [7, 7],
+      [3, 7],
+    ],
+  ];
+
+  it("accepts a point inside the outer ring", () => {
+    expect(pointInPolygon([1, 1], square)).toBe(true);
+  });
+
+  it("rejects a point outside the outer ring", () => {
+    expect(pointInPolygon([11, 5], square)).toBe(false);
+  });
+
+  it("rejects a point that falls in a hole", () => {
+    expect(pointInPolygon([5, 5], square)).toBe(false);
+  });
+});
+
+describe("polygonsBestFirst", () => {
+  // Two disjoint squares: `big` is 4×4 = 16, `small` is 3×3 = 9.
+  const big: LngLat[][] = [
+    [
+      [0, 0],
+      [4, 0],
+      [4, 4],
+      [0, 4],
+    ],
+  ];
+  const small: LngLat[][] = [
+    [
+      [10, 0],
+      [13, 0],
+      [13, 3],
+      [10, 3],
+    ],
+  ];
+
+  it("leads with the polygon holding the capital even when it is the smaller one", () => {
+    // This is the Πόρος case: the island is smaller than the mainland strip its
+    // δήμος also owns, so area alone picks the wrong landmass to draw.
+    const [first] = polygonsBestFirst([big, small], [11, 1]);
+    expect(first).toBe(small);
+  });
+
+  it("keeps the remaining polygons in descending area order behind it", () => {
+    const medium: LngLat[][] = [
+      [
+        [20, 0],
+        [23.5, 0],
+        [23.5, 3.5],
+        [20, 3.5],
+      ],
+    ];
+    expect(polygonsBestFirst([small, big, medium], [11, 1])).toEqual([small, big, medium]);
+  });
+
+  it("falls back to pure area order when no polygon contains the capital", () => {
+    // A capital coordinate rounded to just offshore must not lose the shape.
+    expect(polygonsBestFirst([small, big], [99, 99])).toEqual([big, small]);
   });
 });

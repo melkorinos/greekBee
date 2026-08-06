@@ -37,6 +37,29 @@ no open question stands between here and pressing the button.
 
 <!-- one line per closed ticket: gist + link -->
 
+- **2026-08-06 — Πόρος graduated; the bug was ours, not OSM's, and the fix unblocks ticket 05.**
+  Ticket 04 resolved and deleted. The `place=island` coastline override the ticket proposed was
+  **not built and is not needed**: Δήμος Πόρου's dump already contains the correct island, but
+  the δήμος also owns a strip of Argolid coast fractionally *larger* than the island, so the
+  pipeline's "draw the largest polygon" rule drew the mainland. `project.polygonsBestFirst` now
+  picks the polygon holding the answer's capital — a no-op for all 69 other islands, verified by
+  diffing every emitted shape. 104 answers, `DEFERRED_ANSWER_IDS` empty, `PROXIMITY_MAX_KM`
+  still 938. **Knock-on:** the same point-in-polygon selection answers what
+  [the placeholder islands ticket](05-topothesies-cant-peel-placeholders.md) was blocked on —
+  five of its six islands are already separate polygons and need only a real capital
+  coordinate, not the connected-component splitting feature everyone assumed. Δήλος has no
+  capital and stays the permanent-drop candidate. Detail in the handoff's Threads 1 and 3.
+
+- **2026-08-06 — Χαλκιδική un-merged and Θεσσαλονίκη dropped from Topothesies entirely.**
+  Ticket 03 resolved and deleted. All three candidates were rendered from OSM and judged by eye:
+  the merge was burying
+  Χαλκιδική's three-finger peninsula, and Θεσσαλονίκη alone is a shapeless blob — so it does
+  **not** return as its own answer. Still 103 answers, `PROXIMITY_MAX_KM` unchanged at 938,
+  `gameRules.ts` untouched. Detail in the handoff's Thread 2. **Found and fixed a latent
+  pipeline bug on the way:** `fetchWikidata.ts` had stopped emitting the QID the δήμος join
+  keys on, so any regeneration from a fresh clone would silently have degraded to
+  spatial-nearest guessing for all 452 municipalities.
+
 - **2026-08-06 — Monetization is off the launch path. Ticket 06 deleted, nothing built.**
   Operator call: the crawl step (Ko-fi account, `SUPPORT_URL` in `platform.ts`, «Στήριξε το
   παιχνίδι» drawer link) was blocked on human work — creating the account and an accountant's

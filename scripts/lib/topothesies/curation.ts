@@ -68,6 +68,8 @@ export const ISLAND_OVERRIDES: Readonly<Record<string, string>> = {
  * pin the intended RU by shapeName.
  */
 export const RU_FIX: Readonly<Record<string, string>> = {
+  // Kept for completeness: this RU has no RU_TO_ID entry any more, so pinning it
+  // resolves to null — Θεσσαλονίκη is dropped on this feed too, not mis-assigned.
   Thessaloniki: "Περιφερειακή Ενότητα Θεσσαλονίκης",
   Sparta: "Περιφερειακή Ενότητα Λακωνίας",
 };
@@ -86,11 +88,16 @@ export function isAthensSector(ruEl: string): boolean {
  */
 export const RU_TO_ID: Readonly<Record<string, string>> = {
   "Περιφερειακή Ενότητα Ημαθίας": "imathia", "Περιφερειακή Ενότητα Κιλκίς": "kilkis",
-  // Θεσσαλονίκη MERGED into Χαλκιδική (2026-07-22): the whole Π.Ε. Θεσσαλονίκης
-  // dissolves into the `chalkidiki` answer — the dense metro doesn't read as its
-  // own silhouette, mirroring the Αθήνα/Πειραιάς → Αττική merge. `thessaloniki`
-  // is no longer an answer id.
-  "Περιφερειακή Ενότητα Θεσσαλονίκης": "chalkidiki", "Περιφερειακή Ενότητα Σερρών": "serres",
+  // Θεσσαλονίκη is DROPPED entirely (2026-08-06, ticket 03) — it has no entry here
+  // at all, so `assignOsm` returns null for every Π.Ε. Θεσσαλονίκης δήμος.
+  // It was merged into `chalkidiki` on 2026-07-22 because the dense metro doesn't
+  // read as its own silhouette (mirroring Αθήνα/Πειραιάς → Αττική), but the merge
+  // buried Χαλκιδική's recognisable three-finger peninsula under the metro lobe.
+  // Rendering all three candidates settled it: Χαλκιδική alone is unmistakable and
+  // Θεσσαλονίκη alone is a shapeless blob, so the metro is simply not a puzzle.
+  // Neither `thessaloniki` nor the merge is an answer id. Precedent: Τροιζηνία-
+  // Μέθανα (DROP_WD). Consequence: no answer covers that territory, by choice.
+  "Περιφερειακή Ενότητα Σερρών": "serres",
   "Περιφερειακή Ενότητα Πέλλας": "pella", "Περιφερειακή Ενότητα Πιερίας": "pieria",
   "Περιφερειακή Ενότητα Αιτωλοακαρνανίας": "aetolia-acarnania", "Περιφερειακή Ενότητα Ηλείας": "ilia",
   "Περιφερειακή ενότητα Αχαΐας": "achaia", "Περιφερειακή Ενότητα Γρεβενών": "grevena",
@@ -183,11 +190,14 @@ export const ISLAND_PEEL_WD: Readonly<Record<string, string>> = {
 /** OSM δήμος QIDs excluded from every answer (non-island inside an island RU). */
 export const DROP_WD: ReadonlySet<string> = new Set([
   "Q1536340", // Δήμος Τροιζηνίας - Μεθάνων (mainland peninsula in Attica's Νήσων RU)
+  // Δήμος Θεσσαλονίκης — dropped with the rest of its RU (see RU_TO_ID). Listed
+  // explicitly because its Wikidata parent is the REGION, not the regional unit,
+  // so it would never reach the RU lookup that drops its neighbours.
+  "Q6627746",
 ]);
 
 /** OSM δήμος QIDs whose Wikidata parent isn't the regional unit — pinned by id. */
 export const MUNI_RU_FIX_WD: Readonly<Record<string, string>> = {
-  Q6627746: "chalkidiki", // Δήμος Θεσσαλονίκης — merged into Χαλκιδική (2026-07-22); parent is the region, not the RU
   Q992450: "lakonia",       // Δήμος Σπάρτης
   Q2232240: "attica",      // Δήμος Νίκαιας - Αγίου Ιωάννη Ρέντη (Piraeus RU -> Attica)
 };

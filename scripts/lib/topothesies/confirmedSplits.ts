@@ -98,14 +98,16 @@ export const DEFERRED_ISLANDS: ReadonlyArray<{
  *
  * 2026-07-22: SIZE-AWARE simplification (generateTopothesies.islandIntervalM) raised
  * every small island from ~16–42 pts to ~130–400 pts, so the 28 islands deferred for
- * "low fidelity" were graduated to live after operator preview sign-off. Πόρος alone
- * stays deferred: even at full fidelity its silhouette reads WRONG on eyeball review
- * (a geometry problem, not a simplification one) — see the
- * topothesies-unpeelable-and-review handoff.
+ * "low fidelity" were graduated to live after operator preview sign-off.
+ *
+ * 2026-08-06: EMPTY. Πόρος, the last holdout, was never a fidelity or a source
+ * problem — Δήμος Πόρου owns a strip of the Argolid coast fractionally LARGER than
+ * the island, so the pipeline's "draw the largest polygon" rule drew the mainland.
+ * `project.polygonsBestFirst` now picks the polygon holding the answer's capital
+ * instead, and Πόρος renders as the real island. Keep this set — it is the one-line
+ * lever for parking an answer whose geometry is wrong.
  */
-export const DEFERRED_ANSWER_IDS: ReadonlySet<string> = new Set([
-  "poros",
-]);
+export const DEFERRED_ANSWER_IDS: ReadonlySet<string> = new Set<string>([]);
 
 /**
  * Islands promoted to deferred but NOT peelable in v1 — they share a δήμος with a
