@@ -3,8 +3,8 @@
 > Source: `/grill-with-docs` session, 2026-07-15. This is a **plan**, not implemented code.
 > Ethos: the platform should pay for its own servers. Hobby project, not a business.
 >
-> **Status 2026-08-06: off the launch path.** Ticket 06 (monetization crawl) was deleted from
-> the wayfinder map by operator call — nothing here blocks a go/no-go. The plan stays whole and
+> **Status 2026-08-06: off the launch path.** The monetization crawl was dropped from the launch
+> plan by operator call — nothing here blocks a go/no-go. The plan stays whole and
 > resumable; the locked decisions below are still not to be re-litigated when it is picked up.
 
 ---

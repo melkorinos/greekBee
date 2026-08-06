@@ -85,7 +85,7 @@ This project is managed with a dedicated AI coding agent using **Claude Code**. 
 | `.claude/aiHelper/coverageMap.md` | Per-file test coverage map — loaded on demand, never at session start |
 | `.claude/aiHelper/skillsNotes.md` | Skill install/fork/junction traps — read before any skill maintenance |
 
-Longer-lived working documents live outside `aiHelper/`: `.claude/handoffs/` holds parked feature briefs (monetization, offline mode, the Λογοπαίγνιο content pool, badge ideas, the engagement epic), and `.claude/issue-tracker/` holds issues and the wayfinder decision map.
+Longer-lived working documents live outside `aiHelper/`: `.claude/handoffs/` holds parked feature briefs (monetization, offline mode, the Λογοπαίγνιο content pool, badge ideas, the engagement epic), and `.claude/tracker/` holds deferred issues and agent-ready tickets.
 
 ### Claude Code workflow
 
@@ -106,18 +106,16 @@ All commands live in `.claude/skills/`.
 | `/project-mcp` | Canonical Supabase & Vercel MCP IDs, call recipes, and param-traps — load before any Supabase/Vercel MCP call |
 | `/improve-codebase-architecture` | Surface architectural seams and deepening opportunities |
 | `/grill-with-docs` | Relentless Q&A to stress-test a plan or design, cross-checking against domain docs (CONTEXT.md, ADRs) and updating them inline |
-| `/to-tickets` | Break a plan or spec into independently-grabbable vertical-slice tickets on the issue tracker (formerly `/to-issues`) |
+| `/to-tickets` | Break a plan or spec into independently-grabbable vertical-slice tickets in `.claude/tracker/tickets/` (formerly `/to-issues`) |
 | `/diagnosing-bugs` | Disciplined debugging loop — reproduce → minimise → hypothesise → instrument → fix → regression-test (formerly `/diagnose`) |
 | `/tdd` | Test-driven development with red-green-refactor vertical slices |
 | `/handoff` | Compact the current conversation into a handoff document for the next agent session |
-| `/wayfinder` | Chart a chunk of work too big for one session as a map of decision tickets, then resolve them one at a time |
 | `/code-review` | Two-axis review of a diff (Standards + Spec) in parallel sub-agents. **Shadows the Claude Code built-in of the same name**, including `/code-review ultra` |
 | `/research` | Background agent investigates a question against primary sources and writes the findings to a Markdown file |
 | `/prototype` | Build a throwaway prototype to answer one design question |
-| `/setup-matt-pocock-skills` | One-time setup: configure issue tracker, triage labels, and domain doc layout |
 | `/writing-great-skills` | Reference for writing/editing skills well (formerly `/write-a-skill`) |
 
-The skill set was pruned to a curated list on 2026-07-16 and extended on 2026-07-17 with `/wayfinder`, `/code-review`, `/research` and `/prototype`. Three base skills have no slash command of their own and exist only to back the wrappers: `grilling`, `domain-modeling`, `codebase-design`. **This table is the authoritative list** — `CLAUDE.md` states the standing rules about skills and points here. Install/fork/junction traps live in [`.claude/aiHelper/skillsNotes.md`](.claude/aiHelper/skillsNotes.md); read it before any skill maintenance.
+The skill set was pruned to a curated list on 2026-07-16 and extended on 2026-07-17 with `/code-review`, `/research` and `/prototype`. `/wayfinder` and `/setup-matt-pocock-skills` were deleted on 2026-08-06 with the tracker redesign. Three base skills have no slash command of their own and exist only to back the wrappers: `grilling`, `domain-modeling`, `codebase-design`. **This table is the authoritative list** — `CLAUDE.md` states the standing rules about skills and points here. Install/fork/junction traps live in [`.claude/aiHelper/skillsNotes.md`](.claude/aiHelper/skillsNotes.md); read it before any skill maintenance.
 
 ---
 
@@ -358,17 +356,26 @@ scripts/            Puzzle generation & curation CLIs (batch-generate, curate-an
 
 ---
 
-## Tech debt
+## Tech debt & open work
 
-Tracked as individual issues in [`.claude/issue-tracker/issues/`](.claude/issue-tracker/issues/). Each file has a `Status:` line using the project triage vocabulary (`needs-triage`, `ready-for-agent`, `ready-for-human`, `needs-info`, `wontfix`). Resolved issues are **deleted**, not marked done — see that directory for the live list.
+Everything lives under [`.claude/tracker/`](.claude/tracker/) — conventions and both file templates in [its README](.claude/tracker/README.md). Two folders, and the split is the point: **issues** are problems we have decided not to fix yet; **tickets** are work an agent can pick up cold and execute. There are no triage labels — the folder is the state — and resolved files are **deleted**, not marked done.
 
-| # | Issue | Status |
-|---|-------|--------|
-| 02 | [No disaster-recovery backups](.claude/issue-tracker/issues/02-no-disaster-recovery-backups.md) | needs-triage |
+### Deferred problems ([`issues/`](.claude/tracker/issues/))
 
-### Open decisions (wayfinder map)
+| # | Issue | Revisit when |
+|---|-------|--------------|
+| ISSUE-01 | [No disaster-recovery backups](.claude/tracker/issues/ISSUE-01-no-disaster-recovery-backups.md) | Before public launch, or the next risky migration |
 
-Larger open *questions* — the ones that must be answered before work can be ticketed — live in a separate directory, [`.claude/issue-tracker/tickets/`](.claude/issue-tracker/tickets/), as a wayfinder map. The live map is [Public launch readiness](.claude/issue-tracker/tickets/00-MAP-public-launch-readiness.md); its open tickets are the launch checklist (01), the UI redesign scope (02) and the launch sequencing (09). Resolved tickets are folded into the map's "Decisions so far" and deleted.
+### Ready for pickup ([`tickets/`](.claude/tracker/tickets/))
+
+| # | Ticket | Status |
+|---|--------|--------|
+| TICKET-01 | [`player_milestones` table](.claude/tracker/tickets/TICKET-01-player-milestones-table.md) | ready |
+| TICKET-02 | [Catalog rebuild + launch reset](.claude/tracker/tickets/TICKET-02-catalog-rebuild-launch-reset.md) | ready — blocked by TICKET-01 |
+
+### Open questions
+
+Questions that must be answered before work can be ticketed are **not** tracker items — they live in [`.claude/handoffs/launch-readiness.md`](.claude/handoffs/launch-readiness.md): the launch checklist, the UI redesign scope, and the launch sequencing. Resolving one produces an ADR or a `CONTEXT.md` entry plus, usually, tickets.
 
 ---
 

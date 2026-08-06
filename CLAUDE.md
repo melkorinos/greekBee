@@ -28,7 +28,7 @@ There is one more aiHelper file that is deliberately **NOT** in this list: `.cla
 - **End every session with the Dream** (see soul.md, End-of-Session Dream): condense `log.md`, promote durable lessons into `memory.md`/ADRs, update `reflections.md` and `coverageMap.md`. **Hard caps: `log.md` ≤ 120 lines, `memory.md` ≤ 120 lines.**
 - Do not touch `words-el.json` or any `puzzles-*.json` unless the task explicitly requires it.
 - **DB schema is version-controlled** in `supabase/migrations/` — change it only via a new committed migration + `npx supabase db push`, never via the dashboard or MCP `apply_migration` alone, or the repo drifts (push mechanics + emergency fallback in the memory.md Supabase row). For inspection/debugging use the Supabase/Vercel MCP tools — load `/project-mcp` first. **One shared Supabase project backs both dev and prod** — treat every write as production.
-- When an issue is resolved, **delete its file** from `.claude/issue-tracker/issues/` — do not leave it with a "done" status.
+- When an issue or ticket is resolved, **delete its file** from `.claude/tracker/` — no "done" status, no archive folder. Git history is the archive.
 - **Do not install a skill just because it exists upstream.** All commands live in `.claude/skills/`; the three base skills (`grilling`, `domain-modeling`, `codebase-design`) back the wrappers. The authoritative list of what each command does is the slash-command table in `README.md`. **Before any skill maintenance** (`npx skills` update/add/delete, forking, restoring the built-in `/code-review`), read `.claude/aiHelper/skillsNotes.md` — it holds the install/fork/junction traps that otherwise silently revert local edits or resurrect deleted skills. Note `/code-review` **shadows the Claude Code built-in of the same name** (incl. `/code-review ultra`) — restore recipe in skillsNotes.md.
 - **Word budget.** Under 80 words for a question, under 150 for a report on work done. Over budget means cut content, not compress wording — full sentences and spelled-out terms always, never fragments, arrow chains (`A → B → fails`), or invented abbreviations. If the answer genuinely needs more, say so in one line and ask before writing it.
 - **First sentence is the answer.** "What happened" / "what did you find" / "yes or no", before any context. If the first sentence is setup, delete it and start again.
@@ -37,9 +37,17 @@ There is one more aiHelper file that is deliberately **NOT** in this list: `.cla
 - **ELI5 for technical answers.** When the answer turns on a DB, infra, or architecture concept the developer may not use daily, add one final line: `ELI5: <plain-language analogy or restatement, one sentence>`. One per answer, only when the concept is genuinely non-obvious — not for things already familiar from this codebase.
 - **Be direct.** Grammar loses to brevity — short blunt sentences over polished ones. No hedging, no mumbling, no softening. State it plain.
 
-## Issue tracker & domain docs
+## Tracker & domain docs
 
-- Issues are local markdown files under `.claude/issue-tracker/issues/` — see `.claude/issue-tracker/issue-tracker.md`. Issues hold **work**.
-- **Wayfinder maps and their decision tickets live in a separate directory**, `.claude/issue-tracker/tickets/`, and never mix with issues — tickets hold **decisions**. The live map is `00-MAP-public-launch-readiness.md`; read it before assuming an open question is untracked. Closing a ticket means folding its gist into the map's "Decisions so far".
-- Triage uses the default five-role label vocabulary (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix) — see `.claude/issue-tracker/triage-labels.md`.
-- Domain docs: single-context repo — one `CONTEXT.md` + `docs/adr/` at the root. See `.claude/issue-tracker/domain.md`.
+Everything lives under `.claude/tracker/` — full conventions and both file templates in `.claude/tracker/README.md`. Two folders, and the distinction is the whole point:
+
+- **`issues/`** (`ISSUE-NN-<slug>.md`) — known defects and risks whose fix is **deferred**. Each carries `Deferred:` and `Revisit when:`. An issue is not an idea or a feature request — those go in `goals.md` or a handoff, or the folder silts up.
+- **`tickets/`** (`TICKET-NN-<slug>.md`) — work that is **ready for an agent to pick up cold and execute**. Each carries `Status: ready | in-progress` and, when relevant, `Blocked by:`. `/to-tickets` writes these.
+
+Separate number sequences per folder — `ISSUE-01` and `TICKET-01` are unrelated files, so always say which. **No triage labels** anywhere; the folder is the state.
+
+- **Nothing enters `tickets/` without all four of**: a why, an explicit scope checklist, a spec link, and a done-when. Missing any one means it is an issue, or a question for `/grill-with-docs` — not a ticket.
+- **Promotion is a move**, never a copy: a deferred problem that becomes worth doing moves into `tickets/`, gets the next `TICKET-NN`, and is rewritten to the ticket template.
+- **File issues autonomously, but announce them.** When a session finds a real problem it is not fixing, it writes the issue itself and then says so in its reply, in one line, so the operator can review it.
+- **Open questions are neither.** They live in `.claude/handoffs/` — currently `launch-readiness.md`, which holds the three unresolved launch questions. Read it before assuming an open question is untracked. Resolving one produces an ADR or `CONTEXT.md` entry plus, usually, tickets. Wayfinder is retired; there is no map.
+- Domain docs: single-context repo — one `CONTEXT.md` + `docs/adr/` at the root. See `.claude/tracker/domain.md`.

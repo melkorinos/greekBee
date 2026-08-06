@@ -1,14 +1,15 @@
 # `player_milestones` — one table, one route, one merge for every countable badge input
 
-Status: ready-for-agent
-
-**Order:** second of three. Best done after [03](03-remove-podium-lane.md) (same route, avoids a conflict);
-blocks [05](05-catalog-rebuild-launch-reset.md), which wires badges to these counters.
+**Status:** ready
 **Spec:** [`.claude/handoffs/badgeIdeas.md`](../../handoffs/badgeIdeas.md) · ADR 0013 amendment 2026-08-06 §2
+
+Blocks [TICKET-02](TICKET-02-catalog-rebuild-launch-reset.md), which wires badges to these counters. The
+podium-lane deletion that used to precede this shipped on 2026-08-06 (commit `32a866b`), so the route
+conflict it warned about is gone.
 
 ## Why
 
-Two badges become tiered in ticket 05 and **neither has a counter**. "Reached the top rank" is not derivable
+Two badges become tiered in TICKET-02 and **neither has a counter**. "Reached the top rank" is not derivable
 from `game_scores` — rank needs each puzzle's genius threshold, which the server never sees. New capture was
 unavoidable, so one migration consolidates the existing set tables at the same time rather than adding a
 third one beside them.
@@ -59,7 +60,7 @@ putting `kind` second in the UNIQUE.
 - [ ] New migration creating the table, its RLS policies and grants, and the rewritten
       `player_words_by_length(p_device_uuid)` RPC — now `WHERE kind='word'`, aggregating on `value`.
 - [ ] Drop `player_pangrams` and `player_words` **in the same migration**. There is no data worth
-      copying: ticket 05's launch reset wipes it all, and the beta word capture is dark behind
+      copying: TICKET-02's launch reset wipes it all, and the beta word capture is dark behind
       `FEATURE_FLAGS.achievements`. Confirm that before writing a data-migration step nothing needs.
 - [ ] Regenerate `src/lib/database.types.ts` (`npx supabase gen types`) — it is generated, not hand-edited.
 
@@ -88,7 +89,7 @@ putting `kind` second in the UNIQUE.
       one-shot lane re-runs on every `foundWords`/`rank` change — but that lane posts *achievement ids* only.
       It needs a per-`(puzzle_date, kind)` ref (the way `postedPangramWordsRef` works per word), a milestone
       POST, and tier detection off the returned count. Budget this as a fifth lane's worth of work, not zero.
-      Ticket 05 supplies the thresholds; this ticket supplies the plumbing.
+      TICKET-02 supplies the thresholds; this ticket supplies the plumbing.
 
 **Read path**
 

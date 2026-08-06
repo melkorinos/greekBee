@@ -1,9 +1,7 @@
 # Catalog rebuild + the launch reset — the release gate
 
-Status: ready-for-agent
-
-**Order:** third of three. **Blocked by [04](04-player-milestones-table.md)** — two badges read counters that
-ticket creates.
+**Status:** ready
+**Blocked by:** [TICKET-01](TICKET-01-player-milestones-table.md) — two badges read counters it creates.
 **Spec:** [`.claude/handoffs/badgeIdeas.md`](../../handoffs/badgeIdeas.md) · ADR 0013 amendment 2026-08-06 §§3–6
 
 ## Why it is one ticket and not two
@@ -44,7 +42,7 @@ device already held it — caught before launch.
       `topRankTierThresholds` (1/10/25) and `tzimaniTierThresholds` (1/5/10). Rename
       `theristisFoundRatio` to match the badge's new name while you are there — it is a config key, not a
       frozen id.
-- [ ] Wire both new tiered badges to the counters from ticket 04.
+- [ ] Wire both new tiered badges to the counters from TICKET-01.
 
 > **The ratio does not climb with the tier.** The ladder counts *days at 70%*. A 90/100% rung would be the
 > retired perfect-round concept back under a new name.

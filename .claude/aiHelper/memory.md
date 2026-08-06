@@ -73,7 +73,7 @@ supabase/       config.toml + migrations/ — version-controlled DB schema (auth
 ---
 
 ## 🛠 Known Tech Debt
-Bug/task items live in `.claude/issue-tracker/issues/` (one open: 02, no disaster-recovery backups) — resolved ones are deleted, never marked done. Open *decisions* live separately in `.claude/issue-tracker/tickets/` as the **Public launch readiness** wayfinder map; read the map before assuming something is untracked.
+Everything lives in `.claude/tracker/` (redesigned 2026-08-06, conventions in its README): **`issues/`** are deferred problems (one open: `ISSUE-01`, no disaster-recovery backups), **`tickets/`** are agent-ready work (`TICKET-01` player_milestones, `TICKET-02` catalog rebuild, blocked by 01). No triage labels — the folder is the state; resolved files are deleted, never marked done. Open *questions* are neither, and live in `.claude/handoffs/launch-readiness.md`; read it before assuming something is untracked. Wayfinder is retired.
 
 ---
 

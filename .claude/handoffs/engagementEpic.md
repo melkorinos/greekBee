@@ -99,4 +99,4 @@ At scale, global top-20 stops being meaningful to most players — want to see r
 
 - `/aihelper` — context reload at session start
 - `/grill-with-docs` — when activating any parked pillar, grill it and spawn its handoff
-- `/to-tickets` + `/tdd` — per pillar once its handoff is ready-for-agent
+- `/to-tickets` + `/tdd` — per pillar, once its section here is specified enough to clear the ticket bar

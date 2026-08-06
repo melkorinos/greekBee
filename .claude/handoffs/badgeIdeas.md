@@ -293,27 +293,28 @@ for schema operations will actually look.)
 
 ---
 
-## Build work — three tickets, in order
+## Build work — two tickets left, in order
 
 The previous spec listed six items. Four of them cannot merge independently: dropping the old tables,
 retiring their routes, rewriting the merge, and rewriting the reads are one seam, and shipping any of them
-alone leaves the app broken. They are one vertical slice. The three tickets live at
-`.claude/issue-tracker/issues/`:
+alone leaves the app broken. They are one vertical slice. The remaining tickets live at
+`.claude/tracker/tickets/`:
 
-**[03 — Remove the podium lane](../issue-tracker/issues/03-remove-podium-lane.md).** Pure deletion,
-independent of everything else, go first. Retires a known scaling risk: the podium query fetches every
-device's Leksokipos rows.
+**~~Remove the podium lane~~ — shipped 2026-08-06** (commit `32a866b`). Pure deletion. Retired a known
+scaling risk: the podium query fetched every device's Leksokipos rows. Its ticket file is deleted, per the
+standing rule.
 
-**[04 — `player_milestones`](../issue-tracker/issues/04-player-milestones-table.md).** Migration, `POST
-/api/milestones`, `planMilestoneMerge`, the `GROUP BY kind` on `/api/profile/stats`, the rewritten
+**[TICKET-01 — `player_milestones`](../tracker/tickets/TICKET-01-player-milestones-table.md).** Migration,
+`POST /api/milestones`, `planMilestoneMerge`, the `GROUP BY kind` on `/api/profile/stats`, the rewritten
 words-by-length read, the sync lanes, and the three write-lane cost fixes.
 
-**[05 — Catalog rebuild + launch reset](../issue-tracker/issues/05-catalog-rebuild-launch-reset.md).** The
-five-badge catalog, `achievementTuning` edits, the profile-page Leksokipos section, and the reset script that
-gates release.
+**[TICKET-02 — Catalog rebuild + launch reset](../tracker/tickets/TICKET-02-catalog-rebuild-launch-reset.md).**
+The five-badge catalog, `achievementTuning` edits, the profile-page Leksokipos section, and the reset script
+that gates release.
 
 **ADR amendments ride inside the tickets that make them true** — ADR 0013 §1 and the `CONTEXT.md` Podium
-glossary removals in ticket 03; the ADR 0012 reset exception and the `tzimani` glossary line in ticket 05.
+glossary removals went with the podium deletion; the ADR 0012 reset exception and the `tzimani` glossary line
+are in TICKET-02.
 Writing them as a separate item-0 was the previous spec's mistake: an amendment merged before the code it
 describes is a claim about a state the repo is not yet in.
 
