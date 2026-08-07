@@ -41,12 +41,34 @@ export function deriveBanner(lookup: NominationLookup | null, key: string): Nomi
   return null;
 }
 
+// ── Mandatory submitter fields ────────────────────────────────────────────────
+// Every Nomination carries a name and an explanation (2026-08-07). Both used to
+// be optional, and the note was demanded only when re-proposing a rejected word.
+// The queue is triaged by a human, so an anonymous, unexplained row costs more to
+// review than it saved the submitter. The minimums are the point: a non-empty
+// check passes «ν», which is indistinguishable from an empty field at review time.
+// The route enforces the same two numbers — these constants are the one source.
+
+/** Shortest accepted submitter name, after trimming. */
+export const MIN_NOMINATION_NAME_LENGTH = 2;
+
+/** Shortest accepted explanation, after trimming. */
+export const MIN_NOMINATION_NOTE_LENGTH = 10;
+
+/** The submitter-authored fields every Nomination must carry. */
+export interface NominationFields {
+  name: string;
+  note: string;
+}
+
 /** Verdict on a submit attempt. `ok: false` carries why, for the modal to surface. */
 export type SubmitGuard =
   | { ok: true }
   /** Blocklisted — never post; the block banner explains it. */
   | { ok: false; reason: "blocked" }
-  /** Previously rejected — an explanation is mandatory before re-submitting. */
+  /** Name missing or shorter than MIN_NOMINATION_NAME_LENGTH. */
+  | { ok: false; reason: "name-required" }
+  /** Explanation missing or shorter than MIN_NOMINATION_NOTE_LENGTH. */
   | { ok: false; reason: "note-required" }
   /** Already approved and awaiting release — re-proposing is pointless. */
   | { ok: false; reason: "accepted" }
@@ -57,26 +79,32 @@ export type SubmitGuard =
  * Whether a submit for `lookup.word` may proceed. `lookup` must be current for
  * the word being posted (or null when the lookup failed — a network failure
  * never blocks submission; the server's 422/409 are the backstop).
+ *
+ * Word-level refusals are decided BEFORE the fields: a blocklisted or duplicate
+ * word cannot be posted however well it is filled in, so a field error there
+ * would send the player off fixing the wrong thing. Note that "rejected" needs no
+ * branch of its own any more — the explanation it demands is now demanded of
+ * every submission.
  */
-export function guardSubmit(lookup: NominationLookup | null, note: string): SubmitGuard {
+export function guardSubmit(lookup: NominationLookup | null, fields: NominationFields): SubmitGuard {
   const banner = lookup ? deriveBanner(lookup, lookup.word) : null;
 
-  switch (banner) {
-    case "blocked":
-      return { ok: false, reason: "blocked" };
-    case "rejected":
-      return note.trim() ? { ok: true } : { ok: false, reason: "note-required" };
-    case "accepted":
-      return { ok: false, reason: "accepted" };
-    case "pending":
-      // Without an id there is nothing to pivot to, so let the post through and
-      // let the DB's uniqueness backstop answer 409 with the id.
-      return lookup!.pendingId
-        ? { ok: false, reason: "pending", pendingId: lookup!.pendingId }
-        : { ok: true };
-    default:
-      return { ok: true };
+  if (banner === "blocked")  return { ok: false, reason: "blocked" };
+  if (banner === "accepted") return { ok: false, reason: "accepted" };
+  // Without an id there is nothing to pivot to, so let the post through and let
+  // the DB's uniqueness backstop answer 409 with the id.
+  if (banner === "pending" && lookup!.pendingId) {
+    return { ok: false, reason: "pending", pendingId: lookup!.pendingId };
   }
+
+  if (fields.name.trim().length < MIN_NOMINATION_NAME_LENGTH) {
+    return { ok: false, reason: "name-required" };
+  }
+  if (fields.note.trim().length < MIN_NOMINATION_NOTE_LENGTH) {
+    return { ok: false, reason: "note-required" };
+  }
+
+  return { ok: true };
 }
 
 /**

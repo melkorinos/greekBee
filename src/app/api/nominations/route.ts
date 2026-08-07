@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
 import { getSupabaseClient, table } from "@/lib/supabase";
 import { isBlockedWord } from "@/lib/nominationBlocklist";
+import { MIN_NOMINATION_NAME_LENGTH, MIN_NOMINATION_NOTE_LENGTH } from "@/lib/nominationDecision";
 import { normalizeLetters } from "@/lib/normalize";
 
 export const runtime = "edge";
@@ -89,11 +90,11 @@ export async function GET(req: NextRequest) {
 // ── POST ──────────────────────────────────────────────────────────────────────
 
 interface NominationPayload {
-  word:        string;
-  direction:   "add" | "remove";
-  playerName?: string;
-  note?:       string;
-  deviceId:    string;
+  word:       string;
+  direction:  "add" | "remove";
+  playerName: string;
+  note:       string;
+  deviceId:   string;
 }
 
 export async function POST(req: NextRequest) {
@@ -128,13 +129,29 @@ export async function POST(req: NextRequest) {
     return jsonMessage("blocked_word", 422);
   }
 
+  // Name and explanation are mandatory, and the client is not trusted to say so.
+  // Checked AFTER the blocklist, so the route agrees with guardSubmit on which
+  // refusal a caller hears first: a word we will never accept is the more useful
+  // answer than a field it would have been pointless to fill in. The two minimums
+  // are imported so the modal and the route cannot drift apart on what counts as
+  // filled in.
+  const trimmedName = typeof playerName === "string" ? playerName.trim() : "";
+  const trimmedNote = typeof note       === "string" ? note.trim()       : "";
+
+  if (trimmedName.length < MIN_NOMINATION_NAME_LENGTH) {
+    return jsonMessage("name required");
+  }
+  if (trimmedNote.length < MIN_NOMINATION_NOTE_LENGTH) {
+    return jsonMessage("note required");
+  }
+
   const supabase = getSupabaseClient();
 
   const { error } = await table(supabase, "nominations").insert({
     word:        normalised,
     direction,
-    player_name: playerName ?? null,
-    note:        note ?? null,
+    player_name: trimmedName,
+    note:        trimmedNote,
     device_id:   deviceId,
     status:      "pending",
   });

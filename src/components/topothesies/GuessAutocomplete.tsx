@@ -39,6 +39,9 @@ export function GuessAutocomplete({ candidates, placeholder, disabled, onSubmit 
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const activeRef = useRef<HTMLLIElement>(null);
+  // Armed only when submit() is about to move focus back to a blurred input —
+  // see the comment on submit() for why that would otherwise reopen the list.
+  const refocusingRef = useRef(false);
 
   // The list (full or filtered) always reads alphabetically (Greek collation).
   const sorted = useMemo(
@@ -81,6 +84,12 @@ export function GuessAutocomplete({ candidates, placeholder, disabled, onSubmit 
     return matches.find((c) => c.normalized === q) ?? matches[active] ?? matches[0];
   };
 
+  // A committed guess always leaves the list CLOSED, so the board stays visible
+  // while the player reads the result. Keeping focus is what makes that subtle:
+  // pressing "Μάντεψε" blurs the input (the button takes focus), so restoring it
+  // fires `onFocus`, which would reopen the full list right over the map. The ref
+  // is armed only when the input actually lost focus — so the event it swallows
+  // is always the one we caused, never the player's own tap.
   const submit = () => {
     const candidate = resolveCurrent();
     if (!candidate) return;
@@ -88,7 +97,11 @@ export function GuessAutocomplete({ candidates, placeholder, disabled, onSubmit 
     setQuery("");
     setActive(0);
     setOpen(false);
-    inputRef.current?.focus();
+    const input = inputRef.current;
+    if (input && document.activeElement !== input) {
+      refocusingRef.current = true;
+      input.focus();
+    }
   };
 
   const showList = open && matches.length > 0;
@@ -106,7 +119,10 @@ export function GuessAutocomplete({ candidates, placeholder, disabled, onSubmit 
           value={query}
           placeholder={placeholder}
           aria-label={placeholder}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            if (refocusingRef.current) { refocusingRef.current = false; return; }
+            setOpen(true);
+          }}
           onBlur={() => setOpen(false)}
           onChange={(e) => { setQuery(e.target.value); setActive(0); setOpen(true); }}
           onKeyDown={(e) => {

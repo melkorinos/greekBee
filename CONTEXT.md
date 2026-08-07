@@ -149,7 +149,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Leksikastirio** — Community word-court (λεξικό + δικαστήριο). Players vote on Nominations; admins triage them. Also hosts Community Puzzle review tabs in Admin Mode. (Not: word review, suggestions page)
 
-**Nomination** — Proposal to add or remove a word from `words-el.json`. Has a Direction, DeviceId, optional name/note, and status. (Not: suggestion, report)
+**Nomination** — Proposal to add or remove a word from `words-el.json`. Has a Direction, DeviceId, status, and a **mandatory** submitter name and explanation (2026-08-07; both were optional before, and the explanation was demanded only when re-proposing a rejected word). The two minimums live in `src/lib/nominationDecision.ts` and are enforced by `guardSubmit` in the modal *and* by `POST /api/nominations` — a short explanation is refused because a one-word note tells a reviewer no more than an empty one. Word-level refusals (blocklisted, already accepted, already pending) are decided *before* the fields, on both sides. (Not: suggestion, report)
 
 **Direction** — `"add"` or `"remove"` intent of a Nomination.
 

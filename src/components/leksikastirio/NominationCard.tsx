@@ -19,6 +19,21 @@ export interface Nomination {
   status?:        "pending" | "accepted" | "rejected";
 }
 
+/**
+ * The card's own grid template, widened into columns from `sm:` up. It is a
+ * function of `isAdmin` because the actions cell only exists in Admin Mode, and a
+ * trailing empty column would otherwise leave a gap on every player's screen.
+ *
+ * Below `sm:` this is always two columns — content and the votes cell — which is
+ * the whole point of the layout: the vote buttons sit beside the word on a phone
+ * instead of four columns off the right edge of a horizontally scrolling table.
+ */
+function gridTemplate(isAdmin: boolean): string {
+  return isAdmin
+    ? "grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[9rem_7rem_minmax(0,1fr)_auto_auto]"
+    : "grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[9rem_7rem_minmax(0,1fr)_auto]";
+}
+
 interface NominationCardProps {
   nomination:   Nomination;
   myDeviceId:   string;
@@ -90,23 +105,25 @@ export function NominationCard({
     : "";
 
   return (
-    <tr
+    <li
       data-testid="nomination-card"
-      className={`border-b border-border last:border-0 align-top ${rowTint}`}
+      className={`grid ${gridTemplate(isAdmin)} items-start gap-x-3 gap-y-1 sm:gap-x-4 border-b border-border last:border-0 py-3 ${rowTint}`}
     >
-      <td className="py-3 pr-4 font-bold text-foreground uppercase tracking-wide whitespace-nowrap">
+      {/* The word may wrap to as many lines as it needs — the votes cell is
+          placed in its own column, so nothing pushes it off screen. */}
+      <p className="col-start-1 row-start-1 sm:row-start-1 font-bold text-foreground uppercase tracking-wide break-words">
         {nomination.word}
-      </td>
+      </p>
 
-      <td className="py-3 pr-4 text-xs text-muted whitespace-nowrap">
-        {nomination.player_name ?? "—"}
-      </td>
+      <p className="col-start-1 row-start-2 sm:col-start-2 sm:row-start-1 text-xs text-muted break-words">
+        <span className="sm:hidden">από </span>{nomination.player_name ?? "—"}
+      </p>
 
-      <td className="py-3 pr-4 text-sm text-muted leading-relaxed max-w-md break-words">
+      <p className="col-span-2 row-start-3 sm:col-span-1 sm:col-start-3 sm:row-start-1 text-sm text-muted leading-relaxed break-words">
         {nomination.note ?? ""}
-      </td>
+      </p>
 
-      <td className="py-3 pr-4">
+      <div className="col-start-2 row-start-1 row-span-2 sm:col-start-4 sm:row-span-1">
         <div className="flex items-center gap-1">
           <button
             onClick={() => handleVote("up")}
@@ -150,10 +167,10 @@ export function NominationCard({
             ✓ Ψήφισες {currentVote === "up" ? "υπέρ" : "κατά"}
           </p>
         )}
-      </td>
+      </div>
 
       {isAdmin && (
-        <td className="py-3 pl-2 sticky right-0 bg-background">
+        <div className="col-span-2 row-start-4 sm:col-span-1 sm:col-start-5 sm:row-start-1 mt-1 sm:mt-0">
           {nomination.status === "accepted" || nomination.status === "rejected" ? (
             <span
               data-testid="admin-status"
@@ -197,8 +214,8 @@ export function NominationCard({
               )}
             </div>
           )}
-        </td>
+        </div>
       )}
-    </tr>
+    </li>
   );
 }

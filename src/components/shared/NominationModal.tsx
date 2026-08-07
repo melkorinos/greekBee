@@ -1,10 +1,17 @@
 "use client";
 
-import { btnCancel, btnInfo, btnModalPrimary, btnModalSubmit, inputClass, inputReadonlyClass, labelClass, labelOptionalClass } from "@/styles/recipes";
+import { btnCancel, btnInfo, btnModalPrimary, btnModalSubmit, inputClass, inputReadonlyClass, labelClass } from "@/styles/recipes";
 
 import { Modal } from "./Modal";
-import { getOrCreateDeviceId } from "@/hooks/useGameStore";
-import { deriveBanner, guardSubmit, pivotFor, type NominationLookup } from "@/lib/nominationDecision";
+import { getDisplayName, getOrCreateDeviceId } from "@/hooks/useGameStore";
+import {
+  deriveBanner,
+  guardSubmit,
+  pivotFor,
+  MIN_NOMINATION_NAME_LENGTH,
+  MIN_NOMINATION_NOTE_LENGTH,
+  type NominationLookup,
+} from "@/lib/nominationDecision";
 import { normalizeLetters } from "@/lib/normalize";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -47,10 +54,14 @@ export function NominationModal({
   // Editable word is local state; non-editable reads directly from props so the
   // component doesn't need to unmount/remount to pick up a changed word prop.
   const [editableWord, setEditableWord] = useState("");
-  const [playerName,   setPlayerName]   = useState("");
+  // The name is mandatory, so it starts from the player's saved display name
+  // where there is one — the same envelope field the leaderboard reads. Without
+  // this the in-game flag would ask a player who already told us their name.
+  const [playerName,   setPlayerName]   = useState(getDisplayName);
   const [note,         setNote]         = useState("");
   const [status,       setStatus]       = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [lookup,       setLookup]       = useState<NominationLookup | null>(null);
+  const [nameMissing,  setNameMissing]  = useState(false);
   const [noteMissing,  setNoteMissing]  = useState(false);
   const [successMode,  setSuccessMode]  = useState<"submitted" | "upvoted">("submitted");
 
@@ -112,8 +123,6 @@ export function NominationModal({
   const rejectedHit = banner === "rejected";
   const acceptedHit = banner === "accepted";
   const pendingHit  = banner === "pending";
-  // Previously-rejected words require an explanation before re-submitting.
-  const noteRequired = rejectedHit;
 
   async function handleSubmit() {
     if (busyRef.current) return; // a burst of clicks must produce one POST, not N
@@ -132,9 +141,11 @@ export function NominationModal({
     // Ensure the checks are current for this exact word before posting.
     const lk = lookup && lookup.word === trimmed ? lookup : await runLookup(trimmed);
 
-    // Every refusal below is already visible: the setLookup inside runLookup
-    // surfaces the matching banner and disables the button. Bailing is enough.
-    const guard = guardSubmit(lk, note);
+    // Word-level refusals are already visible: the setLookup inside runLookup
+    // surfaces the matching banner and disables the button. The two field
+    // refusals have no banner, so each one lights its own input instead.
+    const guard = guardSubmit(lk, { name: playerName, note });
+    setNameMissing(guard.ok === false && guard.reason === "name-required");
     setNoteMissing(guard.ok === false && guard.reason === "note-required");
     if (!guard.ok) return;
 
@@ -146,8 +157,8 @@ export function NominationModal({
         body:    JSON.stringify({
           word:       trimmed,
           direction,
-          playerName: playerName.trim() || undefined,
-          note:       note.trim()       || undefined,
+          playerName: playerName.trim(),
+          note:       note.trim(),
           deviceId:   getOrCreateDeviceId(),
         }),
       });
@@ -201,10 +212,11 @@ export function NominationModal({
   function handleClose() {
     busyRef.current = false; // never carry a stuck lock into the next open
     setEditableWord("");
-    setPlayerName("");
+    setPlayerName(getDisplayName()); // back to the prefill, not to blank
     setNote("");
     setStatus("idle");
     setLookup(null);
+    setNameMissing(false);
     setNoteMissing(false);
     setSuccessMode("submitted");
     onClose();
@@ -266,7 +278,7 @@ export function NominationModal({
                 </p>
                 <p className="text-xs text-warning mt-1 leading-relaxed">
                   Μπορείς να την ξαναστείλεις, αλλά εξήγησε καθαρά γιατί πιστεύεις ότι πρόκειται για
-                  λάθος — η εξήγηση είναι <strong>υποχρεωτική</strong>.
+                  λάθος.
                 </p>
               </div>
             )}
@@ -336,33 +348,32 @@ export function NominationModal({
               </div>
 
               <div>
-                <label className={labelClass}>
-                  Όνομα <span className={labelOptionalClass}>(προαιρετικό)</span>
-                </label>
+                <label className={labelClass}>Όνομα</label>
                 <input
                   value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
+                  onChange={(e) => {
+                    setPlayerName(e.target.value);
+                    if (e.target.value.trim().length >= MIN_NOMINATION_NAME_LENGTH) setNameMissing(false);
+                  }}
                   placeholder="π.χ. Νίκος"
                   maxLength={50}
                   data-testid="nomination-modal-name"
-                  className={inputClass}
+                  className={`${inputClass} ${nameMissing ? "border-warning ring-1 ring-warning" : ""}`}
                 />
+                {nameMissing && (
+                  <p className="text-xs text-warning mt-1" data-testid="nomination-name-required">
+                    Γράψε το όνομά σου.
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className={labelClass}>
-                  Σχόλιο{" "}
-                  {noteRequired ? (
-                    <span className="text-warning font-semibold">(υποχρεωτικό)</span>
-                  ) : (
-                    <span className={labelOptionalClass}>(προαιρετικό)</span>
-                  )}
-                </label>
+                <label className={labelClass}>Σχόλιο</label>
                 <textarea
                   value={note}
                   onChange={(e) => {
                     setNote(e.target.value);
-                    if (e.target.value.trim()) setNoteMissing(false);
+                    if (e.target.value.trim().length >= MIN_NOMINATION_NOTE_LENGTH) setNoteMissing(false);
                   }}
                   placeholder={c.notePlaceholder}
                   maxLength={200}
@@ -374,7 +385,7 @@ export function NominationModal({
                 />
                 {noteMissing && (
                   <p className="text-xs text-warning mt-1" data-testid="nomination-note-required">
-                    Πρόσθεσε μια εξήγηση για να ξαναστείλεις αυτή τη λέξη.
+                    Εξήγησε με λίγα λόγια γιατί — τουλάχιστον {MIN_NOMINATION_NOTE_LENGTH} χαρακτήρες.
                   </p>
                 )}
               </div>
@@ -396,10 +407,13 @@ export function NominationModal({
               </button>
               <button
                 onClick={handleSubmit}
+                // Deliberately NOT disabled on a short name/note: those two
+                // refusals have no banner, so a dead button would leave the
+                // player guessing. Clicking lights the offending field instead.
+                // The word-level hits below each already explain themselves.
                 disabled={
                   status === "submitting" ||
                   (!wordEditable && !word.trim()) ||
-                  (noteRequired && !note.trim()) ||
                   blockedHit ||
                   acceptedHit ||
                   pendingHit

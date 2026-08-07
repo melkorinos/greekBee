@@ -213,6 +213,11 @@ describe("Word suggestion flow", () => {
     const { user } = setup();
     await user.keyboard("panda{Enter}");
     await user.click(screen.getByTestId("feedback-suggest-btn"));
+    // The in-game flag goes through the same mandatory name + explanation as the
+    // Leksikastirio form — the rule is the modal's, not one screen's.
+    await user.clear(screen.getByTestId("nomination-modal-name"));
+    await user.type(screen.getByTestId("nomination-modal-name"), "Νίκος");
+    await user.type(screen.getByTestId("nomination-modal-note"), "υπάρχει στο λεξικό");
     await user.click(screen.getByTestId("nomination-modal-submit"));
     // modal closes immediately on success; feedback area shows confirmation
     await waitFor(() =>

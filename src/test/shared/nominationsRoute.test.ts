@@ -56,6 +56,19 @@ function withParams(id: string) {
   return { params: Promise.resolve({ id }) };
 }
 
+// A POST body that satisfies the mandatory name + explanation. Every test that
+// wants to reach the insert spreads this and overrides what it exercises.
+function nominationBody(over: Record<string, unknown> = {}) {
+  return {
+    word:       "καλος",
+    direction:  "add",
+    deviceId:   "d1",
+    playerName: "Νίκος",
+    note:       "μια κανονική εξήγηση",
+    ...over,
+  };
+}
+
 beforeEach(() => { _db.reset(); });
 afterEach(()  => { _db.reset(); });
 
@@ -167,60 +180,86 @@ describe("POST /api/nominations — validation", () => {
   });
 
   it("400 when word is missing", async () => {
-    const res = await submitNomination(makePost("http://localhost/api/nominations", {
-      direction: "add", deviceId: "d1",
-    }));
+    const res = await submitNomination(makePost("http://localhost/api/nominations",
+      nominationBody({ word: undefined })));
     expect(res.status).toBe(400);
   });
 
   it("400 when direction is invalid", async () => {
-    const res = await submitNomination(makePost("http://localhost/api/nominations", {
-      word: "καλος", direction: "edit", deviceId: "d1",
-    }));
+    const res = await submitNomination(makePost("http://localhost/api/nominations",
+      nominationBody({ direction: "edit" })));
     expect(res.status).toBe(400);
   });
 
   it("400 when deviceId is missing", async () => {
-    const res = await submitNomination(makePost("http://localhost/api/nominations", {
-      word: "καλος", direction: "add",
-    }));
+    const res = await submitNomination(makePost("http://localhost/api/nominations",
+      nominationBody({ deviceId: undefined })));
     expect(res.status).toBe(400);
+  });
+
+  // The client enforces both, but the client is not the authority — a direct POST
+  // must not be able to put an anonymous, unexplained row in the review queue.
+  it("400 when the name is missing", async () => {
+    const res = await submitNomination(makePost("http://localhost/api/nominations",
+      nominationBody({ playerName: undefined })));
+    expect(res.status).toBe(400);
+  });
+
+  it("400 when the name is only whitespace", async () => {
+    const res = await submitNomination(makePost("http://localhost/api/nominations",
+      nominationBody({ playerName: "   " })));
+    expect(res.status).toBe(400);
+  });
+
+  it("400 when the explanation is missing", async () => {
+    const res = await submitNomination(makePost("http://localhost/api/nominations",
+      nominationBody({ note: undefined })));
+    expect(res.status).toBe(400);
+  });
+
+  it("400 when the explanation is too short to mean anything", async () => {
+    const res = await submitNomination(makePost("http://localhost/api/nominations",
+      nominationBody({ note: "ναι" })));
+    expect(res.status).toBe(400);
+  });
+
+  // Ordering matters: a word we will never accept is the more useful answer than
+  // a field it would have been pointless to fill in — and it matches guardSubmit.
+  it("422 (not 400) for a blocklisted word submitted with empty fields", async () => {
+    const res = await submitNomination(makePost("http://localhost/api/nominations",
+      nominationBody({ word: "Μαρία", playerName: "", note: "" })));
+    expect(res.status).toBe(422);
   });
 });
 
 describe("POST /api/nominations — happy path", () => {
   it("201 on successful insert", async () => {
     enqueue({ error: null });
-    const res = await submitNomination(makePost("http://localhost/api/nominations", {
-      word: "Καλός", direction: "add", deviceId: "d1",
-    }));
+    const res = await submitNomination(makePost("http://localhost/api/nominations",
+      nominationBody({ word: "Καλός" })));
     expect(res.status).toBe(201);
     expect((await res.json()).ok).toBe(true);
   });
 
   it("500 on DB error", async () => {
     enqueue({ error: { message: "insert failed" } });
-    const res = await submitNomination(makePost("http://localhost/api/nominations", {
-      word: "καλος", direction: "add", deviceId: "d1",
-    }));
+    const res = await submitNomination(makePost("http://localhost/api/nominations", nominationBody()));
     expect(res.status).toBe(500);
   });
 
   it("422 when adding a blocklisted proper noun (no insert attempted)", async () => {
     // Μαρία is one of the ~17k curated-out proper nouns. No DB row is enqueued —
     // the route must short-circuit before touching Supabase.
-    const res = await submitNomination(makePost("http://localhost/api/nominations", {
-      word: "Μαρία", direction: "add", deviceId: "d1",
-    }));
+    const res = await submitNomination(makePost("http://localhost/api/nominations",
+      nominationBody({ word: "Μαρία" })));
     expect(res.status).toBe(422);
     expect((await res.json()).error).toBe("blocked_word");
   });
 
   it("allows REMOVING a blocklisted word (block is add-only)", async () => {
     enqueue({ error: null }); // insert succeeds
-    const res = await submitNomination(makePost("http://localhost/api/nominations", {
-      word: "Μαρία", direction: "remove", deviceId: "d1",
-    }));
+    const res = await submitNomination(makePost("http://localhost/api/nominations",
+      nominationBody({ word: "Μαρία", direction: "remove" })));
     expect(res.status).toBe(201);
   });
 
@@ -229,9 +268,7 @@ describe("POST /api/nominations — happy path", () => {
     // proposal landed between the client's lookup and this POST.
     enqueue({ error: { message: "duplicate key value", code: "23505" } }); // insert conflict
     enqueue({ data: { id: "nom-9" }, error: null });                       // existing pending row
-    const res = await submitNomination(makePost("http://localhost/api/nominations", {
-      word: "καλος", direction: "add", deviceId: "d1",
-    }));
+    const res = await submitNomination(makePost("http://localhost/api/nominations", nominationBody()));
     expect(res.status).toBe(409);
     const json = await res.json() as { error: string; pendingId: string | null };
     expect(json.error).toBe("already_pending");

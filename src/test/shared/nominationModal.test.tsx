@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import { NominationModal } from "@/components/shared/NominationModal";
+import { setDisplayName } from "@/hooks/useGameStore";
 import userEvent from "@testing-library/user-event";
 
 // ── fetch mock ────────────────────────────────────────────────────────────────
@@ -52,6 +53,21 @@ function voteCall(fetchSpy: ReturnType<typeof mockFetch>) {
 }
 
 afterEach(() => vi.restoreAllMocks());
+
+// Name and explanation are mandatory on every nomination, so any test that wants
+// to reach the POST has to fill them first. The name is cleared before typing
+// because the field prefills from the saved display name when there is one.
+async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
+  await user.clear(screen.getByTestId("nomination-modal-name"));
+  await user.type(screen.getByTestId("nomination-modal-name"), "Νίκος");
+  await user.type(screen.getByTestId("nomination-modal-note"), "μια κανονική εξήγηση");
+}
+
+/** Same, for the tests that drive the button with fireEvent rather than userEvent. */
+function fillRequiredSync() {
+  fireEvent.change(screen.getByTestId("nomination-modal-name"), { target: { value: "Νίκος" } });
+  fireEvent.change(screen.getByTestId("nomination-modal-note"), { target: { value: "μια κανονική εξήγηση" } });
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -108,6 +124,7 @@ describe("NominationModal — word field", () => {
     const fetchSpy = mockFetch(true);
     const { user } = setup({ wordEditable: true });
     await user.type(screen.getByTestId("nomination-modal-word-input"), "νεολογισμος");
+    await fillRequired(user);
     await user.click(screen.getByTestId("nomination-modal-submit"));
     await waitFor(() => expect(postCall(fetchSpy)).toBeTruthy());
     const body = JSON.parse((postCall(fetchSpy)![1] as RequestInit).body as string);
@@ -179,6 +196,7 @@ describe("NominationModal — submission", () => {
   it("shows success state after a successful POST", async () => {
     mockFetch(true);
     const { user } = setup();
+    await fillRequired(user);
     await user.click(screen.getByTestId("nomination-modal-submit"));
     await waitFor(() =>
       expect(screen.getByTestId("nomination-modal-success")).toBeInTheDocument(),
@@ -188,6 +206,7 @@ describe("NominationModal — submission", () => {
   it("calls onSuccess with the word after a successful POST", async () => {
     mockFetch(true);
     const { user, onSuccess } = setup();
+    await fillRequired(user);
     await user.click(screen.getByTestId("nomination-modal-submit"));
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith("καλοσ")); // normalised
   });
@@ -199,6 +218,7 @@ describe("NominationModal — submission", () => {
   it("fires exactly one POST when submit is hammered (held Enter / double-click)", async () => {
     const fetchSpy = mockFetch(true);
     setup();
+    fillRequiredSync();
 
     const btn = screen.getByTestId("nomination-modal-submit");
     // Synchronous clicks — none of the awaits inside have resolved yet.
@@ -239,6 +259,7 @@ describe("NominationModal — submission", () => {
   it("shows error message when POST fails", async () => {
     mockFetch(false);
     const { user } = setup();
+    await fillRequired(user);
     await user.click(screen.getByTestId("nomination-modal-submit"));
     await waitFor(() =>
       expect(screen.getByTestId("nomination-modal-error")).toBeInTheDocument(),
@@ -249,6 +270,7 @@ describe("NominationModal — submission", () => {
   it("does NOT call onSuccess when POST fails", async () => {
     mockFetch(false);
     const { user, onSuccess } = setup();
+    await fillRequired(user);
     await user.click(screen.getByTestId("nomination-modal-submit"));
     await waitFor(() =>
       expect(screen.getByTestId("nomination-modal-error")).toBeInTheDocument(),
@@ -257,17 +279,107 @@ describe("NominationModal — submission", () => {
   });
 });
 
+// ── Mandatory name + explanation ──────────────────────────────────────────────
+// Both fields used to be optional and the explanation was demanded only when
+// re-proposing a rejected word. The submit button is deliberately NOT disabled
+// for these two — neither has a banner, so the click has to say what is wrong.
+
+describe("NominationModal — mandatory fields", () => {
+  it("refuses to post with no name and lights the name field", async () => {
+    const fetchSpy = mockFetch(true);
+    const { user } = setup();
+
+    await user.type(screen.getByTestId("nomination-modal-note"), "μια κανονική εξήγηση");
+    await user.click(screen.getByTestId("nomination-modal-submit"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("nomination-name-required")).toBeInTheDocument(),
+    );
+    expect(postCall(fetchSpy)).toBeFalsy();
+    expect(screen.queryByTestId("nomination-modal-success")).toBeNull();
+  });
+
+  it("refuses to post with no explanation and lights the note field", async () => {
+    const fetchSpy = mockFetch(true);
+    const { user } = setup();
+
+    await user.clear(screen.getByTestId("nomination-modal-name"));
+    await user.type(screen.getByTestId("nomination-modal-name"), "Νίκος");
+    await user.click(screen.getByTestId("nomination-modal-submit"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("nomination-note-required")).toBeInTheDocument(),
+    );
+    expect(postCall(fetchSpy)).toBeFalsy();
+  });
+
+  // A one-word "ναι" clears a non-empty check and tells a reviewer nothing.
+  it("refuses an explanation that is too short to mean anything", async () => {
+    const fetchSpy = mockFetch(true);
+    const { user } = setup();
+
+    await user.clear(screen.getByTestId("nomination-modal-name"));
+    await user.type(screen.getByTestId("nomination-modal-name"), "Νίκος");
+    await user.type(screen.getByTestId("nomination-modal-note"), "ναι");
+    await user.click(screen.getByTestId("nomination-modal-submit"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("nomination-note-required")).toBeInTheDocument(),
+    );
+    expect(postCall(fetchSpy)).toBeFalsy();
+  });
+
+  it("clears the field error once the player fills it in, and then posts", async () => {
+    const fetchSpy = mockFetch(true);
+    const { user } = setup();
+
+    await user.click(screen.getByTestId("nomination-modal-submit"));
+    await waitFor(() =>
+      expect(screen.getByTestId("nomination-name-required")).toBeInTheDocument(),
+    );
+
+    await fillRequired(user);
+    expect(screen.queryByTestId("nomination-name-required")).toBeNull();
+
+    await user.click(screen.getByTestId("nomination-modal-submit"));
+    await waitFor(() => expect(postCall(fetchSpy)).toBeTruthy());
+  });
+
+  // A mandatory field the player has already answered elsewhere would be pure
+  // friction on the in-game flag, so it starts from the saved display name.
+  it("prefills the name from the saved display name", () => {
+    setDisplayName("Μαρία");
+    try {
+      mockFetch(true);
+      setup();
+      expect((screen.getByTestId("nomination-modal-name") as HTMLInputElement).value).toBe("Μαρία");
+    } finally {
+      localStorage.clear();
+    }
+  });
+});
+
 // ── Re-proposal warning ─────────────────────────────────────────────────────
 
 describe("NominationModal — re-proposal warning", () => {
-  it("warns and disables submit when a previously-rejected word has no note", async () => {
-    mockFetch(true, 200, { rejected: 2 });
-    setup({ word: "απορ", direction: "add" });
+  // The banner still warns, but the explanation it asks for is now the platform
+  // rule rather than this word's special case — so the refusal comes from the
+  // note field, not from a disabled button.
+  it("warns and refuses to post when a previously-rejected word has no note", async () => {
+    const fetchSpy = mockFetch(true, 200, { rejected: 2 });
+    const { user } = setup({ word: "απορ", direction: "add" });
 
     await waitFor(() =>
       expect(screen.getByTestId("nomination-rejected-warning")).toBeInTheDocument(),
     );
-    expect(screen.getByTestId("nomination-modal-submit")).toBeDisabled();
+    await user.clear(screen.getByTestId("nomination-modal-name"));
+    await user.type(screen.getByTestId("nomination-modal-name"), "Νίκος");
+    await user.click(screen.getByTestId("nomination-modal-submit"));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("nomination-note-required")).toBeInTheDocument(),
+    );
+    expect(postCall(fetchSpy)).toBeFalsy();
   });
 
   it("allows submit once an explanation is provided for a rejected word", async () => {
@@ -277,6 +389,8 @@ describe("NominationModal — re-proposal warning", () => {
     await waitFor(() =>
       expect(screen.getByTestId("nomination-rejected-warning")).toBeInTheDocument(),
     );
+    await user.clear(screen.getByTestId("nomination-modal-name"));
+    await user.type(screen.getByTestId("nomination-modal-name"), "Νίκος");
     await user.type(screen.getByTestId("nomination-modal-note"), "είναι υπαρκτή λέξη, δες λεξικό");
     await user.click(screen.getByTestId("nomination-modal-submit"));
 
@@ -339,6 +453,7 @@ describe("NominationModal — re-proposal warning", () => {
     });
     const { user } = setup({ word: "απορ", direction: "add" });
 
+    await fillRequired(user);
     await user.click(screen.getByTestId("nomination-modal-submit"));
 
     await waitFor(() =>

@@ -111,6 +111,39 @@ describe("TopothesiesBoard", () => {
     expect(screen.getByTestId("shape-guesses")).toHaveTextContent("Βητα");
   });
 
+  // Regression: committing with the button blurs the input, so restoring focus
+  // fired onFocus and reopened the FULL candidate list — a scrolling panel of
+  // every region, drawn straight over the board the player just guessed about.
+  it("leaves the candidate list closed after a guess is committed with the button", async () => {
+    renderBoard();
+    const input = screen.getByRole("textbox");
+    await userEvent.click(input);
+
+    await userEvent.click(screen.getByRole("button", { name: "Βητα" }));
+    await userEvent.click(screen.getByRole("button", { name: "Μάντεψε" }));
+
+    // The guess landed, and no candidate row is on screen obscuring the map.
+    expect(screen.getByTestId("shape-guesses")).toHaveTextContent("Βητα");
+    expect(screen.queryByRole("button", { name: "Αλφα" })).not.toBeInTheDocument();
+    // Focus is kept, so the next guess needs no extra tap to raise the keyboard.
+    expect(input).toHaveFocus();
+  });
+
+  // The ref that suppresses that reopen must be spent by the event it was armed
+  // for — otherwise it swallows the player's next deliberate tap on the input.
+  it("still opens the list when the player taps the input again after a guess", async () => {
+    renderBoard();
+    const input = screen.getByRole("textbox");
+    await userEvent.click(input);
+    await userEvent.click(screen.getByRole("button", { name: "Βητα" }));
+    await userEvent.click(screen.getByRole("button", { name: "Μάντεψε" }));
+
+    // Leave the input, then come back to it the way a player would.
+    await userEvent.click(screen.getByRole("img"));
+    await userEvent.click(input);
+    expect(screen.getByRole("button", { name: "Αλφα" })).toBeInTheDocument();
+  });
+
   it("does not burn a guess on an unresolvable typo", async () => {
     renderBoard();
     await guess("ζζζζ"); // matches no candidate

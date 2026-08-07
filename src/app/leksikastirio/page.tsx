@@ -444,33 +444,25 @@ function LeksikastiríoClient() {
         nominations.length === 0 ? (
           <p className="text-sm text-muted text-center py-8">{nominationTabCopy[activeTab].emptyState}</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs text-muted font-semibold uppercase tracking-wide">
-                  <th className="pb-2 pr-4 font-semibold">Λέξη</th>
-                  <th className="pb-2 pr-4 font-semibold">Από</th>
-                  <th className="pb-2 pr-4 font-semibold">Σχόλιο</th>
-                  <th className="pb-2 pr-4 font-semibold text-center">Ψήφοι</th>
-                  {isAdmin && <th className="pb-2 pl-2 font-semibold sticky right-0 bg-background">Ενέργειες</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {[...nominations].sort(byNetScoreDesc).map((nomination) => (
-                  <NominationCard
-                    key={nomination.id}
-                    nomination={nomination}
-                    myDeviceId={deviceId}
-                    currentVote={votedMap.get(nomination.id) ?? null}
-                    isAdmin={isAdmin}
-                    adminSecret={adminSecret}
-                    onVote={handleVote}
-                    onReviewed={handleReviewed}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
+          // A plain list, not a table: each card owns its own responsive grid, so
+          // it stacks on a phone (votes beside the word) and lines up into
+          // columns from `sm:` up. There is no header row — every cell already
+          // labels itself («από …», ▲/▼) and a header would be a second copy of
+          // the card's grid template to keep in sync.
+          <ul className="w-full text-sm">
+            {[...nominations].sort(byNetScoreDesc).map((nomination) => (
+              <NominationCard
+                key={nomination.id}
+                nomination={nomination}
+                myDeviceId={deviceId}
+                currentVote={votedMap.get(nomination.id) ?? null}
+                isAdmin={isAdmin}
+                adminSecret={adminSecret}
+                onVote={handleVote}
+                onReviewed={handleReviewed}
+              />
+            ))}
+          </ul>
         )
       ) : (
         renderCommunityTab()
