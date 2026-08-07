@@ -4,7 +4,7 @@
 // Provides a sticky header with the platform name, a theme toggle, and a
 // hamburger button that opens a slide-out drawer listing all available games.
 
-import { GAME_REGISTRY } from "@/config/games";
+import { GAME_REGISTRY, type RegistryGameId } from "@/config/games";
 import { PLATFORM_NAME } from "@/config/platform";
 import { FeedbackModal } from "./FeedbackModal";
 import { ProfileToggleButton } from "./ProfileToggleButton";
@@ -46,9 +46,16 @@ interface ShellProps {
   children: React.ReactNode;
 }
 
-// Games shown in the main nav section; leksikastirio is in its own community section.
-const GAME_IDS      = ["leksokipos", "leksiarxeio", "leksindeseis", "vrestifrasi", "leksodromia", "leksoplegma", "stavrolekso", "topothesies", "posokanei", "logopaignio"] as const;
-const COMMUNITY_IDS = ["leksikastirio"] as const;
+// Leksikastirio is the community word-court, not a Game (CONTEXT.md), so it gets
+// its own drawer section. It is the ONE explicit exclusion from the main nav —
+// typed against the registry, so a typo or a removed Game fails the build.
+const COMMUNITY_IDS: readonly RegistryGameId[] = ["leksikastirio"];
+
+// Every other registered Game is main nav, DERIVED from the registry so adding a
+// Game needs no edit here. Hand-typing this list is how topothesies went missing
+// from the drawer in session 121; registryCoverage.test.tsx pins the derivation.
+const GAME_IDS = (Object.keys(GAME_REGISTRY) as RegistryGameId[])
+  .filter((id) => !COMMUNITY_IDS.includes(id));
 
 // Under-construction (wip) games move to their own drawer section, keeping the
 // main list to finished games. Derived from the registry so a flag flip is enough.

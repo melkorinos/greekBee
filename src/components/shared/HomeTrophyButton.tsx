@@ -2,8 +2,9 @@
 
 // HomeTrophyButton — 🏆 icon on landing-page game cards.
 // Opens the game's leaderboard with full auth + profile support.
-// One instance per applicable game card (leksokipos, leksiarxeio, leksindeseis,
-// vrestifrasi, leksodromia, leksoplegma).
+// One instance per game card whose game has a leaderboard — the `LeaderboardGameId`
+// prop is what says which those are, so this comment does not enumerate them (it
+// listed six of nine before that union became registry-derived).
 
 import { useState } from "react";
 import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";

@@ -18,6 +18,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
+import type { RegistryGameId } from "@/config/games";
 import type { LeaderboardUrlBuilder } from "@/hooks/useLeaderboard";
 import type { PlayerIdentityLeaderboardProps } from "@/hooks/usePlayerIdentity";
 import {
@@ -74,17 +75,20 @@ function playLinkSlots(route: string): Pick<LeaderboardViewConfig, "emptySlot" |
   };
 }
 
-/** The registered games that have a leaderboard (excludes stavrolekso, leksikastirio). */
-export type LeaderboardGameId =
-  | "leksokipos"
-  | "leksiarxeio"
-  | "leksindeseis"
-  | "vrestifrasi"
-  | "leksodromia"
-  | "leksoplegma"
-  | "topothesies"
-  | "posokanei"
-  | "logopaignio";
+/**
+ * Registered ids that deliberately have NO leaderboard. Stavrolekso is a browsable
+ * pool of community crosswords rather than a dated puzzle, and Leksikastirio is the
+ * word-court, not a Game at all (CONTEXT.md) — neither has a Score to rank.
+ *
+ * This list, not the union below, is the thing you edit. Adding a Game to
+ * GAME_REGISTRY widens LeaderboardGameId automatically, which makes
+ * GAME_LEADERBOARD_CONFIG stop compiling until the Game gets a config row or is
+ * named here — the compiler asks the question instead of a checklist.
+ */
+export const NO_LEADERBOARD_IDS = ["stavrolekso", "leksikastirio"] as const satisfies readonly RegistryGameId[];
+
+/** The registered games that have a leaderboard. */
+export type LeaderboardGameId = Exclude<RegistryGameId, (typeof NO_LEADERBOARD_IDS)[number]>;
 
 // Leksindeseis is excluded: still wip, its board doesn't yet thread a puzzle
 // date through a route param, and its day-strip is deliberately single-date
@@ -146,6 +150,9 @@ const GAME_LEADERBOARD_CONFIG: Record<LeaderboardGameId, LeaderboardViewConfig> 
     ...playLinkSlots("/logopaignio"),
   },
 };
+
+/** The ids that actually have a config row, at runtime. */
+export const LEADERBOARD_GAME_IDS = Object.keys(GAME_LEADERBOARD_CONFIG) as LeaderboardGameId[];
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
