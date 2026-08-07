@@ -5,7 +5,7 @@
 
 import { useState } from "react";
 import { Modal } from "./Modal";
-import { HeaderIconButton } from "./HeaderIconButton";
+import { GameHelpButton } from "./GameHelpButton";
 import { btnModalSubmit } from "@/styles/recipes";
 
 interface HowToPlayModalProps {
@@ -35,15 +35,10 @@ export function HowToPlayModal({
 
   return (
     <>
-      {/* Trigger */}
-      <HeaderIconButton
-        onClick={() => setOpen(true)}
-        ariaLabel="How to play"
-        tooltip="Κανόνες"
-        className="text-sm font-bold"
-      >
-        ?
-      </HeaderIconButton>
+      {/* Trigger — this modal owns its own open state (it is rendered by two
+          server components), unlike the games that drive theirs from
+          GamePageChrome. Same button either way. */}
+      <GameHelpButton onClick={() => setOpen(true)} />
 
       {/* Backdrop + modal */}
       <Modal

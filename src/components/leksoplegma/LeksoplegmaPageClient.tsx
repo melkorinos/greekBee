@@ -1,15 +1,11 @@
 "use client";
 
-// Λεξόπλεγμα page client — header, HowToPlay, and the board.
-// No clock in this game, so modals never need to pause anything.
-
-import { useState } from "react";
+// Λεξόπλεγμα page client — its board and its rules modal, inside the shared
+// chrome (GamePageChrome owns the title row, both triggers, and the session key).
 
 import type { LeksoplegmaPuzzle } from "@/games/leksoplegma/types";
 
-import { HeaderIconButton } from "@/components/shared/HeaderIconButton";
-import { GameHeader } from "@/components/shared/GameHeader";
-import { GameHeaderTrophyButton } from "@/components/shared/GameHeaderTrophyButton";
+import { GamePageChrome } from "@/components/shared/GamePageChrome";
 import { HowToPlayModal } from "./HowToPlayModal";
 import { LeksoplegmaBoard } from "./LeksoplegmaBoard";
 
@@ -19,37 +15,15 @@ interface LeksoplegmaPageClientProps {
 }
 
 export function LeksoplegmaPageClient({ puzzle, today }: LeksoplegmaPageClientProps) {
-  const [lbOpen,  setLbOpen]  = useState(false);
-  const [htpOpen, setHtpOpen] = useState(false);
-
   return (
-    <>
-      {/* Header row */}
-      <GameHeader title="🕸️ Leksoplegma">
-        <GameHeaderTrophyButton onClick={() => setLbOpen(true)} />
-        <HeaderIconButton
-          onClick={() => setHtpOpen(true)}
-          ariaLabel="Πώς να παίξεις"
-          tooltip="Κανόνες"
-          className="text-sm font-bold"
-        >
-          ?
-        </HeaderIconButton>
-      </GameHeader>
-
-      {/* Keyed by date — the Session key this game persists under. A Session
-          belongs to one Puzzle, so switching Daily Puzzles remounts the board
-          rather than carrying the previous date's round across. */}
-      <LeksoplegmaBoard
-        key={today}
-        puzzle={puzzle}
-        today={today}
-        isLeaderboardOpen={lbOpen}
-        onOpenLeaderboard={() => setLbOpen(true)}
-        onCloseLeaderboard={() => setLbOpen(false)}
-      />
-
-      <HowToPlayModal isOpen={htpOpen} onClose={() => setHtpOpen(false)} />
-    </>
+    <GamePageChrome
+      title="🕸️ Leksoplegma"
+      sessionKey={today}
+      howToPlay={(props) => <HowToPlayModal {...props} />}
+    >
+      {({ leaderboard }) => (
+        <LeksoplegmaBoard puzzle={puzzle} today={today} {...leaderboard} />
+      )}
+    </GamePageChrome>
   );
 }

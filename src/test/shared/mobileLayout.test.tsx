@@ -22,7 +22,7 @@ function renderOpenModal() {
     />,
   );
   // Open the modal
-  fireEvent.click(screen.getByRole("button", { name: /how to play/i }));
+  fireEvent.click(screen.getByRole("button", { name: /πώς να παίξεις/i }));
 }
 
 // ── HowToPlayModal — overflow safety ─────────────────────────────────────────
