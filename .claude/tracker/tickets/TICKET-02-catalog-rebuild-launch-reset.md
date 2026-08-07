@@ -3,19 +3,28 @@
 **Status:** ready
 **Blocked by:** nothing in the repo — `player_milestones`, `POST /api/milestones` and the day-counter sync
 lane shipped on 2026-08-07 (TICKET-01, file deleted per the standing rule; see ADR 0013's 2026-08-07
-amendment). **Still blocked operationally on `npx supabase db push` of `20260807120000`** — until that runs,
-the counters this ticket reads do not exist in the database.
+amendment). **Blocked operationally on `npx supabase db push` of `20260807120000` + the Vercel deploy**, which
+the operator runs back to back, after hours. Until then the counters this ticket reads do not exist in the
+database and nothing writes to them.
 
-Two things TICKET-01 already did that this ticket's Scope below still lists: `theristisFoundRatio` is
-**already 0.7** (moved early so qualifying days were not lost in the gap), and the `tzimani` milestone already
-stores the achieved percentage in `value` — so the "0.7 is a guess and stays one" note below is now only half
-true: the distribution *above* the threshold is being captured.
+> ⚠️ **Read this before you conclude the tree is broken.** Until that push lands, `npm run test -- --run`
+> reports **5 failures**, all in `src/test/shared/rlsInvariantsLiveDb.test.ts`, all
+> `Could not find the table 'public.player_milestones' in the schema cache`. That is the un-pushed migration,
+> not a regression and not yours. Everything else is green: 2341 of 2346 tests, eslint 0, build 0, e2e 7
+> passed / 2 skipped. If any *other* test fails, that one is yours.
+
+Two things TICKET-01 already changed **in the repo** that this ticket's Scope below still lists:
+`theristisFoundRatio` is **already 0.7** in `achievementTuning.ts` (moved early because milestone rows are
+only written as days are played, so a qualifying day passing under the old bar could never be recovered), and
+`kind='tzimani'` rows now carry the achieved percentage in `value`. Neither is live yet — see below.
 **Spec:** [`.claude/handoffs/badgeIdeas.md`](../../handoffs/badgeIdeas.md) · ADR 0013 amendment 2026-08-06 §§3–6
 
 ## Why it is one ticket and not two
 
-The catalog names achievement ids that live rows still hold — 34 devices hold `leksokipos-first-daily`, 2
-hold `leksokipos-theristis`. ADR 0013's frozen-id exceptions are licensed **only** by the pre-launch wipe.
+The catalog names achievement ids that live rows still hold — 34 devices held `leksokipos-first-daily` and 2
+held `leksokipos-theristis` when measured on 2026-08-06. **Both counts only grow**, and once TICKET-01's
+commit is deployed `theristis` grows faster, since its threshold drops to 0.7. Re-measure rather than trusting
+these figures. ADR 0013's frozen-id exceptions are licensed **only** by the pre-launch wipe.
 So the rebuild and the reset are one gate: **this ticket cannot merge without the reset script**, or there is
 a window where the catalog and the data disagree.
 
@@ -46,19 +55,21 @@ device already held it — caught before launch.
 - [ ] Tier **Στην Κορυφή** and revive `leksokipos-tzimani` for the tiered 70% badge (tier ids
       `leksokipos-tzimani-chalkino` / `-asimenio` / `-chryso`). Both are frozen-id exceptions licensed by the
       reset below and by nothing else.
-- [ ] `achievementTuning.ts`: `pangramTierThresholds` → 25/60/150, `theristisFoundRatio` → **0.7**, plus new
-      `topRankTierThresholds` (1/10/25) and `tzimaniTierThresholds` (1/5/10). Rename
-      `theristisFoundRatio` to match the badge's new name while you are there — it is a config key, not a
-      frozen id.
+- [ ] `achievementTuning.ts`: `pangramTierThresholds` → 25/60/150, plus new `topRankTierThresholds` (1/10/25)
+      and `tzimaniTierThresholds` (1/5/10). Rename `theristisFoundRatio` to match the badge's new name — it is
+      a config key, not a frozen id. **Its value is already 0.7** (TICKET-01); only the name is owed.
 - [ ] Wire both new tiered badges to the counters from TICKET-01.
 
 > **The ratio does not climb with the tier.** The ladder counts *days at 70%*. A 90/100% rung would be the
 > retired perfect-round concept back under a new name.
 >
-> **0.7 is a guess and stays one** — the found-word ratio is not stored anywhere, so it cannot be estimated
-> from the DB, and the operator declined capturing it. At 80% only 2 of 34 devices ever qualified once. If
-> 70% proves as rare, the fix is lowering the ladder, which is free. **Στην Κορυφή's 10 and 25 are equally
-> un-tuned** — repeat top-rank frequency was never captured; that gap is why `kind='top_rank'` exists.
+> **0.7 is still a guess — treat it as un-tuned when picking this ladder.** At 80% only 2 of 34 devices ever
+> qualified once. TICKET-01 made every `kind='tzimani'` row carry the achieved percentage in `value`, so the
+> distribution **above** the threshold will accumulate once it is live (near-misses stay unrecorded,
+> knowingly). **No such data exists yet:** nothing is written until `20260807120000` is pushed *and* the code
+> deployed, and there will then be days of it, not weeks. If 70% proves as rare as 80% was, the fix is
+> lowering the ladder, which is free. **Στην Κορυφή's 10 and 25 are equally un-tuned** — repeat top-rank
+> frequency was never captured; that gap is why `kind='top_rank'` exists.
 
 **Profile page**
 
