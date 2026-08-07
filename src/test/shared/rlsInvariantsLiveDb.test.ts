@@ -35,6 +35,17 @@ const canRun     = Boolean(url && anonKey && serviceKey);
 const GAME_ID     = "__rls_test__";
 const PUZZLE_DATE = "2000-01-01";
 
+// game_state rows are the one exception to the ancient sentinel date, and the reason
+// is another test file: cleanupScoresLiveDb.test.ts invokes the real retention cron,
+// whose game_state prune is `DELETE ... WHERE puzzle_date < today - SESSION_RETENTION_DAYS`
+// — table-wide, with no sentinel filter, because that is what the nightly cron is.
+// Vitest runs the two files in parallel workers, so an ancient-dated game_state row
+// seeded here can be deleted by that prune between the seed and the assertion. The
+// row really is gone; it is not a visibility race, and no amount of per-test unique
+// device_uuid helps, because the prune keys on puzzle_date alone. Today's date is
+// always inside the window, so the prune cannot reach it. afterAll still wipes it.
+const STATE_PUZZLE_DATE = new Date().toISOString().split("T")[0];
+
 function freshDeviceId(): string {
   return `__rls_${crypto.randomUUID()}`;
 }
@@ -176,7 +187,7 @@ describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/miles
 
   it("blocks anon from DELETE-ing game_state rows", async () => {
     const { error: seedErr } = await table(service, "game_state")
-      .insert({ device_uuid: DEVICE, game_id: GAME_ID, puzzle_date: PUZZLE_DATE, state: {} });
+      .insert({ device_uuid: DEVICE, game_id: GAME_ID, puzzle_date: STATE_PUZZLE_DATE, state: {} });
     expect(seedErr).toBeNull();
 
     await table(anon, "game_state").delete().eq("device_uuid", DEVICE);
@@ -189,7 +200,7 @@ describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/miles
 
   it("still allows the anon game_state upsert the restore path depends on", async () => {
     const device = `__rls_${crypto.randomUUID()}`;
-    const base   = { device_uuid: device, game_id: GAME_ID, puzzle_date: PUZZLE_DATE };
+    const base   = { device_uuid: device, game_id: GAME_ID, puzzle_date: STATE_PUZZLE_DATE };
 
     // Insert half of the upsert…
     const first = await table(anon, "game_state").upsert(

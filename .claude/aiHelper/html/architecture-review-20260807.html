@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Architecture review — Leksarxeia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+    </script>
+    <style>
+      .seam       { stroke-dasharray: 5 4; }
+      .deepbox    { background: linear-gradient(135deg, #0f172a, #1e293b); }
+      .hatch      { background-image: repeating-linear-gradient(45deg, #fca5a5 0 2px, transparent 2px 7px); }
+      .schematic  { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+      pre.mermaid { display:flex; justify-content:center; }
+    </style>
+  </head>
+  <body class="bg-stone-50 text-slate-900 font-sans antialiased">
+    <main class="max-w-5xl mx-auto px-6 py-12 space-y-14">
+
+      <!-- ══════════════════════════════ HEADER ══════════════════════════════ -->
+      <header class="border-b border-slate-300 pb-8">
+        <p class="schematic text-slate-500 mb-2">Architecture review · deepening opportunities</p>
+        <h1 class="font-serif text-4xl tracking-tight">Leksarxeia</h1>
+        <p class="text-sm text-slate-600 mt-2">
+          2026-08-07 · branch <span class="font-mono">dev</span> · scoped by commit hot-spots:
+          <span class="font-mono text-xs">config/*</span>,
+          <span class="font-mono text-xs">Shell.tsx</span>,
+          <span class="font-mono text-xs">profile/*</span>,
+          <span class="font-mono text-xs">achievements</span>,
+          <span class="font-mono text-xs">topothesies</span>
+        </p>
+
+        <div class="mt-6 flex flex-wrap gap-x-8 gap-y-3 text-xs text-slate-600">
+          <span class="flex items-center gap-2"><span class="inline-block w-8 h-4 border-2 border-slate-700 bg-white"></span> module</span>
+          <span class="flex items-center gap-2"><span class="inline-block w-8 h-4 border-2 border-slate-700 border-dashed bg-white"></span> seam</span>
+          <span class="flex items-center gap-2"><span class="inline-block w-8 h-4 deepbox"></span> deep module</span>
+          <span class="flex items-center gap-2"><span class="inline-block w-8 h-4 hatch border border-red-400"></span> leakage / duplication</span>
+        </div>
+
+        <nav class="mt-8 grid sm:grid-cols-5 gap-2 text-xs">
+          <a href="#c1" class="rounded border border-slate-300 bg-white px-3 py-2 hover:border-emerald-500">1 · Game Registry</a>
+          <a href="#c2" class="rounded border border-slate-300 bg-white px-3 py-2 hover:border-emerald-500">2 · Trophy read surface</a>
+          <a href="#c3" class="rounded border border-slate-300 bg-white px-3 py-2 hover:border-amber-500">3 · Identity merge</a>
+          <a href="#c4" class="rounded border border-slate-300 bg-white px-3 py-2 hover:border-amber-500">4 · Slot-Fill page</a>
+          <a href="#c5" class="rounded border border-slate-300 bg-white px-3 py-2 hover:border-slate-400">5 · Daily selection</a>
+        </nav>
+      </header>
+
+      <section id="candidates" class="space-y-16">
+
+      <!-- ══════════════════════ CANDIDATE 1 ══════════════════════ -->
+      <article id="c1" class="scroll-mt-8">
+        <div class="flex items-baseline gap-3 flex-wrap">
+          <span class="schematic text-slate-400">01</span>
+          <h2 class="font-serif text-3xl">Deepen the Game registry</h2>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2 text-xs">
+          <span class="rounded-full bg-emerald-600 text-white px-3 py-1 font-medium">Strong</span>
+          <span class="rounded-full border border-slate-300 bg-white px-3 py-1 text-slate-600">in-process</span>
+          <span class="rounded-full border border-slate-300 bg-white px-3 py-1 text-slate-600">20 parallel lists</span>
+        </div>
+
+        <div class="mt-4 font-mono text-xs text-slate-600 leading-relaxed">
+          src/config/games.ts · src/components/shared/Shell.tsx:50 · src/components/shared/GameLeaderboardModal.tsx:78,92 ·
+          src/types/index.ts:18,29 · src/hooks/useScoreSubmission.ts:25 · src/app/globals.css:86 ·
+          src/app/page.tsx:169 · src/config/gameRules.ts · src/components/shared/HomeTrophyButton.tsx:5
+        </div>
+
+        <!-- diagram -->
+        <div class="mt-6 grid md:grid-cols-2 gap-4">
+          <div class="rounded-lg border border-slate-300 bg-white p-5">
+            <p class="schematic text-red-600 mb-4">Before — registry is shallow</p>
+            <div class="flex flex-col items-center">
+              <div class="w-52 border-2 border-slate-700 bg-white text-center">
+                <div class="bg-slate-100 border-b-2 border-slate-700 py-1 schematic">GAME_REGISTRY</div>
+                <div class="py-2 text-[11px] leading-5 text-slate-700">
+                  label · emoji · title<br>description · href · wip
+                </div>
+              </div>
+              <svg width="300" height="34" class="my-1"><line x1="150" y1="0" x2="150" y2="30" stroke="#334155" stroke-width="2"/><polygon points="145,30 155,30 150,34" fill="#334155"/></svg>
+              <p class="schematic text-slate-500 mb-2">presentation only — everything else is hand-typed</p>
+              <div class="grid grid-cols-2 gap-1.5 w-full text-[10px]">
+                <div class="hatch border border-red-400 px-2 py-1 rounded">Shell GAME_IDS</div>
+                <div class="hatch border border-red-400 px-2 py-1 rounded">LeaderboardGameId</div>
+                <div class="hatch border border-red-400 px-2 py-1 rounded">LEADERBOARD_CONFIG</div>
+                <div class="hatch border border-red-400 px-2 py-1 rounded">SliceId union</div>
+                <div class="hatch border border-red-400 px-2 py-1 rounded">PersistenceEnvelope</div>
+                <div class="hatch border border-red-400 px-2 py-1 rounded">useScoreSubmission ids</div>
+                <div class="hatch border border-red-400 px-2 py-1 rounded">globals.css accents ×11</div>
+                <div class="hatch border border-red-400 px-2 py-1 rounded">submitButtonFor lists ×3</div>
+                <div class="hatch border border-red-400 px-2 py-1 rounded">gameRules consts ×10</div>
+                <div class="hatch border border-red-400 px-2 py-1 rounded">HomeTrophy branch</div>
+              </div>
+              <p class="mt-3 text-[11px] text-slate-500 text-center">1 of 20 is compiler-checked (<span class="font-mono">page.tsx:154 satisfies</span>)</p>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-slate-300 bg-white p-5">
+            <p class="schematic text-emerald-700 mb-4">After — one row declares a Game</p>
+            <div class="flex flex-col items-center">
+              <div class="w-60 deepbox text-white rounded">
+                <div class="border-b border-slate-600 py-1 text-center schematic">GAME_REGISTRY</div>
+                <div class="py-3 px-3 text-[11px] leading-5 font-mono">
+                  label · emoji · href · wip<br>
+                  <span class="text-emerald-300">slice</span>: SliceId | null<br>
+                  <span class="text-emerald-300">leaderboard</span>: config | null<br>
+                  <span class="text-emerald-300">accent</span>: token<br>
+                  <span class="text-emerald-300">submit</span>: kind
+                </div>
+              </div>
+              <svg width="300" height="46" class="my-1">
+                <line x1="150" y1="0" x2="150" y2="14" stroke="#334155" stroke-width="2"/>
+                <line x1="60" y1="14" x2="240" y2="14" stroke="#334155" stroke-width="2"/>
+                <line x1="60" y1="14" x2="60" y2="42" stroke="#334155" stroke-width="2"/>
+                <line x1="150" y1="14" x2="150" y2="42" stroke="#334155" stroke-width="2"/>
+                <line x1="240" y1="14" x2="240" y2="42" stroke="#334155" stroke-width="2"/>
+                <polygon points="55,42 65,42 60,46" fill="#334155"/>
+                <polygon points="145,42 155,42 150,46" fill="#334155"/>
+                <polygon points="235,42 245,42 240,46" fill="#334155"/>
+              </svg>
+              <div class="grid grid-cols-3 gap-1.5 w-full text-[10px] text-center">
+                <div class="border border-emerald-600 text-emerald-800 bg-emerald-50 px-1 py-1 rounded">Shell</div>
+                <div class="border border-emerald-600 text-emerald-800 bg-emerald-50 px-1 py-1 rounded">Leaderboard</div>
+                <div class="border border-emerald-600 text-emerald-800 bg-emerald-50 px-1 py-1 rounded">Persistence</div>
+              </div>
+              <p class="mt-3 text-[11px] text-slate-500 text-center">derived — adding a Game is one row, not a checklist</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 grid md:grid-cols-3 gap-6">
+          <div>
+            <p class="schematic text-slate-500 mb-1">Problem</p>
+            <p class="text-sm leading-relaxed">The registry's interface carries only presentation, so every operational fact about a Game is re-typed in a list the compiler never checks against it.</p>
+          </div>
+          <div>
+            <p class="schematic text-slate-500 mb-1">Solution</p>
+            <p class="text-sm leading-relaxed">Widen the registry row to declare slice, leaderboard config, accent and submit kind; derive the twenty lists from it, keeping the deliberate exclusions as typed filters rather than retyped unions.</p>
+          </div>
+          <div>
+            <p class="schematic text-slate-500 mb-1">Wins</p>
+            <ul class="text-sm space-y-1 list-disc list-inside marker:text-emerald-600">
+              <li>locality: a Game is one row</li>
+              <li>leverage: 20 lists derive</li>
+              <li>compiler replaces the checklist</li>
+              <li>wip flip stops being manual</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="mt-5 rounded border-l-4 border-amber-400 bg-amber-50 px-4 py-3 text-sm">
+          <span class="font-semibold">Evidence this already bites.</span> Session 121 had to add <span class="font-mono text-xs">topothesies</span> to <span class="font-mono text-xs">Shell.tsx GAME_IDS</span> by hand — the wip flip alone would not have shown it. <span class="font-mono text-xs">HomeTrophyButton.tsx:5</span> lists six games against a nine-id prop. <span class="font-mono text-xs">deploymentReadiness.test.ts</span> has no entry for logopaignio or topothesies data files. <span class="font-mono text-xs">Shell.test.tsx:153</span> asserts 6 of 10 drawer hrefs.
+        </div>
+
+        <div class="mt-3 rounded border-l-4 border-slate-400 bg-slate-100 px-4 py-3 text-sm">
+          <span class="font-semibold">Not in scope:</span> <span class="font-mono text-xs">SliceId</span> ≠ <span class="font-mono text-xs">RegistryGameId</span> is a locked decision — stavrolekso and leksikastirio have no store slice by design. Deriving it means <span class="font-mono text-xs">slice: SliceId | null</span> on the row, never collapsing the two unions.
+        </div>
+      </article>
+
+      <!-- ══════════════════════ CANDIDATE 2 ══════════════════════ -->
+      <article id="c2" class="scroll-mt-8 border-t border-slate-200 pt-14">
+        <div class="flex items-baseline gap-3 flex-wrap">
+          <span class="schematic text-slate-400">02</span>
+          <h2 class="font-serif text-3xl">One read surface for the Trophy Case</h2>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2 text-xs">
+          <span class="rounded-full bg-emerald-600 text-white px-3 py-1 font-medium">Strong</span>
+          <span class="rounded-full border border-slate-300 bg-white px-3 py-1 text-slate-600">local-substitutable</span>
+          <span class="rounded-full border border-red-300 bg-red-50 px-3 py-1 text-red-700">rule duplicated</span>
+        </div>
+
+        <div class="mt-4 font-mono text-xs text-slate-600 leading-relaxed">
+          src/components/profile/TrophyCase.tsx:42,83-88,158-203 · LifetimeStatsStrip.tsx:35 · WordsByLengthCard.tsx:45 ·
+          src/games/leksokipos/sync.ts:36,150 · src/games/leksokipos/lib/achievements.ts:301
+        </div>
+
+        <div class="mt-6 grid md:grid-cols-2 gap-4">
+          <div class="rounded-lg border border-slate-300 bg-white p-4">
+            <p class="schematic text-red-600 mb-3">Before — two clients, one endpoint set</p>
+            <pre class="mermaid">
+flowchart TD
+  TC["TrophyCase<br/>4 inline fetch"]
+  LS["LifetimeStatsStrip<br/>1 inline fetch"]
+  WL["WordsByLengthCard<br/>1 inline fetch"]
+  SY["sync.ts<br/>fetchLifetimeStats<br/>fetchEarnedAchievementIds"]
+  HK["useAchievementSync"]
+  A1["/api/achievements"]
+  A2["/api/profile/stats"]
+  A3["/api/profile/badge"]
+  A4["/api/profile/words"]
+  RULE{{"tier-crossing rule"}}
+
+  HK --> SY
+  SY --> A1
+  SY --> A2
+  TC -.-> A1
+  TC -.-> A2
+  TC -.-> A3
+  LS -.-> A2
+  WL -.-> A4
+  TC --> RULE
+  RULE -.->|"second copy"| SY
+
+  classDef leak stroke:#dc2626,stroke-width:2px,fill:#fef2f2;
+  classDef ok stroke:#0f172a,stroke-width:2px,fill:#ffffff;
+  class TC,LS,WL,RULE leak
+  class SY,HK ok
+            </pre>
+          </div>
+
+          <div class="rounded-lg border border-slate-300 bg-white p-4">
+            <p class="schematic text-emerald-700 mb-3">After — one module, one rule</p>
+            <pre class="mermaid">
+flowchart TD
+  TC2["TrophyCase<br/>pure display"]
+  LS2["LifetimeStatsStrip<br/>pure display"]
+  WL2["WordsByLengthCard<br/>pure display"]
+  PR["playerProgress<br/>read + write<br/>tier rule applied once"]
+  A1["/api/achievements"]
+  A2["/api/profile/stats"]
+  A3["/api/profile/badge"]
+  A4["/api/profile/words"]
+  HK["useAchievementSync"]
+
+  TC2 --> PR
+  LS2 --> PR
+  WL2 --> PR
+  HK  --> PR
+  PR --> A1
+  PR --> A2
+  PR --> A3
+  PR --> A4
+
+  classDef deep fill:#0f172a,color:#ffffff,stroke:#0f172a,stroke-width:3px;
+  classDef ok stroke:#0f172a,stroke-width:2px,fill:#ffffff;
+  class PR deep
+  class TC2,LS2,WL2,HK ok
+            </pre>
+          </div>
+        </div>
+
+        <div class="mt-6 grid md:grid-cols-3 gap-6">
+          <div>
+            <p class="schematic text-slate-500 mb-1">Problem</p>
+            <p class="text-sm leading-relaxed">Three Profile Page components hand-roll fetch, parse, cancel and catch against endpoints <span class="font-mono text-xs">sync.ts</span> already wraps — and <span class="font-mono text-xs">TrophyCase</span> re-derives the tier-crossing rule locally, so the Profile Page can disagree with the game about which tier a player holds.</p>
+          </div>
+          <div>
+            <p class="schematic text-slate-500 mb-1">Solution</p>
+            <p class="text-sm leading-relaxed">One module owning the player's progress read: it returns a resolved view (earned set, held tiers, selected badge, buckets) with the tier rule applied once by <span class="font-mono text-xs">achievements.ts</span>. Components stop knowing URL shapes.</p>
+          </div>
+          <div>
+            <p class="schematic text-slate-500 mb-1">Wins</p>
+            <ul class="text-sm space-y-1 list-disc list-inside marker:text-emerald-600">
+              <li>one tier rule, not two</li>
+              <li>locality: parse bugs land once</li>
+              <li>tests drop fetch mocks</li>
+              <li>optimistic write + rollback owned</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="mt-5 rounded border-l-4 border-slate-400 bg-slate-100 px-4 py-3 text-sm">
+          <span class="font-semibold">Test surface today.</span> <span class="font-mono text-xs">TrophyCase.test.tsx</span> (336 lines) is the <em>only</em> coverage of four fetch calls, three response shapes, an optimistic rollback and the duplicated tier rule — all reachable only by rendering React. Behind a module they become plain function tests.
+        </div>
+
+        <div class="mt-3 rounded border-l-4 border-emerald-500 bg-emerald-50 px-4 py-3 text-sm">
+          <span class="font-semibold">Timing.</span> <span class="font-mono text-xs">TICKET-02</span> rebuilds this catalog and retires emoji glyphs for drawn marks. Deepening first means the rebuild edits one module instead of three components.
+        </div>
+      </article>
+
+      <!-- ══════════════════════ CANDIDATE 3 ══════════════════════ -->
+      <article id="c3" class="scroll-mt-8 border-t border-slate-200 pt-14">
+        <div class="flex items-baseline gap-3 flex-wrap">
+          <span class="schematic text-slate-400">03</span>
+          <h2 class="font-serif text-3xl">Put the identity merge behind a seam</h2>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2 text-xs">
+          <span class="rounded-full bg-amber-500 text-white px-3 py-1 font-medium">Worth exploring</span>
+          <span class="rounded-full border border-slate-300 bg-white px-3 py-1 text-slate-600">ports &amp; adapters</span>
+          <span class="rounded-full border border-slate-300 bg-white px-3 py-1 text-slate-600">13 hand-rolled fakes</span>
+        </div>
+
+        <div class="mt-4 font-mono text-xs text-slate-600 leading-relaxed">
+          src/app/api/auth/link/route.ts:197-289 · src/lib/supabase.ts:53 · src/lib/{score,achievement,pangram,words}Merge.ts ·
+          22 test files repeating the table shim · 13 test files redefining makeChain()
+        </div>
+
+        <!-- cross-section -->
+        <div class="mt-6 grid md:grid-cols-2 gap-4">
+          <div class="rounded-lg border border-slate-300 bg-white p-5">
+            <p class="schematic text-red-600 mb-4">Before — plan is pure, execution is not</p>
+            <div class="space-y-1.5">
+              <div class="border-2 border-slate-700 bg-white px-3 py-2 text-xs font-mono">POST /api/auth/link · 289 lines</div>
+              <div class="ml-4 space-y-1">
+                <div class="hatch border border-red-400 px-3 py-1.5 text-[11px] font-mono rounded-sm">read old + canonical &nbsp;→&nbsp; planScoreMerge &nbsp;→&nbsp; update.in &nbsp;→&nbsp; delete.in</div>
+                <div class="hatch border border-red-400 px-3 py-1.5 text-[11px] font-mono rounded-sm">read old + canonical &nbsp;→&nbsp; planAchievementMerge &nbsp;→&nbsp; update.in &nbsp;→&nbsp; delete.in</div>
+                <div class="hatch border border-red-400 px-3 py-1.5 text-[11px] font-mono rounded-sm">read old + canonical &nbsp;→&nbsp; planPangramMerge &nbsp;→&nbsp; update.in &nbsp;→&nbsp; delete.in</div>
+                <div class="hatch border border-red-400 px-3 py-1.5 text-[11px] font-mono rounded-sm">read old + canonical &nbsp;→&nbsp; planWordsMerge &nbsp;→&nbsp; update.in &nbsp;→&nbsp; delete.in</div>
+              </div>
+              <div class="ml-4 mt-2 border-2 border-dashed border-slate-500 px-3 py-1.5 text-[11px] font-mono">table(client, name) — 2 lines</div>
+              <div class="ml-4 border-2 border-slate-700 bg-slate-100 px-3 py-1.5 text-[11px] font-mono">postgrest builder</div>
+            </div>
+            <p class="mt-4 text-[11px] text-slate-500">24 query chains in one route. The seam is the client factory — internal, so tests must module-mock.</p>
+          </div>
+
+          <div class="rounded-lg border border-slate-300 bg-white p-5">
+            <p class="schematic text-emerald-700 mb-4">After — merge is one verb, twice</p>
+            <div class="space-y-1.5">
+              <div class="border-2 border-slate-700 bg-white px-3 py-2 text-xs font-mono">POST /api/auth/link</div>
+              <div class="ml-4">
+                <div class="deepbox text-white px-3 py-3 rounded">
+                  <div class="schematic text-emerald-300 mb-1">identityStore</div>
+                  <div class="text-[11px] font-mono leading-5">
+                    mergeInto(canonical, old)<br>
+                    <span class="text-slate-400">— set-union lanes, one executor</span>
+                  </div>
+                </div>
+              </div>
+              <div class="ml-4 mt-2 border-2 border-dashed border-emerald-600 px-3 py-1.5 text-[11px] font-mono text-emerald-800">seam: two adapters</div>
+              <div class="ml-4 grid grid-cols-2 gap-1.5">
+                <div class="border-2 border-slate-700 bg-slate-100 px-2 py-1.5 text-[10px] font-mono text-center">postgres</div>
+                <div class="border-2 border-slate-700 bg-emerald-50 px-2 py-1.5 text-[10px] font-mono text-center">in-memory</div>
+              </div>
+            </div>
+            <p class="mt-4 text-[11px] text-slate-500">One fake replaces 13 <span class="font-mono">makeChain()</span> definitions and 22 copies of the shim line.</p>
+          </div>
+        </div>
+
+        <div class="mt-6 grid md:grid-cols-3 gap-6">
+          <div>
+            <p class="schematic text-slate-500 mb-1">Problem</p>
+            <p class="text-sm leading-relaxed">The merge <em>plans</em> sit behind clean pure interfaces; the <em>execution</em> around them is copy-paste four times, and no seam exists below the route — so every route test module-mocks the client factory and invents its own postgrest fake.</p>
+          </div>
+          <div>
+            <p class="schematic text-slate-500 mb-1">Solution</p>
+            <p class="text-sm leading-relaxed">One module owning identity-row movement, taking a table accessor rather than reaching for a factory. Two adapters justify the seam: postgres in production, in-memory in tests.</p>
+          </div>
+          <div>
+            <p class="schematic text-slate-500 mb-1">Wins</p>
+            <ul class="text-sm space-y-1 list-disc list-inside marker:text-amber-600">
+              <li>leverage: one fake, N route tests</li>
+              <li>fakes stop drifting per file</li>
+              <li>merge order testable end to end</li>
+              <li>route shrinks to intent</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="mt-5 rounded border-l-4 border-emerald-500 bg-emerald-50 px-4 py-3 text-sm">
+          <span class="font-semibold">Half of this is already in your working tree.</span> <span class="font-mono text-xs">src/lib/milestoneMerge.ts</span>, <span class="font-mono text-xs">games/leksokipos/lib/milestones.ts</span>, <span class="font-mono text-xs">api/milestones/</span> and migration <span class="font-mono text-xs">20260807120000_add_player_milestones.sql</span> are untracked-but-written, collapsing pangram + words into one lane. This candidate is what remains <em>after</em> that lands: the duplicated read-plan-repoint-delete execution, and the missing test seam. Do not re-derive the plan collapse — it is done.
+        </div>
+
+        <div class="mt-3 rounded border-l-4 border-amber-400 bg-amber-50 px-4 py-3 text-sm">
+          <span class="font-semibold">Deliberately not proposed: a repository per table.</span> <span class="font-mono text-xs">table()</span> fails the deletion test in reverse — deleting it would move complexity to call sites, not concentrate it, and it already gives the generated-types guarantee ADR 0017 exists for. The gap is a module <em>above</em> it for the identity aggregate, not a layer below.
+        </div>
+      </article>
+
+      <!-- ══════════════════════ CANDIDATE 4 ══════════════════════ -->
+      <article id="c4" class="scroll-mt-8 border-t border-slate-200 pt-14">
+        <div class="flex items-baseline gap-3 flex-wrap">
+          <span class="schematic text-slate-400">04</span>
+          <h2 class="font-serif text-3xl">Collapse the Slot-Fill page shell</h2>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2 text-xs">
+          <span class="rounded-full bg-amber-500 text-white px-3 py-1 font-medium">Worth exploring</span>
+          <span class="rounded-full border border-slate-300 bg-white px-3 py-1 text-slate-600">in-process</span>
+          <span class="rounded-full border border-slate-300 bg-white px-3 py-1 text-slate-600">5 near-identical files</span>
+        </div>
+
+        <div class="mt-4 font-mono text-xs text-slate-600 leading-relaxed">
+          src/components/{topothesies,posokanei,logopaignio,leksodromia,leksoplegma}/*PageClient.tsx ·
+          src/games/{topothesies,posokanei,logopaignio}/hooks/use*Round.ts ·
+          src/app/{posokanei,logopaignio,leksodromia,leksoplegma}/page.tsx
+        </div>
+
+        <div class="mt-6 grid md:grid-cols-2 gap-4">
+          <div class="rounded-lg border border-slate-300 bg-white p-5">
+            <p class="schematic text-red-600 mb-4">Before — the spine is deep, the page is not</p>
+            <div class="space-y-2">
+              <div class="grid grid-cols-3 gap-1.5">
+                <div class="hatch border border-red-400 rounded p-2 text-center"><div class="text-[10px] font-mono">Posokanei</div><div class="text-[9px] text-slate-600">PageClient 58L</div></div>
+                <div class="hatch border border-red-400 rounded p-2 text-center"><div class="text-[10px] font-mono">Logopaignio</div><div class="text-[9px] text-slate-600">PageClient 58L</div></div>
+                <div class="hatch border border-red-400 rounded p-2 text-center"><div class="text-[10px] font-mono">Topothesies</div><div class="text-[9px] text-slate-600">PageClient 60L</div></div>
+              </div>
+              <p class="text-center text-[10px] text-slate-500">2 useState · GameHeader · trophy · “?” · keyed Board · HowToPlay</p>
+              <div class="grid grid-cols-3 gap-1.5">
+                <div class="hatch border border-red-400 rounded p-2 text-center"><div class="text-[10px] font-mono">usePosokaneiRound</div></div>
+                <div class="hatch border border-red-400 rounded p-2 text-center"><div class="text-[10px] font-mono">useLogopaignioRound</div></div>
+                <div class="hatch border border-red-400 rounded p-2 text-center"><div class="text-[10px] font-mono">useTopothesiesRound</div></div>
+              </div>
+              <p class="text-center text-[10px] text-slate-500">3 adapters, differing only in type names</p>
+              <div class="border-2 border-slate-700 deepbox text-white rounded px-3 py-3 text-center">
+                <div class="schematic text-emerald-300">useSlotFillRound</div>
+                <div class="text-[10px] mt-1">ADR 0019 — already deep</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-slate-300 bg-white p-5">
+            <p class="schematic text-emerald-700 mb-4">After — one shell, per-game config</p>
+            <div class="space-y-2">
+              <div class="grid grid-cols-3 gap-1.5">
+                <div class="border border-emerald-600 bg-emerald-50 rounded p-2 text-center text-[10px] font-mono text-emerald-800">config</div>
+                <div class="border border-emerald-600 bg-emerald-50 rounded p-2 text-center text-[10px] font-mono text-emerald-800">config</div>
+                <div class="border border-emerald-600 bg-emerald-50 rounded p-2 text-center text-[10px] font-mono text-emerald-800">config</div>
+              </div>
+              <svg width="100%" height="26"><line x1="50%" y1="0" x2="50%" y2="22" stroke="#334155" stroke-width="2"/><polygon points="0,0 0,0" fill="none"/></svg>
+              <div class="border-2 border-slate-700 deepbox text-white rounded px-3 py-4 text-center">
+                <div class="schematic text-emerald-300">SlotFillPageShell</div>
+                <div class="text-[10px] mt-1 leading-4">header + trophy + how-to-play<br>leaderboard state · keyed Board</div>
+              </div>
+              <div class="border-2 border-slate-700 deepbox text-white rounded px-3 py-3 text-center">
+                <div class="schematic text-emerald-300">useSlotFillRound</div>
+                <div class="text-[10px] mt-1">unchanged</div>
+              </div>
+            </div>
+            <p class="mt-4 text-[11px] text-slate-500">A new Slot-Fill game costs a config object, not six files.</p>
+          </div>
+        </div>
+
+        <div class="mt-6 grid md:grid-cols-3 gap-6">
+          <div>
+            <p class="schematic text-slate-500 mb-1">Problem</p>
+            <p class="text-sm leading-relaxed">ADR 0019 deepened the round; the page around it stayed shallow. Five PageClients are the same 58 lines with a title swapped, and three round adapters differ only in type names.</p>
+          </div>
+          <div>
+            <p class="schematic text-slate-500 mb-1">Solution</p>
+            <p class="text-sm leading-relaxed">One shell owning the header, the trophy button, the how-to-play modal and the leaderboard-open state, taking each game's Board and copy as config — mirroring what <span class="font-mono text-xs">GameLeaderboardModal</span> already did for six wrappers.</p>
+          </div>
+          <div>
+            <p class="schematic text-slate-500 mb-1">Wins</p>
+            <ul class="text-sm space-y-1 list-disc list-inside marker:text-amber-600">
+              <li>locality: chrome changes once</li>
+              <li>PageClients stop being untested</li>
+              <li>five files become one</li>
+              <li>keyed-Board contract stated once</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="mt-5 rounded border-l-4 border-amber-400 bg-amber-50 px-4 py-3 text-sm">
+          <span class="font-semibold">Does not contradict ADR 0019 — read the scope.</span> That ADR forbids merging <em>useGuessRound with useSlotFillRound</em>, and it stands. This proposal touches neither spine: it collapses the page chrome above them, inside the Slot-Fill family only, where the option sets are already identical rather than a wide optional union. If it starts needing a <span class="font-mono text-xs">status</span> prop for the Guess family, stop — that is the merge ADR 0019 rejects.
+        </div>
+
+        <div class="mt-3 rounded border-l-4 border-slate-400 bg-slate-100 px-4 py-3 text-sm">
+          <span class="font-semibold">Sizing caveat.</span> Two of the three purest duplicates (posokanei, logopaignio) are <span class="font-mono text-xs">wip:true</span> and blocked on content, so the payoff is mostly future. Worth doing when the next game starts, not before.
+        </div>
+      </article>
+
+      <!-- ══════════════════════ CANDIDATE 5 ══════════════════════ -->
+      <article id="c5" class="scroll-mt-8 border-t border-slate-200 pt-14">
+        <div class="flex items-baseline gap-3 flex-wrap">
+          <span class="schematic text-slate-400">05</span>
+          <h2 class="font-serif text-3xl">One rule for resolving today's Puzzle</h2>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2 text-xs">
+          <span class="rounded-full bg-slate-500 text-white px-3 py-1 font-medium">Speculative</span>
+          <span class="rounded-full border border-slate-300 bg-white px-3 py-1 text-slate-600">in-process</span>
+          <span class="rounded-full border border-red-300 bg-red-50 px-3 py-1 text-red-700">3 silent variants</span>
+        </div>
+
+        <div class="mt-4 font-mono text-xs text-slate-600 leading-relaxed">
+          src/games/topothesies/lib/selectDailyPuzzle.ts:15 · src/games/posokanei/lib/selectDailyPuzzle.ts:14 ·
+          src/games/logopaignio/lib/selectDailyPuzzle.ts:15 · src/data/{leksiarxeio,leksindeseis,vrestifrasi,leksodromia,leksoplegma}/index.ts
+        </div>
+
+        <div class="mt-6 rounded-lg border border-slate-300 bg-white p-5">
+          <p class="schematic text-red-600 mb-4">Before — same name, three different rules</p>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead>
+                <tr class="border-b border-slate-300 text-left schematic text-slate-500">
+                  <th class="py-2 pr-4">module</th><th class="py-2 pr-4">exact-date branch</th><th class="py-2 pr-4">rotation key</th><th class="py-2">consequence</th>
+                </tr>
+              </thead>
+              <tbody class="font-mono">
+                <tr class="border-b border-slate-200"><td class="py-2 pr-4">topothesies</td><td class="py-2 pr-4 text-red-600">none</td><td class="py-2 pr-4">id-sorted</td><td class="py-2 font-sans text-slate-600">a dated answer is never honoured</td></tr>
+                <tr class="border-b border-slate-200"><td class="py-2 pr-4">posokanei</td><td class="py-2 pr-4 text-emerald-700">yes</td><td class="py-2 pr-4">date-sorted</td><td class="py-2 font-sans text-slate-600">pool order shifts as dates are added</td></tr>
+                <tr><td class="py-2 pr-4">logopaignio</td><td class="py-2 pr-4 text-emerald-700">yes</td><td class="py-2 pr-4">id-sorted</td><td class="py-2 font-sans text-slate-600">stable, but differs from its sibling</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="mt-4 text-[11px] text-slate-500">Three modules named identically, tested identically, behaving differently. Nothing compares them.</p>
+        </div>
+
+        <div class="mt-4 rounded-lg border border-slate-300 bg-white p-5">
+          <p class="schematic text-emerald-700 mb-4">After — one interface, the variation declared</p>
+          <div class="flex items-center justify-center gap-4 flex-wrap">
+            <div class="border-2 border-dashed border-slate-500 px-4 py-3 text-[11px] font-mono text-center">
+              pool + date<br><span class="text-slate-500">+ rotation: "id" | "date"</span>
+            </div>
+            <svg width="60" height="20"><line x1="0" y1="10" x2="50" y2="10" stroke="#334155" stroke-width="2"/><polygon points="50,5 50,15 58,10" fill="#334155"/></svg>
+            <div class="deepbox text-white px-5 py-4 rounded text-center">
+              <div class="schematic text-emerald-300">selectDailyPuzzle</div>
+              <div class="text-[10px] mt-1">exact date, else rotate</div>
+            </div>
+          </div>
+          <p class="mt-4 text-center text-[11px] text-slate-500">A game that wants a different rule says so, rather than owning a copy that quietly drifts.</p>
+        </div>
+
+        <div class="mt-6 grid md:grid-cols-3 gap-6">
+          <div>
+            <p class="schematic text-slate-500 mb-1">Problem</p>
+            <p class="text-sm leading-relaxed">Three copies of one concept diverged into three rules, and the divergence is invisible: each has its own green test asserting its own behaviour.</p>
+          </div>
+          <div>
+            <p class="schematic text-slate-500 mb-1">Solution</p>
+            <p class="text-sm leading-relaxed">One pure module over a pool, with the rotation key as a declared parameter rather than a re-implementation.</p>
+          </div>
+          <div>
+            <p class="schematic text-slate-500 mb-1">Wins</p>
+            <ul class="text-sm space-y-1 list-disc list-inside marker:text-slate-500">
+              <li>divergence becomes explicit</li>
+              <li>one date-boundary test set</li>
+              <li>locality: rotation bugs land once</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="mt-5 rounded border-l-4 border-slate-400 bg-slate-100 px-4 py-3 text-sm">
+          <span class="font-semibold">Why only speculative.</span> The other five games resolve their Puzzle through genuinely different paths — community-queue-first for three, deterministic derivation for two — so this unifies three modules, not eight. It earns its keep as a correctness guard for the Slot-Fill family, not as a platform-wide seam. It pairs naturally with candidate 04.
+        </div>
+      </article>
+
+      </section>
+
+      <!-- ══════════════════════ TOP RECOMMENDATION ══════════════════════ -->
+      <section id="top-recommendation" class="border-t-2 border-slate-800 pt-10">
+        <p class="schematic text-slate-500 mb-3">Top recommendation</p>
+        <div class="rounded-xl deepbox text-white p-8">
+          <h3 class="font-serif text-3xl">01 · Deepen the Game registry</h3>
+          <p class="mt-4 text-slate-200 leading-relaxed max-w-3xl">
+            It is the cheapest of the five and the only one whose failure mode is already recorded twice in this repo's own history — a finished game filed under «Υπό κατασκευή» for months, and a live game that needed a hand-edit to a second list before the flag flip meant anything. Every other candidate removes duplication that is at least visible; this one removes duplication the compiler cannot see, which is the kind that ships.
+          </p>
+          <div class="mt-6 flex flex-wrap gap-3 text-xs">
+            <a href="#c1" class="rounded bg-emerald-500 text-slate-900 px-4 py-2 font-medium">Go to candidate 01</a>
+            <a href="#c2" class="rounded border border-slate-500 px-4 py-2 text-slate-200">02 is the timing play — TICKET-02 rewrites it anyway</a>
+          </div>
+        </div>
+      </section>
+
+      <footer class="pt-6 text-xs text-slate-500">
+        Vocabulary: module · interface · implementation · depth · seam · adapter · leverage · locality.
+        Domain terms from <span class="font-mono">CONTEXT.md</span>.
+      </footer>
+
+    </main>
+  </body>
+</html>
