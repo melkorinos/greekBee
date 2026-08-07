@@ -15,8 +15,8 @@ import * as store from "@/hooks/useGameStore";
 vi.mock("@/lib/reload", () => ({ reloadApp: vi.fn() }));
 
 // useAuth + useProfile both read the Supabase session; useAuth also subscribes.
-vi.mock("@/lib/supabase", () => ({
-  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
+vi.mock("@/lib/supabase", async () => ({
+  table: (await import("@/test/helpers/supabaseMock")).tableShim,
   getSupabaseClient: () => ({
     auth: {
       getSession:        async () => ({ data: { session: null } }),

@@ -33,8 +33,8 @@ const { holder, mockScoresEq, mockRpc, mockLt } = vi.hoisted(() => {
   return { holder, mockScoresEq, mockRpc, mockLt };
 });
 
-vi.mock("@/lib/supabase", () => ({
-  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
+vi.mock("@/lib/supabase", async () => ({
+  table: (await import("@/test/helpers/supabaseMock")).tableShim,
   getSupabaseClient: () => ({
     from: () => ({ select: () => ({ eq: mockScoresEq }) }),
     rpc:  mockRpc,

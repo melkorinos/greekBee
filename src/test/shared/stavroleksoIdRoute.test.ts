@@ -9,37 +9,19 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-type ChainResult = { data?: unknown; error?: { message: string } | null };
-
-let _callQueue: ChainResult[] = [];
-
-function makeChain(result: ChainResult) {
-  const chain: Record<string, unknown> = {};
-  const ret = () => chain;
-  chain.select = ret;
-  chain.eq     = ret;
-  chain.update = ret;
-  chain.single = () => Promise.resolve(result);
-  chain.then   = (resolve: (v: ChainResult) => void) => resolve(result);
-  return chain;
-}
+import { makeQueuedClient, tableShim } from "@/test/helpers/supabaseMock";
 
 // Both clients draw from one queue: the tests care about the sequence of calls,
 // not which client made them. Which client the UPDATE uses is pinned separately
 // (getServiceRoleClient is spied on below) because RLS makes that the difference
 // between an edit persisting and silently vanishing.
-const fromQueue = () => ({
-  from: () => {
-    const result = _callQueue.shift() ?? { data: null, error: null };
-    return makeChain(result);
-  },
-});
+const _db = makeQueuedClient();
 
-const getServiceRoleClient = vi.fn(fromQueue);
-const getSupabaseClient    = vi.fn(fromQueue);
+const getServiceRoleClient = vi.fn(() => _db.client);
+const getSupabaseClient    = vi.fn(() => _db.client);
 
 vi.mock("@/lib/supabase", () => ({
-  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
+  table: tableShim,
   getSupabaseClient: () => getSupabaseClient(),
   getServiceRoleClient: () => getServiceRoleClient(),
 }));
@@ -48,7 +30,7 @@ const { GET, PATCH } = await import("@/app/api/community-puzzles/stavrolekso/[id
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function enqueue(...results: ChainResult[]) { _callQueue.push(...results); }
+const enqueue = _db.enqueue;
 
 function withParams(id: string) {
   return { params: Promise.resolve({ id }) };
@@ -79,11 +61,11 @@ const PUZZLE_DATA = {
 };
 
 beforeEach(() => {
-  _callQueue = [];
+  _db.reset();
   getServiceRoleClient.mockClear();
   getSupabaseClient.mockClear();
 });
-afterEach(()  => { _callQueue = []; });
+afterEach(()  => { _db.reset(); });
 
 // ── GET ───────────────────────────────────────────────────────────────────────
 

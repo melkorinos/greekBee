@@ -19,8 +19,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: mockReplace }),
 }));
 
-vi.mock("@/lib/supabase", () => ({
-  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
+vi.mock("@/lib/supabase", async () => ({
+  table: (await import("@/test/helpers/supabaseMock")).tableShim,
   getSupabaseClient: () => ({
     auth: { exchangeCodeForSession: mockExchange },
   }),

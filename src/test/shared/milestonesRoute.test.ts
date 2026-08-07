@@ -19,32 +19,28 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-type ChainResult = { data?: unknown; error?: { message: string } | null };
+import { makeQueuedClient, tableShim, type ChainResult } from "@/test/helpers/supabaseMock";
 
-let _callQueue: ChainResult[] = [];
 let _lastUpsert: { rows: unknown; options: unknown } | null = null;
 let _lastSelectAfterUpsert: unknown = null;
 let _rpcCalls: { fn: string; args: unknown }[] = [];
 let _rpcResult: ChainResult = { data: [], error: null };
 
-function makeChain(result: ChainResult) {
-  const chain: Record<string, unknown> = {};
-  chain.upsert = (rows: unknown, options: unknown) => {
-    _lastUpsert = { rows, options };
-    // The route calls .select(...) on the upsert to learn which rows were NEW —
-    // ON CONFLICT DO NOTHING ... RETURNING yields only actually-inserted rows.
-    return {
-      select: (cols: unknown) => { _lastSelectAfterUpsert = cols; return Promise.resolve(result); },
-    };
-  };
-  return chain;
-}
+// The route calls .select(...) on the upsert to learn which rows were NEW —
+// ON CONFLICT DO NOTHING ... RETURNING yields only actually-inserted rows — so
+// the select recorded here is the one chained onto the upsert.
+const _db = makeQueuedClient({
+  onCall: ({ op, args }) => {
+    if (op === "upsert") _lastUpsert = { rows: args[0], options: args[1] };
+    if (op === "select") _lastSelectAfterUpsert = args[0];
+  },
+});
 
 vi.mock("@/lib/supabase", () => ({
-  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
+  table: tableShim,
   getSupabaseClient: () => ({
-    from: () => makeChain(_callQueue.shift() ?? { data: [], error: null }),
-    rpc:  (fn: string, args: unknown) => { _rpcCalls.push({ fn, args }); return Promise.resolve(_rpcResult); },
+    ..._db.client,
+    rpc: (fn: string, args: unknown) => { _rpcCalls.push({ fn, args }); return Promise.resolve(_rpcResult); },
   }),
 }));
 
@@ -60,10 +56,10 @@ function makePostReq(body: unknown) {
   });
 }
 
-const enqueue = (...results: ChainResult[]) => { _callQueue.push(...results); };
+const enqueue = _db.enqueue;
 
 function reset() {
-  _callQueue = [];
+  _db.reset();
   _lastUpsert = null;
   _lastSelectAfterUpsert = null;
   _rpcCalls = [];

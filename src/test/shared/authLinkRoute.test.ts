@@ -17,6 +17,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { tableShim } from "@/test/helpers/supabaseMock";
 
 // ── Types the mock understands ──────────────────────────────────────────────────
 
@@ -125,7 +126,7 @@ function makeChain(table: string) {
 }
 
 vi.mock("@/lib/supabase", () => ({
-  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
+  table: tableShim,
   getSupabaseClient: () => ({
     auth: {
       getUser: () => Promise.resolve({ data: { user: _authUser }, error: _authError }),

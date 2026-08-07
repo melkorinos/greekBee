@@ -9,40 +9,17 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-type ChainResult = { data?: unknown; error?: { message: string; code?: string } | null; count?: number | null };
+import { makeQueuedClient, tableShim } from "@/test/helpers/supabaseMock";
 
-let _callQueue: ChainResult[] = [];
+const _db = makeQueuedClient();
 
-function makeChain(result: ChainResult) {
-  const chain: Record<string, unknown> = {};
-  const ret = () => chain;
-  chain.select      = ret;
-  chain.eq          = ret;
-  chain.order       = ret;
-  chain.in          = ret;
-  chain.update      = ret;
-  chain.delete      = ret;
-  chain.insert      = () => Promise.resolve(result);
-  chain.maybeSingle = () => Promise.resolve(result);
-  chain.then        = (resolve: (v: ChainResult) => void) => resolve(result);
-  return chain;
-}
-
-vi.mock("@/lib/supabase", () => {
-  const client = {
-    from: () => {
-      const result = _callQueue.shift() ?? { data: null, error: null, count: null };
-      return makeChain(result);
-    },
-  };
-  // The review route uses the service-role client (RLS bypass); everything else
-  // uses the anon client. Both resolve to the same queue-backed mock here.
-  return {
-  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
-    getSupabaseClient:      () => client,
-    getServiceRoleClient:   () => client,
-  };
-});
+// The review route uses the service-role client (RLS bypass); everything else
+// uses the anon client. Both resolve to the same queue-backed mock here.
+vi.mock("@/lib/supabase", () => ({
+  table:                tableShim,
+  getSupabaseClient:    () => _db.client,
+  getServiceRoleClient: () => _db.client,
+}));
 
 vi.stubEnv("ADMIN_SECRET", "secret-admin");
 
@@ -61,7 +38,7 @@ const { POST: reviewNomination } =
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function enqueue(...results: ChainResult[]) { _callQueue.push(...results); }
+const enqueue = _db.enqueue;
 
 function makePost(url: string, body: unknown, adminSecret?: string) {
   return new NextRequest(url, {
@@ -79,8 +56,8 @@ function withParams(id: string) {
   return { params: Promise.resolve({ id }) };
 }
 
-beforeEach(() => { _callQueue = []; });
-afterEach(()  => { _callQueue = []; });
+beforeEach(() => { _db.reset(); });
+afterEach(()  => { _db.reset(); });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/nominations

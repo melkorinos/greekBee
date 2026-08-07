@@ -7,32 +7,19 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-type ChainResult = { data?: unknown; error?: { message: string; code?: string } | null };
+import { makeQueuedClient, tableShim } from "@/test/helpers/supabaseMock";
 
-let _callQueue: ChainResult[] = [];
 let _lastUpsert: { rows: unknown; options: unknown } | null = null;
 
-function makeChain(result: ChainResult) {
-  const chain: Record<string, unknown> = {};
-  const ret = () => chain;
-  chain.select = ret;
-  chain.eq     = ret;
-  chain.upsert = (rows: unknown, options: unknown) => {
-    _lastUpsert = { rows, options };
-    return Promise.resolve(result);
-  };
-  chain.then   = (resolve: (v: ChainResult) => void) => resolve(result);
-  return chain;
-}
+const _db = makeQueuedClient({
+  onCall: ({ op, args }) => {
+    if (op === "upsert") _lastUpsert = { rows: args[0], options: args[1] };
+  },
+});
 
 vi.mock("@/lib/supabase", () => ({
-  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
-  getSupabaseClient: () => ({
-    from: () => {
-      const result = _callQueue.shift() ?? { data: null, error: null };
-      return makeChain(result);
-    },
-  }),
+  table: tableShim,
+  getSupabaseClient: () => _db.client,
 }));
 
 const { POST, GET } = await import("@/app/api/achievements/route");
@@ -53,10 +40,10 @@ function makeGetReq(params: Record<string, string>) {
   return new NextRequest(url.toString());
 }
 
-function enqueue(...results: ChainResult[]) { _callQueue.push(...results); }
+const enqueue = _db.enqueue;
 
-beforeEach(() => { _callQueue = []; _lastUpsert = null; });
-afterEach(()  => { _callQueue = []; _lastUpsert = null; });
+beforeEach(() => { _db.reset(); _lastUpsert = null; });
+afterEach(()  => { _db.reset(); _lastUpsert = null; });
 
 const VALID_POST = {
   device_uuid:     "device-1",

@@ -11,35 +11,21 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-type ChainResult = { data?: unknown; error?: { message: string } | null };
+import { makeQueuedClient, tableShim } from "@/test/helpers/supabaseMock";
 
-let _callQueue: ChainResult[] = [];
 let _lastUpdate: unknown = null;
 let _lastInsert: unknown = null;
 
-function makeChain(result: ChainResult) {
-  const chain: Record<string, unknown> = {};
-  const ret = () => chain;
-  chain.select = ret;
-  chain.eq     = ret;
-  chain.in     = ret;
-  chain.limit  = ret;
-  chain.single = ret;
-  chain.maybeSingle = ret;
-  chain.update = (payload: unknown) => { _lastUpdate = payload; return chain; };
-  chain.insert = (payload: unknown) => { _lastInsert = payload; return chain; };
-  chain.then   = (resolve: (v: ChainResult) => void) => resolve(result);
-  return chain;
-}
+const _db = makeQueuedClient({
+  onCall: ({ op, args }) => {
+    if (op === "update") _lastUpdate = args[0];
+    if (op === "insert") _lastInsert = args[0];
+  },
+});
 
 vi.mock("@/lib/supabase", () => ({
-  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
-  getServiceRoleClient: () => ({
-    from: () => {
-      const result = _callQueue.shift() ?? { data: null, error: null };
-      return makeChain(result);
-    },
-  }),
+  table: tableShim,
+  getServiceRoleClient: () => _db.client,
 }));
 
 const { POST, GET } = await import("@/app/api/profile/badge/route");
@@ -60,10 +46,10 @@ function makeGetReq(params: Record<string, string>) {
   return new NextRequest(url.toString());
 }
 
-function enqueue(...results: ChainResult[]) { _callQueue.push(...results); }
+const enqueue = _db.enqueue;
 
-beforeEach(() => { _callQueue = []; _lastUpdate = null; _lastInsert = null; });
-afterEach(()  => { _callQueue = []; _lastUpdate = null; _lastInsert = null; });
+beforeEach(() => { _db.reset(); _lastUpdate = null; _lastInsert = null; });
+afterEach(()  => { _db.reset(); _lastUpdate = null; _lastInsert = null; });
 
 // Two different catalog badges. Both are tiered because after TICKET-02 every
 // catalog entry is — the route's contract is about ownership and storage shape,

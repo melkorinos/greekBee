@@ -10,46 +10,27 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-type ChainResult = { data?: unknown; error?: { message: string } | null };
+import { makeQueuedClient, tableShim } from "@/test/helpers/supabaseMock";
 
-let _callQueue: ChainResult[] = [];
 let _lastUpsertPayload: unknown = null;
 let _lastUpdatePayload: unknown = null;
 
-function makeChain(result: ChainResult) {
-  const chain: Record<string, unknown> = {};
-  const ret = () => chain;
-  chain.select = ret;
-  chain.eq     = ret;
-  chain.order  = ret;
-  chain.insert = () => Promise.resolve(result);
-  chain.upsert = (data: unknown) => { _lastUpsertPayload = data; return Promise.resolve(result); };
-  chain.update = (data: unknown) => { _lastUpdatePayload = data; return chain; };
-  chain.single = () => Promise.resolve(result);
-  chain.then   = (resolve: (v: ChainResult) => void) => resolve(result);
-  return chain;
-}
+const _db = makeQueuedClient({
+  onCall: ({ op, args }) => {
+    if (op === "upsert") _lastUpsertPayload = args[0];
+    if (op === "update") _lastUpdatePayload = args[0];
+  },
+});
 
 const hoisted = vi.hoisted(() => ({ tokens: [] as string[] }));
 
-function makeClient() {
-  return {
-    from: () => {
-      const result = _callQueue.shift() ?? { data: null, error: null };
-      return makeChain(result);
-    },
-  };
-}
-
 vi.mock("@/lib/supabase", () => ({
-  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
-  getSupabaseClient:    () => makeClient(),
-  getTokenScopedClient: (token: string) => { hoisted.tokens.push(token); return makeClient(); },
+  table: tableShim,
+  getSupabaseClient:    () => _db.client,
+  getTokenScopedClient: (token: string) => { hoisted.tokens.push(token); return _db.client; },
 }));
 
-function enqueue(...results: ChainResult[]) {
-  _callQueue.push(...results);
-}
+const enqueue = _db.enqueue;
 
 const { GET, POST } = await import("@/app/api/profile/route");
 
@@ -67,8 +48,8 @@ function makePostReq(body: unknown): NextRequest {
   });
 }
 
-beforeEach(() => { _callQueue = []; _lastUpsertPayload = null; _lastUpdatePayload = null; hoisted.tokens = []; });
-afterEach(()  => { _callQueue = []; _lastUpsertPayload = null; _lastUpdatePayload = null; hoisted.tokens = []; });
+beforeEach(() => { _db.reset(); _lastUpsertPayload = null; _lastUpdatePayload = null; hoisted.tokens = []; });
+afterEach(()  => { _db.reset(); _lastUpsertPayload = null; _lastUpdatePayload = null; hoisted.tokens = []; });
 
 // ── GET ?device_uuid= — startup existence check ───────────────────────────────
 

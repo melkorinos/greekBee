@@ -2,6 +2,8 @@
 
 > Moved out of `memory.md` 2026-07-18. **Not loaded at session start** — open this file only when writing, moving, or consolidating tests, and update it in the end-of-session Dream (soul.md).
 > Before writing a new test, grep the left column. If the function appears, read that file first.
+>
+> **Route tests: do not hand-roll a postgrest fake.** `src/test/helpers/supabaseMock.ts` owns the shared chain stub — `makeQueuedClient()` (a per-`from()` result queue plus `enqueue`/`reset`), `makeChain()` for a single fixed result, and `tableShim` for the `table:` line every `vi.mock("@/lib/supabase")` needs. Thirteen per-file `makeChain()` copies were folded into it 2026-08-07. Add a missing verb to its `VERBS` list, a payload assertion via `onCall`, an odd call shape via `overrides`. Two traps: the stub replays results and ignores the table name and filters, so a test whose correctness depends on *which* rows come back for *which* identity needs a stateful fake instead (`authLinkRoute.test.ts` keeps one, deliberately); and when the module under test is imported statically rather than through `await import(...)`, the `vi.mock` factory must be `async` and pull the helper in via `await import(...)`, or the hoisted factory hits the import binding before it initialises.
 
 | File | What is tested |
 |------|----------------|
@@ -129,6 +131,7 @@
 | `puzzleRotation.test.ts` | `dateToIndex` |
 | `rlsInvariantsLiveDb.test.ts` | Live-DB RLS posture matrix. Covers `player_milestones` since 2026-08-07: anon DELETE blocked, insert-if-absent holds (including for a row whose `detail` defaults to `''` — the NOT NULL guarantee), and both aggregate RPCs callable by anon. Runs locally off `.env.local` (`vitest.config.ts` forwards the 3 Supabase keys); auto-skips in CI, where live-DB secrets are deliberately absent. **The milestone rows fail until `20260807120000` is pushed** — that is the un-pushed migration, not a regression |
 | `scoreMerge.test.ts` | `planScoreMerge` (best-per-puzzle) + `mergeLengthScore` (Leksiarxeio fold; re-post overwrite documented) |
+| `identityMerge.test.ts` | `mergeIdentityRows` — Sign-in Restore's EXECUTION (the plan functions have their own suites). All three lanes read both identities; a lane with nothing to move issues no writes; the re-point payload names each table's own owner column. **The load-bearing row: deletes go out BEFORE the re-point** — re-pointing a game_scores winner while the row it beat still sits on the canonical identity violates `UNIQUE(game_id, device_id, puzzle_date)`. Driven by a recording stub passed as the `BoundTable` argument, so there is no client factory to module-mock |
 | `stavroleksoIdRoute.test.ts` | GET/PATCH stavrolekso `[id]` — PIN auth + state guards, "the edit actually persists" (service-role write) |
 | `supabase.test.ts` | `getSupabaseClient`, `signInWithGoogle` |
 | `useAuth.test.ts` | Session on mount / from store / sign-out |

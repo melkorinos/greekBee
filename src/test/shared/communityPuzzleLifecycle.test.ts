@@ -9,44 +9,19 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock (records the call chain so assertions can see table/args) ──
 
-type ChainResult = { data?: unknown; error?: { message: string } | null };
-type RecordedCall = { table: string; op: string; args: unknown[] };
+import { makeQueuedClient, tableShim, type ChainCall } from "@/test/helpers/supabaseMock";
 
-let _queue: ChainResult[] = [];
-let _calls: RecordedCall[] = [];
+let _calls: ChainCall[] = [];
 
-function makeChain(table: string, result: ChainResult) {
-  const chain: Record<string, unknown> = {};
-  const record = (op: string) => (...args: unknown[]) => {
-    _calls.push({ table, op, args });
-    return chain;
-  };
-  for (const op of ["insert", "select", "update", "delete", "eq", "order", "limit"]) {
-    chain[op] = record(op);
-  }
-  chain.single = () => {
-    _calls.push({ table, op: "single", args: [] });
-    return Promise.resolve(result);
-  };
-  chain.then = (resolve: (v: ChainResult) => void) => resolve(result);
-  return chain;
-}
+const _db = makeQueuedClient({ onCall: (call) => { _calls.push(call); } });
 
-vi.mock("@/lib/supabase", () => {
-  const client = {
-    from: (table: string) => {
-      const result = _queue.shift() ?? { data: null, error: null };
-      return makeChain(table, result);
-    },
-  };
-  // The admin/privileged paths (list, review, consume) use the service-role
-  // client; the public submit path uses the anon client. Both share the queue.
-  return {
-  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
-    getSupabaseClient:    () => client,
-    getServiceRoleClient: () => client,
-  };
-});
+// The admin/privileged paths (list, review, consume) use the service-role
+// client; the public submit path uses the anon client. Both share the queue.
+vi.mock("@/lib/supabase", () => ({
+  table:                tableShim,
+  getSupabaseClient:    () => _db.client,
+  getServiceRoleClient: () => _db.client,
+}));
 
 const { consumeApprovedPuzzle, createListHandler, createReviewHandler, createSubmitHandler } =
   await import("@/lib/communityPuzzleLifecycle");
@@ -96,12 +71,12 @@ function params(id: string) {
 }
 
 beforeEach(() => {
-  _queue = [];
+  _db.reset();
   _calls = [];
   process.env.ADMIN_SECRET = CORRECT_SECRET;
 });
 afterEach(() => {
-  _queue = [];
+  _db.reset();
   _calls = [];
   delete process.env.ADMIN_SECRET;
 });
@@ -137,7 +112,7 @@ describe("createSubmitHandler", () => {
   });
 
   it("echoes the inserted id when returnInsertedId is set", async () => {
-    _queue.push({ data: { id: 42 }, error: null });
+    _db.enqueue({ data: { id: 42 }, error: null });
     const POST = createSubmitHandler({ ...baseConfig, returnInsertedId: true });
     const res = await POST(makeReq("POST", { word: "γεια" }));
     expect(res.status).toBe(200);
@@ -146,7 +121,7 @@ describe("createSubmitHandler", () => {
   });
 
   it("returns 500 on DB error", async () => {
-    _queue.push({ data: null, error: { message: "db fail" } });
+    _db.enqueue({ data: null, error: { message: "db fail" } });
     const POST = createSubmitHandler(baseConfig);
     const res = await POST(makeReq("POST", { word: "γεια" }));
     expect(res.status).toBe(500);
@@ -169,7 +144,7 @@ describe("createListHandler — admin-only games", () => {
   });
 
   it("defaults to status=pending, oldest first, default columns", async () => {
-    _queue.push({ data: [{ id: 1 }], error: null });
+    _db.enqueue({ data: [{ id: 1 }], error: null });
     const GET = createListHandler(baseConfig);
     const res = await GET(makeReq("GET", undefined, { secret: CORRECT_SECRET }));
     expect(res.status).toBe(200);
@@ -182,7 +157,7 @@ describe("createListHandler — admin-only games", () => {
   });
 
   it("returns 500 on DB error", async () => {
-    _queue.push({ data: null, error: { message: "db fail" } });
+    _db.enqueue({ data: null, error: { message: "db fail" } });
     const GET = createListHandler(baseConfig);
     const res = await GET(makeReq("GET", undefined, { secret: CORRECT_SECRET }));
     expect(res.status).toBe(500);
@@ -198,7 +173,7 @@ describe("createListHandler — publicApprovedList (Stavrolekso shape)", () => {
   };
 
   it("serves the approved list without admin secret, newest first", async () => {
-    _queue.push({ data: [{ id: 2 }], error: null });
+    _db.enqueue({ data: [{ id: 2 }], error: null });
     const GET = createListHandler(config);
     const res = await GET(makeReq("GET"));
     expect(res.status).toBe(200);
@@ -217,7 +192,7 @@ describe("createListHandler — publicApprovedList (Stavrolekso shape)", () => {
   });
 
   it("serves status=pending with the admin secret", async () => {
-    _queue.push({ data: [], error: null });
+    _db.enqueue({ data: [], error: null });
     const GET = createListHandler(config);
     const res = await GET(makeReq("GET", undefined, { query: "?status=pending", secret: CORRECT_SECRET }));
     expect(res.status).toBe(200);
@@ -236,7 +211,7 @@ describe("consumeApprovedPuzzle", () => {
   const DATE = "2026-08-10";
 
   it("reads the row scheduled for the requested date and returns data + submitter_name", async () => {
-    _queue.push({ data: { id: 3, submitter_name: "Νίκος", data: { phrase: "γεια σου" } }, error: null });
+    _db.enqueue({ data: { id: 3, submitter_name: "Νίκος", data: { phrase: "γεια σου" } }, error: null });
 
     const result = await consumeApprovedPuzzle<{ phrase: string }>(TABLE, DATE);
     expect(result).toEqual({ data: { phrase: "γεια σου" }, submitter_name: "Νίκος" });
@@ -250,15 +225,15 @@ describe("consumeApprovedPuzzle", () => {
     // The s134 defect: consume used to DELETE on every call, and the loaders run
     // on every page load, so a refresh destroyed the puzzle and served the next
     // one. Serving is now a pure read.
-    _queue.push({ data: { id: 3, submitter_name: "Νίκος", data: { phrase: "γεια σου" } }, error: null });
+    _db.enqueue({ data: { id: 3, submitter_name: "Νίκος", data: { phrase: "γεια σου" } }, error: null });
     await consumeApprovedPuzzle<{ phrase: string }>(TABLE, DATE);
     expect(_calls.find((c) => c.op === "delete")).toBeUndefined();
   });
 
   it("is idempotent — repeated calls for one date return the same puzzle", async () => {
     const row = { id: 3, submitter_name: "Νίκος", data: { phrase: "γεια σου" } };
-    _queue.push({ data: row, error: null });
-    _queue.push({ data: row, error: null });
+    _db.enqueue({ data: row, error: null });
+    _db.enqueue({ data: row, error: null });
 
     const first  = await consumeApprovedPuzzle<{ phrase: string }>(TABLE, DATE);
     const second = await consumeApprovedPuzzle<{ phrase: string }>(TABLE, DATE);
@@ -266,24 +241,24 @@ describe("consumeApprovedPuzzle", () => {
   });
 
   it("scopes the read to the requested date, so an archive date cannot serve today's row", async () => {
-    _queue.push({ data: null, error: null });
+    _db.enqueue({ data: null, error: null });
     await consumeApprovedPuzzle(TABLE, "2026-01-02");
     expect(_calls.filter((c) => c.op === "eq").map((c) => c.args))
       .toContainEqual(["scheduled_date", "2026-01-02"]);
   });
 
   it("returns null when nothing is scheduled for that date", async () => {
-    _queue.push({ data: null, error: null });
+    _db.enqueue({ data: null, error: null });
     expect(await consumeApprovedPuzzle(TABLE, DATE)).toBeNull();
   });
 
   it("returns null on DB error so the loader falls through to its static fallback", async () => {
-    _queue.push({ data: null, error: { message: "db fail" } });
+    _db.enqueue({ data: null, error: { message: "db fail" } });
     expect(await consumeApprovedPuzzle(TABLE, DATE)).toBeNull();
   });
 
   it("normalises a blank submitter_name to null", async () => {
-    _queue.push({ data: { id: 4, submitter_name: "", data: { phrase: "x" } }, error: null });
+    _db.enqueue({ data: { id: 4, submitter_name: "", data: { phrase: "x" } }, error: null });
     const result = await consumeApprovedPuzzle<{ phrase: string }>(TABLE, DATE);
     expect(result?.submitter_name).toBeNull();
   });
@@ -364,7 +339,7 @@ describe("createReviewHandler — scheduled release", () => {
 
   /** Queues the SELECT of already-taken dates that approval reads first. */
   function enqueueTakenDates(...dates: (string | null)[]) {
-    _queue.push({ data: dates.map((d) => ({ scheduled_date: d })), error: null });
+    _db.enqueue({ data: dates.map((d) => ({ scheduled_date: d })), error: null });
   }
 
   function scheduledDateWritten(): string | null | undefined {
@@ -441,7 +416,7 @@ describe("createReviewHandler — scheduled release", () => {
   });
 
   it("returns 500 when the schedule read fails, without approving", async () => {
-    _queue.push({ data: null, error: { message: "db fail" } });
+    _db.enqueue({ data: null, error: { message: "db fail" } });
     const res = await PATCH(
       makeReq("PATCH", { action: "approve" }, { secret: CORRECT_SECRET }),
       params("5"),
@@ -468,7 +443,7 @@ describe("createReviewHandler — scheduled release", () => {
   });
 
   it("returns 500 on DB error", async () => {
-    _queue.push({ data: null, error: { message: "db fail" } });
+    _db.enqueue({ data: null, error: { message: "db fail" } });
     const res = await PATCH(
       makeReq("PATCH", { action: "approve" }, { secret: CORRECT_SECRET }),
       params("5"),

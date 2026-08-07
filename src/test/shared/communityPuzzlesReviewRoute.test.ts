@@ -9,42 +9,19 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-type ChainResult = { data?: unknown; error?: { message: string } | null };
+import { makeQueuedClient, tableShim } from "@/test/helpers/supabaseMock";
 
-let _callQueue: ChainResult[] = [];
+const _db = makeQueuedClient();
 
-function makeChain(result: ChainResult) {
-  const chain: Record<string, unknown> = {};
-  const ret = () => chain;
-  chain.update = ret;
-  chain.delete = ret;
-  // Approve reads the already-scheduled dates before assigning one, so the chain
-  // has to survive a .select().eq() as well as the .update().eq() that follows.
-  chain.select = ret;
-  chain.eq     = () => Promise.resolve(result);
-  chain.then   = (resolve: (v: ChainResult) => void) => resolve(result);
-  return chain;
-}
+// Review handlers use the service-role client (RLS bypass); both resolve to the
+// same queue-backed mock here.
+vi.mock("@/lib/supabase", () => ({
+  table:                tableShim,
+  getSupabaseClient:    () => _db.client,
+  getServiceRoleClient: () => _db.client,
+}));
 
-vi.mock("@/lib/supabase", () => {
-  const client = {
-    from: () => {
-      const result = _callQueue.shift() ?? { data: null, error: null };
-      return makeChain(result);
-    },
-  };
-  // Review handlers use the service-role client (RLS bypass); both resolve to the
-  // same queue-backed mock here.
-  return {
-  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
-    getSupabaseClient:    () => client,
-    getServiceRoleClient: () => client,
-  };
-});
-
-function enqueue(...results: ChainResult[]) {
-  _callQueue.push(...results);
-}
+const enqueue = _db.enqueue;
 
 // ── Route handlers ────────────────────────────────────────────────────────────
 
@@ -76,11 +53,11 @@ function params(id: string) {
 }
 
 beforeEach(() => {
-  _callQueue = [];
+  _db.reset();
   process.env.ADMIN_SECRET = CORRECT_SECRET;
 });
 afterEach(() => {
-  _callQueue = [];
+  _db.reset();
   delete process.env.ADMIN_SECRET;
 });
 

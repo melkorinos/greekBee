@@ -12,37 +12,16 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-type ChainResult = { data?: unknown; error?: { message: string } | null };
+import { makeQueuedClient, tableShim } from "@/test/helpers/supabaseMock";
 
-let _callQueue: ChainResult[] = [];
-
-function makeChain(result: ChainResult) {
-  const chain: Record<string, unknown> = {};
-  const ret = () => chain;
-  chain.select      = ret;
-  chain.eq          = ret;
-  chain.gt          = ret;
-  chain.update      = ret;
-  chain.insert      = () => Promise.resolve(result);
-  chain.single      = () => Promise.resolve(result);
-  chain.maybeSingle = () => Promise.resolve(result);
-  chain.then        = (resolve: (v: ChainResult) => void) => resolve(result);
-  return chain;
-}
+const _db = makeQueuedClient();
 
 vi.mock("@/lib/supabase", () => ({
-  table: (c: { from: (n: string) => unknown }, n: string) => c.from(n),
-  getServiceRoleClient: () => ({
-    from: () => {
-      const result = _callQueue.shift() ?? { data: null, error: null };
-      return makeChain(result);
-    },
-  }),
+  table: tableShim,
+  getServiceRoleClient: () => _db.client,
 }));
 
-function enqueue(...results: ChainResult[]) {
-  _callQueue.push(...results);
-}
+const enqueue = _db.enqueue;
 
 const { POST: generateCode } = await import("@/app/api/transfer/route");
 const { POST: claimCode }    = await import("@/app/api/transfer/claim/route");
@@ -55,8 +34,8 @@ function makeReq(url: string, body: unknown): NextRequest {
   });
 }
 
-beforeEach(() => { _callQueue = []; });
-afterEach(()  => { _callQueue = []; });
+beforeEach(() => { _db.reset(); });
+afterEach(()  => { _db.reset(); });
 
 // ── POST /api/transfer — generate ────────────────────────────────────────────
 

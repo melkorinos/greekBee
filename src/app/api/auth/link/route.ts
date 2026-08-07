@@ -30,9 +30,7 @@ import { getServiceRoleClient, getSupabaseClient, table, type BoundTable } from 
 
 /** This route's local table shorthand — see the `db` binding in POST. */
 type Db = BoundTable;
-import { planScoreMerge, type MergeRow } from "@/lib/scoreMerge";
-import { planAchievementMerge, type AchievementMergeRow } from "@/lib/achievementMerge";
-import { planMilestoneMerge, type MilestoneMergeRow } from "@/lib/milestoneMerge";
+import { mergeIdentityRows } from "@/lib/identityMerge";
 
 export const runtime = "edge";
 
@@ -185,81 +183,17 @@ async function linkFreshDevice(db: Db, auth_user_id: string, googleName: string 
 
 // ── Sign-in Restore ──────────────────────────────────────────────────────────
 //
-// The account already lives on `anchor.device_uuid`. Merge this device's
-// game_scores into it (best score per puzzle wins), delete this device's old
-// profile row, and hand the canonical identity back for the client to adopt.
-// Row counts are small (leaderboard window is days, pruned by cleanup-scores),
-// so the per-batch writes here are cheap and one-time.
+// The account already lives on `anchor.device_uuid`. Move this device's history
+// onto it (scores, achievements, milestones — see identityMerge for the per-table
+// rules), delete this device's old profile row, and hand the canonical identity
+// back for the client to adopt.
 
 interface Anchor { device_uuid: string; display_name: string }
 
 async function restore(db: Db, oldDevice: string, anchor: Anchor) {
   const canonical = anchor.device_uuid;
 
-  // Read both identities' scores and decide the winners off-DB.
-  const { data: oldRows }   = await db("game_scores")
-    .select("id, game_id, puzzle_date, score").eq("device_id", oldDevice) as { data: MergeRow[] | null };
-  const { data: canonRows } = await db("game_scores")
-    .select("id, game_id, puzzle_date, score").eq("device_id", canonical) as { data: MergeRow[] | null };
-
-  const plan = planScoreMerge(oldRows ?? [], canonRows ?? []);
-
-  // Re-point surviving old rows onto the adopted identity.
-  if (plan.repoint.length) {
-    await db("game_scores")
-      .update({ device_id: canonical })
-      .in("id", plan.repoint);
-  }
-  // Delete the losers so each surviving (game_id, puzzle_date) is unique.
-  if (plan.deleteCanonical.length) {
-    await db("game_scores").delete().in("id", plan.deleteCanonical);
-  }
-  if (plan.deleteOld.length) {
-    await db("game_scores").delete().in("id", plan.deleteOld);
-  }
-
-  // Merge earned achievements too (ADR 0013): union onto the canonical identity.
-  // Without this, restoring an account would drop the old device's badges. The
-  // set has no "better" — carry over what canonical lacks, drop duplicates the
-  // UNIQUE(device_uuid, achievement_id) constraint would otherwise reject.
-  const { data: oldAch }   = await db("player_achievements")
-    .select("id, achievement_id").eq("device_uuid", oldDevice) as { data: AchievementMergeRow[] | null };
-  const { data: canonAch } = await db("player_achievements")
-    .select("id, achievement_id").eq("device_uuid", canonical) as { data: AchievementMergeRow[] | null };
-
-  const achPlan = planAchievementMerge(oldAch ?? [], canonAch ?? []);
-  if (achPlan.repoint.length) {
-    await db("player_achievements")
-      .update({ device_uuid: canonical })
-      .in("id", achPlan.repoint);
-  }
-  if (achPlan.deleteOld.length) {
-    await db("player_achievements").delete().in("id", achPlan.deleteOld);
-  }
-
-  // Merge the milestone fact-set too (ADR 0013): union onto the canonical identity.
-  // Same shape as the achievement merge, but the dedup key is the composite
-  // (puzzle_date, kind, detail) — the same word on a different day is a distinct
-  // find, and the two detail-less day counters are separated by kind alone. Carry
-  // over what canonical lacks; drop duplicates the
-  // UNIQUE(device_uuid, puzzle_date, kind, detail) constraint would otherwise reject.
-  //
-  // One merge for all four kinds: this replaces the separate pangram and word
-  // merges the two absorbed tables each needed.
-  const { data: oldMilestones }   = await db("player_milestones")
-    .select("id, puzzle_date, kind, detail").eq("device_uuid", oldDevice) as { data: MilestoneMergeRow[] | null };
-  const { data: canonMilestones } = await db("player_milestones")
-    .select("id, puzzle_date, kind, detail").eq("device_uuid", canonical) as { data: MilestoneMergeRow[] | null };
-
-  const milestonePlan = planMilestoneMerge(oldMilestones ?? [], canonMilestones ?? []);
-  if (milestonePlan.repoint.length) {
-    await db("player_milestones")
-      .update({ device_uuid: canonical })
-      .in("id", milestonePlan.repoint);
-  }
-  if (milestonePlan.deleteOld.length) {
-    await db("player_milestones").delete().in("id", milestonePlan.deleteOld);
-  }
+  await mergeIdentityRows(db, oldDevice, canonical);
 
   // Drop this device's now-merged profile row (unique device_uuid index).
   await db("player_profiles").delete().eq("device_uuid", oldDevice);
