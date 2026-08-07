@@ -12,9 +12,8 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
 import { getSupabaseClient, table, type Json } from "@/lib/supabase";
-import { isISODate } from "@/games/leksokipos/lib";
 import { upsertAndClean } from "@/lib/supabasePost";
-import { normalizePuzzleDate } from "@/lib/puzzleDate";
+import { isISODate, normalizePuzzleDate } from "@/lib/puzzleDate";
 
 export const runtime = "edge";
 

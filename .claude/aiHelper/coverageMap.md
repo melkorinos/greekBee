@@ -89,7 +89,7 @@
 | `useGameState.test.ts` | Cross-device server restore — gates, success, error handling, `restoreFromServer` |
 | `missedWordsList.test.tsx` | MissedWordsList (give-up reveal) |
 | `milestones.test.ts` (leksokipos) | `sanitizeMilestones` — per-`kind` shape guards (word ≥10 + server-stamped length, pangram ≥7, forced empty `detail` and bounded 0–100 percentage on the two day counters), `(kind, detail)` dedup, batch cap. Absorbs the deleted `pangrams.test.ts` + `words.test.ts` |
-| `puzzle.test.ts` (leksokipos) | `isDailyPuzzle`, `isISODate` |
+| `puzzle.test.ts` (leksokipos) | `isDailyPuzzle` |
 | `puzzleIndex.test.ts` | Slim puzzle index — drift guard vs full loader, `getPrebuiltPuzzleParams` canonical params |
 | `randomPuzzle.test.ts` | `pickRandom7` quality rules |
 | `rankDisplay.test.ts` | `rankProgress`, `getRankEmoji` |
@@ -129,7 +129,7 @@
 | `premadeDataConsistency.test.ts` | ADR 0015 drift guard — every game, both directions (stale removal + missed addition), byte-identical write path |
 | `profileSectionFunnel.test.tsx` / `profileSectionSignIn.test.tsx` | ProfileSection — /profile funnel link; Google sign-in offered whenever not AuthLinked (ADR 0012) |
 | `profileStatsRoute.test.ts` | `GET /api/profile/stats` — score aggregate + one `player_milestone_counts` GROUP BY (kinds absent from the aggregate read as 0; `word` deliberately not surfaced; exactly one milestone query however many kinds exist) |
-| `puzzleDate.test.ts` | `todayISO` / `getLast7Dates` (UTC anchoring) / `normalizePuzzleDate` / `resolvePuzzleDateParam` / **`nextFreeScheduledDate`** (tomorrow on an empty calendar, never today, skips a booked run, fills a mid-run gap, order-independent, ignores past bookings, tolerates nulls, month + year boundaries) |
+| `puzzleDate.test.ts` | `todayISO` / `getLast7Dates` (UTC anchoring) / `normalizePuzzleDate` / **`isISODate`** (graduated out of leksokipos/lib s142) / `resolvePuzzleDateParam` (incl. the locale-suffix rejection that pins it to the shared regex) / **`nextFreeScheduledDate`** (tomorrow on an empty calendar, never today, skips a booked run, fills a mid-run gap, order-independent, ignores past bookings, tolerates nulls, month + year boundaries) |
 | `puzzleRotation.test.ts` | `dateToIndex` |
 | `rlsInvariantsLiveDb.test.ts` | Live-DB RLS posture matrix. Covers `player_milestones` since 2026-08-07: anon DELETE blocked, insert-if-absent holds (including for a row whose `detail` defaults to `''` — the NOT NULL guarantee), and both aggregate RPCs callable by anon. Runs locally off `.env.local` (`vitest.config.ts` forwards the 3 Supabase keys); auto-skips in CI, where live-DB secrets are deliberately absent. **The milestone rows fail until `20260807120000` is pushed** — that is the un-pushed migration, not a regression |
 | `scoreMerge.test.ts` | `planScoreMerge` (best-per-puzzle) + `mergeLengthScore` (Leksiarxeio fold; re-post overwrite documented) |

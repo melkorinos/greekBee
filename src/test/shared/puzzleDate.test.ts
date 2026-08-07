@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   getLast7Dates,
+  isISODate,
   nextFreeScheduledDate,
   normalizePuzzleDate,
   resolvePuzzleDateParam,
@@ -73,6 +74,28 @@ describe("normalizePuzzleDate", () => {
   });
 });
 
+describe("isISODate", () => {
+  it("returns true for a valid YYYY-MM-DD string", () => {
+    expect(isISODate("2026-05-20")).toBe(true);
+  });
+
+  it("returns false when a suffix is appended", () => {
+    expect(isISODate("2026-05-20-el")).toBe(false);
+  });
+
+  it("returns false for an empty string", () => {
+    expect(isISODate("")).toBe(false);
+  });
+
+  it("returns false for a partial date", () => {
+    expect(isISODate("2026-05")).toBe(false);
+  });
+
+  it("returns false for a non-date string", () => {
+    expect(isISODate("custom-α-βγδεζη")).toBe(false);
+  });
+});
+
 describe("resolvePuzzleDateParam", () => {
   const today = "2026-07-15";
 
@@ -94,6 +117,12 @@ describe("resolvePuzzleDateParam", () => {
 
   it("falls back to today for a date-like string with extra characters", () => {
     expect(resolvePuzzleDateParam("2026-07-10T00:00:00", today)).toBe(today);
+  });
+
+  it("falls back to today for a locale-suffixed puzzle ID", () => {
+    // Shares isISODate's strict regex, so a raw puzzle ID is not a date param —
+    // callers must run it through normalizePuzzleDate first.
+    expect(resolvePuzzleDateParam("2026-07-10-el", today)).toBe(today);
   });
 });
 

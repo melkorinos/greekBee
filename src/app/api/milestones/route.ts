@@ -33,7 +33,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
 import { getSupabaseClient, table } from "@/lib/supabase";
-import { isISODate } from "@/games/leksokipos/lib/puzzle";
+import { isISODate } from "@/lib/puzzleDate";
 import { sanitizeMilestones } from "@/games/leksokipos/lib/milestones";
 
 export const runtime = "edge";

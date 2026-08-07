@@ -15,12 +15,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getSupabaseClient, table, type Insert } from "@/lib/supabase";
-import { isISODate } from "@/games/leksokipos/lib";
 import { upsertAndClean } from "@/lib/supabasePost";
 import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
 import { LEKSIARXEIO } from "@/config/gameRules";
 import { mergeLengthScore } from "@/lib/scoreMerge";
-import { normalizePuzzleDate } from "@/lib/puzzleDate";
+import { isISODate, normalizePuzzleDate } from "@/lib/puzzleDate";
 import { sanitizeDisplayName } from "@/lib/postScore";
 import {
   achievementById,

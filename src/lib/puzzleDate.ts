@@ -67,10 +67,23 @@ export function normalizePuzzleDate(raw: string | null | undefined): string {
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
+ * Returns true when the given string is a strict ISO date (YYYY-MM-DD, no suffix).
+ *
+ * The platform's one definition of a well-formed puzzle date, so every boundary
+ * that takes a date from the outside — API route handlers validating a body or
+ * query param, `resolvePuzzleDateParam` below — measures against the same rule.
+ * A second copy of this regex once lived in the Leksokipos game lib, which is
+ * why three edge routes with nothing to do with that game imported from it.
+ */
+export function isISODate(value: string): boolean {
+  return ISO_DATE_RE.test(value);
+}
+
+/**
  * Resolves a `?puzzle=` search param (a game's "play an older puzzle" link)
  * to a valid YYYY-MM-DD date, falling back to `today` for anything missing
  * or malformed — a page route is a system boundary, the param is user input.
  */
 export function resolvePuzzleDateParam(param: string | undefined, today: string): string {
-  return param && ISO_DATE_RE.test(param) ? param : today;
+  return param && isISODate(param) ? param : today;
 }
