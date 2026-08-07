@@ -26,6 +26,20 @@ describe("selectDailyPuzzle", () => {
     expect(pool).toContain(a);
   });
 
+  it("rotation never serves a row pinned to a future date", () => {
+    // «c» is pinned to 2026-09-01; before that day the rotation sees a/b only.
+    const pinned = [puzzle("a"), puzzle("b"), puzzle("c", { date: "2026-09-01" })];
+    for (const date of ["2026-08-31", "2026-08-01", "2026-01-01"]) {
+      expect(selectDailyPuzzle(date, pinned).id).not.toBe("c");
+    }
+    expect(selectDailyPuzzle("2026-09-01", pinned).id).toBe("c");
+  });
+
+  it("rotates the whole pool when every row is future-pinned", () => {
+    const future = [puzzle("a", { date: "2030-01-01" }), puzzle("b", { date: "2030-01-02" })];
+    expect(future).toContain(selectDailyPuzzle("2026-08-01", future));
+  });
+
   it("rotation is stable regardless of input order (sorted by id)", () => {
     const reversed = [...pool].reverse();
     expect(selectDailyPuzzle("2026-09-09", pool)).toEqual(selectDailyPuzzle("2026-09-09", reversed));

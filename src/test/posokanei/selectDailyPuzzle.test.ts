@@ -29,6 +29,22 @@ describe("selectDailyPuzzle", () => {
     expect(pool).toContain(a);
   });
 
+  it("rotation never serves a row pinned to a future date", () => {
+    // 2026-08-02 has no row of its own; «γ» is pinned to the day after and must
+    // not leak early, so every rotation day before it picks from α/β only.
+    const gapped = [puzzle("2026-08-01", "α"), puzzle("2026-08-03", "γ")];
+    for (const date of ["2026-08-02", "2026-07-15", "2026-01-01"]) {
+      expect(selectDailyPuzzle(date, gapped).item).not.toBe("γ");
+    }
+    expect(selectDailyPuzzle("2026-08-03", gapped).item).toBe("γ");
+  });
+
+  it("rotates the whole pool when no row is due yet", () => {
+    // An all-future calendar still has to render something.
+    const future = [puzzle("2030-01-01", "α"), puzzle("2030-01-02", "β")];
+    expect(future).toContain(selectDailyPuzzle("2026-08-01", future));
+  });
+
   it("always returns the only puzzle when the pool has one row (sample build)", () => {
     const one = [puzzle("2026-08-01", "μόνο")];
     expect(selectDailyPuzzle("2030-01-01", one).item).toBe("μόνο");

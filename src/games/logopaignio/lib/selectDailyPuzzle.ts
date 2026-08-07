@@ -6,6 +6,12 @@
 // `id` — the stable key that is always present (date isn't). So every player
 // sees the same puzzle for a given day and the page always renders, including
 // the single-row sample build.
+//
+// The rotation pool excludes rows pinned to a FUTURE date: an undated row is
+// always eligible, a dated one only from its own day onward. Otherwise a row
+// pinned to next month would surface early on a rotation day and then repeat
+// on its pinned day. If every row is future-pinned we rotate the whole pool
+// rather than fail: rendering beats hiding.
 
 import { dateToIndex } from "@/lib/puzzleRotation";
 
@@ -22,6 +28,9 @@ export function selectDailyPuzzle(
   const exact = puzzles.find((p) => p.date === dateISO);
   if (exact) return exact;
 
-  const sorted = [...puzzles].sort((a, b) => a.id.localeCompare(b.id));
+  const eligible = puzzles.filter((p) => !p.date || p.date <= dateISO);
+  const pool = eligible.length > 0 ? eligible : puzzles;
+
+  const sorted = [...pool].sort((a, b) => a.id.localeCompare(b.id));
   return sorted[dateToIndex(dateISO, sorted.length)];
 }

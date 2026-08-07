@@ -5,6 +5,12 @@
 // gap in the calendar, or the single-row sample build — we fall back to the
 // platform's deterministic daily rotation (dateToIndex) over the pool sorted by
 // date, so every player still sees the same puzzle and the page always renders.
+//
+// The fallback rotates only over rows already DUE (date <= dateISO). Rotating
+// over the whole pool would serve a row pinned to a future calendar day on an
+// earlier gap day — spoiling it, then repeating it when its own day arrives.
+// If nothing is due yet (an all-future calendar, or the sample build) we rotate
+// the whole pool rather than fail: rendering beats hiding.
 
 import { dateToIndex } from "@/lib/puzzleRotation";
 
@@ -21,6 +27,9 @@ export function selectDailyPuzzle(
   const exact = puzzles.find((p) => p.date === dateISO);
   if (exact) return exact;
 
-  const sorted = [...puzzles].sort((a, b) => a.date.localeCompare(b.date));
+  const due = puzzles.filter((p) => p.date <= dateISO);
+  const pool = due.length > 0 ? due : puzzles;
+
+  const sorted = [...pool].sort((a, b) => a.date.localeCompare(b.date));
   return sorted[dateToIndex(dateISO, sorted.length)];
 }
