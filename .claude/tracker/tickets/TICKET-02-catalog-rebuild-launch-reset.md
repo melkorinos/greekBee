@@ -1,17 +1,26 @@
 # Catalog rebuild + the launch reset — the release gate
 
 **Status:** ready
-**Blocked by:** nothing in the repo — `player_milestones`, `POST /api/milestones` and the day-counter sync
-lane shipped on 2026-08-07 (TICKET-01, file deleted per the standing rule; see ADR 0013's 2026-08-07
-amendment). **Blocked operationally on `npx supabase db push` of `20260807120000` + the Vercel deploy**, which
-the operator runs back to back, after hours. Until then the counters this ticket reads do not exist in the
-database and nothing writes to them.
+**Blocked by:** nothing. `player_milestones`, `POST /api/milestones` and the day-counter sync lane shipped on
+2026-08-07 (TICKET-01, file deleted per the standing rule; see ADR 0013's 2026-08-07 amendment).
+
+**Build this against an un-migrated database, on purpose.** TICKET-01's migration `20260807120000` is
+committed but deliberately **not pushed**: the operator's decision on 2026-08-07 is to build this ticket
+first, then push and deploy both tickets in ONE after-hours window instead of two. See
+[Deploying this](#deploying-this-one-window-for-both-tickets) at the bottom — it is the last step of this
+ticket and the agent does not perform it.
 
 > ⚠️ **Read this before you conclude the tree is broken.** Until that push lands, `npm run test -- --run`
 > reports **5 failures**, all in `src/test/shared/rlsInvariantsLiveDb.test.ts`, all
 > `Could not find the table 'public.player_milestones' in the schema cache`. That is the un-pushed migration,
 > not a regression and not yours. Everything else is green: 2341 of 2346 tests, eslint 0, build 0, e2e 7
-> passed / 2 skipped. If any *other* test fails, that one is yours.
+> passed / 2 skipped. **If any *other* test fails, that one is yours.** Do not "fix" the 5 by pushing the
+> migration, editing the migration, or skipping the tests.
+>
+> The same absence shows up at runtime: `/api/profile/stats` and `/api/profile/words` log
+> `db_error: Could not find the function public.player_milestone_counts` and return their zero shape, so a
+> locally-rendered Trophy Case reads **empty, not broken**. Verify tier logic through unit tests against the
+> counts, never by eyeballing the live page.
 
 Two things TICKET-01 already changed **in the repo** that this ticket's Scope below still lists:
 `theristisFoundRatio` is **already 0.7** in `achievementTuning.ts` (moved early because milestone rows are
@@ -119,9 +128,36 @@ crashing. The `selected_badge_id` NULL-ing is still required — this is a backs
 
 ## Done when
 
-`npm run test -- --run`, `npx eslint .`, `npm run build` and `npm run test:e2e` all pass; the Trophy Case
-shows five tiered badges; and `supabase/scripts/launch-reset.sql` is committed and reviewed. **The script is
-not run by the agent** — the operator runs it on release day.
+`npx eslint .`, `npm run build` and `npm run test:e2e` pass; `npm run test -- --run` passes **except the 5
+known `rlsInvariantsLiveDb` failures** described at the top; the Trophy Case renders five tiered badges (unit
+tests, not the live page — the counters are empty until the deploy below); and
+`supabase/scripts/launch-reset.sql` is committed and reviewed. **The script is not run by the agent** — the
+operator runs it on release day.
+
+Then stop and say the branch is ready. The deploy below is the operator's.
+
+## Deploying this — one window for both tickets
+
+TICKET-01 and TICKET-02 deploy **together**, in one after-hours window. Operator decision, 2026-08-07: the
+migration was held back rather than pushed on its own so there is one exposure window instead of two.
+
+**One Supabase project backs both dev and prod, so the push is live in production the moment it runs.**
+Migration `20260807120000` drops `player_pangrams` and `player_words`. Between that push and the Vercel
+deploy, production runs old code against the new schema and every pangram find 500s.
+
+Run these back to back, when nobody is playing:
+
+1. `npx supabase db push` — applies `20260807120000`.
+2. Vercel deploy — ships TICKET-01 and TICKET-02 together.
+3. Re-run `npm run test -- --run`. **All 5 `rlsInvariantsLiveDb` failures must now pass.** They are the
+   acceptance test for the push; if any still fails, the schema did not land as written.
+
+Not part of this: `supabase/scripts/launch-reset.sql` is never auto-applied and is **not** run in this
+window. It is a release-day action, separate and later.
+
+What goes live in this window, beyond the badges: Θεριστής starts earning at **0.7** instead of 0.8 (the knob
+moved in TICKET-01 but has never been deployed), and milestone rows begin accruing — including the `tzimani`
+percentages that make the 70% threshold measurable for the first time.
 
 ## Out of scope
 
