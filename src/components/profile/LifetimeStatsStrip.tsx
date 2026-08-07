@@ -1,18 +1,12 @@
-"use client";
-
 // LifetimeStatsStrip — the lifetime-stats strip on /profile.
 //
-// Fetches GET /api/profile/stats for this device on mount. Cross-game points and
-// puzzle count, plus the append-only pangram count. Shows a skeleton while
-// loading and degrades to dashes on error — it must never block the page.
+// Cross-game points and puzzle count, plus the append-only pangram count. Pure
+// display: the page reads GET /api/profile/stats once (useProfileStats) and shares
+// it with the Trophy Case, so this strip no longer owns a fetch of its own. Shows a
+// skeleton while loading and degrades to dashes on error — it must never block the
+// page, which is why `errored` arrives separately from a null `stats`.
 
-import { useEffect, useState } from "react";
-
-interface Stats {
-  total_points:   number;
-  puzzles_played: number;
-  pangram_count:  number;
-}
+import type { ProfileStats } from "@/hooks/useProfileStats";
 
 type Cell = { label: string; value: string };
 
@@ -25,20 +19,14 @@ function StatCell({ label, value }: Cell) {
   );
 }
 
-export function LifetimeStatsStrip({ deviceId }: { deviceId: string }) {
-  const [stats,   setStats]   = useState<Stats | null>(null);
-  const [errored, setErrored] = useState(false);
-
-  useEffect(() => {
-    if (!deviceId) return;
-    let cancelled = false;
-    fetch(`/api/profile/stats?device_uuid=${encodeURIComponent(deviceId)}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("stats fetch failed"))))
-      .then((d: Stats) => { if (!cancelled) setStats(d); })
-      .catch(() => { if (!cancelled) setErrored(true); });
-    return () => { cancelled = true; };
-  }, [deviceId]);
-
+export function LifetimeStatsStrip({
+  stats,
+  errored = false,
+}: {
+  stats:    ProfileStats | null;
+  /** True once the shared read has failed — dashes instead of a forever skeleton. */
+  errored?: boolean;
+}) {
   const fmt = (n: number) => n.toLocaleString("el-GR");
   const cells: Cell[] = [
     { label: "Πόντοι",   value: stats ? fmt(stats.total_points)   : "—" },

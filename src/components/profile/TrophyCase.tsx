@@ -3,16 +3,16 @@
 // TrophyCase — the Trophy Case grid on /profile.
 //
 // Fetches the device's earned achievement ids (GET /api/achievements) and lights the
-// tiers they prove. Four of the five badges also read a live lifetime value from the
-// ONE GET /api/profile/stats response — leksokipos_points, pangram_count,
-// top_rank_count, tzimani_count — and light each tier chip when earned server-side
-// OR when the value crosses its threshold (belt-and-suspenders, self-consistent with
-// the number shown — ADR 0013), plus an "X / N" progress line toward the next
-// uncrossed tier. Μακρυλέξης is the exception: its rungs are exact-length one-shot
-// facts with no cumulative number behind them, so it lights from earned ids alone.
-// Page-local by design.
+// tiers they prove. Four of the five badges also read a live lifetime value off the
+// stats response the PAGE fetches once (useProfileStats, shared with the lifetime
+// strip) — leksokipos_points, pangram_count, top_rank_count, tzimani_count — and
+// light each tier chip when earned server-side OR when the value crosses its
+// threshold (belt-and-suspenders, self-consistent with the number shown — ADR 0013),
+// plus an "X / N" progress line toward the next uncrossed tier. Μακρυλέξης is the
+// exception: its rungs are exact-length one-shot facts with no cumulative number
+// behind them, so it lights from earned ids alone. Page-local by design.
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { GAME_REGISTRY } from "@/config/games";
 import {
@@ -22,28 +22,28 @@ import {
   SYLLEKTIS_PONTON_ID,
   TIER_MEDALS,
   TZIMANI_ID,
+  detectEarnedTiers,
   nextTierThreshold,
   resolveDisplayBadge,
   type Achievement,
   type AchievementTier,
 } from "@/games/leksokipos/lib/achievements";
+import type { ProfileStats } from "@/hooks/useProfileStats";
 
 const fmt = (n: number) => n.toLocaleString("el-GR");
 
 function TierChips({
   tiers,
-  earned,
-  liveValue,
+  held,
 }: {
-  tiers:  readonly AchievementTier[];
-  earned: ReadonlySet<string>;
-  /** Live value driving live lighting/progress; undefined = no live source. */
-  liveValue: number | undefined;
+  tiers: readonly AchievementTier[];
+  /** Tier ids this player holds — the crossing rule already applied, once. */
+  held:  ReadonlySet<string>;
 }) {
   return (
     <div className="mt-1 flex flex-wrap justify-center gap-x-2 gap-y-0.5">
       {tiers.map((t) => {
-        const lit = earned.has(t.id) || (liveValue !== undefined && liveValue >= t.threshold);
+        const lit = held.has(t.id);
         return (
           <span
             key={t.id}
@@ -80,18 +80,18 @@ function TrophyTile({
   const tiers = achievement.tiers;
 
   // A tier counts as held when the server recorded it OR the live value has crossed
-  // it — the same belt-and-suspenders rule the chips use, so the tile, its chips and
-  // its medal can never disagree. Resolving through resolveDisplayBadge (rather than
-  // a local `some`) means the medal here is the same highest-tier-wins answer the
-  // leaderboard chip shows.
-  const heldIds = tiers
-    ? [
-        ...earned,
-        ...tiers.filter((t) => liveValue !== undefined && liveValue >= t.threshold).map((t) => t.id),
-      ]
-    : [...earned];
+  // it. The crossing half runs through detectEarnedTiers — the SAME function the
+  // earning lanes use — so the Profile Page cannot drift from the game about which
+  // tier a player holds. Resolved once here and handed down, so the tile, its chips
+  // and its medal read one answer. resolveDisplayBadge (rather than a local `some`)
+  // makes that medal the same highest-tier-wins answer the leaderboard chip shows.
+  const held: ReadonlySet<string> = new Set(
+    tiers && liveValue !== undefined
+      ? [...earned, ...detectEarnedTiers(tiers, liveValue)]
+      : earned,
+  );
 
-  const resolved = resolveDisplayBadge(achievement.id, heldIds);
+  const resolved = resolveDisplayBadge(achievement.id, [...held]);
   const tileEarned = tiers ? resolved !== null : earned.has(achievement.id);
   const medal = resolved?.tier ? TIER_MEDALS[resolved.tier] : null;
 
@@ -140,7 +140,7 @@ function TrophyTile({
       )}
       <span className="text-xs font-semibold text-foreground">{achievement.name}</span>
       <span className="text-[11px] leading-tight text-muted">{achievement.hint}</span>
-      {tiers && <TierChips tiers={tiers} earned={earned} liveValue={liveValue} />}
+      {tiers && <TierChips tiers={tiers} held={held} />}
       {nextThreshold !== null && liveValue !== undefined && (
         <span
           data-testid={`tier-progress-${achievement.id}`}
@@ -160,10 +160,36 @@ function TrophyTile({
  */
 type LiveValues = Partial<Record<string, number>>;
 
-export function TrophyCase({ deviceId = "" }: { deviceId?: string }) {
+/**
+ * Map each stats field onto the badge that ladders on it. A non-number (absent
+ * field, error shape, no response yet) leaves that badge with no live source, so its
+ * chips fall back to earned facts alone rather than lighting at zero.
+ */
+function liveValuesFrom(stats: ProfileStats | null): LiveValues {
+  const next: LiveValues = {};
+  if (!stats) return next;
+  const put = (badgeId: string, value: unknown) => {
+    if (typeof value === "number") next[badgeId] = value;
+  };
+  put(SYLLEKTIS_PONTON_ID, stats.leksokipos_points);
+  put(KYNIGOS_PANGRAM_ID,  stats.pangram_count);
+  put(STIN_KORIFI_ID,      stats.top_rank_count);
+  put(TZIMANI_ID,          stats.tzimani_count);
+  return next;
+}
+
+export function TrophyCase({
+  deviceId = "",
+  stats = null,
+}: {
+  deviceId?: string;
+  /** The page's shared /api/profile/stats read; null while loading or on failure. */
+  stats?: ProfileStats | null;
+}) {
   const [earned, setEarned] = useState<ReadonlySet<string>>(() => new Set());
-  const [liveValues, setLiveValues] = useState<LiveValues>({});
   const [selected, setSelected] = useState<string | null>(null);
+
+  const liveValues = useMemo(() => liveValuesFrom(stats), [stats]);
 
   useEffect(() => {
     if (!deviceId) return;
@@ -176,25 +202,6 @@ export function TrophyCase({ deviceId = "" }: { deviceId?: string }) {
         if (!cancelled) setEarned(new Set(d.earned ?? []));
       })
       .catch(() => { /* leave tiles locked — never block the page */ });
-
-    fetch(`/api/profile/stats?device_uuid=${id}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("stats fetch failed"))))
-      .then((d: Partial<Record<string, number>>) => {
-        if (cancelled) return;
-        // Map each stats field onto the badge that ladders on it. A non-number
-        // (absent field, error shape) leaves that badge with no live source, so its
-        // chips fall back to earned facts alone rather than lighting at zero.
-        const next: LiveValues = {};
-        const put = (badgeId: string, value: unknown) => {
-          if (typeof value === "number") next[badgeId] = value;
-        };
-        put(SYLLEKTIS_PONTON_ID, d.leksokipos_points);
-        put(KYNIGOS_PANGRAM_ID,  d.pangram_count);
-        put(STIN_KORIFI_ID,      d.top_rank_count);
-        put(TZIMANI_ID,          d.tzimani_count);
-        setLiveValues(next);
-      })
-      .catch(() => { /* no live progress — tiers still light from earned facts */ });
 
     fetch(`/api/profile/badge?device_uuid=${id}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("badge fetch failed"))))

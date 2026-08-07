@@ -21,6 +21,7 @@ import { TrophyCase } from "@/components/profile/TrophyCase";
 import { FEATURE_FLAGS } from "@/config/featureFlags";
 import { GAME_REGISTRY } from "@/config/games";
 import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
+import { useProfileStats } from "@/hooks/useProfileStats";
 import { cardShell } from "@/styles/recipes";
 import { useSyncExternalStore } from "react";
 
@@ -52,6 +53,11 @@ export default function ProfilePage() {
   // rendering it during hydration mismatches the server HTML. Gate on mount so the
   // server and first client paint agree, then swap in the real content.
   const mounted = useMounted();
+
+  // ONE stats read for the whole page. The strip and the Trophy Case ladder on the
+  // same response, and each used to fetch it itself — two identical round-trips on
+  // every /profile open. Fetched here, handed down; the panels are pure display.
+  const { stats, errored: statsErrored } = useProfileStats(deviceId);
 
   // Persist the rename: createProfile POSTs /api/profile (which fans the name out
   // to the player's game_scores rows) and updates the local store. For an already
@@ -112,7 +118,7 @@ export default function ProfilePage() {
       </p>
 
       <section className={`${cardShell} overflow-hidden`}>
-        <LifetimeStatsStrip deviceId={deviceId} />
+        <LifetimeStatsStrip stats={stats} errored={statsErrored} />
       </section>
 
       {/* One labelled Leksokipos section, NOT tabs. Both surfaces inside it are
@@ -130,7 +136,7 @@ export default function ProfilePage() {
             {GAME_REGISTRY.leksokipos.label}
           </h2>
           <div className={`${cardShell} overflow-hidden`}>
-            <TrophyCase deviceId={deviceId} />
+            <TrophyCase deviceId={deviceId} stats={stats} />
           </div>
           <div className={`${cardShell} overflow-hidden`}>
             <WordsByLengthCard deviceId={deviceId} />

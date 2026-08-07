@@ -2,9 +2,10 @@
 //
 // Renders the frozen catalog, lights earned one-shots, and lights per-tier chips of
 // each tiered badge either when earned server-side OR when a live lifetime value
-// crosses the threshold, plus an "X / N" progress line toward the next tier. Both
-// live values (leksokipos_points for Συλλέκτης Πόντων, pangram_count for Κυνηγός
-// Πανγκράμ) come from /api/profile/stats; earned ids from /api/achievements.
+// crosses the threshold, plus an "X / N" progress line toward the next tier. Earned
+// ids come from /api/achievements (the component's own fetch); the four live values
+// arrive as a `stats` PROP — the page reads /api/profile/stats once and shares it
+// with the lifetime strip, so this component no longer fetches it.
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -12,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { TrophyCase } from "@/components/profile/TrophyCase";
 import { GAME_REGISTRY } from "@/config/games";
 import { LEKSOKIPOS_ACHIEVEMENTS } from "@/games/leksokipos/lib/achievements";
+import type { ProfileStats } from "@/hooks/useProfileStats";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -25,33 +27,50 @@ function tierChip(tierId: string): HTMLElement {
   return screen.getByTestId(`tier-chip-${tierId}`);
 }
 
+interface CaseOptions {
+  earned?:   string[];
+  points?:   number;
+  pangrams?: number;
+  topRank?:  number;
+  tzimani?:  number;
+  selected?: string | null;
+  /** false = both the shared stats read and the component's own fetches failed. */
+  ok?:       boolean;
+  deviceId?: string;
+}
+
 /**
- * Route the fetch mock by URL: /api/achievements → { earned }, /api/profile/stats →
- * the four live lifetime values, one per tiered badge that has one. Both share the
- * ok flag so an error case fails both reads.
+ * Mock the two endpoints the component still owns: /api/achievements → { earned },
+ * /api/profile/badge → { selected_badge_id }. Both share the ok flag so an error
+ * case fails both reads.
  */
-function mockData({
-  earned = [] as string[],
-  points = 0,
-  pangrams = 0,
-  topRank = 0,
-  tzimani = 0,
-  selected = null as string | null,
-  ok = true,
-} = {}) {
+function mockData({ earned = [], selected = null, ok = true }: CaseOptions = {}) {
   return vi.spyOn(globalThis, "fetch").mockImplementation((input: RequestInfo | URL) => {
     const url = String(input);
     let body: unknown = { earned };
-    if (url.includes("/api/profile/stats")) {
-      body = {
-        leksokipos_points: points,
-        pangram_count:     pangrams,
-        top_rank_count:    topRank,
-        tzimani_count:     tzimani,
-      };
-    } else if (url.includes("/api/profile/badge")) body = { selected_badge_id: selected };
+    if (url.includes("/api/profile/badge")) body = { selected_badge_id: selected };
     return Promise.resolve({ ok, json: async () => body } as Response);
   });
+}
+
+/** The shared stats read the page would hand down — null when that read failed. */
+function statsFor(o: CaseOptions): ProfileStats | null {
+  if (o.ok === false) return null;
+  return {
+    total_points:      0,
+    puzzles_played:    0,
+    leksokipos_points: o.points   ?? 0,
+    pangram_count:     o.pangrams ?? 0,
+    top_rank_count:    o.topRank  ?? 0,
+    tzimani_count:     o.tzimani  ?? 0,
+  };
+}
+
+/** Mock + render in one call; returns the fetch spy for POST assertions. */
+function renderCase(o: CaseOptions = {}) {
+  const spy = mockData(o);
+  render(<TrophyCase deviceId={o.deviceId ?? "dev-A"} stats={statsFor(o)} />);
+  return spy;
 }
 
 /** The most recent POST to /api/profile/badge, parsed, or null if none fired. */
@@ -61,11 +80,6 @@ function lastBadgePost(spy: ReturnType<typeof vi.spyOn>): { device_uuid: string;
     ([url, init]) => String(url).includes("/api/profile/badge") && init?.method === "POST",
   );
   return post ? JSON.parse(String(post[1]!.body)) : null;
-}
-
-/** Back-compat shorthand for the earned-only cases. */
-function mockEarned(ids: string[], ok = true) {
-  return mockData({ earned: ids, ok });
 }
 
 describe("TrophyCase", () => {
@@ -102,8 +116,7 @@ describe("TrophyCase", () => {
   });
 
   it("lights tiles whose achievement id has been earned, leaving the rest locked", async () => {
-    mockEarned(["leksokipos-stin-korifi-chalkino"]);
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: ["leksokipos-stin-korifi-chalkino"] });
 
     await waitFor(() =>
       expect(tileFor("Στην Κορυφή")).toHaveAttribute("data-earned", "true"),
@@ -112,8 +125,7 @@ describe("TrophyCase", () => {
   });
 
   it("shows an earned tile's own glyph instead of the generic trophy", async () => {
-    mockEarned(["leksokipos-stin-korifi-chalkino"]);
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: ["leksokipos-stin-korifi-chalkino"] });
 
     await waitFor(() =>
       expect(tileFor("Στην Κορυφή")).toHaveAttribute("data-earned", "true"),
@@ -127,8 +139,7 @@ describe("TrophyCase", () => {
   });
 
   it("keeps every tile locked when the device has earned nothing", async () => {
-    mockEarned([]);
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: [] });
 
     await waitFor(() =>
       expect(screen.getAllByTestId("trophy-tile").length).toBeGreaterThan(0),
@@ -139,8 +150,7 @@ describe("TrophyCase", () => {
   });
 
   it("keeps every tile locked on fetch error, without crashing", async () => {
-    mockEarned([], false); // ok: false
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: [], ok: false });
 
     await waitFor(() =>
       expect(screen.getAllByTestId("trophy-tile").length).toBeGreaterThan(0),
@@ -155,9 +165,18 @@ describe("TrophyCase", () => {
     expect(tileFor("Στην Κορυφή")).toHaveAttribute("data-earned", "false");
   });
 
+  it("never fetches /api/profile/stats — the page reads it once and hands it down", async () => {
+    const spy = renderCase({ earned: [], points: 1500 });
+
+    await waitFor(() =>
+      expect(tierChip("leksokipos-syllektis-ponton-chalkino")).toHaveAttribute("data-earned", "true"),
+    );
+    const urls = (spy.mock.calls as [RequestInfo | URL, RequestInit?][]).map(([u]) => String(u));
+    expect(urls.some((u) => u.includes("/api/profile/stats"))).toBe(false);
+  });
+
   it("lights a points-tier chip when live points cross it, even if not earned server-side", async () => {
-    mockData({ earned: [], points: 1500 }); // ≥ χάλκινο (1000), < ασημένιο (10000)
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: [], points: 1500 }); // ≥ χάλκινο (1000), < ασημένιο (10000)
 
     await waitFor(() =>
       expect(tierChip("leksokipos-syllektis-ponton-chalkino")).toHaveAttribute("data-earned", "true"),
@@ -167,8 +186,7 @@ describe("TrophyCase", () => {
 
   it("lights a points-tier chip earned server-side even when the live points are lower", async () => {
     // Earned fact is authoritative; a lagging/low points read must not un-light it.
-    mockData({ earned: ["leksokipos-syllektis-ponton-chalkino"], points: 0 });
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: ["leksokipos-syllektis-ponton-chalkino"], points: 0 });
 
     await waitFor(() =>
       expect(tierChip("leksokipos-syllektis-ponton-chalkino")).toHaveAttribute("data-earned", "true"),
@@ -176,8 +194,7 @@ describe("TrophyCase", () => {
   });
 
   it("shows X / N progress toward the next uncrossed points tier", async () => {
-    mockData({ earned: [], points: 740 });
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: [], points: 740 });
 
     await waitFor(() =>
       // el-GR grouping: next threshold 1000 → "1.000"
@@ -186,8 +203,7 @@ describe("TrophyCase", () => {
   });
 
   it("shows no progress line once every points tier is crossed", async () => {
-    mockData({ earned: [], points: 30000 }); // past χρυσό (25000)
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: [], points: 30000 }); // past χρυσό (25000)
 
     await waitFor(() =>
       expect(tierChip("leksokipos-syllektis-ponton-chryso")).toHaveAttribute("data-earned", "true"),
@@ -205,8 +221,7 @@ describe("TrophyCase", () => {
   });
 
   it("lights a pangram-tier chip when the live pangram count crosses it", async () => {
-    mockData({ earned: [], pangrams: 25 }); // ≥ χάλκινο (25), < ασημένιο (60)
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: [], pangrams: 25 }); // ≥ χάλκινο (25), < ασημένιο (60)
 
     await waitFor(() =>
       expect(tierChip("leksokipos-kynigos-pangram-chalkino")).toHaveAttribute("data-earned", "true"),
@@ -215,8 +230,7 @@ describe("TrophyCase", () => {
   });
 
   it("lights a pangram-tier chip earned server-side even when the live count is lower", async () => {
-    mockData({ earned: ["leksokipos-kynigos-pangram-chalkino"], pangrams: 0 });
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: ["leksokipos-kynigos-pangram-chalkino"], pangrams: 0 });
 
     await waitFor(() =>
       expect(tierChip("leksokipos-kynigos-pangram-chalkino")).toHaveAttribute("data-earned", "true"),
@@ -224,8 +238,7 @@ describe("TrophyCase", () => {
   });
 
   it("shows X / N progress toward the next uncrossed pangram tier", async () => {
-    mockData({ earned: [], pangrams: 7 });
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: [], pangrams: 7 });
 
     await waitFor(() =>
       expect(screen.getByTestId("tier-progress-leksokipos-kynigos-pangram")).toHaveTextContent("7 / 25"),
@@ -235,8 +248,7 @@ describe("TrophyCase", () => {
   // ── The two day-count badges (TICKET-02): live sources are the milestone counts ──
 
   it("lights a Στην Κορυφή chip from the live top-rank day count", async () => {
-    mockData({ earned: [], topRank: 10 }); // ≥ ασημένιο (10), < χρυσό (25)
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: [], topRank: 10 }); // ≥ ασημένιο (10), < χρυσό (25)
 
     await waitFor(() =>
       expect(tierChip("leksokipos-stin-korifi-asimenio")).toHaveAttribute("data-earned", "true"),
@@ -245,8 +257,7 @@ describe("TrophyCase", () => {
   });
 
   it("shows X / N progress toward the next uncrossed Στην Κορυφή tier", async () => {
-    mockData({ earned: [], topRank: 3 });
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: [], topRank: 3 });
 
     await waitFor(() =>
       expect(screen.getByTestId("tier-progress-leksokipos-stin-korifi")).toHaveTextContent("3 / 10"),
@@ -254,8 +265,7 @@ describe("TrophyCase", () => {
   });
 
   it("lights a Τζιμάνι chip from the live qualifying-day count", async () => {
-    mockData({ earned: [], tzimani: 5 }); // ≥ ασημένιο (5), < χρυσό (10)
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: [], tzimani: 5 }); // ≥ ασημένιο (5), < χρυσό (10)
 
     await waitFor(() =>
       expect(tierChip("leksokipos-tzimani-asimenio")).toHaveAttribute("data-earned", "true"),
@@ -264,8 +274,7 @@ describe("TrophyCase", () => {
   });
 
   it("shows X / N progress toward the next uncrossed Τζιμάνι tier", async () => {
-    mockData({ earned: [], tzimani: 2 });
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: [], tzimani: 2 });
 
     await waitFor(() =>
       expect(screen.getByTestId("tier-progress-leksokipos-tzimani")).toHaveTextContent("2 / 5"),
@@ -275,8 +284,7 @@ describe("TrophyCase", () => {
   it("keeps each badge's live value on its own tile", async () => {
     // Four badges now read four different numbers off one stats response; crossing
     // the wires would light a tier the player has not reached.
-    mockData({ earned: [], points: 0, pangrams: 0, topRank: 25, tzimani: 0 });
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: [], points: 0, pangrams: 0, topRank: 25, tzimani: 0 });
 
     await waitFor(() =>
       expect(tierChip("leksokipos-stin-korifi-chryso")).toHaveAttribute("data-earned", "true"),
@@ -286,11 +294,24 @@ describe("TrophyCase", () => {
     expect(tierChip("leksokipos-syllektis-ponton-chalkino")).toHaveAttribute("data-earned", "false");
   });
 
+  it("lights chips from earned facts alone when the shared stats read failed", async () => {
+    // stats={null} is the page saying "no live numbers this load". Earned tiers must
+    // still light, and nothing may light at zero.
+    mockData({ earned: ["leksokipos-tzimani-chalkino"] });
+    render(<TrophyCase deviceId="dev-A" stats={null} />);
+
+    await waitFor(() =>
+      expect(tierChip("leksokipos-tzimani-chalkino")).toHaveAttribute("data-earned", "true"),
+    );
+    expect(tierChip("leksokipos-tzimani-asimenio")).toHaveAttribute("data-earned", "false");
+    // No live value means no progress denominator either.
+    expect(screen.queryByTestId("tier-progress-leksokipos-tzimani")).not.toBeInTheDocument();
+  });
+
   // ── Tier medals on the tile: a top-tier holder must not look like a bronze one ──
 
   it("shows the medal of the highest earned tier on a tiered tile", async () => {
-    mockData({ earned: ["leksokipos-kynigos-pangram-chryso"] });
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: ["leksokipos-kynigos-pangram-chryso"] });
 
     await waitFor(() =>
       expect(screen.getByTestId("tile-medal-leksokipos-kynigos-pangram")).toHaveTextContent("🥇"),
@@ -298,8 +319,7 @@ describe("TrophyCase", () => {
   });
 
   it("shows the bronze medal when only the lowest tier is held", async () => {
-    mockData({ earned: ["leksokipos-kynigos-pangram-chalkino"] });
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: ["leksokipos-kynigos-pangram-chalkino"] });
 
     await waitFor(() =>
       expect(screen.getByTestId("tile-medal-leksokipos-kynigos-pangram")).toHaveTextContent("🥉"),
@@ -307,8 +327,7 @@ describe("TrophyCase", () => {
   });
 
   it("shows a medal for a tier reached only by the live value", async () => {
-    mockData({ earned: [], points: 30000 }); // past χρυσό, nothing recorded server-side
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: [], points: 30000 }); // past χρυσό, nothing recorded server-side
 
     await waitFor(() =>
       expect(screen.getByTestId("tile-medal-leksokipos-syllektis-ponton")).toHaveTextContent("🥇"),
@@ -316,8 +335,7 @@ describe("TrophyCase", () => {
   });
 
   it("shows no medal on a tile whose badge has no tier held", async () => {
-    mockData({ earned: ["leksokipos-stin-korifi-chalkino"] });
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: ["leksokipos-stin-korifi-chalkino"] });
 
     await waitFor(() =>
       expect(screen.getByTestId("tile-medal-leksokipos-stin-korifi")).toHaveTextContent("🥉"),
@@ -330,8 +348,7 @@ describe("TrophyCase", () => {
   // ── Word-length ladder: one climbing badge over the four frozen length ids ──
 
   it("lights the ladder tile from a frozen word-length id and shows that rung's medal", async () => {
-    mockData({ earned: ["leksokipos-word-13"] });
-    render(<TrophyCase deviceId="dev-A" />);
+    renderCase({ earned: ["leksokipos-word-13"] });
 
     await waitFor(() =>
       expect(tileFor("Μακρυλέξης")).toHaveAttribute("data-earned", "true"),
@@ -340,8 +357,7 @@ describe("TrophyCase", () => {
   });
 
   it("selects the ladder by its base id, not the frozen rung id", async () => {
-    const spy = mockData({ earned: ["leksokipos-word-11"] });
-    render(<TrophyCase deviceId="dev-A" />);
+    const spy = renderCase({ earned: ["leksokipos-word-11"] });
 
     await waitFor(() =>
       expect(tileFor("Μακρυλέξης")).toHaveAttribute("data-earned", "true"),
@@ -358,8 +374,7 @@ describe("TrophyCase", () => {
 
 describe("TrophyCase — display-badge picker", () => {
   it("tapping an earned tile selects it, POSTing the base achievement id", async () => {
-    const spy = mockData({ earned: ["leksokipos-stin-korifi-chalkino"] });
-    render(<TrophyCase deviceId="dev-A" />);
+    const spy = renderCase({ earned: ["leksokipos-stin-korifi-chalkino"] });
 
     await waitFor(() =>
       expect(tileFor("Στην Κορυφή")).toHaveAttribute("data-earned", "true"),
@@ -373,8 +388,7 @@ describe("TrophyCase — display-badge picker", () => {
   });
 
   it("selects a tiered tile by its BASE id (never a tier id)", async () => {
-    const spy = mockData({ earned: ["leksokipos-kynigos-pangram-chalkino"] });
-    render(<TrophyCase deviceId="dev-A" />);
+    const spy = renderCase({ earned: ["leksokipos-kynigos-pangram-chalkino"] });
 
     await waitFor(() =>
       expect(tileFor("Κυνηγός Πανγκράμ")).toHaveAttribute("data-earned", "true"),
@@ -387,8 +401,7 @@ describe("TrophyCase — display-badge picker", () => {
   });
 
   it("tapping the already-selected tile clears it, POSTing null", async () => {
-    const spy = mockData({ earned: ["leksokipos-stin-korifi-chalkino"], selected: "leksokipos-stin-korifi" });
-    render(<TrophyCase deviceId="dev-A" />);
+    const spy = renderCase({ earned: ["leksokipos-stin-korifi-chalkino"], selected: "leksokipos-stin-korifi" });
 
     await waitFor(() =>
       expect(tileFor("Στην Κορυφή")).toHaveAttribute("data-selected", "true"),
@@ -402,8 +415,7 @@ describe("TrophyCase — display-badge picker", () => {
   });
 
   it("a locked tile is inert — tapping it fires no badge POST", async () => {
-    const spy = mockData({ earned: [] });
-    render(<TrophyCase deviceId="dev-A" />);
+    const spy = renderCase({ earned: [] });
 
     await waitFor(() =>
       expect(tileFor("Μακρυλέξης")).toHaveAttribute("data-earned", "false"),

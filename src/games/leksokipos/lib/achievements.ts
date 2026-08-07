@@ -346,8 +346,14 @@ export const TZIMANI_TIERS: readonly AchievementTier[] =
 // (ascending) — the server insert-if-absents, so re-returning an earned tier is a
 // harmless no-op. The generic core is shared so a further tiered badge adds no copy.
 
-/** Tier ids whose threshold `value` has reached (>=), ascending. */
-function detectEarnedTiers(tiers: readonly AchievementTier[], value: number): string[] {
+/**
+ * Tier ids whose threshold `value` has reached (>=), ascending.
+ *
+ * Exported because the Trophy Case needs the SAME crossing rule to decide which
+ * chips light: re-rolling `value >= t.threshold` on the display side is how the
+ * Profile Page starts disagreeing with the game about which tier a player holds.
+ */
+export function detectEarnedTiers(tiers: readonly AchievementTier[], value: number): string[] {
   return tiers.filter((t) => value >= t.threshold).map((t) => t.id);
 }
 
