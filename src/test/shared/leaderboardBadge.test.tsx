@@ -30,11 +30,12 @@ vi.mock("@/hooks/useLeaderboard", async (importOriginal) => {
 });
 
 describe("LeaderboardBadge", () => {
-  it("renders a one-shot badge's glyph, with no tier medal", () => {
-    render(<LeaderboardBadge badge={{ achievementId: "leksokipos-first-daily", tier: null }} />);
+  it("renders the glyph with no medal when no tier was resolved", () => {
+    // Every catalog badge is tiered after TICKET-02, so a null tier now only
+    // reaches the chip defensively — it must render the badge, not a stray medal.
+    render(<LeaderboardBadge badge={{ achievementId: "leksokipos-stin-korifi", tier: null }} />);
     const chip = screen.getByTestId("lb-badge");
-    expect(chip).toHaveTextContent("🌱");
-    // No podium medal for a one-shot.
+    expect(chip).toHaveTextContent("👑");
     expect(chip).not.toHaveTextContent("🥉");
     expect(chip).not.toHaveTextContent("🥈");
     expect(chip).not.toHaveTextContent("🥇");

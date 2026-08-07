@@ -16,18 +16,24 @@ import { RANKS, type RankName } from "./ranking";
 const TOP_RANK: RankName = RANKS[RANKS.length - 1].name;
 
 /**
- * The five frozen one-shot achievement ids — the single source shared by the
- * detector (below) and the display catalog (LEKSOKIPOS_ACHIEVEMENTS). Referencing
- * these instead of re-typing the string literals keeps detection and catalog in
+ * The frozen one-shot achievement ids — the single source shared by the detector
+ * (below) and the display catalog (LEKSOKIPOS_ACHIEVEMENTS). Referencing these
+ * instead of re-typing the string literals keeps detection and catalog in
  * lock-step; a typo can't silently earn a non-existent badge. FROZEN on first deploy.
+ *
+ * Only the word-length ladder is left. Everything else the client could once decide
+ * from an end-of-game snapshot now ladders on a lifetime count the server holds
+ * (TICKET-02) — see the tier detectors near the bottom of this file.
+ *
+ * RETIRED, never to be reused: `leksokipos-first-daily` (Πρώτα Βήματα, deleted) and
+ * `leksokipos-theristis` (superseded by the revived `leksokipos-tzimani`). Both are
+ * frozen-id exceptions licensed by the pre-launch wipe and by nothing else — after
+ * launch the rule is absolute again (ADR 0013 §4).
  */
 export const LEKSOKIPOS_ONESHOT_IDS = {
-  firstDaily:   "leksokipos-first-daily",
-  stinKorifi:   "leksokipos-stin-korifi",
+  // Word-length ladder (exact length). Σιδηρόδρομος is the 10-letter rung.
+  // FROZEN on first deploy like every other award id.
   sidirodromos: "leksokipos-sidirodromos",
-  theristis:    "leksokipos-theristis",
-  // Word-length ladder (exact length). Σιδηρόδρομος (above) is the 10-letter rung;
-  // these extend it. FROZEN on first deploy like every other award id.
   wordLength11: "leksokipos-word-11",
   wordLength12: "leksokipos-word-12",
   wordLength13: "leksokipos-word-13",
@@ -128,6 +134,13 @@ export interface AchievementContext {
 /**
  * Returns the ids of the one-shot achievements this end-of-game snapshot earns.
  * Insert-if-absent on the server makes each "earned forever"; re-earning is a no-op.
+ *
+ * Word lengths are all that survives here: they are the only accomplishment a single
+ * round can settle by itself. Reaching the top rank and crossing the found-word
+ * ratio still happen in-round, but what the rebuilt catalog awards is the *number of
+ * days* either has happened — a lifetime count only the server holds. Those rounds
+ * are recorded by detectDayMilestones below and the tiers crossed by
+ * detectEarnedTopRankTiers / detectEarnedTzimaniTiers.
  */
 export function detectEarnedAchievements(ctx: AchievementContext): OneShotAchievementId[] {
   const earned: OneShotAchievementId[] = [];
@@ -135,24 +148,9 @@ export function detectEarnedAchievements(ctx: AchievementContext): OneShotAchiev
   // Achievements are earned on daily puzzles only — custom/random puzzles don't post.
   if (!ctx.isDaily) return earned;
 
-  if (ctx.foundWords.length > 0) {
-    earned.push(LEKSOKIPOS_ONESHOT_IDS.firstDaily);
-  }
-
   // Word-length ladder — a word of EXACTLY N letters earns the N badge (not ≥).
   for (const { length, id } of WORD_LENGTH_BADGES) {
     if (ctx.foundWords.some((w) => w.length === length)) earned.push(id);
-  }
-
-  if (
-    ctx.validWordCount > 0 &&
-    ctx.foundWords.length / ctx.validWordCount >= TUNING.theristisFoundRatio
-  ) {
-    earned.push(LEKSOKIPOS_ONESHOT_IDS.theristis);
-  }
-
-  if (ctx.rank === TOP_RANK) {
-    earned.push(LEKSOKIPOS_ONESHOT_IDS.stinKorifi);
   }
 
   return earned;
@@ -195,7 +193,7 @@ export function detectDayMilestones(ctx: AchievementContext): DayMilestone[] {
   }
 
   const foundRatio = ctx.foundWords.length / ctx.validWordCount;
-  if (foundRatio >= TUNING.theristisFoundRatio) {
+  if (foundRatio >= TUNING.tzimaniFoundRatio) {
     milestones.push({ kind: "tzimani", value: Math.round(foundRatio * 100) });
   }
 
@@ -207,6 +205,19 @@ export const SYLLEKTIS_PONTON_ID = "leksokipos-syllektis-ponton";
 
 /** Frozen id of the lifetime-pangram tiered badge — shared by the catalog + detector. */
 export const KYNIGOS_PANGRAM_ID = "leksokipos-kynigos-pangram";
+
+/** Frozen id of the top-rank-days tiered badge — shared by the catalog + detector. */
+export const STIN_KORIFI_ID = "leksokipos-stin-korifi";
+
+/**
+ * Frozen id of the found-ratio-days tiered badge — shared by the catalog + detector.
+ *
+ * REVIVED, not new: this id was retired on 2026-07-18 with the perfect-round concept
+ * and is brought back for the 70% badge, in preference to keeping
+ * `leksokipos-theristis` under new display copy — an id and a name that disagree
+ * would disagree forever. Licensed by the pre-launch wipe alone (ADR 0013 §4).
+ */
+export const TZIMANI_ID = "leksokipos-tzimani";
 
 /**
  * Frozen id of the word-length ladder — the base id a player selects for display.
@@ -230,20 +241,38 @@ const MAKRYLEXIS_TIERS: readonly AchievementTier[] = WORD_LENGTH_BADGES.map((b) 
   label:     b.name,
 }));
 
+/** The three metal thresholds a cumulative badge ladders on, from achievementTuning. */
+interface MetalThresholds {
+  chalkino: number;
+  asimenio: number;
+  chryso:   number;
+}
+
+/**
+ * The standard three-rung ladder every cumulative badge wears: tier ids are
+ * `${baseId}-${tier}`, labels are the Greek metal words, thresholds come from
+ * tuning. Four badges share this shape, so deriving it keeps a tier id from ever
+ * being mistyped into a permanent junk row.
+ *
+ * Μακρυλέξης does NOT use this — its rungs reuse the pre-existing frozen
+ * word-length ids and it has a fourth rung above gold.
+ */
+function metalTiers(baseId: string, thresholds: MetalThresholds): readonly AchievementTier[] {
+  return [
+    { id: `${baseId}-chalkino`, tier: "chalkino", threshold: thresholds.chalkino, label: "Χάλκινο" },
+    { id: `${baseId}-asimenio`, tier: "asimenio", threshold: thresholds.asimenio, label: "Ασημένιο" },
+    { id: `${baseId}-chryso`,   tier: "chryso",   threshold: thresholds.chryso,   label: "Χρυσό" },
+  ];
+}
+
 export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
   {
-    id:   LEKSOKIPOS_ONESHOT_IDS.firstDaily,
-    name: "Πρώτα Βήματα",
-    hint: "Παίξε το πρώτο σου ημερήσιο παζλ.",
-    glyph: "🌱",
-    kind: "oneshot",
-  },
-  {
-    id:   LEKSOKIPOS_ONESHOT_IDS.stinKorifi,
+    id:   STIN_KORIFI_ID,
     name: "Στην Κορυφή",
-    hint: "Φτάσε στην κατάταξη Απολυτότητα σε ένα ημερήσιο παζλ.",
+    hint: "Φτάσε στην κατάταξη Απολυτότητα σε ημερήσια παζλ.",
     glyph: "👑",
-    kind: "oneshot",
+    kind: "tiered",
+    tiers: metalTiers(STIN_KORIFI_ID, TUNING.topRankTierThresholds),
   },
   // Word-length ladder — ONE badge with a rung per exact length. Each rung is still
   // its own frozen earned fact (detection is unchanged); grouping them here means the
@@ -258,23 +287,20 @@ export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
     tiers: MAKRYLEXIS_TIERS,
   },
   {
-    id:   LEKSOKIPOS_ONESHOT_IDS.theristis,
-    name: "Θεριστής",
-    hint: `Βρες το ${Math.round(TUNING.theristisFoundRatio * 100)}% των λέξεων ενός ημερήσιου παζλ.`,
+    id:   TZIMANI_ID,
+    name: "Τζιμάνι",
+    hint: `Βρες το ${Math.round(TUNING.tzimaniFoundRatio * 100)}% των λέξεων σε ημερήσια παζλ.`,
     glyph: "🌾",
-    kind: "oneshot",
+    kind: "tiered",
+    tiers: metalTiers(TZIMANI_ID, TUNING.tzimaniTierThresholds),
   },
   {
-    id:   "leksokipos-kynigos-pangram",
+    id:   KYNIGOS_PANGRAM_ID,
     name: "Κυνηγός Πανγκράμ",
     hint: "Βρες πανγκράμ σε ημερήσια παζλ.",
     glyph: "✍️",
     kind: "tiered",
-    tiers: [
-      { id: "leksokipos-kynigos-pangram-chalkino", tier: "chalkino", threshold: TUNING.pangramTierThresholds.chalkino, label: "Χάλκινο" },
-      { id: "leksokipos-kynigos-pangram-asimenio", tier: "asimenio", threshold: TUNING.pangramTierThresholds.asimenio, label: "Ασημένιο" },
-      { id: "leksokipos-kynigos-pangram-chryso",   tier: "chryso",   threshold: TUNING.pangramTierThresholds.chryso,   label: "Χρυσό" },
-    ],
+    tiers: metalTiers(KYNIGOS_PANGRAM_ID, TUNING.pangramTierThresholds),
   },
   {
     id:   SYLLEKTIS_PONTON_ID,
@@ -282,11 +308,7 @@ export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
     hint: "Μάζεψε πόντους συνολικά.",
     glyph: "💎",
     kind: "tiered",
-    tiers: [
-      { id: "leksokipos-syllektis-ponton-chalkino", tier: "chalkino", threshold: TUNING.pointsTierThresholds.chalkino, label: "Χάλκινο" },
-      { id: "leksokipos-syllektis-ponton-asimenio", tier: "asimenio", threshold: TUNING.pointsTierThresholds.asimenio, label: "Ασημένιο" },
-      { id: "leksokipos-syllektis-ponton-chryso",   tier: "chryso",   threshold: TUNING.pointsTierThresholds.chryso,   label: "Χρυσό" },
-    ],
+    tiers: metalTiers(SYLLEKTIS_PONTON_ID, TUNING.pointsTierThresholds),
   },
 ];
 
@@ -306,6 +328,14 @@ export const SYLLEKTIS_PONTON_TIERS: readonly AchievementTier[] =
 /** The lifetime-pangram badge's tiers, ascending — the single source for detection + progress. */
 export const KYNIGOS_PANGRAM_TIERS: readonly AchievementTier[] =
   LEKSOKIPOS_ACHIEVEMENTS.find((a) => a.id === KYNIGOS_PANGRAM_ID)?.tiers ?? [];
+
+/** The top-rank-days badge's tiers, ascending — the single source for detection + progress. */
+export const STIN_KORIFI_TIERS: readonly AchievementTier[] =
+  LEKSOKIPOS_ACHIEVEMENTS.find((a) => a.id === STIN_KORIFI_ID)?.tiers ?? [];
+
+/** The found-ratio-days badge's tiers, ascending — the single source for detection + progress. */
+export const TZIMANI_TIERS: readonly AchievementTier[] =
+  LEKSOKIPOS_ACHIEVEMENTS.find((a) => a.id === TZIMANI_ID)?.tiers ?? [];
 
 // ─── Tiered-badge detection (async lanes) ─────────────────────────────────────
 //
@@ -349,6 +379,28 @@ export function detectEarnedPangramTiers(pangramCount: number): string[] {
 /** The next pangram threshold not yet reached — Trophy Case "X / N" denominator; null when maxed. */
 export function nextPangramTierThreshold(pangramCount: number): number | null {
   return nextTierThreshold(KYNIGOS_PANGRAM_TIERS, pangramCount);
+}
+
+/**
+ * Tier ids whose threshold the lifetime top-rank DAY count has reached (>=), ascending.
+ *
+ * The count is a COUNT(*) over player_milestones where kind='top_rank' — one row per
+ * qualifying day, never a stored tally. Bronze at 1 means the first top-rank day
+ * earns the badge, exactly as the one-shot this replaces did.
+ */
+export function detectEarnedTopRankTiers(topRankDays: number): string[] {
+  return detectEarnedTiers(STIN_KORIFI_TIERS, topRankDays);
+}
+
+/**
+ * Tier ids whose threshold the lifetime Τζιμάνι DAY count has reached (>=), ascending.
+ *
+ * The count is a COUNT(*) over player_milestones where kind='tzimani'. Every rung
+ * qualifies at the same `tzimaniFoundRatio`: the ladder counts days, it does not
+ * climb the percentage.
+ */
+export function detectEarnedTzimaniTiers(tzimaniDays: number): string[] {
+  return detectEarnedTiers(TZIMANI_TIERS, tzimaniDays);
 }
 
 /** What the unlock toast shows for an earned id. */

@@ -304,13 +304,21 @@ alone leaves the app broken. They are one vertical slice. The remaining tickets 
 scaling risk: the podium query fetched every device's Leksokipos rows. Its ticket file is deleted, per the
 standing rule.
 
-**[TICKET-01 — `player_milestones`](../tracker/tickets/TICKET-01-player-milestones-table.md).** Migration,
+**~~TICKET-01 — `player_milestones`~~ — shipped 2026-08-07.** Migration `20260807120000`,
 `POST /api/milestones`, `planMilestoneMerge`, the `GROUP BY kind` on `/api/profile/stats`, the rewritten
-words-by-length read, the sync lanes, and the three write-lane cost fixes.
+words-by-length read, the sync lanes, and the three write-lane cost fixes. Ticket file deleted per the
+standing rule; the durable record is ADR 0013's 2026-08-07 storage-seam amendment.
 
-**[TICKET-02 — Catalog rebuild + launch reset](../tracker/tickets/TICKET-02-catalog-rebuild-launch-reset.md).**
-The five-badge catalog, `achievementTuning` edits, the profile-page Leksokipos section, and the reset script
-that gates release.
+**~~TICKET-02 — Catalog rebuild + launch reset~~ — shipped 2026-08-07.** The five-badge catalog,
+`achievementTuning` edits, the profile-page Leksokipos section, and `supabase/scripts/launch-reset.sql`.
+Ticket file deleted; the durable record is ADR 0013's 2026-08-07 catalog amendment plus ADR 0012's
+append-forever exception.
+
+> ⚠️ **This whole document is now DISCHARGED — it is history, not a work list.** Every build item above
+> is shipped and every decision has landed in an ADR. Two things it describes are **not yet true in
+> production**: the code is committed but undeployed (both tickets go out in one after-hours window), and
+> the frozen-id exceptions are not legitimate until `supabase/scripts/launch-reset.sql` is run on release
+> day. The only live thread is badge **art**, which was always decoupled — `badgeVisualSystem.md`.
 
 **ADR amendments ride inside the tickets that make them true** — ADR 0013 §1 and the `CONTEXT.md` Podium
 glossary removals went with the podium deletion; the ADR 0012 reset exception and the `tzimani` glossary line

@@ -37,6 +37,8 @@ import {
   detectEarnedAchievements,
   detectEarnedPangramTiers,
   detectEarnedPointsTiers,
+  detectEarnedTopRankTiers,
+  detectEarnedTzimaniTiers,
   type EarnedToast,
 } from "@/games/leksokipos/lib/achievements";
 import type { RankName } from "@/games/leksokipos/lib/ranking";
@@ -165,6 +167,8 @@ export function useAchievementSync({
       if (cancelled || !stats) return;
       if (stats.leksokipos_points !== null) commitEarned(deviceId, detectEarnedPointsTiers(stats.leksokipos_points));
       if (stats.pangram_count !== null) commitEarned(deviceId, detectEarnedPangramTiers(stats.pangram_count));
+      if (stats.top_rank_count !== null) commitEarned(deviceId, detectEarnedTopRankTiers(stats.top_rank_count));
+      if (stats.tzimani_count !== null) commitEarned(deviceId, detectEarnedTzimaniTiers(stats.tzimani_count));
     });
     return () => { cancelled = true; };
   }, [enabled, isDaily, isGodMode, deviceId, commitEarned]);
@@ -237,9 +241,11 @@ export function useAchievementSync({
   // ref starts empty each mount, so a failed POST re-posts next mount and
   // insert-if-absent makes the overlap a no-op.
   //
-  // The returned counts are ignored here: the tiered badges that read them are
-  // TICKET-02's work. This lane's job is to make sure the days are on record from
-  // now on — a day that passes unrecorded can never be recovered.
+  // Both badges cross off the returned counts, exactly as the pangram lane does:
+  // the POST just inserted the row, so the total it returns is current and needs no
+  // second round-trip. A kind ABSENT from the response means nothing was inserted
+  // — the day was already on record — so no total moved and there is no crossing to
+  // check; the mount self-heal covers that case.
   useEffect(() => {
     if (!enabled || !isDaily || isGodMode || !deviceId) return;
 
@@ -248,6 +254,16 @@ export function useAchievementSync({
     if (unposted.length === 0) return;
     for (const m of unposted) postedDayMilestonesRef.current.add(`${puzzleDate}::${m.kind}`);
 
-    postMilestones({ deviceUuid: deviceId, puzzleDate, milestones: unposted });
-  }, [enabled, foundWords, rank, validWordCount, puzzleDate, isDaily, isGodMode, deviceId]);
+    let cancelled = false;
+    postMilestones({ deviceUuid: deviceId, puzzleDate, milestones: unposted }).then((counts) => {
+      if (cancelled || !counts) return;
+      if (typeof counts.top_rank === "number") {
+        commitEarned(deviceId, detectEarnedTopRankTiers(counts.top_rank));
+      }
+      if (typeof counts.tzimani === "number") {
+        commitEarned(deviceId, detectEarnedTzimaniTiers(counts.tzimani));
+      }
+    });
+    return () => { cancelled = true; };
+  }, [enabled, foundWords, rank, validWordCount, puzzleDate, isDaily, isGodMode, deviceId, commitEarned]);
 }

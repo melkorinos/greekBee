@@ -65,20 +65,23 @@ function enqueue(...results: ChainResult[]) { _callQueue.push(...results); }
 beforeEach(() => { _callQueue = []; _lastUpdate = null; _lastInsert = null; });
 afterEach(()  => { _callQueue = []; _lastUpdate = null; _lastInsert = null; });
 
-const ONESHOT = "leksokipos-first-daily";
-const TIERED  = "leksokipos-kynigos-pangram";
+// Two different catalog badges. Both are tiered because after TICKET-02 every
+// catalog entry is — the route's contract is about ownership and storage shape,
+// not about the badge's kind.
+const OTHER  = "leksokipos-stin-korifi";
+const TIERED = "leksokipos-kynigos-pangram";
 
 // ── POST — valid selection saved ──────────────────────────────────────────────
 
 describe("POST /api/profile/badge — valid selection", () => {
-  it("saves a one-shot the device owns onto an existing profile row", async () => {
+  it("saves a badge the device owns onto an existing profile row", async () => {
     enqueue(
       { data: [{ id: 1 }], error: null }, // ownership check — earned
       { data: [{ id: 7 }], error: null }, // update — a row existed
     );
-    const res = await POST(makePostReq({ device_uuid: "dev-1", selected_badge_id: ONESHOT }));
+    const res = await POST(makePostReq({ device_uuid: "dev-1", selected_badge_id: OTHER }));
     expect(res.status).toBe(200);
-    expect(_lastUpdate).toMatchObject({ selected_badge_id: ONESHOT });
+    expect(_lastUpdate).toMatchObject({ selected_badge_id: OTHER });
     expect(_lastInsert).toBeNull(); // updated in place, no lazy insert
   });
 
@@ -98,7 +101,7 @@ describe("POST /api/profile/badge — valid selection", () => {
 describe("POST /api/profile/badge — rejection", () => {
   it("rejects an id the device has not earned (no fake prestige)", async () => {
     enqueue({ data: [], error: null }); // ownership — nothing earned
-    const res = await POST(makePostReq({ device_uuid: "dev-1", selected_badge_id: ONESHOT }));
+    const res = await POST(makePostReq({ device_uuid: "dev-1", selected_badge_id: OTHER }));
     expect(res.status).toBe(403);
     expect(_lastUpdate).toBeNull();
   });
@@ -146,9 +149,9 @@ describe("POST /api/profile/badge — lazy profile creation", () => {
       { data: [], error: null },          // update — no row yet
       { data: null, error: null },        // insert — ok
     );
-    const res = await POST(makePostReq({ device_uuid: "dev-new", selected_badge_id: ONESHOT }));
+    const res = await POST(makePostReq({ device_uuid: "dev-new", selected_badge_id: OTHER }));
     expect(res.status).toBe(200);
-    expect(_lastInsert).toMatchObject({ device_uuid: "dev-new", selected_badge_id: ONESHOT });
+    expect(_lastInsert).toMatchObject({ device_uuid: "dev-new", selected_badge_id: OTHER });
     // display_name is NOT NULL — the lazy row must carry a default name.
     expect((_lastInsert as { display_name?: string }).display_name).toBeTruthy();
   });
@@ -165,7 +168,7 @@ describe("POST /api/profile/badge — validation", () => {
   });
 
   it("400 when device_uuid is missing", async () => {
-    const res = await POST(makePostReq({ selected_badge_id: ONESHOT }));
+    const res = await POST(makePostReq({ selected_badge_id: OTHER }));
     expect(res.status).toBe(400);
   });
 
@@ -179,7 +182,7 @@ describe("POST /api/profile/badge — validation", () => {
       { data: [{ id: 1 }], error: null },        // ownership
       { data: null, error: { message: "boom" } }, // update fails
     );
-    const res = await POST(makePostReq({ device_uuid: "dev-1", selected_badge_id: ONESHOT }));
+    const res = await POST(makePostReq({ device_uuid: "dev-1", selected_badge_id: OTHER }));
     expect(res.status).toBe(500);
   });
 });

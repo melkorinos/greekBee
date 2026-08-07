@@ -2,13 +2,15 @@
 
 // TrophyCase — the Trophy Case grid on /profile.
 //
-// Fetches the device's earned achievement ids (GET /api/achievements) and lights
-// the matching one-shot tiles. For each tiered badge it also reads a live lifetime
-// value (GET /api/profile/stats: leksokipos_points for Συλλέκτης Πόντων,
-// pangram_count for Κυνηγός Πανγκράμ) and lights each tier chip when earned
-// server-side OR when the value crosses its threshold (belt-and-suspenders,
-// self-consistent with the number shown — ADR 0013), plus an "X / N" progress line
-// toward the next uncrossed tier. Page-local by design.
+// Fetches the device's earned achievement ids (GET /api/achievements) and lights the
+// tiers they prove. Four of the five badges also read a live lifetime value from the
+// ONE GET /api/profile/stats response — leksokipos_points, pangram_count,
+// top_rank_count, tzimani_count — and light each tier chip when earned server-side
+// OR when the value crosses its threshold (belt-and-suspenders, self-consistent with
+// the number shown — ADR 0013), plus an "X / N" progress line toward the next
+// uncrossed tier. Μακρυλέξης is the exception: its rungs are exact-length one-shot
+// facts with no cumulative number behind them, so it lights from earned ids alone.
+// Page-local by design.
 
 import { useEffect, useState } from "react";
 
@@ -16,8 +18,10 @@ import { GAME_REGISTRY } from "@/config/games";
 import {
   KYNIGOS_PANGRAM_ID,
   LEKSOKIPOS_ACHIEVEMENTS,
+  STIN_KORIFI_ID,
   SYLLEKTIS_PONTON_ID,
   TIER_MEDALS,
+  TZIMANI_ID,
   nextTierThreshold,
   resolveDisplayBadge,
   type Achievement,
@@ -149,10 +153,16 @@ function TrophyTile({
   );
 }
 
+/**
+ * The lifetime number each tiered badge ladders on, keyed by its base id. Every
+ * value comes from the ONE /api/profile/stats response; a badge with no live source
+ * (the word-length ladder, whose rungs are one-shot facts) is simply absent.
+ */
+type LiveValues = Partial<Record<string, number>>;
+
 export function TrophyCase({ deviceId = "" }: { deviceId?: string }) {
   const [earned, setEarned] = useState<ReadonlySet<string>>(() => new Set());
-  const [points, setPoints] = useState<number | undefined>(undefined);
-  const [pangrams, setPangrams] = useState<number | undefined>(undefined);
+  const [liveValues, setLiveValues] = useState<LiveValues>({});
   const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => {
@@ -169,10 +179,20 @@ export function TrophyCase({ deviceId = "" }: { deviceId?: string }) {
 
     fetch(`/api/profile/stats?device_uuid=${id}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("stats fetch failed"))))
-      .then((d: { leksokipos_points?: number; pangram_count?: number }) => {
+      .then((d: Partial<Record<string, number>>) => {
         if (cancelled) return;
-        if (typeof d.leksokipos_points === "number") setPoints(d.leksokipos_points);
-        if (typeof d.pangram_count === "number") setPangrams(d.pangram_count);
+        // Map each stats field onto the badge that ladders on it. A non-number
+        // (absent field, error shape) leaves that badge with no live source, so its
+        // chips fall back to earned facts alone rather than lighting at zero.
+        const next: LiveValues = {};
+        const put = (badgeId: string, value: unknown) => {
+          if (typeof value === "number") next[badgeId] = value;
+        };
+        put(SYLLEKTIS_PONTON_ID, d.leksokipos_points);
+        put(KYNIGOS_PANGRAM_ID,  d.pangram_count);
+        put(STIN_KORIFI_ID,      d.top_rank_count);
+        put(TZIMANI_ID,          d.tzimani_count);
+        setLiveValues(next);
       })
       .catch(() => { /* no live progress — tiers still light from earned facts */ });
 
@@ -222,12 +242,8 @@ export function TrophyCase({ deviceId = "" }: { deviceId?: string }) {
             earned={earned}
             selected={selected === a.id}
             onSelect={handleSelect}
-            // Each tiered badge reads its own live value; one-shots have none.
-            liveValue={
-              a.id === SYLLEKTIS_PONTON_ID ? points
-                : a.id === KYNIGOS_PANGRAM_ID ? pangrams
-                : undefined
-            }
+            // Each badge reads its own live value; the word-length ladder has none.
+            liveValue={liveValues[a.id]}
           />
         ))}
       </div>

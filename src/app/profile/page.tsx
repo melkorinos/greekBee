@@ -100,32 +100,42 @@ export default function ProfilePage() {
         />
       </section>
 
-      {/* Scope clarifier — every stat and trophy below currently tracks only the
-          first game (Leksokipos); other games have no engagement surface yet. The
-          beta "may reset on launch" caveat lives on in the Trophy Case notice. */}
+      {/* Scope clarifier — the lifetime stats below are cross-game in shape but only
+          Leksokipos currently feeds them. The badge surfaces get something stronger
+          than a sentence: their own labelled game section, below. */}
       <p
         data-testid="scope-notice"
         className="rounded-lg border border-border bg-surface-raised px-3 py-2 text-[11px] leading-snug text-muted"
       >
-        📊 Τα στατιστικά{FEATURE_FLAGS.achievements ? " και τα επιτεύγματα" : ""} παρακάτω
-        αφορούν προς το παρόν μόνο το {GAME_REGISTRY.leksokipos.label}, το πρώτο παιχνίδι.
+        📊 Τα στατιστικά παρακάτω αφορούν προς το παρόν μόνο το{" "}
+        {GAME_REGISTRY.leksokipos.label}, το πρώτο παιχνίδι.
       </p>
 
       <section className={`${cardShell} overflow-hidden`}>
         <LifetimeStatsStrip deviceId={deviceId} />
       </section>
 
-      {/* Words-by-length + Trophy Case hidden until achievements ship — word capture
-          rides the same flag, so before launch there is no data to show. */}
+      {/* One labelled Leksokipos section, NOT tabs. Both surfaces inside it are
+          Leksokipos-only, and wrapping them says so structurally instead of relying
+          on a caveat the reader may skip. Tabs would advertise a sibling game to
+          switch to; there is exactly one earning game, so they wait until a second
+          one earns. Hidden until achievements ship — the capture rides the same
+          flag, so before launch there is nothing to show. */}
       {FEATURE_FLAGS.achievements && (
-        <>
-          <section className={`${cardShell} overflow-hidden`}>
-            <WordsByLengthCard deviceId={deviceId} />
-          </section>
-          <section className={`${cardShell} overflow-hidden`}>
+        <section data-testid="leksokipos-section" className="space-y-2">
+          <h2
+            data-testid="leksokipos-section-heading"
+            className="px-1 text-xs font-semibold uppercase tracking-widest text-muted"
+          >
+            {GAME_REGISTRY.leksokipos.label}
+          </h2>
+          <div className={`${cardShell} overflow-hidden`}>
             <TrophyCase deviceId={deviceId} />
-          </section>
-        </>
+          </div>
+          <div className={`${cardShell} overflow-hidden`}>
+            <WordsByLengthCard deviceId={deviceId} />
+          </div>
+        </section>
       )}
     </div>
   );

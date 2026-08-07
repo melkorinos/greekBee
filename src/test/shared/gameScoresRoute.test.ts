@@ -303,8 +303,8 @@ describe("GET /api/game-scores — happy path", () => {
 // the returned devices and — for tiered selections — to player_achievements to
 // resolve the highest earned tier. Each row carries `badge` (or null).
 
-const TIERED  = "leksokipos-kynigos-pangram";
-const ONESHOT = "leksokipos-first-daily";
+const TIERED = "leksokipos-kynigos-pangram";
+const OTHER  = "leksokipos-stin-korifi";
 
 type BadgedRow = { display_name: string; badge: { achievementId: string; tier: string | null } | null };
 
@@ -315,15 +315,17 @@ describe("GET /api/game-scores — display badges", () => {
         { device_id: "a", display_name: "Άννα", score: 100 },
         { device_id: "b", display_name: "Βάσω", score: 80  },
       ], error: null },
-      // profiles: a picked the tiered badge, b picked the one-shot
+      // profiles: two devices, two different badges picked
       { data: [
-        { device_uuid: "a", selected_badge_id: TIERED  },
-        { device_uuid: "b", selected_badge_id: ONESHOT },
+        { device_uuid: "a", selected_badge_id: TIERED },
+        { device_uuid: "b", selected_badge_id: OTHER  },
       ], error: null },
-      // achievements: a holds χάλκινο + ασημένιο of the tiered badge
+      // achievements: a holds χάλκινο + ασημένιο of the pangram badge; b only χάλκινο
+      // of the other. Each device resolves against its OWN earned rows.
       { data: [
         { device_uuid: "a", achievement_id: "leksokipos-kynigos-pangram-chalkino" },
         { device_uuid: "a", achievement_id: "leksokipos-kynigos-pangram-asimenio" },
+        { device_uuid: "b", achievement_id: "leksokipos-stin-korifi-chalkino" },
       ], error: null },
     );
 
@@ -333,7 +335,7 @@ describe("GET /api/game-scores — display badges", () => {
     const anna = json.top20.find((r) => r.display_name === "Άννα")!;
     const vaso = json.top20.find((r) => r.display_name === "Βάσω")!;
     expect(anna.badge).toEqual({ achievementId: TIERED, tier: "asimenio" });
-    expect(vaso.badge).toEqual({ achievementId: ONESHOT, tier: null });
+    expect(vaso.badge).toEqual({ achievementId: OTHER,  tier: "chalkino" });
   });
 
   it("resolves a dangling tiered selection (no earned tier rows) to no badge", async () => {

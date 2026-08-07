@@ -210,6 +210,47 @@ Two things worth carrying:
   counter added ahead of the badge that reads it needs the same question asked: what is not being
   recorded in the gap?
 
+### 🟡 A retired id is not gone — it is still sitting in your fixtures (s140)
+
+Removing two achievement ids from the catalog broke **8 test files**, and only two of those
+breaks were about the badges. Everywhere else the ids were just *arbitrary valid strings* a past
+session had reached for — `authLinkRoute`, `achievementMerge`, `achievementsRoute`,
+`gameScoresRoute`, `profileBadgeRoute`, `achievementToast`, `leaderboardBadge`. They read as
+noise to fix, but two of them were not:
+
+- **`profileBadgeRoute`'s "saves a one-shot" and `gameScoresRoute`'s "one-shot resolves to
+  `tier: null`" were testing a shape the catalog can no longer produce.** Once every entry is
+  tiered, those cases cannot arise from real data. Swapping the string would have kept a green
+  test that asserts nothing reachable; they had to become genuinely different scenarios. **When a
+  fixture stops compiling against reality, ask whether the test still describes a possible
+  world** — a mechanical rename is the tempting wrong answer.
+- **A blanket `sed` over `TrophyCase.test.tsx` rewrote the *selected* badge id into a tier id.**
+  Selection stores the BASE id and always has; the sed could not know that. It went green-adjacent
+  and failed loudly, but a slightly different sed would have passed while encoding a wire format
+  the route rejects.
+
+The durable point: **the blast radius of retiring an id is not "the badge code", it is every
+place that ever needed a plausible id.** Nothing marks a fixture as arbitrary, so grep is the only
+map, and each hit needs a judgement call rather than a substitution.
+
+### 🔴 A loose API stub does not fail the test — it empties the page (s140)
+
+The new `profilePage.test.tsx` reported `Unable to find "Λέξεις ανά μήκος"` with a **body
+containing one empty `<div>`**, which reads exactly like "the section was never added" — the
+failure I was actually trying to rule out. It was neither. `WordsByLengthCard` maps over
+`data.buckets` and `LifetimeStatsStrip` calls `.toLocaleString()` on `stats.total_points`,
+**neither guarded**, so a stub missing those fields threw during render and React unmounted the
+whole tree. Two rounds of chasing the wrong symptom before reading the *uncaught exception* below
+the assertion rather than the assertion itself.
+
+Two things to carry:
+- **A page-composition test needs REAL response shapes, not `{}` or a plausible-looking object.**
+  This is the same family as s132's mocked `router.prefetch`: a stub is a claim about a contract,
+  and a wrong claim here is worse than no test because the failure mimics the bug under test.
+- **When a component test shows an empty container, read the exception trace before the
+  assertion.** The assertion message describes the symptom; the trace names the component that
+  actually died, and jsdom reports the crash *after* the query timeout, so it is easy to miss.
+
 ### 🟡 Word-length ladder may be near-unearnable + a thin card (s125)
 
 The word-length badges are **exact length** (operator's choice): a word of exactly 12 or 13 letters is genuinely rare on a Leksokipos board, so the 12/13 rungs may almost never earn, and a 14+ monster earns nothing at all. Same reason the "Λέξεις ανά μήκος" card (now 10/11/12/13+ only) will read near-empty for most players — most of a round's finds are short. Both are acceptable given the change's real goal (cap `player_words` growth, resolved issue 14), but if the badges feel dead or the card feels barren post-launch, the lever is `achievementTuning.wordLengthBadges` (drop to `[10,11,12]`, or make the top rung "13+") — everything (buckets, floor, detection, catalog) re-derives from that one array.

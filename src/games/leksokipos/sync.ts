@@ -27,6 +27,10 @@ export interface LifetimeStatsRead {
   leksokipos_points: number | null;
   /** Size of the append-only pangram set — feeds the Κυνηγός Πανγκράμ self-heal. */
   pangram_count:     number | null;
+  /** Days the top rank was reached — feeds the Στην Κορυφή self-heal. */
+  top_rank_count:    number | null;
+  /** Days the found-word ratio was crossed — feeds the Τζιμάνι self-heal. */
+  tzimani_count:     number | null;
 }
 
 /** One milestone to record — the wire shape of a player_milestones row's payload. */
@@ -54,10 +58,13 @@ export async function fetchLifetimeStats(deviceUuid: string): Promise<LifetimeSt
       `${STATS_ENDPOINT}?device_uuid=${encodeURIComponent(deviceUuid)}`,
     );
     if (!res.ok) return null;
-    const data = (await res.json()) as { leksokipos_points?: number; pangram_count?: number };
+    const data = (await res.json()) as Partial<Record<keyof LifetimeStatsRead, number>>;
+    const num = (v: number | undefined) => (typeof v === "number" ? v : null);
     return {
-      leksokipos_points: typeof data.leksokipos_points === "number" ? data.leksokipos_points : null,
-      pangram_count:     typeof data.pangram_count === "number" ? data.pangram_count : null,
+      leksokipos_points: num(data.leksokipos_points),
+      pangram_count:     num(data.pangram_count),
+      top_rank_count:    num(data.top_rank_count),
+      tzimani_count:     num(data.tzimani_count),
     };
   } catch {
     return null;

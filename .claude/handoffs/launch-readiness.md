@@ -56,6 +56,15 @@ covering at minimum:
 - Test and E2E gate — is the current Playwright suite the bar, or does it need growing first
 - The `dev → main` merge itself (`goals.md` item 1: Leksodromia and Leksoplegma await a manual
   browser play-through)
+- **Run `supabase/scripts/launch-reset.sql` on release day — BLOCKING, and it belongs on the
+  checklist however question 1 resolves.** The rebuilt badge catalog retires
+  `leksokipos-first-daily` and `leksokipos-theristis` and revives `leksokipos-tzimani`; those
+  frozen-id exceptions are licensed by this wipe and by nothing else (ADR 0013 §4, ADR 0012's
+  reset amendment). Until it runs, live rows hold ids the catalog no longer names. It is run by
+  hand in the dashboard, never by `db push`, and only AFTER both tickets are deployed —
+  running it against the old catalog would wipe progress and immediately re-earn the retired
+  ids. Take a backup first (`npm run db:backup`); one Supabase project backs dev and prod, so
+  there is no rehearsal and no undo.
 
 Resolve with `/grill-with-docs` so `CONTEXT.md` and the ADRs are cross-checked and updated
 inline as the checklist is pinned.
@@ -186,9 +195,14 @@ Carried over from the retired map. One line per resolved question.
   and carries the two new counters; **Στην Κορυφή** and **Θεριστής→Τζιμάνι** become tiered;
   **Πρώτα Βήματα is removed** and **`leksokipos-tzimani` revived** (frozen-id exceptions two and
   three, licensed only by the pre-launch wipe); **one displayed badge, permanently**; **emoji
-  glyphs retired** for drawn SVG marks. All of it in **ADR 0013's 2026-08-06 amendment**, with
-  the owed build work in `.claude/handoffs/badgeIdeas.md` and the art work in
-  `.claude/handoffs/badgeVisualSystem.md`.
+  glyphs retired** for drawn SVG marks. All of it in **ADR 0013's 2026-08-06 amendment**.
+  **Built 2026-08-07** across TICKET-01 and TICKET-02 — five tiered badges, the unified
+  `player_milestones` table, and `supabase/scripts/launch-reset.sql`; ADR 0013's 2026-08-07
+  amendment records where it superseded the 2026-08-06 one (pangram thresholds 25/60/150, the
+  ratio at 0.7, and `leksokipos-theristis` retired outright). `badgeIdeas.md` is discharged. Two
+  things remain and both are operator actions, not build work: **the after-hours deploy window**,
+  and **running the reset on release day** (see the checklist bullet in question 1). Badge art is
+  still open and still decoupled — `.claude/handoffs/badgeVisualSystem.md`.
 - **2026-08-06 — Five islands added, Δήλος dropped, Topothesies is at 109 answers.** Neither a
   `place=island` override nor connected-component splitting was needed: a δήμος spanning several
   islands already arrives as **one polygon per island** — the islands only had to be *selected*,

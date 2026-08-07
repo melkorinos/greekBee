@@ -18,6 +18,8 @@ import {
   detectDayMilestones,
   detectEarnedPointsTiers,
   detectEarnedPangramTiers,
+  detectEarnedTopRankTiers,
+  detectEarnedTzimaniTiers,
   nextPangramTierThreshold,
   describeAchievement,
   type AchievementContext,
@@ -47,15 +49,26 @@ function ids() {
 }
 
 describe("LEKSOKIPOS_ACHIEVEMENTS catalog", () => {
-  it("contains the frozen top-level badge ids", () => {
-    expect(ids()).toEqual(
-      expect.arrayContaining([
-        "leksokipos-first-daily",
-        "leksokipos-stin-korifi",
-        "leksokipos-theristis",
-        "leksokipos-makrylexis",
-      ]),
-    );
+  it("contains exactly the five rebuilt badges, every one tiered", () => {
+    // TICKET-02: the catalog is five entries and no one-shot ENTRY survives — the
+    // tier treatment is how every badge reads, not decoration on some of them.
+    expect(ids()).toEqual([
+      "leksokipos-stin-korifi",
+      "leksokipos-makrylexis",
+      "leksokipos-tzimani",
+      "leksokipos-kynigos-pangram",
+      "leksokipos-syllektis-ponton",
+    ]);
+    for (const a of LEKSOKIPOS_ACHIEVEMENTS) expect(a.kind).toBe("tiered");
+  });
+
+  it("retires Πρώτα Βήματα and the Θεριστής id permanently", () => {
+    // Both are frozen-id exceptions licensed ONLY by the pre-launch wipe (ADR 0013
+    // §4). Neither id may appear anywhere in the catalog again — not as an entry,
+    // not as a tier id.
+    const all = LEKSOKIPOS_ACHIEVEMENTS.flatMap((a) => [a.id, ...(a.tiers ?? []).map((t) => t.id)]);
+    expect(all).not.toContain("leksokipos-first-daily");
+    expect(all).not.toContain("leksokipos-theristis");
   });
 
   it("keeps the frozen word-length ids as the ladder's tier ids", () => {
@@ -115,11 +128,13 @@ describe("LEKSOKIPOS_ACHIEVEMENTS catalog", () => {
     const glyphByName = Object.fromEntries(
       LEKSOKIPOS_ACHIEVEMENTS.map((a) => [a.name, a.glyph]),
     );
-    expect(glyphByName).toMatchObject({
-      "Πρώτα Βήματα":     "🌱",
+    // Interim emoji — drawn marks land separately (badgeVisualSystem.md), which is
+    // why the art is decoupled from this ticket. Τζιμάνι keeps the retired
+    // Θεριστής glyph: same accomplishment, new name and id.
+    expect(glyphByName).toEqual({
       "Στην Κορυφή":      "👑",
-      "Θεριστής":        "🌾",
       "Μακρυλέξης":      "🛏️", // the ladder wears its top rung's glyph
+      "Τζιμάνι":         "🌾",
       "Κυνηγός Πανγκράμ": "✍️",
       "Συλλέκτης Πόντων": "💎",
     });
@@ -180,21 +195,17 @@ describe("WORD_LENGTH_BADGES — the exact-length ladder", () => {
   });
 });
 
-describe("detectEarnedAchievements — Θεριστής (≥ 80% of words found)", () => {
-  it("earns at exactly 70% of the puzzle's words", () => {
+describe("detectEarnedAchievements — the word-length ladder is all that is left", () => {
+  // TICKET-02 moved every other badge onto a lifetime day-count read back from the
+  // server (Στην Κορυφή / Τζιμάνι) or a lifetime aggregate (pangrams / points).
+  // What an end-of-game snapshot can still decide by itself is exact word lengths.
+  it("returns only word-length ids, even for a round that maxes every other condition", () => {
     const ctx = makeCtx({
-      foundWords:     Array.from({ length: 14 }, (_, i) => `word${i}`),
-      validWordCount: 20, // 14 / 20 = 0.70
+      foundWords:     ["α".repeat(11), ...Array.from({ length: 19 }, (_, i) => `word${i}`)],
+      validWordCount: 20, // 100% found
+      rank:           "Απολυτότητα",
     });
-    expect(detectEarnedAchievements(ctx)).toContain("leksokipos-theristis");
-  });
-
-  it("does not earn below 70%", () => {
-    const ctx = makeCtx({
-      foundWords:     Array.from({ length: 13 }, (_, i) => `word${i}`),
-      validWordCount: 20, // 13 / 20 = 0.65
-    });
-    expect(detectEarnedAchievements(ctx)).not.toContain("leksokipos-theristis");
+    expect(detectEarnedAchievements(ctx)).toEqual([lengthBadgeId(11)]);
   });
 });
 
@@ -270,27 +281,68 @@ describe("detectDayMilestones", () => {
   });
 });
 
-describe("detectEarnedAchievements — Στην Κορυφή (top rank)", () => {
-  it("earns when the player reaches the Απολυτότητα rank", () => {
-    const ctx = makeCtx({ rank: "Απολυτότητα" });
-    expect(detectEarnedAchievements(ctx)).toContain("leksokipos-stin-korifi");
+// ── The two day-count tiered badges (TICKET-02) ───────────────────────────────
+//
+// Both read a LIFETIME count of qualifying DAYS off player_milestones, so like the
+// pangram and points badges they are detected from a server-returned number, not
+// from the end-of-game snapshot. The snapshot's job is only to record the day
+// (detectDayMilestones above); crossing a rung is decided here.
+
+describe("detectEarnedTopRankTiers — Στην Κορυφή (lifetime top-rank days)", () => {
+  const { chalkino, asimenio, chryso } = LEKSOKIPOS_ACHIEVEMENT_TUNING.topRankTierThresholds;
+
+  it("earns nothing on zero qualifying days", () => {
+    expect(detectEarnedTopRankTiers(0)).toEqual([]);
   });
 
-  it("does not earn at any rank below Απολυτότητα", () => {
-    const ctx = makeCtx({ rank: "Γκουρού" });
-    expect(detectEarnedAchievements(ctx)).not.toContain("leksokipos-stin-korifi");
+  it("earns χάλκινο on the first qualifying day", () => {
+    // Bronze at 1 deliberately preserves the meaning of the one-shot it replaces.
+    expect(chalkino).toBe(1);
+    expect(detectEarnedTopRankTiers(1)).toEqual(["leksokipos-stin-korifi-chalkino"]);
+  });
+
+  it("earns every tier crossed, ascending", () => {
+    expect(detectEarnedTopRankTiers(asimenio)).toEqual([
+      "leksokipos-stin-korifi-chalkino",
+      "leksokipos-stin-korifi-asimenio",
+    ]);
+    expect(detectEarnedTopRankTiers(chryso)).toEqual([
+      "leksokipos-stin-korifi-chalkino",
+      "leksokipos-stin-korifi-asimenio",
+      "leksokipos-stin-korifi-chryso",
+    ]);
   });
 });
 
-describe("detectEarnedAchievements — Πρώτα Βήματα (played a daily)", () => {
-  it("earns once the player has found at least one word", () => {
-    const ctx = makeCtx({ foundWords: ["γατα"] });
-    expect(detectEarnedAchievements(ctx)).toContain("leksokipos-first-daily");
+describe("detectEarnedTzimaniTiers — Τζιμάνι (lifetime days at the found-word ratio)", () => {
+  const { chalkino, asimenio, chryso } = LEKSOKIPOS_ACHIEVEMENT_TUNING.tzimaniTierThresholds;
+
+  it("earns nothing on zero qualifying days", () => {
+    expect(detectEarnedTzimaniTiers(0)).toEqual([]);
   });
 
-  it("does not earn before any word is found", () => {
-    const ctx = makeCtx({ foundWords: [] });
-    expect(detectEarnedAchievements(ctx)).not.toContain("leksokipos-first-daily");
+  it("earns χάλκινο on the first qualifying day", () => {
+    expect(chalkino).toBe(1);
+    expect(detectEarnedTzimaniTiers(1)).toEqual(["leksokipos-tzimani-chalkino"]);
+  });
+
+  it("earns every tier crossed, ascending", () => {
+    expect(detectEarnedTzimaniTiers(asimenio)).toEqual([
+      "leksokipos-tzimani-chalkino",
+      "leksokipos-tzimani-asimenio",
+    ]);
+    expect(detectEarnedTzimaniTiers(chryso)).toEqual([
+      "leksokipos-tzimani-chalkino",
+      "leksokipos-tzimani-asimenio",
+      "leksokipos-tzimani-chryso",
+    ]);
+  });
+
+  it("counts DAYS, not the ratio — the ladder never climbs the percentage", () => {
+    // A 90/100% rung would be the retired perfect-round concept under a new name
+    // (ADR 0013). Every rung qualifies on the same tzimaniFoundRatio.
+    const tzimani = LEKSOKIPOS_ACHIEVEMENTS.find((a) => a.id === "leksokipos-tzimani");
+    expect(tzimani?.tiers?.map((t) => t.threshold)).toEqual([chalkino, asimenio, chryso]);
   });
 });
 
@@ -321,25 +373,25 @@ describe("detectEarnedPointsTiers — Συλλέκτης Πόντων (lifetime 
 });
 
 describe("detectEarnedPangramTiers — Κυνηγός Πανγκράμ (lifetime pangram set size)", () => {
-  // Thresholds live in achievementTuning (chalkino 10 / asimenio 20 / chryso 50).
-  // The count is a COUNT(*) over player_pangrams, never a stored tally (ADR 0013 lane C).
-  // Returns every crossed tier id ascending; the server insert-if-absents so re-returning
-  // an earned tier is a harmless no-op.
+  // TICKET-02 raised these 10/20/50 → 25/60/150. The old numbers put gold at ~11
+  // played days and one beta device already held it; a threshold can be lowered
+  // later but never effectively raised, so this was the correctable direction and
+  // the pre-launch window was the only chance to take it.
   it("earns nothing below the first threshold", () => {
-    expect(detectEarnedPangramTiers(9)).toEqual([]);
+    expect(detectEarnedPangramTiers(24)).toEqual([]);
     expect(detectEarnedPangramTiers(0)).toEqual([]);
   });
 
   it("earns χάλκινο at exactly its threshold", () => {
-    expect(detectEarnedPangramTiers(10)).toEqual(["leksokipos-kynigos-pangram-chalkino"]);
+    expect(detectEarnedPangramTiers(25)).toEqual(["leksokipos-kynigos-pangram-chalkino"]);
   });
 
   it("earns every tier crossed, ascending", () => {
-    expect(detectEarnedPangramTiers(20)).toEqual([
+    expect(detectEarnedPangramTiers(60)).toEqual([
       "leksokipos-kynigos-pangram-chalkino",
       "leksokipos-kynigos-pangram-asimenio",
     ]);
-    expect(detectEarnedPangramTiers(50)).toEqual([
+    expect(detectEarnedPangramTiers(150)).toEqual([
       "leksokipos-kynigos-pangram-chalkino",
       "leksokipos-kynigos-pangram-asimenio",
       "leksokipos-kynigos-pangram-chryso",
@@ -349,24 +401,27 @@ describe("detectEarnedPangramTiers — Κυνηγός Πανγκράμ (lifetime
 
 describe("nextPangramTierThreshold — Trophy Case 'X / N' denominator", () => {
   it("points at χάλκινο before any tier is crossed", () => {
-    expect(nextPangramTierThreshold(0)).toBe(10);
-    expect(nextPangramTierThreshold(9)).toBe(10);
+    expect(nextPangramTierThreshold(0)).toBe(25);
+    expect(nextPangramTierThreshold(24)).toBe(25);
   });
 
   it("advances to the next uncrossed threshold", () => {
-    expect(nextPangramTierThreshold(10)).toBe(20);
-    expect(nextPangramTierThreshold(20)).toBe(50);
+    expect(nextPangramTierThreshold(25)).toBe(60);
+    expect(nextPangramTierThreshold(60)).toBe(150);
   });
 
   it("is null once every tier is crossed", () => {
-    expect(nextPangramTierThreshold(50)).toBeNull();
+    expect(nextPangramTierThreshold(150)).toBeNull();
     expect(nextPangramTierThreshold(999)).toBeNull();
   });
 });
 
 describe("describeAchievement — earned-id → toast display", () => {
-  it("resolves a one-shot id to its badge name, no tier label", () => {
-    expect(describeAchievement("leksokipos-first-daily")).toEqual({ name: "Πρώτα Βήματα" });
+  it("resolves a bare word-length rung to the ladder's name plus its rung label", () => {
+    expect(describeAchievement("leksokipos-word-13")).toEqual({
+      name: "Μακρυλέξης",
+      tierLabel: "Σεντόνι",
+    });
   });
 
   it("resolves a tier id to the badge name plus the Greek tier label", () => {
@@ -396,10 +451,6 @@ describe("SELECTABLE_BADGE_IDS — the whitelist of pickable badges", () => {
 });
 
 describe("qualifyingEarnedIds — which earned rows prove ownership of a badge", () => {
-  it("a one-shot is owned by holding its own id", () => {
-    expect(qualifyingEarnedIds("leksokipos-first-daily")).toEqual(["leksokipos-first-daily"]);
-  });
-
   it("a tiered badge is owned by holding ANY of its tier ids", () => {
     expect(qualifyingEarnedIds("leksokipos-kynigos-pangram")).toEqual([
       "leksokipos-kynigos-pangram-chalkino",
@@ -448,7 +499,7 @@ describe("resolveDisplayBadge — the word-length ladder shows the rarest rung h
   });
 
   it("is null when no rung has been earned", () => {
-    expect(resolveDisplayBadge("leksokipos-makrylexis", ["leksokipos-first-daily"])).toBeNull();
+    expect(resolveDisplayBadge("leksokipos-makrylexis", ["leksokipos-word-nope"])).toBeNull();
   });
 });
 
@@ -468,11 +519,12 @@ describe("resolveDisplayBadge — read-time badge resolution for the leaderboard
     expect(resolveDisplayBadge(null, [])).toBeNull();
   });
 
-  it("a one-shot selection resolves to its id with no tier (trusts the stored id)", () => {
-    expect(resolveDisplayBadge("leksokipos-first-daily", [])).toEqual({
-      achievementId: "leksokipos-first-daily",
-      tier:          null,
-    });
+  it("a selection of a RETIRED id resolves to no badge", () => {
+    // The launch reset NULLs every player_profiles.selected_badge_id, but this is
+    // the backstop if it is ever run partially: 34 devices had Πρώτα Βήματα
+    // selected, and an unresolvable id must render nothing rather than crash.
+    expect(resolveDisplayBadge("leksokipos-first-daily", [])).toBeNull();
+    expect(resolveDisplayBadge("leksokipos-theristis", [])).toBeNull();
   });
 
   it("a tiered selection resolves to the HIGHEST earned tier", () => {

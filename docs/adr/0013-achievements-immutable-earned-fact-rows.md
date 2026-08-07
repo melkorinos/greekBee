@@ -253,3 +253,70 @@ words and pangrams whose text is regex-bounded. A scripted loop over 365 dates e
 client-trust model as scores, consistent with "the server runs zero detection". Also unbounded by design:
 playing a *past* daily puzzle records that date's milestone, so catching up on a missed week can bank several
 days at once — correct, since those days were genuinely played.
+
+## Amendment (2026-08-07) — the catalog rebuild lands: five tiered badges, and where this supersedes 2026-08-06
+
+TICKET-02, built on top of the storage seam above. This is the amendment the 2026-08-06 revision anticipated;
+it **supersedes that revision on four points**, each recorded below with what changed and why.
+
+### 1. The catalog is five badges, every one tiered
+
+| Badge | Frozen base id | Earns on | Rungs |
+|---|---|---|---|
+| Στην Κορυφή | `leksokipos-stin-korifi` | lifetime days at the top rank (`kind='top_rank'`) | 1 / 10 / 25 |
+| Μακρυλέξης | `leksokipos-makrylexis` | a found word of exactly 10 / 11 / 12 / 13 letters | 4 rungs, incl. `diamanti` |
+| Τζιμάνι | `leksokipos-tzimani` | lifetime days at 70% of a puzzle's words (`kind='tzimani'`) | 1 / 5 / 10 |
+| Κυνηγός Πανγκράμ | `leksokipos-kynigos-pangram` | lifetime pangrams (`kind='pangram'`) | 25 / 60 / 150 |
+| Συλλέκτης Πόντων | `leksokipos-syllektis-ponton` | lifetime Leksokipos points | 1000 / 10000 / 25000 |
+
+**No one-shot catalog entries remain.** The tier treatment is now how every badge reads, not decoration on
+some of them. Four of the five carry a `${base}-chalkino/-asimenio/-chryso` ladder derived by one `metalTiers`
+helper, so a tier id cannot be mistyped into a permanent junk row; Μακρυλέξης is the standing exception (its
+rungs reuse the pre-existing frozen word-length ids and it has a fourth rung above gold).
+
+**Consequence for detection:** `detectEarnedAchievements` now returns **word-length ids and nothing else** —
+exact word lengths are the only accomplishment a single end-of-game snapshot can settle by itself. Στην Κορυφή
+and Τζιμάνι still *happen* in-round, but what is awarded is the **number of days** either has happened, which
+only the server holds. The round records the day (`detectDayMilestones`); the crossing is decided by
+`detectEarnedTopRankTiers` / `detectEarnedTzimaniTiers` off a returned count, exactly as the pangram lane
+already worked.
+
+### 2. Superseding the 2026-08-06 revision
+
+- **Pangram thresholds 10/20/50 → 25/60/150.** The old numbers put gold at ~11 played days and one beta device
+  already held it. Raising a threshold is only possible before launch (see §4), so this was the last chance.
+- **Θεριστής → Τζιμάνι at 0.7, not 0.8.** The 2026-08-06 revision said `theristisFoundRatio` "stays 0.8"; it
+  moved to 0.7 in TICKET-01 for a timing reason that revision had not considered — milestone rows are only
+  written as days are played, so deferring the change would have permanently lost every qualifying day in
+  between. The config key is renamed `tzimaniFoundRatio` here (a balance knob, not a frozen id). **0.7 remains
+  a guess**; the `value` percentage on each `tzimani` row is what will make it measurable.
+- **The ladder counts DAYS, never the ratio.** No rung climbs above 70%. A 90/100% rung would be the retired
+  perfect-round concept back under a new name.
+- **Στην Κορυφή's 10 and 25 are un-tuned and knowingly so.** Repeat top-rank frequency was never captured —
+  that gap is why `kind='top_rank'` exists. Bronze at 1 preserves the meaning of the one-shot it replaces.
+
+### 3. Frozen-id rule — the exceptions are now spent
+
+The 2026-08-06 revision granted the second and third exceptions (`leksokipos-first-daily` removed,
+`leksokipos-tzimani` revived). Both are now **executed in code**, and the third carries a consequence that
+revision stated but did not enumerate: reviving `leksokipos-tzimani` means **`leksokipos-theristis` is retired
+permanently and never reused** — an id and a name that disagree would disagree forever. `achievements.test.ts`
+asserts neither retired id appears anywhere in the catalog, as an entry or a tier id.
+
+**These exceptions are licensed by the pre-launch wipe and by nothing else** (`supabase/scripts/launch-reset.sql`,
+ADR 0012's 2026-08-07 amendment). The catalog and the live data disagree until that script runs — which is why
+the reset ships as part of this same ticket rather than later. **After launch the window is shut**: an id may
+be added, never renamed, removed, or revived.
+
+### 4. Reads
+
+`GET /api/profile/stats` already returned `top_rank_count` and `tzimani_count` from the one `GROUP BY kind`
+(TICKET-01). Both are now consumed: the Trophy Case maps each stats field onto the badge that ladders on it,
+and `useAchievementSync`'s mount lane self-heals owed tiers for all four cumulative badges. That self-heal is
+the **only** path that can cross a tier on a day whose milestone insert was a no-op, because a kind absent
+from the POST response means nothing was inserted and therefore no total moved.
+
+The Trophy Case and Λέξεις ανά μήκος now sit inside one labelled Leksokipos section on `/profile` — structural
+scoping rather than a caveat sentence. **Tabs were rejected for now**: they advertise a sibling to switch to,
+and exactly one game earns badges. A second earning game is what justifies them, along with the `game_id`
+migration described in the storage section above.

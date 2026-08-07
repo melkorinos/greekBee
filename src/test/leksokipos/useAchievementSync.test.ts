@@ -12,8 +12,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 
-interface StatsRead { leksokipos_points: number | null; pangram_count: number | null }
-const NO_STATS: StatsRead = { leksokipos_points: null, pangram_count: null };
+interface StatsRead {
+  leksokipos_points: number | null;
+  pangram_count:     number | null;
+  top_rank_count:    number | null;
+  tzimani_count:     number | null;
+}
+const NO_STATS: StatsRead = {
+  leksokipos_points: null, pangram_count: null, top_rank_count: null, tzimani_count: null,
+};
+/** A stats read with only the named fields present — the rest read as absent. */
+function stats(partial: Partial<StatsRead>): StatsRead {
+  return { ...NO_STATS, ...partial };
+}
 
 // Each mock carries its real signature from @/games/leksokipos/sync. Typing them
 // as zero-arg fns made `mock.calls[0][0]` an index into an empty tuple, so the
@@ -61,7 +72,9 @@ import { LEKSOKIPOS_ACHIEVEMENT_TUNING } from "@/config/achievementTuning";
 // Derived, not hardcoded: this file tests LANE behaviour (does a crossing get
 // posted at all), so it must not re-break every time the thresholds are re-balanced.
 // The boundary values themselves are pinned with literals in achievements.test.ts.
-const PANGRAM_TIERS = LEKSOKIPOS_ACHIEVEMENT_TUNING.pangramTierThresholds;
+const PANGRAM_TIERS  = LEKSOKIPOS_ACHIEVEMENT_TUNING.pangramTierThresholds;
+const TOP_RANK_TIERS = LEKSOKIPOS_ACHIEVEMENT_TUNING.topRankTierThresholds;
+const TZIMANI_TIERS  = LEKSOKIPOS_ACHIEVEMENT_TUNING.tzimaniTierThresholds;
 
 interface Props {
   enabled?:             boolean;
@@ -106,38 +119,43 @@ describe("useAchievementSync — posting", () => {
     expect(postAchievements).toHaveBeenCalledTimes(1);
     const arg = postAchievements.mock.calls[0][0];
     expect(arg.deviceUuid).toBe("device-1");
-    expect(arg.achievementIds).toEqual(
-      expect.arrayContaining(["leksokipos-first-daily", "leksokipos-sidirodromos"]),
-    );
+    expect(arg.achievementIds).toEqual(["leksokipos-sidirodromos"]);
+  });
+
+  it("posts nothing when the round earns no word-length rung", () => {
+    // After TICKET-02 the one-shot lane detects word lengths and nothing else, so
+    // an ordinary round with only short finds has no achievement to post at all.
+    renderHook(() => useAchievementSync({ ...BASE, foundWords: ["γατα", "σκυλος"] }));
+    expect(postAchievements).not.toHaveBeenCalled();
   });
 
   it("does not re-post an id already posted this session", () => {
     const { rerender } = renderHook((props: Props) => useAchievementSync(props), {
-      initialProps: { ...BASE, foundWords: ["γατα"] }, // first-daily
+      initialProps: { ...BASE, foundWords: ["ελικοπτερο"] }, // exactly 10 → sidirodromos
     });
     expect(postAchievements).toHaveBeenCalledTimes(1);
     postAchievements.mockClear();
 
     // Another word found, but no NEW achievement crosses — nothing to post.
-    rerender({ ...BASE, foundWords: ["γατα", "σκυλος"] });
+    rerender({ ...BASE, foundWords: ["ελικοπτερο", "σκυλος"] });
     expect(postAchievements).not.toHaveBeenCalled();
   });
 
   it("posts only the newly-crossed id when state grows into a new achievement", () => {
     const { rerender } = renderHook((props: Props) => useAchievementSync(props), {
-      initialProps: { ...BASE, foundWords: ["γατα"] }, // first-daily
+      initialProps: { ...BASE, foundWords: ["ελικοπτερο"] }, // exactly 10 → sidirodromos
     });
     postAchievements.mockClear();
 
-    rerender({ ...BASE, foundWords: ["γατα", "ελικοπτερο"] }); // exactly 10 → adds sidirodromos
+    rerender({ ...BASE, foundWords: ["ελικοπτερο", "παρακολουθηση"] }); // exactly 13 → adds word-13
     expect(postAchievements).toHaveBeenCalledTimes(1);
-    expect(postAchievements.mock.calls[0][0].achievementIds).toEqual(["leksokipos-sidirodromos"]);
+    expect(postAchievements.mock.calls[0][0].achievementIds).toEqual(["leksokipos-word-13"]);
   });
 });
 
 describe("useAchievementSync — points-tier lane", () => {
   it("posts every crossed points-tier id from the lifetime stats read", async () => {
-    fetchLifetimeStats.mockResolvedValue({ leksokipos_points: 12000, pangram_count: null }); // ≥ chalkino + asimenio
+    fetchLifetimeStats.mockResolvedValue(stats({ leksokipos_points: 12000, pangram_count: null })); // ≥ chalkino + asimenio
     renderHook(() => useAchievementSync({ ...BASE }));
 
     await waitFor(() => {
@@ -152,7 +170,7 @@ describe("useAchievementSync — points-tier lane", () => {
   });
 
   it("posts no points tier when lifetime points are below the first threshold", async () => {
-    fetchLifetimeStats.mockResolvedValue({ leksokipos_points: 999, pangram_count: null });
+    fetchLifetimeStats.mockResolvedValue(stats({ leksokipos_points: 999, pangram_count: null }));
     renderHook(() => useAchievementSync({ ...BASE, foundWords: [] })); // no one-shots either
     await waitFor(() => expect(fetchLifetimeStats).toHaveBeenCalled());
     expect(postAchievements).not.toHaveBeenCalled();
@@ -217,9 +235,8 @@ describe("useAchievementSync — pangram lane (delta-post)", () => {
   // Self-heal lane: on mount the pangram_count read heals owed tiers even when no
   // new pangram is found this session (crash/offline gap between write and tier POST).
   it("self-heals owed pangram tiers from the mount pangram_count read", async () => {
-    fetchLifetimeStats.mockResolvedValue({
-      leksokipos_points: null, pangram_count: PANGRAM_TIERS.asimenio, // chalkino + asimenio
-    });
+    // chalkino + asimenio
+    fetchLifetimeStats.mockResolvedValue(stats({ pangram_count: PANGRAM_TIERS.asimenio }));
     renderHook(() => useAchievementSync({ ...BASE, foundWords: [], foundPangrams: [] }));
 
     await waitFor(() =>
@@ -359,41 +376,117 @@ describe("useAchievementSync — day-milestone lane", () => {
   });
 });
 
+// ── The two day-count badges cross off the same returned counts (TICKET-02) ────
+//
+// Identical shape to the pangram lane, and for the same reason: the POST just
+// inserted the row, so the count it returns is current and the crossing needs no
+// second round-trip. A kind absent from the response means nothing was inserted —
+// the day was already on record — so no total moved and there is no crossing.
+
+describe("useAchievementSync — day-milestone tier crossings", () => {
+  const TOP_RANK: RankName = "Απολυτότητα";
+  const RATIO_ROUND = {
+    foundWords:     Array.from({ length: 18 }, (_, i) => `word${i}`),
+    validWordCount: 20, // 90% — clears tzimaniFoundRatio
+  };
+
+  it("posts every Στην Κορυφή tier crossed by the returned top_rank count", async () => {
+    postMilestones.mockResolvedValue({ top_rank: TOP_RANK_TIERS.asimenio });
+    renderHook(() => useAchievementSync({ ...BASE, foundWords: [], rank: TOP_RANK }));
+
+    await waitFor(() =>
+      expect(allPostedIds()).toEqual(
+        expect.arrayContaining([
+          "leksokipos-stin-korifi-chalkino",
+          "leksokipos-stin-korifi-asimenio",
+        ]),
+      ),
+    );
+    expect(allPostedIds()).not.toContain("leksokipos-stin-korifi-chryso");
+  });
+
+  it("posts every Τζιμάνι tier crossed by the returned tzimani count", async () => {
+    postMilestones.mockResolvedValue({ tzimani: TZIMANI_TIERS.asimenio });
+    renderHook(() => useAchievementSync({ ...BASE, ...RATIO_ROUND }));
+
+    await waitFor(() =>
+      expect(allPostedIds()).toEqual(
+        expect.arrayContaining([
+          "leksokipos-tzimani-chalkino",
+          "leksokipos-tzimani-asimenio",
+        ]),
+      ),
+    );
+    expect(allPostedIds()).not.toContain("leksokipos-tzimani-chryso");
+  });
+
+  it("skips both crossings when the server withheld the counts (nothing was new)", async () => {
+    postMilestones.mockResolvedValue({});
+    renderHook(() => useAchievementSync({ ...BASE, ...RATIO_ROUND, rank: TOP_RANK }));
+    await waitFor(() => expect(postedOfKind("top_rank")).toHaveLength(1));
+    expect(postAchievements).not.toHaveBeenCalled();
+  });
+
+  it("self-heals owed day-count tiers from the mount stats read", async () => {
+    // The counterpart to the pangram self-heal: it closes a crash/offline gap
+    // between a milestone row landing and its tier POST, and it is the ONLY path
+    // that can cross a tier on a day that inserted nothing new.
+    fetchLifetimeStats.mockResolvedValue(stats({
+      top_rank_count: TOP_RANK_TIERS.chalkino,
+      tzimani_count:  TZIMANI_TIERS.chalkino,
+    }));
+    renderHook(() => useAchievementSync({ ...BASE, foundWords: [] }));
+
+    await waitFor(() =>
+      expect(allPostedIds()).toEqual(
+        expect.arrayContaining([
+          "leksokipos-stin-korifi-chalkino",
+          "leksokipos-tzimani-chalkino",
+        ]),
+      ),
+    );
+    // Nothing qualified this round — the heal must not invent milestone rows.
+    expect(postMilestones).not.toHaveBeenCalled();
+  });
+});
+
 describe("useAchievementSync — unlock toast surfacing", () => {
-  it("surfaces a genuinely-new one-shot badge to the toast callback", async () => {
+  it("surfaces a genuinely-new badge to the toast callback", async () => {
     fetchEarnedAchievementIds.mockResolvedValue([]); // nothing earned before
     const onAchievementEarned = vi.fn();
-    renderHook(() => useAchievementSync({ ...BASE, foundWords: ["γατα"], onAchievementEarned }));
+    renderHook(() => useAchievementSync({ ...BASE, foundWords: ["ελικοπτερο"], onAchievementEarned }));
 
     await waitFor(() =>
       expect(onAchievementEarned).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "leksokipos-first-daily", name: "Πρώτα Βήματα" }),
+        expect.objectContaining({ id: "leksokipos-sidirodromos", name: "Μακρυλέξης" }),
       ),
     );
   });
 
   it("toasts only the newly-earned badge, suppressing ones earned in a prior session", async () => {
-    fetchEarnedAchievementIds.mockResolvedValue(["leksokipos-first-daily"]);
+    fetchEarnedAchievementIds.mockResolvedValue(["leksokipos-sidirodromos"]);
     const onAchievementEarned = vi.fn();
-    // γατα → first-daily (already earned); ελικοπτερο (exactly 10) → sidirodromos (new)
+    // ελικοπτερο (10) → sidirodromos (already earned); παρακολουθηση (13) → word-13 (new)
     renderHook(() =>
-      useAchievementSync({ ...BASE, foundWords: ["γατα", "ελικοπτερο"], onAchievementEarned }),
+      useAchievementSync({
+        ...BASE, foundWords: ["ελικοπτερο", "παρακολουθηση"], onAchievementEarned,
+      }),
     );
 
     await waitFor(() =>
       expect(onAchievementEarned).toHaveBeenCalledWith(
-        expect.objectContaining({ id: "leksokipos-sidirodromos" }),
+        expect.objectContaining({ id: "leksokipos-word-13" }),
       ),
     );
     expect(onAchievementEarned).not.toHaveBeenCalledWith(
-      expect.objectContaining({ id: "leksokipos-first-daily" }),
+      expect.objectContaining({ id: "leksokipos-sidirodromos" }),
     );
     expect(onAchievementEarned).toHaveBeenCalledTimes(1);
   });
 
   it("surfaces a newly-crossed points tier with its Greek tier label", async () => {
     fetchEarnedAchievementIds.mockResolvedValue([]);
-    fetchLifetimeStats.mockResolvedValue({ leksokipos_points: 1500, pangram_count: null }); // χάλκινο
+    fetchLifetimeStats.mockResolvedValue(stats({ leksokipos_points: 1500, pangram_count: null })); // χάλκινο
     const onAchievementEarned = vi.fn();
     renderHook(() => useAchievementSync({ ...BASE, foundWords: [], onAchievementEarned }));
 
@@ -410,7 +503,7 @@ describe("useAchievementSync — unlock toast surfacing", () => {
 
   it("toasts only the newly-crossed tier, suppressing an already-earned lower tier", async () => {
     fetchEarnedAchievementIds.mockResolvedValue(["leksokipos-syllektis-ponton-chalkino"]);
-    fetchLifetimeStats.mockResolvedValue({ leksokipos_points: 12000, pangram_count: null }); // χάλκινο (earned) + ασημένιο (new)
+    fetchLifetimeStats.mockResolvedValue(stats({ leksokipos_points: 12000, pangram_count: null })); // χάλκινο (earned) + ασημένιο (new)
     const onAchievementEarned = vi.fn();
     renderHook(() => useAchievementSync({ ...BASE, foundWords: [], onAchievementEarned }));
 

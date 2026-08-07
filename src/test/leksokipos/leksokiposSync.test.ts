@@ -44,18 +44,29 @@ describe("fetchLifetimeStats", () => {
     } as Response);
   }
 
-  it("reads both leksokipos_points and pangram_count off the one response", async () => {
-    const spy = mockStats({ leksokipos_points: 1500, pangram_count: 12, total_points: 9 });
+  it("reads every tiered badge's lifetime value off the one response", async () => {
+    // Four badges, four numbers, ONE round-trip — that is the point of this fetch.
+    const spy = mockStats({
+      leksokipos_points: 1500, pangram_count: 12,
+      top_rank_count: 4, tzimani_count: 2,
+      total_points: 9, // cross-game field the badge lanes ignore
+    });
     const stats = await fetchLifetimeStats("device-abc");
-    expect(stats).toEqual({ leksokipos_points: 1500, pangram_count: 12 });
+    expect(stats).toEqual({
+      leksokipos_points: 1500, pangram_count: 12, top_rank_count: 4, tzimani_count: 2,
+    });
     const url = (spy.mock.calls[0] as [string])[0];
     expect(url).toContain("/api/profile/stats");
     expect(url).toContain("device_uuid=device-abc");
   });
 
   it("nulls out fields the response omits or that aren't numbers", async () => {
+    // Null, not zero: absent must read as "no live source" so a lane skips its
+    // crossing check, never as a count of zero that would un-light a chip.
     mockStats({ total_points: 9 });
-    expect(await fetchLifetimeStats("d")).toEqual({ leksokipos_points: null, pangram_count: null });
+    expect(await fetchLifetimeStats("d")).toEqual({
+      leksokipos_points: null, pangram_count: null, top_rank_count: null, tzimani_count: null,
+    });
   });
 
   it("returns null on a non-ok response", async () => {
