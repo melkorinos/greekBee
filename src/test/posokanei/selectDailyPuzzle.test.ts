@@ -30,13 +30,15 @@ describe("selectDailyPuzzle", () => {
   });
 
   it("rotation never serves a row pinned to a future date", () => {
-    // 2026-08-02 has no row of its own; «γ» is pinned to the day after and must
-    // not leak early, so every rotation day before it picks from α/β only.
-    const gapped = [puzzle("2026-08-01", "α"), puzzle("2026-08-03", "γ")];
-    for (const date of ["2026-08-02", "2026-07-15", "2026-01-01"]) {
-      expect(selectDailyPuzzle(date, gapped).item).not.toBe("γ");
+    // A gap day inside the calendar: 2026-08-02 and -04 have no row of their
+    // own, «δ» is pinned to -05 and must not leak on either, then wins on -05.
+    const gapped = [
+      puzzle("2026-08-01", "α"), puzzle("2026-08-03", "γ"), puzzle("2026-08-05", "δ"),
+    ];
+    for (const date of ["2026-08-02", "2026-08-04"]) {
+      expect(selectDailyPuzzle(date, gapped).item).not.toBe("δ");
     }
-    expect(selectDailyPuzzle("2026-08-03", gapped).item).toBe("γ");
+    expect(selectDailyPuzzle("2026-08-05", gapped).item).toBe("δ");
   });
 
   it("rotates the whole pool when no row is due yet", () => {
