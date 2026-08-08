@@ -1,22 +1,18 @@
 // board.test.tsx — PosokaneiBoard render + play-through through the reducer seam:
 // the framed photo + item render, a wrong guess yields a direction/proximity
 // hint, a correct guess finishes the round with a score + revealed price, and
-// give-up reveals the price. The identity/network stack is stubbed.
+// give-up reveals the price.
+//
+// Nothing is stubbed any more: the Game declares no capabilities, so the board
+// touches neither the identity stack nor the network.
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { PosokaneiBoard } from "@/components/posokanei/PosokaneiBoard";
 import type { PosokaneiPuzzle } from "@/games/posokanei/types";
 import { POSOKANEI } from "@/config/gameRules";
-
-vi.mock("@/hooks/usePlayerIdentity", () => ({
-  usePlayerIdentity: () => ({ deviceId: "", displayName: "", leaderboardProps: {} }),
-}));
-vi.mock("@/components/shared/GameLeaderboardModal", () => ({
-  GameLeaderboardModal: () => null,
-}));
 
 const TARGET: PosokaneiPuzzle = {
   date: "2026-08-01", item: "Αγγούρι", itemType: "generic", unit: "τεμάχιο",
@@ -26,13 +22,7 @@ const TARGET: PosokaneiPuzzle = {
 
 function renderBoard() {
   return render(
-    <PosokaneiBoard
-      target={TARGET}
-      today="2026-08-01"
-      isLeaderboardOpen={false}
-      onOpenLeaderboard={() => {}}
-      onCloseLeaderboard={() => {}}
-    />,
+    <PosokaneiBoard target={TARGET} today="2026-08-01" />,
   );
 }
 

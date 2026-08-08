@@ -27,7 +27,12 @@ interface ShareResultPanelProps {
   score:             number;
   /** Spoiler-free emoji summary copied to the clipboard on share. */
   shareText:         string;
-  onOpenLeaderboard: () => void;
+  /**
+   * Opens the leaderboard. Omitted by a Game whose registry row does not declare
+   * the `leaderboard` capability — the link is then not rendered at all, rather
+   * than opening a modal with no board behind it.
+   */
+  onOpenLeaderboard?: () => void;
   /** The game-specific reveal line(s) — the only part that differs per game. */
   children:          ReactNode;
 }
@@ -66,12 +71,14 @@ export function ShareResultPanel({
         {copied ? "Αντιγράφηκε" : "Κοινοποίηση"}
       </button>
 
-      <button
-        onClick={onOpenLeaderboard}
-        className="text-sm text-muted underline hover:text-foreground transition-colors"
-      >
-        Δες τον πίνακα σκορ
-      </button>
+      {onOpenLeaderboard && (
+        <button
+          onClick={onOpenLeaderboard}
+          className="text-sm text-muted underline hover:text-foreground transition-colors"
+        >
+          Δες τον πίνακα σκορ
+        </button>
+      )}
     </div>
   );
 }

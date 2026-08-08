@@ -48,13 +48,19 @@ interface GamePageChromeProps {
    * instead of in a comment above every page client's board.
    */
   sessionKey: string;
+  /**
+   * Whether this Game has a leaderboard to open — i.e. whether its registry row
+   * declares the `leaderboard` capability. When false the 🏆 trigger is not
+   * rendered, because there is no board behind it. Default true.
+   */
+  hasLeaderboard?: boolean;
   /** The game's rules modal, built from the open/close pair the chrome owns. */
   howToPlay:  (props: { isOpen: boolean; onClose: () => void }) => ReactNode;
   /** The game's board, built from the chrome's open-state props. */
   children:   (props: GameChromeRenderProps) => ReactNode;
 }
 
-export function GamePageChrome({ title, sessionKey, howToPlay, children }: GamePageChromeProps) {
+export function GamePageChrome({ title, sessionKey, hasLeaderboard = true, howToPlay, children }: GamePageChromeProps) {
   const [lbOpen,  setLbOpen]  = useState(false);
   const [htpOpen, setHtpOpen] = useState(false);
 
@@ -76,7 +82,7 @@ export function GamePageChrome({ title, sessionKey, howToPlay, children }: GameP
   return (
     <>
       <GameHeader title={title}>
-        <GameHeaderTrophyButton onClick={openLeaderboard} />
+        {hasLeaderboard && <GameHeaderTrophyButton onClick={openLeaderboard} />}
         <GameHelpButton onClick={openHowToPlay} />
       </GameHeader>
 

@@ -18,7 +18,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 
-import type { RegistryGameId } from "@/config/games";
+import type { GameIdWith } from "@/config/games";
 import type { LeaderboardUrlBuilder } from "@/hooks/useLeaderboard";
 import type { PlayerIdentityLeaderboardProps } from "@/hooks/usePlayerIdentity";
 import {
@@ -76,19 +76,15 @@ function playLinkSlots(route: string): Pick<LeaderboardViewConfig, "emptySlot" |
 }
 
 /**
- * Registered ids that deliberately have NO leaderboard. Stavrolekso is a browsable
- * pool of community crosswords rather than a dated puzzle, and Leksikastirio is the
- * word-court, not a Game at all (CONTEXT.md) — neither has a Score to rank.
+ * The registered Games that have a leaderboard — the ones whose registry row
+ * declares the `leaderboard` capability.
  *
- * This list, not the union below, is the thing you edit. Adding a Game to
- * GAME_REGISTRY widens LeaderboardGameId automatically, which makes
- * GAME_LEADERBOARD_CONFIG stop compiling until the Game gets a config row or is
- * named here — the compiler asks the question instead of a checklist.
+ * The registry row, not a list here, is the thing you edit. Declaring the
+ * capability widens this union, which makes GAME_LEADERBOARD_CONFIG stop compiling
+ * until the Game gets a config row — the compiler still asks the question, it just
+ * asks it about a Game that opted in rather than about every Game ever registered.
  */
-export const NO_LEADERBOARD_IDS = ["stavrolekso", "leksikastirio"] as const satisfies readonly RegistryGameId[];
-
-/** The registered games that have a leaderboard. */
-export type LeaderboardGameId = Exclude<RegistryGameId, (typeof NO_LEADERBOARD_IDS)[number]>;
+export type LeaderboardGameId = GameIdWith<"leaderboard">;
 
 // Leksindeseis is excluded: still wip, its board doesn't yet thread a puzzle
 // date through a route param, and its day-strip is deliberately single-date
@@ -136,18 +132,6 @@ const GAME_LEADERBOARD_CONFIG: Record<LeaderboardGameId, LeaderboardViewConfig> 
     subtitle:   "Πόντοι ημέρας · υψηλότερο = καλύτερο",
     scoreLabel: "Πόντοι",
     ...playLinkSlots("/topothesies"),
-  },
-  posokanei: {
-    buildUrl:   buildLeaderboardUrl("posokanei"),
-    subtitle:   "Πόντοι ημέρας · υψηλότερο = καλύτερο",
-    scoreLabel: "Πόντοι",
-    ...playLinkSlots("/posokanei"),
-  },
-  logopaignio: {
-    buildUrl:   buildLeaderboardUrl("logopaignio"),
-    subtitle:   "Πόντοι ημέρας · υψηλότερο = καλύτερο",
-    scoreLabel: "Πόντοι",
-    ...playLinkSlots("/logopaignio"),
   },
 };
 

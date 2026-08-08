@@ -2,22 +2,17 @@
 // the framed de-blurring mark + sector hint render, a wrong guess adds a history
 // row and de-blurs the mark, a correct guess finishes the round with a score +
 // revealed brand, blank input never burns a guess, and give-up reveals the brand.
-// The identity/network stack is stubbed.
+//
+// Nothing is stubbed any more: the Game declares no capabilities, so the board
+// touches neither the identity stack nor the network.
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { LogopaignioBoard } from "@/components/logopaignio/LogopaignioBoard";
 import type { LogopaignioPuzzle } from "@/games/logopaignio/types";
 import { LOGOPAIGNIO } from "@/config/gameRules";
-
-vi.mock("@/hooks/usePlayerIdentity", () => ({
-  usePlayerIdentity: () => ({ deviceId: "", displayName: "", leaderboardProps: {} }),
-}));
-vi.mock("@/components/shared/GameLeaderboardModal", () => ({
-  GameLeaderboardModal: () => null,
-}));
 
 const TARGET: LogopaignioPuzzle = {
   id: "logopaignio-test",
@@ -29,13 +24,7 @@ const TARGET: LogopaignioPuzzle = {
 
 function renderBoard() {
   return render(
-    <LogopaignioBoard
-      target={TARGET}
-      today="2026-08-01"
-      isLeaderboardOpen={false}
-      onOpenLeaderboard={() => {}}
-      onCloseLeaderboard={() => {}}
-    />,
+    <LogopaignioBoard target={TARGET} today="2026-08-01" />,
   );
 }
 

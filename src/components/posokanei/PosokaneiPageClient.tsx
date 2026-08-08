@@ -19,6 +19,7 @@ export function PosokaneiPageClient({ target, today }: PosokaneiPageClientProps)
     <GamePageChrome
       title="Πόσο κάνει;"
       sessionKey={today}
+      hasLeaderboard={false}
       howToPlay={(props) => (
         <HowToPlayModal
           {...props}
@@ -26,9 +27,7 @@ export function PosokaneiPageClient({ target, today }: PosokaneiPageClientProps)
         />
       )}
     >
-      {({ leaderboard }) => (
-        <PosokaneiBoard target={target} today={today} {...leaderboard} />
-      )}
+      {() => <PosokaneiBoard target={target} today={today} />}
     </GamePageChrome>
   );
 }

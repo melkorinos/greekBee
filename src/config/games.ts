@@ -2,23 +2,58 @@
  * Central Game Registry — single source of truth for every Game on the Platform.
  * Add a new Game here; Shell nav and picker card update automatically.
  * Picker-specific content (rules, HowToPlay copy) stays in app/page.tsx.
+ *
+ * PRESENTATION derives, BEHAVIOUR enrols. Everything a Game *looks* like — drawer
+ * nav, picker card, SEO description, accent token, Offline Mode — is derived from
+ * the rows below, so a new Game is visible by default and a `wip` flip is one edit.
+ * Everything a Game *does* to the shared database is an explicit `capabilities`
+ * entry, so a new Game is inert by default: it writes nothing until someone says so
+ * here. Both wip content games shipped placeholder Scores into production precisely
+ * because the old lists spelled this "everything except…".
  */
+
+/**
+ * What a registered Game is allowed to DO, beyond existing on the Platform.
+ *
+ * - `scores`      — may post rows to game_scores (widens ScoreSubmissionGameId).
+ * - `leaderboard` — has a board to rank them on (widens LeaderboardGameId, and so
+ *                   requires a row in GAME_LEADERBOARD_CONFIG).
+ *
+ * Deliberately NOT a capability: drawer section, Offline Mode, SEO. Those are
+ * presentation and stay derived — see the header note.
+ */
+export type GameCapability = "scores" | "leaderboard";
+
+interface GameRegistryRow {
+  label:        string;
+  emoji:        string;
+  title:        string;
+  description:  string;
+  href:         string;
+  wip:          boolean;
+  capabilities: readonly GameCapability[];
+}
+
 export const GAME_REGISTRY = {
   leksokipos: {
     label:       "🌸 Leksokipos",
     emoji:       "🌸",
     title:       "Leksokipos",
     description: "Βρες λέξεις με τα 7 γράμματα του κήπου.",
-    href:        "/leksokipos",
-    wip:         false,
+    href:         "/leksokipos",
+    wip:          false,
+    capabilities: ["scores", "leaderboard"],
   },
   leksiarxeio: {
     label:       "✏️ Leksiarxeio",
     emoji:       "✏️",
     title:       "Leksiarxeio",
     description: "Μάντεψε τη λέξη σε 6 προσπάθειες — 5 γράμματα.",
-    href:        "/leksiarxeio",
-    wip:         false,
+    href:         "/leksiarxeio",
+    wip:          false,
+    // Posts through useLeksiarxeioScoreSubmission (a row per word length), not the
+    // generic hook — but "may write Scores" is the same capability either way.
+    capabilities: ["scores", "leaderboard"],
   },
   // Fully built and community-backed, but DELIBERATELY still wip:true — confirmed
   // by the operator on 2026-08-06, when a docs audit found every doc calling it
@@ -29,48 +64,59 @@ export const GAME_REGISTRY = {
     emoji:       "🔗",
     title:       "Leksindeseis",
     description: "Ομαδοποίησε 16 λέξεις σε 4 κατηγορίες των 4.",
-    href:        "/leksindeseis",
-    wip:         true,
+    href:         "/leksindeseis",
+    wip:          true,
+    // wip:true is a launch decision, not missing content (see above) — the Game is
+    // finished and community-backed, so it keeps both capabilities.
+    capabilities: ["scores", "leaderboard"],
   },
   vrestifrasi: {
     label:       "💬 Vres Tin Frasi",
     emoji:       "💬",
     title:       "Vres Tin Frasi",
     description: "Βρες τη φράση της ημέρας σε 6 προσπάθειες.",
-    href:        "/vres-tin-frasi",
-    wip:         false,
+    href:         "/vres-tin-frasi",
+    wip:          false,
+    capabilities: ["scores", "leaderboard"],
   },
   leksodromia: {
     label:       "🏁 Leksodromia",
     emoji:       "🏁",
     title:       "Leksodromia",
     description: "Ξεμπέρδεψε 10 λέξεις — όσο πιο γρήγορα, τόσο περισσότεροι πόντοι.",
-    href:        "/leksodromia",
-    wip:         false,
+    href:         "/leksodromia",
+    wip:          false,
+    capabilities: ["scores", "leaderboard"],
   },
   leksoplegma: {
     label:       "🕸️ Leksoplegma",
     emoji:       "🕸️",
     title:       "Leksoplegma",
     description: "Βρες τις κρυμμένες λέξεις πάνω στις γραμμές του πλέγματος.",
-    href:        "/leksoplegma",
-    wip:         false,
+    href:         "/leksoplegma",
+    wip:          false,
+    capabilities: ["scores", "leaderboard"],
   },
   stavrolekso: {
     label:       "♟️ Stavrolekso",
     emoji:       "♟️",
     title:       "Stavrolekso",
     description: "Λύσε και δημιούργησε σταυρόλεξα της κοινότητας.",
-    href:        "/stavrolekso",
-    wip:         false,
+    href:         "/stavrolekso",
+    wip:          false,
+    // A browsable pool of community crosswords, not a dated Puzzle — no Score to
+    // post and nothing to rank.
+    capabilities: [],
   },
   leksikastirio: {
     label:       "⚖️ Leksikastirio",
     emoji:       "⚖️",
     title:       "Leksikastirio",
     description: "Ψηφίστε λέξεις για προσθήκη ή αφαίρεση από τη λίστα.",
-    href:        "/leksikastirio",
-    wip:         false,
+    href:         "/leksikastirio",
+    wip:          false,
+    // The community word-court, not a Game at all (CONTEXT.md).
+    capabilities: [],
   },
   // Worldle-style Greek geography game (guess the regional unit from its
   // silhouette, then its capital). `topothesies` is the permanent internal id
@@ -80,8 +126,9 @@ export const GAME_REGISTRY = {
     emoji:       "🗺️",
     title:       "Topothesies",
     description: "Μάντεψε την περιφερειακή ενότητα από το σχήμα της.",
-    href:        "/topothesies",
-    wip:         false,
+    href:         "/topothesies",
+    wip:          false,
+    capabilities: ["scores", "leaderboard"],
   },
   // Daily "guess the supermarket price" game. Ships wip:true (single placeholder
   // puzzle + sample photo); flip to false once real content is sourced (photos +
@@ -92,8 +139,13 @@ export const GAME_REGISTRY = {
     emoji:       "🛒",
     title:       "Πόσο κάνει;",
     description: "Μάντεψε την τιμή του προϊόντος του σούπερ μάρκετ.",
-    href:        "/posokanei",
-    wip:         true,
+    href:         "/posokanei",
+    wip:          true,
+    // No capabilities while the content is a single placeholder puzzle: a Score
+    // against a fake price is a permanent junk row in the shared production
+    // game_scores table, which is append-forever. Grant both the day real content
+    // lands, together with the wip flip.
+    capabilities: [],
   },
   // Daily "guess the Greek company from its name-stripped logo mark" game. Ships
   // wip:true (single placeholder puzzle); flip to false once ~30 real brands are
@@ -104,10 +156,28 @@ export const GAME_REGISTRY = {
     emoji:       "🔎",
     title:       "Λογοπαίγνιο",
     description: "Μάντεψε την εταιρεία από το λογότυπό της.",
-    href:        "/logopaignio",
-    wip:         true,
+    href:         "/logopaignio",
+    wip:          true,
+    // Same as posokanei: one placeholder brand, so nothing worth writing yet.
+    capabilities: [],
   },
-} as const;
+} as const satisfies Record<string, GameRegistryRow>;
 
 /** The ID of any registered Game. */
 export type RegistryGameId = keyof typeof GAME_REGISTRY;
+
+/**
+ * The registered Games that declare `cap`. Opt-in by construction: a Game absent
+ * from the union cannot be passed to the surface that consumes it, so granting the
+ * capability is a compile error until the registry row says so.
+ */
+export type GameIdWith<C extends GameCapability> = {
+  [K in RegistryGameId]: C extends (typeof GAME_REGISTRY)[K]["capabilities"][number] ? K : never;
+}[RegistryGameId];
+
+/** Runtime counterpart of GameIdWith — same set, for filtering and drift guards. */
+export function gameIdsWith<C extends GameCapability>(cap: C): GameIdWith<C>[] {
+  return (Object.keys(GAME_REGISTRY) as RegistryGameId[]).filter(
+    (id) => (GAME_REGISTRY[id].capabilities as readonly GameCapability[]).includes(cap),
+  ) as GameIdWith<C>[];
+}

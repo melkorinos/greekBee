@@ -8,7 +8,7 @@
 // Extract to src/data/gameRules.ts when a third consumer appears.
 
 import React from "react";
-import { GAME_REGISTRY } from "@/config/games";
+import { GAME_REGISTRY, gameIdsWith, type GameIdWith, type RegistryGameId } from "@/config/games";
 import { PLATFORM_NAME } from "@/config/platform";
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
 import { HomeTrophyButton } from "@/components/shared/HomeTrophyButton";
@@ -163,18 +163,34 @@ const gameList      = GAMES.filter((g) => g.id !== "leksikastirio" && !g.wip);
 const wipList       = GAMES.filter((g) => g.id !== "leksikastirio" &&  g.wip);
 const communityList = GAMES.filter((g) => g.id === "leksikastirio");
 
+// Read from the registry rather than from GameLeaderboardModal's runtime export:
+// this is a Server Component, and a value imported from a "use client" module
+// arrives as a client-reference proxy, not the array (it builds, then fails at
+// prerender). Types from there are fine — they are erased.
+const LEADERBOARD_IDS: readonly RegistryGameId[] = gameIdsWith("leaderboard");
+
+/** Narrows to the Games whose registry row declares the `leaderboard` capability. */
+function hasLeaderboard(id: RegistryGameId): id is GameIdWith<"leaderboard"> {
+  return LEADERBOARD_IDS.includes(id);
+}
+
 // Per-game action buttons shown on the right edge of a card. Shared between the
 // main list and the under-construction list so a game keeps its buttons wherever
 // it lives.
-function submitButtonFor(id: (typeof GAMES)[number]["id"]): React.ReactNode {
-  if (id === "leksiarxeio" || id === "leksindeseis" || id === "vrestifrasi") {
-    return <><SubmitPuzzleButton game={id} /><HomeTrophyButton gameId={id} /></>;
-  }
+//
+// The 🏆 button is DERIVED from the `leaderboard` capability, not hand-typed:
+// this list is how the two placeholder-content games came to advertise a board on
+// the picker. The community-puzzle buttons stay explicit — "accepts player
+// submissions" is a genuine per-game fact with no capability behind it yet.
+function submitButtonFor(id: RegistryGameId): React.ReactNode {
   if (id === "stavrolekso") return <StavroleksoMakerButton />;
-  if (id === "leksokipos" || id === "leksodromia" || id === "leksoplegma" || id === "topothesies" || id === "posokanei" || id === "logopaignio") {
-    return <HomeTrophyButton gameId={id} />;
+
+  const trophy = hasLeaderboard(id) ? <HomeTrophyButton gameId={id} /> : undefined;
+
+  if (id === "leksiarxeio" || id === "leksindeseis" || id === "vrestifrasi") {
+    return <><SubmitPuzzleButton game={id} />{trophy}</>;
   }
-  return undefined;
+  return trophy;
 }
 
 function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submitButton?: React.ReactNode }) {

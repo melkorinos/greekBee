@@ -19,11 +19,10 @@ export function LogopaignioPageClient({ target, today }: LogopaignioPageClientPr
     <GamePageChrome
       title="Λογοπαίγνιο"
       sessionKey={today}
+      hasLeaderboard={false}
       howToPlay={(props) => <HowToPlayModal {...props} markCredit={target.credit} />}
     >
-      {({ leaderboard }) => (
-        <LogopaignioBoard target={target} today={today} {...leaderboard} />
-      )}
+      {() => <LogopaignioBoard target={target} today={today} />}
     </GamePageChrome>
   );
 }

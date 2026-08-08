@@ -16,30 +16,21 @@
 
 import { useCallback, useEffect, useRef } from "react";
 
-import type { RegistryGameId } from "@/config/games";
+import type { GameIdWith } from "@/config/games";
 import { postScore, sanitizeDisplayName } from "@/lib/postScore";
 import { writeOutboxEntry } from "@/lib/offlineOutbox";
 import { useOfflineMode } from "@/hooks/useOfflineMode";
 
 /**
- * Registered ids that do NOT post through this hook. Stavrolekso and Leksikastirio
- * have no Score at all; Leksiarxeio has one but writes a row per word length, so it
- * posts through useLeksiarxeioScoreSubmission instead.
+ * Games whose Score this hook may post — the ones whose registry row declares the
+ * `scores` capability, and nothing else.
  *
- * Deliberately a separate list from GameLeaderboardModal's NO_LEADERBOARD_IDS —
- * "has a leaderboard" and "posts through this hook" are different questions, and
- * Leksiarxeio answers them differently. Kept here rather than imported so a hook
- * never depends on the components layer. `satisfies` ties it to the registry, so a
- * renamed or removed Game fails the build.
+ * Opt-IN, deliberately. This is the one surface that writes to the shared
+ * production database, so registering a Game must not be enough to earn it: a Game
+ * with no capabilities cannot be passed here at all, and the fix is one line in
+ * src/config/games.ts rather than an exclusion list nobody remembers to edit.
  */
-export const NON_POSTING_IDS = ["stavrolekso", "leksikastirio", "leksiarxeio"] as const satisfies readonly RegistryGameId[];
-
-/**
- * Games whose Score this hook posts. Derived, so a newly registered dated Game can
- * post without editing this union — which is the right default here: every Game
- * that keeps a daily Score posts it the same way.
- */
-export type ScoreSubmissionGameId = Exclude<RegistryGameId, (typeof NON_POSTING_IDS)[number]>;
+export type ScoreSubmissionGameId = GameIdWith<"scores">;
 
 interface UseScoreSubmissionOptions {
   /** Which game's leaderboard to post to. */

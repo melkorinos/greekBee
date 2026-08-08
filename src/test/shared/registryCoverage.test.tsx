@@ -11,7 +11,11 @@
 // Three seams, one per surface that must never diverge from the registry:
 //   1. Shell drawer  — asserted by injecting a probe Game into the registry
 //   2. globals.css   — asserted by scanning the [data-game] accent rules
-//   3. leaderboards  — asserted against the config keyed by LeaderboardGameId
+//   3. capabilities  — asserted against the registry's opt-in behaviour field
+//
+// Seams 1 and 2 are PRESENTATION, which derives: the probe Game must show up
+// without anyone naming it. Seam 3 is BEHAVIOUR, which enrols: the probe Game must
+// stay inert, and the surfaces must match what the registry rows declare.
 //
 // Behavioural drawer tests (open/close, Escape, link click) stay in Shell.test.tsx;
 // this file owns only the registry→surface contracts, which is why it may mock the
@@ -46,8 +50,9 @@ vi.mock("@/config/games", async (importOriginal) => {
         emoji:       "🧪",
         title:       "Probe",
         description: "Test-only Game injected by registryCoverage.test.tsx.",
-        href:        PROBE_HREF,
-        wip:         false,
+        href:         PROBE_HREF,
+        wip:          false,
+        capabilities: [],
       },
     },
   };
@@ -131,41 +136,52 @@ describe("registry coverage — globals.css accents", () => {
   });
 });
 
-// ── Seam 3: leaderboard config ────────────────────────────────────────────────
-// LeaderboardGameId is `Exclude<RegistryGameId, …NO_LEADERBOARD_IDS>`, so a newly
-// registered Game widens it automatically and the `Record<LeaderboardGameId, …>`
-// on the config stops compiling until that Game gets a row or an exclusion. That
-// break is a COMPILE-time guarantee (npm run build); what this seam adds at
-// runtime is the other direction — that the exclusions still name real Games, and
-// that the config has not drifted from the registry some other way.
+// ── Seam 3: capabilities ──────────────────────────────────────────────────────
+// Behaviour is opt-IN: LeaderboardGameId and ScoreSubmissionGameId are now the
+// Games whose registry row DECLARES the capability, so a newly registered Game can
+// neither post a Score nor open a board until someone edits src/config/games.ts.
+// The `Record<LeaderboardGameId, …>` on GAME_LEADERBOARD_CONFIG makes granting
+// `leaderboard` without a config row a COMPILE error (npm run build); what this
+// seam adds at runtime is the other direction — a config row for a Game that no
+// longer declares the capability — plus the capability set's own sanity.
 
-const { LEADERBOARD_GAME_IDS, NO_LEADERBOARD_IDS } =
-  await import("@/components/shared/GameLeaderboardModal");
+const { LEADERBOARD_GAME_IDS } = await import("@/components/shared/GameLeaderboardModal");
+const { gameIdsWith } = await vi.importActual<typeof import("@/config/games")>("@/config/games");
 
-describe("registry coverage — leaderboards", () => {
-  it("every registered Game either has a leaderboard config or is deliberately excluded", () => {
-    const covered  = [...LEADERBOARD_GAME_IDS, ...NO_LEADERBOARD_IDS];
-    const uncovered = REAL_GAME_IDS.filter((id) => !covered.includes(id as never));
-
-    expect(
-      uncovered,
-      "These Games are in GAME_REGISTRY but have neither a row in " +
-        "GAME_LEADERBOARD_CONFIG nor a place in NO_LEADERBOARD_IDS: " +
-        uncovered.join(", "),
-    ).toEqual([]);
-  });
-
-  it("every deliberately excluded id is still a registered Game", () => {
-    const stale = NO_LEADERBOARD_IDS.filter((id) => !REAL_GAME_IDS.includes(id));
+describe("registry coverage — capabilities", () => {
+  it("the leaderboard config covers exactly the Games declaring `leaderboard`", () => {
+    const declared = gameIdsWith("leaderboard");
 
     expect(
-      stale,
-      `NO_LEADERBOARD_IDS names ids that are no longer in GAME_REGISTRY: ${stale.join(", ")}`,
-    ).toEqual([]);
+      [...LEADERBOARD_GAME_IDS].sort(),
+      "GAME_LEADERBOARD_CONFIG has drifted from the `leaderboard` capability in " +
+        "GAME_REGISTRY. Every Game declaring it needs a config row, and a row " +
+        "must not outlive the declaration.",
+    ).toEqual([...declared].sort());
   });
 
-  it("does not exclude a Game that already has a leaderboard config", () => {
-    const both = NO_LEADERBOARD_IDS.filter((id) => LEADERBOARD_GAME_IDS.includes(id as never));
-    expect(both, `Ids in both NO_LEADERBOARD_IDS and the config: ${both.join(", ")}`).toEqual([]);
+  it("declares only known capabilities, and never the same one twice", () => {
+    const known = ["scores", "leaderboard"];
+
+    for (const id of REAL_GAME_IDS) {
+      const caps = REAL_REGISTRY[id as keyof typeof REAL_REGISTRY].capabilities as readonly string[];
+      expect(caps.filter((c) => !known.includes(c)), `${id} declares an unknown capability`).toEqual([]);
+      expect(new Set(caps).size, `${id} repeats a capability`).toBe(caps.length);
+    }
+  });
+
+  it("grants no Game a leaderboard it can never fill", () => {
+    // A board with nothing to rank on it. The reverse (scores without a board) is
+    // allowed in principle — but nothing does it today, and this catches the typo
+    // where a row gets `leaderboard` alone.
+    const unfillable = gameIdsWith("leaderboard").filter(
+      (id) => !gameIdsWith("scores").includes(id as never),
+    );
+
+    expect(
+      unfillable,
+      `These Games declare \`leaderboard\` but not \`scores\`, so their board can ` +
+        `never receive a row: ${unfillable.join(", ")}`,
+    ).toEqual([]);
   });
 });

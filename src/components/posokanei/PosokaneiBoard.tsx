@@ -3,14 +3,14 @@
 // PosokaneiBoard — the "guess the price" play surface (single stage; mirrors the
 // topothesies board's spine). The framed product photo sits up top; each wrong
 // guess adds a row showing the guessed price, a direction arrow (🔼 go higher /
-// 🔽 go lower), and a proximity %. Score posts CONTINUOUSLY on every live
-// increase, like the other round games; restored rounds never post.
+// 🔽 go lower), and a proximity %.
+//
+// Posts NO Score and renders NO leaderboard: the registry row declares no
+// capabilities while the content is a single placeholder puzzle (src/config/games.ts).
+// Restore both — the score hook, useLiveScorePost, and the modal, exactly as the
+// topothesies board wires them — when the capabilities are granted.
 
 import { useState } from "react";
-
-import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
-import { useScoreSubmission } from "@/hooks/useScoreSubmission";
-import { useLiveScorePost } from "@/hooks/useLiveScorePost";
 
 import { POSOKANEI } from "@/config/gameRules";
 import type { PosokaneiPuzzle, PriceDirection } from "@/games/posokanei/types";
@@ -19,19 +19,14 @@ import { computeScore } from "@/games/posokanei/lib/scoring";
 import { buildShareText } from "@/games/posokanei/lib/shareText";
 import { formatEuro } from "@/games/posokanei/lib/format";
 
-import { todayISO } from "@/lib/puzzleDate";
 import { FramedMedia } from "@/components/shared/FramedMedia";
-import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { PriceInput } from "./PriceInput";
 import { PosokaneiResult } from "./PosokaneiResult";
 import { PosokaneiGiveUpModal } from "./PosokaneiGiveUpModal";
 
 interface PosokaneiBoardProps {
-  target:             PosokaneiPuzzle;
-  today:              string;
-  isLeaderboardOpen:  boolean;
-  onOpenLeaderboard:  () => void;
-  onCloseLeaderboard: () => void;
+  target: PosokaneiPuzzle;
+  today:  string;
 }
 
 /** The direction hint for a wrong guess: which way the true price lies. */
@@ -47,34 +42,10 @@ function DirectionChip({ direction, proximityPct }: { direction: PriceDirection;
   );
 }
 
-export function PosokaneiBoard({
-  target,
-  today,
-  isLeaderboardOpen,
-  onOpenLeaderboard,
-  onCloseLeaderboard,
-}: PosokaneiBoardProps) {
-  const identity = usePlayerIdentity();
-  const { deviceId, displayName } = identity;
-
-  const { state, dispatch, hasLiveActed } = usePosokaneiRound(target, today);
+export function PosokaneiBoard({ target, today }: PosokaneiBoardProps) {
+  const { state, dispatch } = usePosokaneiRound(target, today);
   const score = computeScore(state);
   const [giveUpOpen, setGiveUpOpen] = useState(false);
-
-  const { submit: postScore } = useScoreSubmission({
-    gameId:     "posokanei",
-    puzzleDate: today,
-    deviceId,
-    displayName,
-  });
-
-  useLiveScorePost({
-    score,
-    isFinished: state.stage === "finished",
-    hasLiveActed,
-    post:       postScore,
-    onFinish:   onOpenLeaderboard,
-  });
 
   const itemLabel = [target.item, target.brand].filter(Boolean).join(" ");
   const guessesLeft = POSOKANEI.MAX_GUESSES - state.guesses.length;
@@ -143,7 +114,6 @@ export function PosokaneiBoard({
           target={target}
           score={score}
           shareText={buildShareText(state)}
-          onOpenLeaderboard={onOpenLeaderboard}
         />
       )}
 
@@ -154,15 +124,6 @@ export function PosokaneiBoard({
           dispatch({ type: "GIVE_UP" });
           setGiveUpOpen(false);
         }}
-      />
-
-      <GameLeaderboardModal
-        gameId="posokanei"
-        isOpen={isLeaderboardOpen}
-        today={todayISO()}
-        defaultDate={today}
-        onClose={onCloseLeaderboard}
-        {...identity.leaderboardProps}
       />
     </div>
   );

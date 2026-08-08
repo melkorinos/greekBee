@@ -3,14 +3,14 @@
 // LogopaignioBoard — the "guess the logo" play surface (single stage; mirrors the
 // posokanei board's spine). The framed, progressively de-blurring mark sits up
 // top; the sector shows as a permanent free hint; each wrong guess adds a history
-// row and de-blurs the mark one step. Score posts CONTINUOUSLY on every live
-// increase, like the other round games; restored rounds never post.
+// row and de-blurs the mark one step.
+//
+// Posts NO Score and renders NO leaderboard: the registry row declares no
+// capabilities while the content is a single placeholder brand (src/config/games.ts).
+// Restore both — the score hook, useLiveScorePost, and the modal, exactly as the
+// topothesies board wires them — when the capabilities are granted.
 
 import { useState } from "react";
-
-import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
-import { useScoreSubmission } from "@/hooks/useScoreSubmission";
-import { useLiveScorePost } from "@/hooks/useLiveScorePost";
 
 import { LOGOPAIGNIO } from "@/config/gameRules";
 import type { LogopaignioPuzzle } from "@/games/logopaignio/types";
@@ -18,49 +18,20 @@ import { useLogopaignioRound } from "@/games/logopaignio/hooks/useLogopaignioRou
 import { computeScore } from "@/games/logopaignio/lib/scoring";
 import { buildShareText } from "@/games/logopaignio/lib/shareText";
 
-import { todayISO } from "@/lib/puzzleDate";
-import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { LogoReveal } from "./LogoReveal";
 import { GuessTextInput } from "./GuessTextInput";
 import { LogopaignioResult } from "./LogopaignioResult";
 import { LogopaignioGiveUpModal } from "./LogopaignioGiveUpModal";
 
 interface LogopaignioBoardProps {
-  target:             LogopaignioPuzzle;
-  today:              string;
-  isLeaderboardOpen:  boolean;
-  onOpenLeaderboard:  () => void;
-  onCloseLeaderboard: () => void;
+  target: LogopaignioPuzzle;
+  today:  string;
 }
 
-export function LogopaignioBoard({
-  target,
-  today,
-  isLeaderboardOpen,
-  onOpenLeaderboard,
-  onCloseLeaderboard,
-}: LogopaignioBoardProps) {
-  const identity = usePlayerIdentity();
-  const { deviceId, displayName } = identity;
-
-  const { state, dispatch, hasLiveActed } = useLogopaignioRound(target, today);
+export function LogopaignioBoard({ target, today }: LogopaignioBoardProps) {
+  const { state, dispatch } = useLogopaignioRound(target, today);
   const score = computeScore(state);
   const [giveUpOpen, setGiveUpOpen] = useState(false);
-
-  const { submit: postScore } = useScoreSubmission({
-    gameId:     "logopaignio",
-    puzzleDate: today,
-    deviceId,
-    displayName,
-  });
-
-  useLiveScorePost({
-    score,
-    isFinished: state.stage === "finished",
-    hasLiveActed,
-    post:       postScore,
-    onFinish:   onOpenLeaderboard,
-  });
 
   const wrongGuesses  = state.guesses.filter((g) => !g.correct).length;
   const finished      = state.stage === "finished";
@@ -118,7 +89,6 @@ export function LogopaignioBoard({
           solved={state.solved}
           score={score}
           shareText={buildShareText(state)}
-          onOpenLeaderboard={onOpenLeaderboard}
         />
       )}
 
@@ -129,15 +99,6 @@ export function LogopaignioBoard({
           dispatch({ type: "GIVE_UP" });
           setGiveUpOpen(false);
         }}
-      />
-
-      <GameLeaderboardModal
-        gameId="logopaignio"
-        isOpen={isLeaderboardOpen}
-        today={todayISO()}
-        defaultDate={today}
-        onClose={onCloseLeaderboard}
-        {...identity.leaderboardProps}
       />
     </div>
   );

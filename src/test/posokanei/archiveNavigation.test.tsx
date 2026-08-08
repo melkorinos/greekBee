@@ -1,23 +1,20 @@
 // archiveNavigation.test.tsx — playing an older Daily Puzzle from the day-strip.
 //
 // Slot-Fill sibling of the Guess-family guard (vrestifrasi/leksiarxeio): the
-// leaderboard's "play this puzzle" link is a client-side navigation, so the
-// board stays mounted and only its props change. A Session belongs to one
-// Puzzle, so the round must not carry across dates. Slot-Fill games key their
-// Session by date (`sessionKey: today`), so the render site keys by the same.
+// `?puzzle=<date>` route is reachable as a client-side navigation, so the board
+// stays mounted and only its props change. A Session belongs to one Puzzle, so
+// the round must not carry across dates. Slot-Fill games key their Session by
+// date (`sessionKey: today`), so the render site keys by the same.
+//
+// The navigation used to come from the leaderboard's "play this puzzle" link.
+// The Game declares no capabilities while its content is a placeholder, so that
+// link is gone — the route param it targeted is not, and neither is this guard.
 
 import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { PosokaneiPageClient } from "@/components/posokanei/PosokaneiPageClient";
 import type { PosokaneiPuzzle } from "@/games/posokanei/types";
-
-vi.mock("@/hooks/usePlayerIdentity", () => ({
-  usePlayerIdentity: () => ({ deviceId: "", displayName: "", leaderboardProps: {} }),
-}));
-vi.mock("@/components/shared/GameLeaderboardModal", () => ({
-  GameLeaderboardModal: () => null,
-}));
 
 const TODAY   = "2026-08-05";
 const ARCHIVE = "2026-08-01";
