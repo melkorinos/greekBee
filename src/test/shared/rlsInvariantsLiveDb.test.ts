@@ -290,11 +290,16 @@ describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/miles
 
   it("lets anon call the player_milestone_counts aggregate, grouped by kind", async () => {
     const device = `__rls_${crypto.randomUUID()}`;
-    await table(service, "player_milestones").insert([
-      { device_uuid: device, puzzle_date: PUZZLE_DATE, kind: "pangram", detail: "__rls_a__" },
-      { device_uuid: device, puzzle_date: PUZZLE_DATE, kind: "pangram", detail: "__rls_b__" },
-      { device_uuid: device, puzzle_date: PUZZLE_DATE, kind: "top_rank" },
+    // Every object in a bulk insert must carry the SAME keys — PostgREST rejects a
+    // ragged batch outright (PGRST102) rather than falling back to column defaults.
+    // So the top_rank row spells out `detail: ""` instead of leaning on the column
+    // default; the default itself is covered by the insert-if-absent test above.
+    const { error: seedErr } = await table(service, "player_milestones").insert([
+      { device_uuid: device, puzzle_date: PUZZLE_DATE, kind: "pangram",  detail: "__rls_a__" },
+      { device_uuid: device, puzzle_date: PUZZLE_DATE, kind: "pangram",  detail: "__rls_b__" },
+      { device_uuid: device, puzzle_date: PUZZLE_DATE, kind: "top_rank", detail: "" },
     ]);
+    expect(seedErr).toBeNull();
 
     const { data, error } = await anon.rpc("player_milestone_counts", { p_device_uuid: device });
     expect(error).toBeNull();
