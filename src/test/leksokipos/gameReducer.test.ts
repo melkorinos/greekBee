@@ -6,7 +6,7 @@ import { buildInitialState, gameReducer } from "@/games/leksokipos/hooks/gameRed
 import { describe, expect, it } from "vitest";
 
 import { maxScore } from "@/games/leksokipos/lib/scoring";
-import { RANKS } from "@/games/leksokipos/lib/ranking";
+import { RANKS, calculateRank } from "@/games/leksokipos/lib/ranking";
 
 // ── Shared test fixture ────────────────────────────────────────────────────────
 
@@ -241,12 +241,15 @@ describe("RESTORE_STATE", () => {
       saved: {
         foundWords: ["anti", "paid"],
         score: 2,
+        // A deliberately-stale persisted rank: RESTORE_STATE must IGNORE this and
+        // recompute currentRank from the restored score (guards against a rank
+        // rename leaving a stale name in localStorage).
         currentRank: RANKS[1].name,
       },
     });
     expect(s.foundWords).toEqual(["anti", "paid"]);
     expect(s.score).toBe(2);
-    expect(s.currentRank).toBe(RANKS[1].name);
+    expect(s.currentRank).toBe(calculateRank(2, s.puzzleMaxScore));
   });
 
   it("preserves puzzleMaxScore from the initial state", () => {
