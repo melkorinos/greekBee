@@ -12,6 +12,13 @@ Known mitigations applied (Session 25):
 Stripping `validWords` from `puzzles-el.json` was evaluated and rejected: saving ~4–10 ms of JSON
 parse time is outweighed by adding ~50–200 ms of dictionary computation on first request per puzzle.
 
+### 🟠 The deploy window's acceptance test only proves half of it (s142, live until the window runs)
+The plan for the `player_milestones` window is: `npx supabase db push`, then the Vercel deploy, then re-run the tests and confirm all 5 `rlsInvariantsLiveDb` failures turn green. **Those 5 tests, and the whole e2e suite, validate step 1 and are blind to step 2.** They open a Supabase client and talk to Postgres directly; no deployed app code is exercised. So they go green the moment the migration lands — whether the deploy succeeded, failed, or was never started.
+
+That matters because the failure mode being guarded against lives precisely in the gap: the migration drops `player_pangrams` and `player_words`, and production serves code that writes to them until the deploy lands. A green suite would actively reassure the operator while every pangram find is 500ing. **The window needs one check that hits the deployed route** — a POST to `/api/milestones` on production, or Vercel runtime errors read for the minutes after the deploy. Until that is added, "all 5 green" should be read as "the schema changed", nothing more.
+
+Second-order, and the reason this is worth a tension rather than a note: `dev` is currently **22 commits ahead of `origin/dev`**, so step 2 is not a button press — it is a push of a large backlog plus a build. The gap is measured in minutes at best, and whoever runs the window should size it before starting, not discover it midway.
+
 ### 🟡 Authored content vs derived word lists (the s133 class of bug)
 Vres Tin Frasi shipped with 29% of its phrase corpus unsolvable — the game rejected its own answers — because **authored content (`phrases-el.json`) and the derived guess pool (fixed-length `words-N.json` lists) have no structural link.** A phrase can be written using any word; the pool only stocks lengths 1–8, and only what the dictionary happens to contain. Nothing failed loudly: the puzzle rendered fine and only the correct answer was refused.
 
