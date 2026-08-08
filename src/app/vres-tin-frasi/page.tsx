@@ -2,21 +2,33 @@
 // Loads today's phrase puzzle and word pools, then passes them to the client board.
 
 import { getTodaysVresTinFrasiPuzzle, getTodayDateString } from "@/data/vrestifrasi";
+import { resolvePuzzleDateParam } from "@/lib/puzzleDate";
 import { VresTinFrasiPageClient } from "@/components/vrestifrasi/VresTinFrasiPageClient";
+import { GamePageShell } from "@/components/shared/GamePageShell";
 import { getValidWords } from "@/data/leksiarxeio";
 import type { LeksiarxeioLength } from "@/games/leksiarxeio/types";
+import words1 from "@/data/vrestifrasi/words-1.json";
 import words2 from "@/data/leksiarxeio/words-2.json";
 import words3 from "@/data/leksiarxeio/words-3.json";
 
 export const dynamic = "force-dynamic";
 
-export default async function VresTinFrasiPage() {
-  const today = getTodayDateString();
+interface VresTinFrasiPageProps {
+  searchParams: Promise<{ puzzle?: string }>;
+}
+
+export default async function VresTinFrasiPage({ searchParams }: VresTinFrasiPageProps) {
+  const { puzzle: puzzleParam } = await searchParams;
+  const today = resolvePuzzleDateParam(puzzleParam, getTodayDateString());
   const { puzzle, submitter_name } = await getTodaysVresTinFrasiPuzzle(today);
 
-  // Supply all word pools (2–8) to validate phrase guess words.
-  // Short words (2–3 letters) cover particles, articles, prepositions used in phrases.
+  // Supply all word pools (1–8) to validate phrase guess words.
+  // Short words (1–3 letters) cover the standalone articles «η»/«ο» plus the
+  // particles, articles and prepositions phrases are built from. 8 letters is a
+  // deliberate ceiling: the phrase corpus is authored to fit the pool, so no
+  // 9+ pool is loaded (which would mean scanning the 795k-word master list).
   const allWords = [
+    ...(words1 as string[]),
     ...(words2 as string[]),
     ...(words3 as string[]),
     ...getValidWords(4 as LeksiarxeioLength),
@@ -27,7 +39,7 @@ export default async function VresTinFrasiPage() {
   ];
 
   return (
-    <main data-game="vrestifrasi" className="flex flex-1 flex-col items-center gap-2 px-4 pt-4 bg-background text-foreground">
+    <GamePageShell gameId="vrestifrasi">
       {submitter_name && (
         <p className="text-xs text-muted self-center">
           Παζλ από {submitter_name}
@@ -38,6 +50,6 @@ export default async function VresTinFrasiPage() {
         validWords={allWords}
         today={today}
       />
-    </main>
+    </GamePageShell>
   );
 }

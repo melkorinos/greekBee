@@ -1,4 +1,5 @@
-// leaderboardModal.test.tsx — unit tests for LeaderboardModal.
+// leaderboardModal.test.tsx — unit tests for GameLeaderboardModal, exercised
+// through the leksokipos config row (the game with the play-link slots).
 //
 // Covers:
 //   1. 7-day pill strip renders with the correct pills.
@@ -12,7 +13,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
-import { LeaderboardModal } from "@/components/leksokipos/LeaderboardModal";
+import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import userEvent from "@testing-library/user-event";
 
 // ── Mock useLeaderboard ───────────────────────────────────────────────────────
@@ -43,11 +44,13 @@ function makeRecentDates(n: number): string[] {
 
 const RECENT_DATES = makeRecentDates(7);
 
-function renderModal(overrides: Partial<React.ComponentProps<typeof LeaderboardModal>> = {}) {
-  const defaults: React.ComponentProps<typeof LeaderboardModal> = {
+function renderModal(overrides: Partial<React.ComponentProps<typeof GameLeaderboardModal>> = {}) {
+  const defaults: React.ComponentProps<typeof GameLeaderboardModal> = {
+    gameId:              "leksokipos",
     isOpen:              true,
-    defaultPuzzleId:     TODAY,
-    recentDates:         RECENT_DATES,
+    today:               TODAY,
+    defaultDate:         TODAY,
+    dates:               RECENT_DATES,
     deviceId:            "test-device-id",
     displayName:         "",
     profileLinked:       false,
@@ -60,7 +63,7 @@ function renderModal(overrides: Partial<React.ComponentProps<typeof LeaderboardM
     onClose:             vi.fn(),
     ...overrides,
   };
-  return render(<LeaderboardModal {...defaults} />);
+  return render(<GameLeaderboardModal {...defaults} />);
 }
 
 // ── Closed modal ──────────────────────────────────────────────────────────────
@@ -107,14 +110,14 @@ describe("LeaderboardModal — day strip", () => {
 
 describe("LeaderboardModal — play link", () => {
   it("does NOT show any play link when today's pill is selected and defaultPuzzleId is today", () => {
-    renderModal({ defaultPuzzleId: TODAY });
+    renderModal({ defaultDate: TODAY });
     expect(screen.queryByText(/Παίξε αυτό το παζλ/)).toBeNull();
     expect(screen.queryByText(/Παίξε το σημερινό παζλ/)).toBeNull();
   });
 
   it("shows play link when a past pill is clicked (player is on today's puzzle)", async () => {
     const past = RECENT_DATES[3];
-    renderModal({ defaultPuzzleId: TODAY });
+    renderModal({ defaultDate: TODAY });
     fireEvent.click(screen.getByRole("button", { name: past }));
     const links = await screen.findAllByText(/Παίξε αυτό το παζλ/);
     expect(links.length).toBeGreaterThan(0);
@@ -122,7 +125,7 @@ describe("LeaderboardModal — play link", () => {
 
   it("play link href points to the correct past puzzle", async () => {
     const past = RECENT_DATES[3];
-    renderModal({ defaultPuzzleId: TODAY });
+    renderModal({ defaultDate: TODAY });
     fireEvent.click(screen.getByRole("button", { name: past }));
     const links = await screen.findAllByText(/Παίξε αυτό το παζλ/);
     links.forEach((link) =>
@@ -132,7 +135,7 @@ describe("LeaderboardModal — play link", () => {
 
   it("shows 'Παίξε το σημερινό παζλ' link when on a past puzzle and today pill is selected", async () => {
     const past = RECENT_DATES[3];
-    renderModal({ defaultPuzzleId: past });
+    renderModal({ defaultDate: past });
     // today pill is selected by default when defaultPuzzleId is in the strip,
     // but defaultPuzzleId=past means the strip opens on the past date.
     // Click the today pill to trigger the back-to-today link.
@@ -146,7 +149,7 @@ describe("LeaderboardModal — play link", () => {
 
   it("does NOT show a play link when the past pill matching the current puzzle is selected", async () => {
     const past = RECENT_DATES[3];
-    renderModal({ defaultPuzzleId: past });
+    renderModal({ defaultDate: past });
     // The strip opens on the past date (defaultPuzzleId). No link should show for the current puzzle.
     expect(screen.queryByText(/Παίξε αυτό το παζλ/)).toBeNull();
     expect(screen.queryByText(/Παίξε το σημερινό παζλ/)).toBeNull();

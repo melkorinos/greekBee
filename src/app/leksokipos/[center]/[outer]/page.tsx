@@ -15,7 +15,7 @@
 // The resulting Puzzle object is identical in shape to a pre-built one, so the
 // entire existing game stack (GameBoard, reducer, persistence) works unchanged.
 
-import { buildCustomPuzzle, getPrebuiltPuzzleByLetters, getRecentPuzzleDates } from "@/data";
+import { buildCustomPuzzle, getPrebuiltPuzzleByLetters } from "@/data";
 import { notFound, redirect } from "next/navigation";
 
 import type { Language } from "@/types";
@@ -82,10 +82,6 @@ export default async function CustomLeksokiposPage({
     getPrebuiltPuzzleByLetters(parsed.center, parsed.outer, language) ??
     (await buildCustomPuzzle(parsed.center, parsed.outer, language));
 
-  // Last 7 daily puzzle dates (newest-first) — passed to GameBoard so the
-  // leaderboard can render the rolling day-strip without a client-side import.
-  const recentPuzzleDates = getRecentPuzzleDates(7, language);
-
   // The share URL is the greeklish canonical path — pure ASCII, human-readable.
   // ShareButton will prepend window.location.origin on the client.
   const canonicalPath = `/leksokipos/${canonicalCenter}/${canonicalOuter}`;
@@ -94,10 +90,9 @@ export default async function CustomLeksokiposPage({
   const tooFewWords = puzzle.validWords.length < 5;
 
   return (
-    <div data-game="leksokipos" className="flex flex-col flex-1 items-center justify-start bg-background font-sans min-h-screen">
+    <div data-game="leksokipos" className="flex flex-col flex-1 items-center justify-start bg-background">
       <LeksokiposLayout
         puzzle={puzzle}
-        recentPuzzleDates={recentPuzzleDates}
         canonicalPath={canonicalPath}
         tooFewWords={tooFewWords}
       />

@@ -17,6 +17,7 @@ All IDs verified live against the MCP servers.
 | **Region / stack** | `eu-central-1` · Postgres 17 | `fra1` · Next.js · Node 24.x |
 | **URL** | `https://rnfsuvhgufhbekodkmlp.supabase.co` | `https://greek-bee.vercel.app` |
 | **Source** | — | GitHub `melkorinos/greekBee` (public) · prod ← `main`, previews ← `dev` |
+| **Plan** | free tier | **Pro** (since ~2026-07-14, $200/mo on-demand cap) |
 
 - **Every Supabase MCP tool** requires `project_id: "rnfsuvhgufhbekodkmlp"`.
 - **Every Vercel MCP tool** requires `teamId: "team_AUMxvbaDutPq8SMboMcf4sED"` **and** `projectId` (slug `greek-bee` works for most).
@@ -29,12 +30,39 @@ All IDs verified live against the MCP servers.
 
 So **skip all discovery calls** — `list_projects` / `list_organizations` / `list_teams` — you already have every ID.
 
+## Vercel MCP absent? Use the CLI (verified 2026-07-14)
+
+Some sessions have **no Vercel MCP tools at all** (ToolSearch finds none — only Supabase/Gmail/Drive are connected). Don't hunt; fall back to the Vercel CLI, which covers most of the same ground:
+
+- `npx vercel whoami` — if not logged in, it starts a device-code flow (user visits vercel.com/oauth/device); account `melkorinos`. Credentials then persist on this machine.
+- Always pass `--scope melkorinos-projects`.
+- `npx vercel ls greek-bee [--prod]` — deployments list (works fine, unlike MCP `list_projects`).
+- `npx vercel inspect <url-or-dpl_id>` — deployment metadata (accepts alias or id; gives `dpl_…`, created time, aliases).
+- `npx vercel inspect <dpl_id> --logs` — full build logs incl. the Next.js route table. **Writes to stderr** — run via Bash with `2>&1` redirect into a file; PowerShell `2>$null` eats it (0 lines).
+- `npx vercel logs greek-bee.vercel.app --json` — **live-streams runtime logs from now** (no lookback); wrap in `timeout N …` via Bash to sample a window. Rows have `source` (`static`/`edge-function`/`lambda`), `requestPath`, `cache`, `responseStatusCode`.
+- **Not available via CLI or MCP:** per-function CPU, Fluid gauge, billing-cycle reset date — Observability → Functions in the dashboard remains the only source; ask the operator.
+
+## Environment variables — CLI only (verified 2026-07-16)
+
+There is **no Vercel MCP tool for env vars** (ToolSearch finds none — `get_project`/`deploy_*`/logs only). Manage them with the CLI, always `--scope melkorinos-projects`:
+
+- **The repo is NOT `vercel link`ed** (`.vercel/` is gitignored). `vercel env`/`redeploy` need project context or they go interactive. Link non-interactively by writing `.vercel/project.json` yourself — no prompt, no network:
+  ```
+  {"projectId":"prj_HNH0oGZw3o7taDayCAtVe7BViOFl","orgId":"team_AUMxvbaDutPq8SMboMcf4sED"}
+  ```
+  (Vercel's `orgId` **is** the team id. The dir is gitignored, so it never pollutes the tree.)
+- `vercel env ls [production|preview] --scope melkorinos-projects` — lists names + which environments, **values shown as `Encrypted`** (never the plaintext).
+- **Updating a value = rm then add** (no in-place edit): `vercel env rm NAME <env> --yes` then `printf 'value' | vercel env add NAME <env>`. Pipe the value via stdin with `printf` (no trailing newline). A var can target multiple environments as ONE entry — removing `production` may drop the whole entry (its `preview` target then reports `env_not_found`); re-add each environment you want explicitly.
+- **New vars are created `Sensitive` by default → the value CANNOT be read back**, not even via `vercel env pull` (the pulled `.env` line is present but empty). Do **not** try to verify a secret by pulling — you'll see length 0 and misread it as "unset". Verify by exercising the deployed endpoint instead.
+- **Env changes are captured at BUILD time — they do NOT affect the running deployment.** A change goes live only on the **next deployment**: `vercel redeploy <prod-url-or-dpl_id> --scope …` (rebuilds current source with the new env), or piggyback on the next `main` deploy. Until then, prod keeps the old value. (This is why a freshly-set secret still 403s until a redeploy.)
+- `ADMIN_SECRET` gates every admin review route — since ADR 0016 the secret always travels as an `X-Admin-Secret` header and a bad one is always **401** (the old nominations body-`adminSecret`/403 shape is gone; `requireAdmin` in `src/lib/apiRoute.ts` is the one gate, and it denies everyone when `ADMIN_SECRET` is unset). The `?godmode=zzkdgr3` URL param is a **client-only Leksokipos cheat** (hardcoded in `GameBoard.tsx`, never server-validated); the Leksikastirio page also accepts `?godmode=` as an alias for `?admin=`, and shows approve/reject buttons for ANY non-empty value — the API still 401s unless the value matches `ADMIN_SECRET`.
+
 ## Verified project facts (so you don't re-derive)
 
-- **12 tables, all RLS-enabled** (`public.` schema): `game_scores` (~120), `game_state` (~93), `nominations`, `nomination_votes`, `player_profiles`, `player_achievements` (newest, migration `20260706093000`), `transfer_codes`, `identity_audit`, and 4 `community_*_puzzles`.
+- **14 tables, all RLS-enabled** (`public.` schema): `game_scores` (~220), `game_state` (~90), `nominations`, `nomination_votes`, `player_profiles`, `player_achievements`, `player_pangrams` (migration `20260706120000`), `player_words` (newest, migration `20260718120000` — words-by-length lane, dark behind `FEATURE_FLAGS.achievements`; + invoker-rights RPC `player_words_by_length`), `transfer_codes`, `identity_audit`, and 4 `community_*_puzzles`. (Re-verified live 2026-07-18.)
 - **No Supabase Edge Functions** — server logic is Next.js API routes on Vercel. Don't hunt for edge functions.
 - **Keys:** legacy anon JWT + publishable `sb_publishable_DzrXPPJlqRlQshOccwnlBg_n3IFkEy8` (both enabled).
-- **Advisor baseline is noisy but expected** — `get_advisors security` returns ~15 lints that are BY DESIGN: permissive anon-`INSERT`/`ALL` policies (public write is intentional — `game_state`, `player_achievements`, `nominations`, community tables), `identity_audit` RLS-enabled-no-policy, auth leaked-password-protection off. **Don't treat these as regressions.** `get_advisors performance` is clean.
+- **Advisor baseline is noisy but expected** — `get_advisors security` returns **18 lints, all BY DESIGN** (re-verified 2026-07-16 after the hardening batch): 2 INFO `rls_enabled_no_policy` on the server-only tables (`identity_audit`, `transfer_codes`); 15 WARN `rls_policy_always_true`, every one a deliberate permissive **per-command** policy (open INSERT on `game_scores`/`game_state`/`nominations`/`nomination_votes`/`player_achievements`/`player_pangrams`/`player_profiles`/4 community tables, plus UPDATE on `game_scores` + `game_state` (upserts) and UPDATE+DELETE on `nomination_votes` (the vote toggle)); 1 WARN auth leaked-password-protection off. **No ALL-command grant remains anywhere** (migrations `20260716120000`/`120100`). Counting quirk: narrowing `game_state` ALL→per-command *raised* its WARN count from 1 to 2 — lint count is not a security score; compare against this list, not the number. **Don't treat these as regressions.** `get_advisors performance` is clean.
 
 ## Happy-path recipes
 
@@ -43,6 +71,16 @@ So **skip all discovery calls** — `list_projects` / `list_organizations` / `li
 **"Why did the build fail?"** → `list_deployments` → grab the failing `dpl_…` → `get_deployment_build_logs { idOrUrl: "<dpl_…>", errorsOnly: true }`.
 
 **Supabase inspect/debug (read-only, allowlisted):** `list_tables`, `list_migrations`, `execute_sql` (SELECT), `get_advisors { type }`, `get_logs { service }` — services: `api | postgres | auth | storage | realtime | edge-function | branch-action`. All with `project_id`.
+
+## Applying migrations via MCP — the two gotchas (verified 2026-07-15)
+
+The sanctioned path stays `npx supabase db push` (keeps migration-history in sync). But when you *do* apply via MCP (user-authorised), two things bit and will bite again:
+
+1. **`apply_migration` can 502 while `execute_sql` works.** On 2026-07-15 `apply_migration` returned Cloudflare `502 origin_bad_gateway` (retryable) on every attempt, yet read-only *and* write `execute_sql` calls to the same project succeeded seconds apart — the mutating-migration origin path was specifically unhealthy, not the whole server. (Transient: on 2026-07-16 `apply_migration` worked first try, four times.) **Fallback:** run the DDL through `execute_sql` with `CREATE INDEX IF NOT EXISTS` / idempotent guards. Same DB state; no bogus migration-history row (see #2). On any 502, **first re-run a read-only check** (`SELECT … FROM pg_indexes …`) to see whether the failed write actually landed before retrying — a blind retry of bare `CREATE INDEX` errors "already exists".
+2. **MCP-applied DDL never records the file's version in migration history.** Neither `apply_migration` (invents its own version) nor `execute_sql` (records nothing) writes the `20260715120000`-style version your committed `supabase/migrations/*.sql` file carries. So a later `npx supabase db push` sees that file as un-applied and re-runs it → `index already exists`. One-time fix when you next push: `supabase migration repair --status applied <version>`. The *schema itself* is correct — only the CLI bookkeeping drifts. Always keep the committed `.sql` file as the authoritative record regardless. **Confirmed live 2026-07-16:** the four hardening migrations (`202607161200xx` files) were recorded as `20260716175545`/`180413`/`181113`/`204554` — the invented rows are harmless. **RESOLVED 2026-07-18 — history is clean; a plain `db push` is safe again.** All seven owed file versions were repaired `--status applied`, the five *invented* MCP rows (`20260716175545`/`180413`/`181113`/`204554`/`20260717114857`) repaired `--status reverted` (push refuses to run while remote holds versions unknown locally — the `applied` repair alone is not enough), and `20260718120000_add_player_words` was pushed. `SUPABASE_DB_URL` now lives in `.env.local` (session-pooler URI — the direct-connection string is IPv6-only and fails from home networks). **Two traps hit during the fix:** a dashboard DB-password reset takes ~60 s to propagate to the pooler (auth fails until then — retry before assuming the password is wrong), and the Docker warning `db push` prints at the end is harmless catalog-caching noise. Any future MCP `apply_migration` re-creates the invented-version debt — prefer `db push` now that the URL exists.
+3. **The auto-mode permission classifier can block `execute_sql` writes that look destructive** (e.g. a table-wide `UPDATE` used as a constraint probe, or any statement containing an obviously-junk value) even when the intent is a harmless should-fail test. On 2026-07-17 it blocked both `execute_sql` AND `apply_migration` for a legitimate, operator-authorised data migration (the vrestifrasi flip) — the block fires *before* the user sees a prompt, so retrying tools is pointless. **A bare `REVOKE` trips it too** (the stavrolekso `edit_pin` grant fix, same day) — "destructive-looking" includes privilege removal, even when the migration is a security *fix*. **2026-07-18: it also pre-blocked CLI `supabase migration repair --status reverted` AND `supabase db push` run via the agent's shell** — when that happens, hand the exact command to the operator's own terminal (that's how the player_words push landed). There, the operator switching permission mode was what unblocked it, and the retried `apply_migration` then succeeded first try: worth offering as an option rather than defaulting straight to the dashboard. Don't fight it: for reads, prove the fact read-only (`pg_enum`/`pg_constraint`/`pg_policies`); for authorised writes, hand the SQL to the operator for the dashboard SQL editor, or have them switch the permission mode so prompts reach them.
+
+**Data migrations that flip stored-value semantics must land WITH the code deploy, never before** — e.g. the Vres Tin Frasi attempt-count→points flip (ADR 0014): inverting live rows while old code still posts the old shape corrupts the leaderboard until deploy. Hold such migrations until the code is live.
 
 ## Guardrails (from CLAUDE.md — read before any write)
 

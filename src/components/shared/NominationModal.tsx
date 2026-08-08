@@ -1,18 +1,19 @@
 "use client";
 
-import { btnCancel, btnModalPrimary, btnModalSubmit, inputClass, inputReadonlyClass, labelClass, labelOptionalClass } from "@/styles/recipes";
+import { btnCancel, btnInfo, btnModalPrimary, btnModalSubmit, inputClass, inputReadonlyClass, labelClass } from "@/styles/recipes";
 
 import { Modal } from "./Modal";
-import { getOrCreateDeviceId } from "@/hooks/useGameStore";
-import { useCallback, useEffect, useState } from "react";
-
-interface LookupResult {
-  word:      string; // the lowercase+trim word this result applies to
-  rejected:  number;
-  accepted:  number; // approved but not yet released (not in the dictionary yet)
-  pending:   number;
-  pendingId: string | null; // id of the existing pending proposal, to upvote instead
-}
+import { getDisplayName, getOrCreateDeviceId } from "@/hooks/useGameStore";
+import {
+  deriveBanner,
+  guardSubmit,
+  pivotFor,
+  MIN_NOMINATION_NAME_LENGTH,
+  MIN_NOMINATION_NOTE_LENGTH,
+  type NominationLookup,
+} from "@/lib/nominationDecision";
+import { normalizeLetters } from "@/lib/normalize";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface NominationModalProps {
   word: string;
@@ -53,20 +54,34 @@ export function NominationModal({
   // Editable word is local state; non-editable reads directly from props so the
   // component doesn't need to unmount/remount to pick up a changed word prop.
   const [editableWord, setEditableWord] = useState("");
-  const [playerName,   setPlayerName]   = useState("");
+  // The name is mandatory, so it starts from the player's saved display name
+  // where there is one — the same envelope field the leaderboard reads. Without
+  // this the in-game flag would ask a player who already told us their name.
+  const [playerName,   setPlayerName]   = useState(getDisplayName);
   const [note,         setNote]         = useState("");
   const [status,       setStatus]       = useState<"idle" | "submitting" | "success" | "error">("idle");
-  const [lookup,       setLookup]       = useState<LookupResult | null>(null);
+  const [lookup,       setLookup]       = useState<NominationLookup | null>(null);
+  const [nameMissing,  setNameMissing]  = useState(false);
   const [noteMissing,  setNoteMissing]  = useState(false);
   const [successMode,  setSuccessMode]  = useState<"submitted" | "upvoted">("submitted");
 
+  // Re-entrancy lock for the two mutating actions (submit / upvote). `status`
+  // can't do this job: it's React state, so it only disables the button on the
+  // NEXT render — a held Enter key or a fast double-click fires several handlers
+  // before that, and each one sails past the duplicate checks and POSTs. A ref
+  // flips synchronously, so the burst is stopped on the very first re-entry.
+  // (This is what put six identical αγοραροσ rows in the DB within 32 ms.)
+  const busyRef = useRef(false);
+
   const word = wordEditable ? editableWord : wordProp;
   const c    = copy[direction];
-  const key  = word.trim().toLowerCase();
+  // Normalise the key the same way the server does (accent-stripped, final sigma
+  // collapsed) so `lookup.word === key` matches even when the player typed accents.
+  const key  = normalizeLetters(word.trim());
 
   // Look up prior rejections / pending duplicates for `target` (lowercase+trim).
   const runLookup = useCallback(
-    async (target: string): Promise<LookupResult | null> => {
+    async (target: string): Promise<NominationLookup | null> => {
       if (target.length < 2) {
         setLookup(null);
         return null;
@@ -76,9 +91,10 @@ export function NominationModal({
           `/api/nominations/lookup?word=${encodeURIComponent(target)}&direction=${direction}`,
         );
         if (!res.ok) return null;
-        const data = (await res.json()) as { rejected?: number; accepted?: number; pending?: number; pendingId?: string | null };
-        const result: LookupResult = {
+        const data = (await res.json()) as { blocked?: boolean; rejected?: number; accepted?: number; pending?: number; pendingId?: string | null };
+        const result: NominationLookup = {
           word:      target,
+          blocked:   data.blocked   ?? false,
           rejected:  data.rejected  ?? 0,
           accepted:  data.accepted  ?? 0,
           pending:   data.pending   ?? 0,
@@ -96,46 +112,42 @@ export function NominationModal({
   // Non-editable word (e.g. in-game flag) has no blur moment — check on open.
   useEffect(() => {
     if (!isOpen || wordEditable) return;
-    const target = wordProp.trim().toLowerCase();
+    const target = normalizeLetters(wordProp.trim());
     if (target) runLookup(target);
   }, [isOpen, wordEditable, wordProp, runLookup]);
 
   if (!isOpen) return null;
 
-  // A warning applies only while the looked-up word still matches the input.
-  // Priority: rejected → accepted → pending (at most one banner shows).
-  const matches     = !!lookup && lookup.word === key;
-  const rejectedHit = matches && lookup!.rejected > 0;
-  const acceptedHit = matches && lookup!.rejected === 0 && lookup!.accepted > 0;
-  const pendingHit  = matches && lookup!.rejected === 0 && lookup!.accepted === 0 && lookup!.pending > 0;
-  // Previously-rejected words require an explanation before re-submitting.
-  const noteRequired = rejectedHit;
+  const banner      = deriveBanner(lookup, key);
+  const blockedHit  = banner === "blocked";
+  const rejectedHit = banner === "rejected";
+  const acceptedHit = banner === "accepted";
+  const pendingHit  = banner === "pending";
 
   async function handleSubmit() {
-    const trimmed = word.trim().toLowerCase();
+    if (busyRef.current) return; // a burst of clicks must produce one POST, not N
+    busyRef.current = true;
+    try {
+      await submitOnce();
+    } finally {
+      busyRef.current = false;
+    }
+  }
+
+  async function submitOnce() {
+    const trimmed = normalizeLetters(word.trim());
     if (!trimmed) return;
 
-    // Ensure the rejection check is current for this exact word before posting.
+    // Ensure the checks are current for this exact word before posting.
     const lk = lookup && lookup.word === trimmed ? lookup : await runLookup(trimmed);
-    if (lk && lk.rejected > 0 && !note.trim()) {
-      setNoteMissing(true); // mandatory explanation for a previously-rejected word
-      return;
-    }
-    setNoteMissing(false);
 
-    // Already approved (awaiting release) → re-proposing is pointless. Bail; the
-    // setLookup above makes `acceptedHit` true, disabling the button and showing
-    // the "already approved" banner.
-    if (lk && lk.rejected === 0 && lk.accepted > 0) {
-      return;
-    }
-
-    // An identical proposal is already pending → never insert a duplicate. Bail;
-    // the setLookup above makes `pendingHit` true, greying out this button and
-    // surfacing the "upvote the existing one" action in the info banner.
-    if (lk && lk.rejected === 0 && lk.accepted === 0 && lk.pending > 0 && lk.pendingId) {
-      return;
-    }
+    // Word-level refusals are already visible: the setLookup inside runLookup
+    // surfaces the matching banner and disables the button. The two field
+    // refusals have no banner, so each one lights its own input instead.
+    const guard = guardSubmit(lk, { name: playerName, note });
+    setNameMissing(guard.ok === false && guard.reason === "name-required");
+    setNoteMissing(guard.ok === false && guard.reason === "note-required");
+    if (!guard.ok) return;
 
     setStatus("submitting");
     try {
@@ -145,11 +157,22 @@ export function NominationModal({
         body:    JSON.stringify({
           word:       trimmed,
           direction,
-          playerName: playerName.trim() || undefined,
-          note:       note.trim()       || undefined,
+          playerName: playerName.trim(),
+          note:       note.trim(),
           deviceId:   getOrCreateDeviceId(),
         }),
       });
+      // A refusal the server decided (blocklist 422 / pending-uniqueness 409)
+      // becomes a lookup, so the same banner surfaces as if we had caught it.
+      if (res.status === 422 || res.status === 409) {
+        const data  = (await res.json().catch(() => null)) as { pendingId?: string | null } | null;
+        const pivot = pivotFor(res.status, trimmed, data);
+        if (pivot) {
+          setLookup(pivot);
+          setStatus("idle");
+          return;
+        }
+      }
       if (!res.ok) {
         throw new Error("server error");
       }
@@ -164,6 +187,8 @@ export function NominationModal({
   // Upvote the existing pending proposal instead of submitting a duplicate.
   async function handleUpvoteExisting(targetId: string | null) {
     if (!targetId) return;
+    if (busyRef.current) return; // same burst guard as handleSubmit
+    busyRef.current = true;
     setStatus("submitting");
     try {
       const res = await fetch(`/api/nominations/${targetId}/vote`, {
@@ -176,18 +201,22 @@ export function NominationModal({
       }
       setSuccessMode("upvoted");
       setStatus("success");
-      onSuccess(word.trim().toLowerCase());
+      onSuccess(normalizeLetters(word.trim()));
     } catch {
       setStatus("error");
+    } finally {
+      busyRef.current = false;
     }
   }
 
   function handleClose() {
+    busyRef.current = false; // never carry a stuck lock into the next open
     setEditableWord("");
-    setPlayerName("");
+    setPlayerName(getDisplayName()); // back to the prefill, not to blank
     setNote("");
     setStatus("idle");
     setLookup(null);
+    setNameMissing(false);
     setNoteMissing(false);
     setSuccessMode("submitted");
     onClose();
@@ -224,17 +253,32 @@ export function NominationModal({
               {c.body(word.trim() || "…")}
             </p>
 
+            {blockedHit && (
+              <div
+                data-testid="nomination-blocked-warning"
+                className="mb-4 rounded-xl border border-danger-border bg-danger-surface px-3 py-2.5"
+              >
+                <p className="text-xs font-semibold text-danger">
+                  🚫 Δεν δεχόμαστε κύρια ονόματα.
+                </p>
+                <p className="text-xs text-danger mt-1 leading-relaxed">
+                  Ονόματα ανθρώπων, μηνών ή τόπων —  καθώς και ξένες λέξεις — δεν προστίθενται
+                  στη λίστα. Δοκίμασε μια κοινή ελληνική λέξη.
+                </p>
+              </div>
+            )}
+
             {rejectedHit && (
               <div
                 data-testid="nomination-rejected-warning"
-                className="mb-4 rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950 px-3 py-2.5"
+                className="mb-4 rounded-xl border border-warning-border bg-warning-surface px-3 py-2.5"
               >
-                <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+                <p className="text-xs font-semibold text-warning">
                   ⚠ Αυτή η λέξη έχει ξαναπροταθεί και απορρίφθηκε.
                 </p>
-                <p className="text-xs text-amber-700 dark:text-amber-300 mt-1 leading-relaxed">
+                <p className="text-xs text-warning mt-1 leading-relaxed">
                   Μπορείς να την ξαναστείλεις, αλλά εξήγησε καθαρά γιατί πιστεύεις ότι πρόκειται για
-                  λάθος — η εξήγηση είναι <strong>υποχρεωτική</strong>.
+                  λάθος.
                 </p>
               </div>
             )}
@@ -242,9 +286,9 @@ export function NominationModal({
             {acceptedHit && (
               <div
                 data-testid="nomination-accepted-info"
-                className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950 px-3 py-2.5"
+                className="mb-4 rounded-xl border border-success-border bg-success-surface px-3 py-2.5"
               >
-                <p className="text-xs text-emerald-800 dark:text-emerald-200 leading-relaxed">
+                <p className="text-xs text-success leading-relaxed">
                   ✓ Αυτή η λέξη έχει ήδη εγκριθεί και θα προστεθεί στη λίστα με την επόμενη
                   ενημέρωση. Δεν χρειάζεται να την ξαναστείλεις.
                 </p>
@@ -254,9 +298,9 @@ export function NominationModal({
             {pendingHit && (
               <div
                 data-testid="nomination-pending-info"
-                className="mb-4 rounded-xl border border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950 px-3 py-2.5"
+                className="mb-4 rounded-xl border border-info-border bg-info-surface px-3 py-2.5"
               >
-                <p className="text-xs text-sky-800 dark:text-sky-200 leading-relaxed">
+                <p className="text-xs text-info leading-relaxed">
                   ℹ Υπάρχει ήδη ενεργή πρόταση για αυτή τη λέξη. Ψήφισέ την αντί να στείλεις
                   διπλή πρόταση.
                 </p>
@@ -264,7 +308,7 @@ export function NominationModal({
                   onClick={() => handleUpvoteExisting(lookup?.pendingId ?? null)}
                   disabled={status === "submitting" || !lookup?.pendingId}
                   data-testid="nomination-pending-upvote"
-                  className="mt-2.5 w-full py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                  className={`mt-2.5 w-full py-1.5 rounded-lg text-xs font-semibold ${btnInfo}`}
                 >
                   {status === "submitting" ? "…" : "▲ Ψήφισε υπέρ της υπάρχουσας"}
                 </button>
@@ -287,7 +331,7 @@ export function NominationModal({
                       setLookup(null);      // word changed → drop any stale warning
                       setNoteMissing(false);
                     }}
-                    onBlur={(e) => runLookup(e.target.value.trim().toLowerCase())}
+                    onBlur={(e) => runLookup(normalizeLetters(e.target.value.trim()))}
                     placeholder="π.χ. ΑΓΑΠΗ"
                     maxLength={50}
                     data-testid="nomination-modal-word-input"
@@ -304,45 +348,44 @@ export function NominationModal({
               </div>
 
               <div>
-                <label className={labelClass}>
-                  Όνομα <span className={labelOptionalClass}>(προαιρετικό)</span>
-                </label>
+                <label className={labelClass}>Όνομα</label>
                 <input
                   value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
+                  onChange={(e) => {
+                    setPlayerName(e.target.value);
+                    if (e.target.value.trim().length >= MIN_NOMINATION_NAME_LENGTH) setNameMissing(false);
+                  }}
                   placeholder="π.χ. Νίκος"
                   maxLength={50}
                   data-testid="nomination-modal-name"
-                  className={inputClass}
+                  className={`${inputClass} ${nameMissing ? "border-warning ring-1 ring-warning" : ""}`}
                 />
+                {nameMissing && (
+                  <p className="text-xs text-warning mt-1" data-testid="nomination-name-required">
+                    Γράψε το όνομά σου.
+                  </p>
+                )}
               </div>
 
               <div>
-                <label className={labelClass}>
-                  Σχόλιο{" "}
-                  {noteRequired ? (
-                    <span className="text-amber-600 dark:text-amber-400 font-semibold">(υποχρεωτικό)</span>
-                  ) : (
-                    <span className={labelOptionalClass}>(προαιρετικό)</span>
-                  )}
-                </label>
+                <label className={labelClass}>Σχόλιο</label>
                 <textarea
                   value={note}
                   onChange={(e) => {
                     setNote(e.target.value);
-                    if (e.target.value.trim()) setNoteMissing(false);
+                    if (e.target.value.trim().length >= MIN_NOMINATION_NOTE_LENGTH) setNoteMissing(false);
                   }}
                   placeholder={c.notePlaceholder}
                   maxLength={200}
                   rows={3}
                   data-testid="nomination-modal-note"
                   className={`${inputClass} resize-none ${
-                    noteMissing ? "border-amber-500 ring-1 ring-amber-500" : ""
+                    noteMissing ? "border-warning ring-1 ring-warning" : ""
                   }`}
                 />
                 {noteMissing && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1" data-testid="nomination-note-required">
-                    Πρόσθεσε μια εξήγηση για να ξαναστείλεις αυτή τη λέξη.
+                  <p className="text-xs text-warning mt-1" data-testid="nomination-note-required">
+                    Εξήγησε με λίγα λόγια γιατί — τουλάχιστον {MIN_NOMINATION_NOTE_LENGTH} χαρακτήρες.
                   </p>
                 )}
               </div>
@@ -364,15 +407,19 @@ export function NominationModal({
               </button>
               <button
                 onClick={handleSubmit}
+                // Deliberately NOT disabled on a short name/note: those two
+                // refusals have no banner, so a dead button would leave the
+                // player guessing. Clicking lights the offending field instead.
+                // The word-level hits below each already explain themselves.
                 disabled={
                   status === "submitting" ||
                   (!wordEditable && !word.trim()) ||
-                  (noteRequired && !note.trim()) ||
+                  blockedHit ||
                   acceptedHit ||
                   pendingHit
                 }
                 data-testid="nomination-modal-submit"
-                className={btnModalSubmit}
+                className={`flex-1 ${btnModalSubmit}`}
               >
                 {status === "submitting" ? "…" : "Αποστολή"}
               </button>

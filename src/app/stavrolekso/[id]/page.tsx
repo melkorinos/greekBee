@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { StavroleksoPlayer } from "./StavroleksoPlayer";
-import { getSupabaseClient } from "@/lib/supabase";
+import { getSupabaseClient, table } from "@/lib/supabase";
+import { GamePageShell } from "@/components/shared/GamePageShell";
 import type { StavroleksoPuzzleData } from "@/games/stavrolekso/types";
 
 interface PuzzleRow {
@@ -14,13 +15,17 @@ interface PuzzleRow {
 async function getPuzzle(id: string): Promise<PuzzleRow | null> {
   try {
     const supabase = getSupabaseClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from("community_stavrolekso_puzzles") as any)
+    const { data, error } = await table(supabase, "community_stavrolekso_puzzles")
       .select("id, title, submitter_name, data, status")
-      .eq("id", id)
+      // The route param is a string; the column is a bigint.
+      .eq("id", Number(id))
       .single();
     if (error || !data) return null;
-    return data as PuzzleRow;
+    // `data` is jsonb — the DB types it as Json and knows nothing of the puzzle
+    // shape inside. StavroleksoPuzzleData is a game-level contract enforced by
+    // validateStavroleksoSubmission on the way in, so the double cast is the
+    // honest way to say "narrower than the DB can prove".
+    return data as unknown as PuzzleRow;
   } catch {
     return null;
   }
@@ -37,8 +42,8 @@ export default async function StavroleksoPuzzlePage({
   if (!puzzle || puzzle.status !== "approved") notFound();
 
   return (
-    <main className="flex flex-col items-center min-h-screen bg-background px-4 py-6">
-      <div className="w-full max-w-sm space-y-3 mb-4">
+    <GamePageShell gameId="stavrolekso">
+      <div className="w-full max-w-game space-y-3 mb-4">
         <h1 className="text-xl font-bold text-foreground">
           {puzzle.title ?? `Stavrolekso #${puzzle.id}`}
         </h1>
@@ -51,6 +56,6 @@ export default async function StavroleksoPuzzlePage({
         id={puzzle.id}
         puzzle={{ ...puzzle.data, title: puzzle.title, submitter_name: puzzle.submitter_name }}
       />
-    </main>
+    </GamePageShell>
   );
 }

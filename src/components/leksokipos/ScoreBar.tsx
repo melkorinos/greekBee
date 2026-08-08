@@ -13,14 +13,9 @@ import { scoreBarFill, scoreBarTrack } from "./styles";
 import { useEffect, useRef, useState } from "react";
 
 import type { RankName } from "@/games/leksokipos/types";
+import type { EndgameInfo } from "@/games/leksokipos/lib";
 import { getRankEmoji } from "@/games/leksokipos/lib";
 import { rankProgress } from "./rankDisplay";
-
-export interface EndgameInfo {
-  remainingTotal:    number;
-  remainingPangrams: number;
-  byLength:          { length: number; count: number }[];
-}
 
 interface ScoreBarProps {
   score:              number;
@@ -52,6 +47,11 @@ function RankIcon() {
 
 export function ScoreBar({ score, maxScore, currentRank, endgameInfo, onOpenLeaderboard }: ScoreBarProps) {
   const [showPanel, setShowPanel] = useState(false);
+  // Reaching the top rank silently swaps the rank-ladder popup for the Endgame
+  // panel. Pulse the ladder icon so the player notices the new content; the pulse
+  // clears the first time they open it. Local state is enough — GameBoard remounts
+  // per puzzle (key={puzzle.id}), so each day's endgame gets a fresh cue.
+  const [endgameSeen, setEndgameSeen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { pct, ptsToNext, nextRank, ladder } = rankProgress(score, maxScore, currentRank);
@@ -69,18 +69,30 @@ export function ScoreBar({ score, maxScore, currentRank, endgameInfo, onOpenLead
   }, [showPanel]);
 
   const isEndgame = endgameInfo !== undefined;
+  // Cue the icon only while the newly-revealed endgame panel is still unseen.
+  const cueEndgame = isEndgame && !endgameSeen;
 
   return (
     <div ref={containerRef} data-testid="score-bar" className={styles.container}>
       {/* Rank + score label */}
       <div className={styles.labelRow}>
         <button
-          onClick={() => setShowPanel((v) => !v)}
+          onClick={() => {
+            setShowPanel((v) => !v);
+            if (isEndgame) setEndgameSeen(true); // first open clears the cue
+          }}
           aria-label={isEndgame ? "Εμφάνιση λέξεων που απομένουν" : "Εμφάνιση επιπέδων"}
           aria-expanded={showPanel}
           className="flex items-center gap-1.5 group"
         >
-          <span className={`${btnHeaderIconSize} ${btnHeaderIcon} group-hover:bg-surface-raised group-hover:text-accent`}>
+          <span
+            data-testid="rank-icon"
+            data-endgame-cue={cueEndgame}
+            className={
+              `${btnHeaderIconSize} ${btnHeaderIcon} group-hover:bg-surface-raised group-hover:text-accent ` +
+              (cueEndgame ? "text-accent bg-surface-raised ring-2 ring-game-accent animate-pulse" : "")
+            }
+          >
             <RankIcon />
           </span>
           <span

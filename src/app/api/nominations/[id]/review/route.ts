@@ -1,38 +1,36 @@
-// POST /api/nominations/[id]/review — admin approve or reject a nomination
-// Requires adminSecret matching ADMIN_SECRET env var.
+// POST /api/nominations/[id]/review — admin approve or reject a nomination.
+//
+// Admin auth is the platform's one wire format: an `x-admin-secret` header
+// matching ADMIN_SECRET, answered with 401 (see requireAdmin in lib/apiRoute).
+// This route used to take the secret as an `adminSecret` body field and answer
+// 403 — the same concept in a second shape, which is what the envelope removes.
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getServiceRoleClient } from "@/lib/supabase";
+import { jsonError, jsonMessage, parseJson, requireAdmin } from "@/lib/apiRoute";
+import { getServiceRoleClient, table } from "@/lib/supabase";
 
 export const runtime = "edge";
 
 interface ReviewPayload {
-  action:      "approve" | "reject";
-  adminSecret: string;
+  action: "approve" | "reject";
 }
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const denied = requireAdmin(req);
+  if (denied) return denied;
+
   const { id } = await params;
 
-  let body: ReviewPayload;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
-  }
+  const parsed = await parseJson<ReviewPayload>(req);
+  if (!parsed.ok) return parsed.response;
 
-  const { action, adminSecret } = body;
-
-  if (adminSecret !== process.env.ADMIN_SECRET) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
-  }
-
+  const { action } = parsed.body;
   if (action !== "approve" && action !== "reject") {
-    return NextResponse.json({ error: "action must be 'approve' or 'reject'" }, { status: 400 });
+    return jsonMessage("action must be 'approve' or 'reject'");
   }
 
   // The anon client has INSERT-only RLS on `nominations` (there is no UPDATE
@@ -42,14 +40,11 @@ export async function POST(
   const supabase = getServiceRoleClient();
 
   const newStatus = action === "approve" ? "accepted" : "rejected";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from("nominations") as any)
+  const { error } = await table(supabase, "nominations")
     .update({ status: newStatus })
     .eq("id", id);
 
-  if (error) {
-    return NextResponse.json({ error: "db_error" }, { status: 500 });
-  }
+  if (error) return jsonError("db_error", error.message);
 
   return NextResponse.json({ ok: true });
 }

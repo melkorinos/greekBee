@@ -10,7 +10,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseClient, getTokenScopedClient } from "@/lib/supabase";
+import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
+import { getSupabaseClient, getTokenScopedClient, table } from "@/lib/supabase";
 
 export const runtime = "edge";
 
@@ -22,17 +23,13 @@ interface CreateProfilePayload {
 }
 
 export async function POST(req: NextRequest) {
-  let body: CreateProfilePayload;
-  try {
-    body = (await req.json()) as CreateProfilePayload;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+  const parsed = await parseJson<CreateProfilePayload>(req);
+  if (!parsed.ok) return parsed.response;
 
-  const { display_name: rawName, device_uuid } = body;
+  const { display_name: rawName, device_uuid } = parsed.body;
 
   if (!device_uuid) {
-    return NextResponse.json({ error: "device_uuid is required" }, { status: 400 });
+    return jsonMessage("device_uuid is required");
   }
 
   const display_name = (rawName ?? "").trim() || "Ανώνυμος";
@@ -47,14 +44,13 @@ export async function POST(req: NextRequest) {
   const token      = authHeader.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : "";
   const supabase   = token ? getTokenScopedClient(token) : getSupabaseClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from("player_profiles") as any).upsert(
+  const { error } = await table(supabase, "player_profiles").upsert(
     { display_name, device_uuid, last_active: new Date().toISOString() },
     { onConflict: "device_uuid" }
   );
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return jsonError("db_error", error.message);
   }
 
   // Propagate the rename to the leaderboard. Display names are denormalized onto
@@ -62,13 +58,12 @@ export async function POST(req: NextRequest) {
   // from player_profiles), so without this fan-out the player's existing rows
   // keep the stale name. anon UPDATE is permitted (scores_update USING(true),
   // ADR 0012). No-op for a brand-new device with no scores yet.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: scoresError } = await (supabase.from("game_scores") as any)
+  const { error: scoresError } = await table(supabase, "game_scores")
     .update({ display_name })
     .eq("device_id", device_uuid);
 
   if (scoresError) {
-    return NextResponse.json({ error: scoresError.message }, { status: 500 });
+    return jsonError("db_error", scoresError.message);
   }
 
   return NextResponse.json({ ok: true });
@@ -80,19 +75,18 @@ export async function GET(req: NextRequest) {
   const deviceUuid = req.nextUrl.searchParams.get("device_uuid") ?? "";
 
   if (!deviceUuid) {
-    return NextResponse.json({ error: "device_uuid is required" }, { status: 400 });
+    return jsonMessage("device_uuid is required");
   }
 
   const supabase = getSupabaseClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.from("player_profiles") as any)
+  const { data, error } = await table(supabase, "player_profiles")
     .select("device_uuid")
     .eq("device_uuid", deviceUuid)
     .single();
 
   if (error && error.message !== "JSON object requested, multiple (or no) rows returned") {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return jsonError("db_error", error.message);
   }
 
   return NextResponse.json({ exists: data !== null });

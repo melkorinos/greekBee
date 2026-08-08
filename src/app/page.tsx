@@ -8,11 +8,12 @@
 // Extract to src/data/gameRules.ts when a third consumer appears.
 
 import React from "react";
-import { GAME_REGISTRY } from "@/config/games";
+import { GAME_REGISTRY, gameIdsWith, type GameIdWith, type RegistryGameId } from "@/config/games";
 import { PLATFORM_NAME } from "@/config/platform";
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
 import { HomeTrophyButton } from "@/components/shared/HomeTrophyButton";
 import { SubmitPuzzleButton } from "@/components/shared/SubmitPuzzleButton";
+import { btnHeaderIcon, btnHeaderIconSize, cardShellInteractive, chipWarning } from "@/styles/recipes";
 import Link from "next/link";
 
 function StavroleksoMakerButton() {
@@ -21,7 +22,7 @@ function StavroleksoMakerButton() {
       href="/stavrolekso/maker"
       aria-label="Δημιούργησε σταυρόλεξο"
       title="Δημιούργησε σταυρόλεξο"
-      className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface-raised transition-colors text-base leading-none"
+      className={`${btnHeaderIconSize} ${btnHeaderIcon} text-base`}
     >
       ✏️
     </Link>
@@ -88,6 +89,29 @@ const GAME_RULES = {
       "Μπορείς και να **δημιουργήσεις** το δικό σου σταυρόλεξο για υποβολή.",
     ],
   },
+  leksodromia: {
+    rulesTitle: "Πώς να παίξεις — Leksodromia",
+    bulletIcon: "🏁",
+    rules: [
+      "Ξεμπέρδεψε **10 ανακατεμένες λέξεις** — 2 από κάθε μήκος, 4 έως 8 γράμματα.",
+      "Δεν υπάρχει χρονόμετρο αποτυχίας: όσο πιο **γρήγορα** λύσεις, τόσο περισσότερους πόντους παίρνεις.",
+      "Κάθε **υπόδειξη** αποκαλύπτει ένα γράμμα αλλά κοστίζει πόντους.",
+      "Αν κολλήσεις, πάτα **Επόμενο** — η λέξη επιστρέφει στο **τέλος του γύρου** για δεύτερη ευκαιρία (το ρολόι της συνεχίζει).",
+      "Ίδιο παζλ για όλους κάθε μέρα — μπες στον πίνακα σκορ!",
+    ],
+  },
+  leksoplegma: {
+    rulesTitle: "Πώς να παίξεις — Leksoplegma",
+    bulletIcon: "🕸️",
+    rules: [
+      "Βρες τις **9 κρυμμένες λέξεις** σύροντας πάνω στα γράμματα — μόνο κατά μήκος των γραμμών.",
+      "Μπορείς να σχηματίζεις κάθε λέξη **προς όποια κατεύθυνση** θες.",
+      "Όταν βρίσκεις μια λέξη, τα γράμματα που δεν χρειάζονται πια **θαμπώνουν** — αλλά παίζουν ως το τέλος.",
+      "Κάθε κρυμμένη λέξη δίνει **10 πόντους ανά γράμμα** — χωρίς ρολόι, με την ησυχία σου.",
+      "Κάθε άλλη υπαρκτή λέξη πάνω στις γραμμές δίνει **+25 πόντους** — πάτα ✓ για να την υποβάλεις.",
+      "Ίδιο παζλ για όλους κάθε μέρα!",
+    ],
+  },
   leksikastirio: {
     rulesTitle: "Πώς λειτουργεί — Λεξικαστήριο",
     bulletIcon: "⚖️",
@@ -96,6 +120,35 @@ const GAME_RULES = {
       "Ψήφισε τις προτάσεις άλλων παικτών.",
       "Οι εγκεκριμένες λέξεις **προστίθενται** ή **αφαιρούνται** από τη λίστα.",
       "Μπορείς να αναφέρεις λέξεις και μέσα από το παιχνίδι Leksokipos!",
+    ],
+  },
+  // Published (session 121) after the operator play-through; the gameplay copy
+  // below is final.
+  topothesies: {
+    rulesTitle: "Πώς να παίξεις — Topothesies",
+    bulletIcon: "🗺️",
+    rules: [
+      "Δες τη **σιλουέτα** μιας περιφερειακής ενότητας και μάντεψέ την σε **4 προσπάθειες**.",
+      "Μετά από κάθε λάθος παίρνεις **απόσταση, κατεύθυνση** και ποσοστό **εγγύτητας**.",
+      "Αν τη βρεις, μάντεψε και την **πρωτεύουσά** της σε **3 προσπάθειες** για bonus.",
+    ],
+  },
+  posokanei: {
+    rulesTitle: "Πώς να παίξεις — Πόσο κάνει;",
+    bulletIcon: "🛒",
+    rules: [
+      "Δες ένα **προϊόν** του σούπερ μάρκετ και μάντεψε την **τιμή** του σε **6 προσπάθειες**.",
+      "Μετά από κάθε λάθος μαθαίνεις αν η σωστή τιμή είναι **πιο πάνω** ή **πιο κάτω**, με ποσοστό **εγγύτητας**.",
+      "Κερδίζεις αν πέσεις **αρκετά κοντά** — όσο νωρίτερα, τόσο περισσότεροι πόντοι!",
+    ],
+  },
+  logopaignio: {
+    rulesTitle: "Πώς να παίξεις — Λογοπαίγνιο",
+    bulletIcon: "🔎",
+    rules: [
+      "Δες το **λογότυπο** μιας ελληνικής εταιρείας — χωρίς το όνομά της — και γράψε το όνομα.",
+      "Το λογότυπο ξεκινά **θολό** και ξεθολώνει λίγο σε κάθε λάθος προσπάθεια.",
+      "Ο **τομέας** της εταιρείας φαίνεται σαν βοήθεια — όσο πιο νωρίς τη βρεις, τόσο περισσότεροι πόντοι!",
     ],
   },
 } as const satisfies Record<keyof typeof GAME_REGISTRY, { rulesTitle: string; bulletIcon: string; rules: readonly string[] }>;
@@ -110,28 +163,46 @@ const gameList      = GAMES.filter((g) => g.id !== "leksikastirio" && !g.wip);
 const wipList       = GAMES.filter((g) => g.id !== "leksikastirio" &&  g.wip);
 const communityList = GAMES.filter((g) => g.id === "leksikastirio");
 
+// Read from the registry rather than from GameLeaderboardModal's runtime export:
+// this is a Server Component, and a value imported from a "use client" module
+// arrives as a client-reference proxy, not the array (it builds, then fails at
+// prerender). Types from there are fine — they are erased.
+const LEADERBOARD_IDS: readonly RegistryGameId[] = gameIdsWith("leaderboard");
+
+/** Narrows to the Games whose registry row declares the `leaderboard` capability. */
+function hasLeaderboard(id: RegistryGameId): id is GameIdWith<"leaderboard"> {
+  return LEADERBOARD_IDS.includes(id);
+}
+
 // Per-game action buttons shown on the right edge of a card. Shared between the
 // main list and the under-construction list so a game keeps its buttons wherever
 // it lives.
-function submitButtonFor(id: (typeof GAMES)[number]["id"]): React.ReactNode {
-  if (id === "leksiarxeio" || id === "leksindeseis" || id === "vrestifrasi") {
-    return <><SubmitPuzzleButton game={id} /><HomeTrophyButton gameId={id} /></>;
-  }
+//
+// The 🏆 button is DERIVED from the `leaderboard` capability, not hand-typed:
+// this list is how the two placeholder-content games came to advertise a board on
+// the picker. The community-puzzle buttons stay explicit — "accepts player
+// submissions" is a genuine per-game fact with no capability behind it yet.
+function submitButtonFor(id: RegistryGameId): React.ReactNode {
   if (id === "stavrolekso") return <StavroleksoMakerButton />;
-  if (id === "leksokipos")  return <HomeTrophyButton gameId={id} />;
-  return undefined;
+
+  const trophy = hasLeaderboard(id) ? <HomeTrophyButton gameId={id} /> : undefined;
+
+  if (id === "leksiarxeio" || id === "leksindeseis" || id === "vrestifrasi") {
+    return <><SubmitPuzzleButton game={id} />{trophy}</>;
+  }
+  return trophy;
 }
 
 function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submitButton?: React.ReactNode }) {
   return (
-    <li className="flex items-stretch rounded-2xl bg-surface border border-border shadow-sm hover:shadow-md hover:border-border transition-all overflow-hidden">
+    <li className={`flex items-stretch ${cardShellInteractive} overflow-hidden`}>
       <Link href={game.href} className="flex-1 flex items-start gap-4 p-5">
         <span className="text-3xl mt-0.5">{game.emoji}</span>
         <div>
           <p className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
             {game.title}
             {game.wip && (
-              <span className="text-xs font-normal text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded-full">
+              <span className={`text-xs font-normal ${chipWarning} px-1.5 py-0.5 rounded-full`}>
                 🚧 Υπό κατασκευή
               </span>
             )}
@@ -157,7 +228,7 @@ export default function HomePage() {
       <h1 className="text-3xl font-bold text-foreground mb-2">{PLATFORM_NAME}</h1>
       <p className="text-muted text-sm mb-10">Επίλεξε παιχνίδι για να ξεκινήσεις</p>
 
-      <ul className="w-full max-w-sm space-y-4">
+      <ul className="w-full max-w-game space-y-4">
         {gameList.map((game) => (
           <GameCard
             key={game.id}
@@ -167,25 +238,25 @@ export default function HomePage() {
         ))}
       </ul>
 
-      <div className="w-full max-w-sm mt-8 mb-4 flex items-center gap-3">
+      <div className="w-full max-w-game mt-8 mb-4 flex items-center gap-3">
         <hr className="flex-1 border-border" />
         <span className="text-xs font-semibold text-muted uppercase tracking-widest">Κοινότητα</span>
         <hr className="flex-1 border-border" />
       </div>
 
-      <ul className="w-full max-w-sm space-y-4">
+      <ul className="w-full max-w-game space-y-4">
         {communityList.map((game) => <GameCard key={game.id} game={game} />)}
       </ul>
 
       {wipList.length > 0 && (
         <>
-          <div className="w-full max-w-sm mt-8 mb-4 flex items-center gap-3">
+          <div className="w-full max-w-game mt-8 mb-4 flex items-center gap-3">
             <hr className="flex-1 border-border" />
             <span className="text-xs font-semibold text-muted uppercase tracking-widest">🚧 Υπό κατασκευή</span>
             <hr className="flex-1 border-border" />
           </div>
 
-          <ul className="w-full max-w-sm space-y-4">
+          <ul className="w-full max-w-game space-y-4">
             {wipList.map((game) => (
               <GameCard
                 key={game.id}

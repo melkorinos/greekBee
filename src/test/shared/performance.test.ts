@@ -30,6 +30,9 @@ import { describe, expect, it } from "vitest";
 
 import { computeValidWords } from "@/games/leksokipos/lib/computeValidWords";
 import wordListEl from "@/data/words-el.json";
+import topothesiesShapes from "@/data/topothesies/shapes.json";
+import topothesiesAnswers from "@/data/topothesies/answers.json";
+import type { TopothesiesShape } from "@/games/topothesies/types";
 
 // ── Thresholds ────────────────────────────────────────────────────────────────
 // Measured on a mid-range dev machine; Vercel Fluid instances are comparable.
@@ -129,6 +132,40 @@ describe("performance: getPrebuiltPuzzleByLetters (pre-built puzzle scan)", () =
 
     expect(result).toBeNull();
     expect(elapsed).toBeLessThan(CURATED_LOOKUP_BUDGET_MS);
+  });
+});
+
+// ── Topothesies client payload budget ────────────────────────────────────────
+// ADR 0018: the route inlines only TODAY'S one silhouette path, so the geometry
+// that reaches the client is a single shape — never the whole shapes.json. This
+// guards a simplification regression (raising TOPO_SIMPLIFY, or dropping the
+// coordinate rounding in project.ts) from silently bloating that per-day payload.
+// The autocomplete + hint metadata (answers.json) DOES ship whole, so it gets a
+// budget too.
+
+describe("performance: Topothesies client payload stays small", () => {
+  const shapes = topothesiesShapes as TopothesiesShape[];
+
+  /**
+   * One day ships one path (ADR 0018), so this is a per-shape / worst-case
+   * ceiling, never a whole-file budget. Raised to 20 KB when the geometry source
+   * swapped to OpenStreetMap admin_level=7 (real coastlines, far denser than the
+   * generalised geoBoundaries feed): simplification is now an absolute 200 m
+   * coastal tolerance, under which the largest silhouette (Εύβοια) is ~12 KB and
+   * gzips to a couple KB, so 20 KB leaves generous headroom for a single inline.
+   */
+  const MAX_SHAPE_PATH_BYTES = 20_000;
+  /** answers.json (all metadata, no geometry) ships whole to the client. */
+  const MAX_ANSWERS_BYTES = 60_000;
+
+  it(`no single silhouette path exceeds ${MAX_SHAPE_PATH_BYTES} bytes`, () => {
+    const largest = Math.max(...shapes.map((s) => Buffer.byteLength(s.path, "utf8")));
+    expect(largest).toBeLessThan(MAX_SHAPE_PATH_BYTES);
+  });
+
+  it(`the shipped answer metadata stays under ${MAX_ANSWERS_BYTES} bytes`, () => {
+    const bytes = Buffer.byteLength(JSON.stringify(topothesiesAnswers), "utf8");
+    expect(bytes).toBeLessThan(MAX_ANSWERS_BYTES);
   });
 });
 

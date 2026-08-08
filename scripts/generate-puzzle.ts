@@ -19,6 +19,14 @@
 import fs from "fs";
 import path from "path";
 
+import { LEKSOKIPOS } from "../src/config/gameRules";
+import type { LeksokiposPuzzle } from "../src/games/leksokipos/types";
+import {
+  countPangrams,
+  meetsDifficultyRules,
+  realisticWordsToGenius,
+} from "./lib/leksokipos/puzzleQuality";
+
 // ── CLI argument parsing ───────────────────────────────────────────────────────
 
 function getArg(name: string, fallback?: string): string {
@@ -142,9 +150,42 @@ if (validWords.length < 15) {
   console.warn(`⚠️  Only ${validWords.length} words found — consider choosing different letters.`);
 }
 
-// ── Build puzzle object ────────────────────────────────────────────────────────
+// ── Difficulty gates (warn-only) ───────────────────────────────────────────────
+//
+// batch-generate REJECTS a candidate that fails these; this script only warns,
+// because the caller supplied an explicit letter set on purpose and may be
+// authoring a deliberate exception. The numbers still come from the one shared
+// module, so a warning here means the same thing as a rejection there.
 
 const puzzleId = `${date}-${lang}`;
+
+const qualityCandidate: LeksokiposPuzzle = {
+  id: puzzleId,
+  language: lang as LeksokiposPuzzle["language"],
+  date,
+  centerLetter: normalize(center),
+  outerLetters: outer.map(normalize),
+  validWords,
+};
+
+if (!meetsDifficultyRules(qualityCandidate)) {
+  const pangramCount = countPangrams(qualityCandidate);
+  const wordsToGenius = realisticWordsToGenius(qualityCandidate);
+  console.warn(
+    `⚠️  This letter set fails the difficulty gates that batch-generate enforces:`,
+  );
+  if (pangramCount >= LEKSOKIPOS.MAX_PANGRAMS) {
+    console.warn(`      ${pangramCount} pangrams (max ${LEKSOKIPOS.MAX_PANGRAMS - 1})`);
+  }
+  if (wordsToGenius >= LEKSOKIPOS.MAX_WORDS_TO_GENIUS) {
+    console.warn(
+      `      ${wordsToGenius} words to the top rank (max ${LEKSOKIPOS.MAX_WORDS_TO_GENIUS - 1}) — this board will feel tedious`,
+    );
+  }
+  console.warn(`    Writing it anyway; puzzleCorpusQuality.test.ts will fail on it.\n`);
+}
+
+// ── Build puzzle object ────────────────────────────────────────────────────────
 
 const newPuzzle = {
   id: puzzleId,

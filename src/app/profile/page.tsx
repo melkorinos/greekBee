@@ -16,10 +16,13 @@ import { IdentityHeader } from "@/components/profile/IdentityHeader";
 import { NameEditor } from "@/components/profile/NameEditor";
 import { WelcomeBackBanner } from "@/components/profile/WelcomeBackBanner";
 import { LifetimeStatsStrip } from "@/components/profile/LifetimeStatsStrip";
+import { WordsByLengthCard } from "@/components/profile/WordsByLengthCard";
 import { TrophyCase } from "@/components/profile/TrophyCase";
-import { useGameIdentity } from "@/hooks/useGameIdentity";
-import { useAuth } from "@/hooks/useAuth";
-import { useProfile } from "@/hooks/useProfile";
+import { FEATURE_FLAGS } from "@/config/featureFlags";
+import { GAME_REGISTRY } from "@/config/games";
+import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
+import { useProfileStats } from "@/hooks/useProfileStats";
+import { cardShell } from "@/styles/recipes";
 import { useSyncExternalStore } from "react";
 
 // Server and first client paint both read `false`; after hydration the client
@@ -31,8 +34,19 @@ function useMounted(): boolean {
 }
 
 export default function ProfilePage() {
-  const { deviceId, displayName, setDeviceId, setDisplayName } = useGameIdentity();
-  const { authLinked, authUserName, signInWithGoogle, signOut } = useAuth();
+  const {
+    deviceId,
+    displayName,
+    profileLinked,
+    authLinked,
+    authUserName,
+    createProfile,
+    generateTransferCode,
+    claimTransferCode,
+    disconnect,
+    signInWithGoogle,
+    signOut,
+  } = usePlayerIdentity();
 
   // Every panel below reads client-only identity (localStorage device/name + the
   // Supabase session), which is empty on the server and filled on the client —
@@ -40,17 +54,10 @@ export default function ProfilePage() {
   // server and first client paint agree, then swap in the real content.
   const mounted = useMounted();
 
-  const {
-    profileLinked,
-    createProfile,
-    generateTransferCode,
-    claimTransferCode,
-    disconnect,
-  } = useProfile({
-    deviceId,
-    onDeviceIdChange:    setDeviceId,
-    onDisplayNameChange: setDisplayName,
-  });
+  // ONE stats read for the whole page. The strip and the Trophy Case ladder on the
+  // same response, and each used to fetch it itself — two identical round-trips on
+  // every /profile open. Fetched here, handed down; the panels are pure display.
+  const { stats, errored: statsErrored } = useProfileStats(deviceId);
 
   // Persist the rename: createProfile POSTs /api/profile (which fans the name out
   // to the player's game_scores rows) and updates the local store. For an already
@@ -62,20 +69,20 @@ export default function ProfilePage() {
 
   if (!mounted) {
     return (
-      <div className="w-full max-w-sm mx-auto px-4 py-6 space-y-4">
+      <div className="w-full max-w-game mx-auto px-4 py-6 space-y-4">
         <h1 className="text-lg font-semibold text-foreground px-1">Το προφίλ μου</h1>
-        <div className="rounded-2xl border border-border bg-surface h-48 animate-pulse" aria-hidden />
+        <div className={`${cardShell} h-48 animate-pulse`} aria-hidden />
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-sm mx-auto px-4 py-6 space-y-4">
+    <div className="w-full max-w-game mx-auto px-4 py-6 space-y-4">
       <h1 className="text-lg font-semibold text-foreground px-1">Το προφίλ μου</h1>
 
       <WelcomeBackBanner />
 
-      <section className="rounded-2xl border border-border bg-surface overflow-hidden">
+      <section className={`${cardShell} overflow-hidden`}>
         <IdentityHeader
           authLinked={authLinked}
           profileLinked={profileLinked}
@@ -99,13 +106,43 @@ export default function ProfilePage() {
         />
       </section>
 
-      <section className="rounded-2xl border border-border bg-surface overflow-hidden">
-        <LifetimeStatsStrip deviceId={deviceId} />
+      {/* Scope clarifier — the lifetime stats below are cross-game in shape but only
+          Leksokipos currently feeds them. The badge surfaces get something stronger
+          than a sentence: their own labelled game section, below. */}
+      <p
+        data-testid="scope-notice"
+        className="rounded-lg border border-border bg-surface-raised px-3 py-2 text-[11px] leading-snug text-muted"
+      >
+        📊 Τα στατιστικά παρακάτω αφορούν προς το παρόν μόνο το{" "}
+        {GAME_REGISTRY.leksokipos.label}, το πρώτο παιχνίδι.
+      </p>
+
+      <section className={`${cardShell} overflow-hidden`}>
+        <LifetimeStatsStrip stats={stats} errored={statsErrored} />
       </section>
 
-      <section className="rounded-2xl border border-border bg-surface overflow-hidden">
-        <TrophyCase deviceId={deviceId} />
-      </section>
+      {/* One labelled Leksokipos section, NOT tabs. Both surfaces inside it are
+          Leksokipos-only, and wrapping them says so structurally instead of relying
+          on a caveat the reader may skip. Tabs would advertise a sibling game to
+          switch to; there is exactly one earning game, so they wait until a second
+          one earns. Hidden until achievements ship — the capture rides the same
+          flag, so before launch there is nothing to show. */}
+      {FEATURE_FLAGS.achievements && (
+        <section data-testid="leksokipos-section" className="space-y-2">
+          <h2
+            data-testid="leksokipos-section-heading"
+            className="px-1 text-xs font-semibold uppercase tracking-widest text-muted"
+          >
+            {GAME_REGISTRY.leksokipos.label}
+          </h2>
+          <div className={`${cardShell} overflow-hidden`}>
+            <TrophyCase deviceId={deviceId} stats={stats} />
+          </div>
+          <div className={`${cardShell} overflow-hidden`}>
+            <WordsByLengthCard deviceId={deviceId} />
+          </div>
+        </section>
+      )}
     </div>
   );
 }

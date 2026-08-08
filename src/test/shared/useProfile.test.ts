@@ -20,7 +20,8 @@ vi.mock("@/lib/reload", () => ({
 // createProfile reads the current session to attach a Bearer token for RLS.
 // Default: no session (anonymous) — a test overrides it to assert the auth path.
 const supa = vi.hoisted(() => ({ session: null as { access_token: string } | null }));
-vi.mock("@/lib/supabase", () => ({
+vi.mock("@/lib/supabase", async () => ({
+  table: (await import("@/test/helpers/supabaseMock")).tableShim,
   getSupabaseClient: () => ({
     auth: { getSession: async () => ({ data: { session: supa.session } }) },
   }),

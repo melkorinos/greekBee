@@ -36,7 +36,6 @@ const puzzle: LeksokiposPuzzle = {
 
 const defaultProps = {
   puzzle,
-  recentPuzzleDates: [] as string[],
   canonicalPath: "/leksokipos/a/pinted",
   tooFewWords: false,
 };

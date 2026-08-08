@@ -10,56 +10,44 @@ At the start of every session, read these files in order:
 4. `.claude/aiHelper/reflections.md` — risks and tensions to watch
 5. `.claude/aiHelper/log.md` — what has been done in previous sessions
 
+There is one more aiHelper file that is deliberately **NOT** in this list: `.claude/aiHelper/coverageMap.md`, the test coverage map. Never read it at session start — open it on demand, only when about to write, move, or consolidate a test: grep it first, and if the function already appears there, extend that test file instead of creating a new one. Update it in the end-of-session Dream.
+
 ## Standing rules (every session)
 
 - Run `npm run test -- --run`, `npx eslint .`, and `npm run build` after every meaningful change. All must pass (0 failures, 0 errors).
+- **Run `npm run test:e2e` before saying a branch is ready to push** whenever the change touched a page, layout, route, or shared chrome component. Playwright otherwise only runs in CI, so a stale selector stays invisible until after the merge — which is exactly how the `getByRole("link")` guard in `e2e/profile.spec.ts` survived the header's Link→button change. Local runs use the dev server and need no build.
 - **PowerShell only** — use `Select-Object -Last N`, never `tail`.
 - Game logic (`src/games/*/lib/`) must stay pure functions — zero React imports.
 - Each game reads/writes only its own `useGameStore` slice — never touches `localStorage` directly.
 - No component graduates to `src/components/shared/` speculatively — only when two games genuinely need it.
 - No magic hex values or inline styles — Tailwind utility classes only.
-- **Styling uses semantic tokens** (`bg-surface`, `text-muted`, `border-border`, `bg-inverted`, `text-correct`…), never literal neutral palette classes (`stone-`/`zinc-`/`gray-`…) or hand-written `dark:` pairs (ADR 0008). Composite recipes live in `src/styles/recipes.ts` (cross-game) / `src/components/leksokipos/styles.ts` (Leksokipos-only) — reuse them, don't re-roll button/input/label strings. Intentional non-token exceptions are enumerated in ADR 0008 and guarded by `noRawPaletteClasses.test.ts`; add a new one only by editing that allowlist + the ADR.
-- **Never hardcode a value that lives in `src/config/`** — import it. `gameRules.ts` (numeric knobs: lengths, max-guesses, score caps), `achievementTuning.ts` (achievement trigger thresholds/scales/rates — balance knobs), `games.ts` (`GAME_REGISTRY`/`RegistryGameId`), `platform.ts` (brand), `retention.ts` (DB windows). `RegistryGameId` = every registered game; `SliceId` (`@/types`) = persistence-slice keys only.
+- **Styling uses semantic tokens** — never literal neutral palette classes (`stone-`/`zinc-`/`gray-`…) or hand-written `dark:` pairs; reuse the recipes instead of re-rolling button/input/tooltip/card strings; frame game pages with `GamePageShell` + `GameHeader`; the content column is `max-w-game`, never a literal `max-w-sm`. Guard tests enforce all of this; the full posture, file locations, and deliberate exceptions live in the memory.md Theming row + ADR 0008/0009.
+- **Never hardcode a value that lives in `src/config/`** — import it (`gameRules`, `achievementTuning`, `games`, `platform`, `retention`; details in the memory.md Config row). `RegistryGameId` = every registered game; `SliceId` (`@/types`) = persistence-slice keys only.
+- **Never `git push`** (any remote, any branch) — every push triggers a paid Vercel deployment. The developer does all syncs to preview/production personally. Stop after committing and say the branch is ready to push. A deny rule in `.claude/settings.local.json` enforces this.
 - Do not install new dependencies without explicit approval.
-- Keep `.claude/aiHelper/log.md` under 250 lines — condense older entries before adding new.
+- **End every session with the Dream** (see soul.md, End-of-Session Dream): condense `log.md`, promote durable lessons into `memory.md`/ADRs, update `reflections.md` and `coverageMap.md`. **Hard caps: `log.md` ≤ 120 lines, `memory.md` ≤ 120 lines.**
 - Do not touch `words-el.json` or any `puzzles-*.json` unless the task explicitly requires it.
-- **DB schema is version-controlled** in `supabase/migrations/` (authoritative DDL + RLS; `CONTEXT.md` documents purpose only). Change it via a new migration applied with `npx supabase db push` — never via the Supabase dashboard or MCP `apply_migration` without committing a matching migration file, or the repo drifts. The `supabase` CLI is an approved devDependency. (`db pull`/`db reset`/local stack need Docker, which is not installed and not required for `db push`.) The repo is **not** `supabase link`ed, so for inspection/debugging use the **Supabase and Vercel MCP tools** (the chosen interface): `list_migrations`, `list_tables`, `get_advisors`, `get_logs`, `execute_sql` for the DB; deployment/runtime-log tools for Vercel. Read-only MCP calls are allowlisted; mutating ones (`execute_sql`, `apply_migration`, `deploy_*`) still prompt — **one shared Supabase project backs both dev and prod** (see aiHelper memory), so treat every write as production.
-- When an issue is resolved, **delete its file** from `.claude/issue-tracker/issues/` — do not leave it with a "done" status.
+- **DB schema is version-controlled** in `supabase/migrations/` — change it only via a new committed migration + `npx supabase db push`, never via the dashboard or MCP `apply_migration` alone, or the repo drifts (push mechanics + emergency fallback in the memory.md Supabase row). For inspection/debugging use the Supabase/Vercel MCP tools — load `/project-mcp` first. **One shared Supabase project backs both dev and prod** — treat every write as production.
+- When an issue or ticket is resolved, **delete its file** from `.claude/tracker/` — no "done" status, no archive folder. Git history is the archive.
+- **Do not install a skill just because it exists upstream.** All commands live in `.claude/skills/`; the three base skills (`grilling`, `domain-modeling`, `codebase-design`) back the wrappers. The authoritative list of what each command does is the slash-command table in `README.md`. **Before any skill maintenance** (`npx skills` update/add/delete, forking, restoring the built-in `/code-review`), read `.claude/aiHelper/skillsNotes.md` — it holds the install/fork/junction traps that otherwise silently revert local edits or resurrect deleted skills. Note `/code-review` **shadows the Claude Code built-in of the same name** (incl. `/code-review ultra`) — restore recipe in skillsNotes.md.
+- **Word budget.** Under 80 words for a question, under 150 for a report on work done. Over budget means cut content, not compress wording — full sentences and spelled-out terms always, never fragments, arrow chains (`A → B → fails`), or invented abbreviations. If the answer genuinely needs more, say so in one line and ask before writing it.
+- **First sentence is the answer.** "What happened" / "what did you find" / "yes or no", before any context. If the first sentence is setup, delete it and start again.
+- **Never include, unless asked:** provenance (which file, migration, or ADR taught you this), self-corrections about your own earlier turns, meta-lessons about process, options you're not taking, restatements of the question, narration of the next tool call, or a closing summary of what you just said. A table needs three or more rows to beat a sentence — otherwise write the sentence.
+- **One offer at the end, max one line.** "I can do X, say the word." No menus, no trade-off analysis unless asked.
+- **ELI5 for technical answers.** When the answer turns on a DB, infra, or architecture concept the developer may not use daily, add one final line: `ELI5: <plain-language analogy or restatement, one sentence>`. One per answer, only when the concept is genuinely non-obvious — not for things already familiar from this codebase.
+- **Be direct.** Grammar loses to brevity — short blunt sentences over polished ones. No hedging, no mumbling, no softening. State it plain.
 
-## Available slash commands
+## Tracker & domain docs
 
-All commands live in `.claude/skills/`. Project-specific first, then mattpocock/skills:
+Everything lives under `.claude/tracker/` — full conventions and both file templates in `.claude/tracker/README.md`. Two folders, and the distinction is the whole point:
 
-> **Skill install note:** mattpocock skills are managed by `npx skills@latest add mattpocock/skills` (tracked in `skills-lock.json`). Some are thin **wrappers** that delegate to base skills — `/grill-with-docs` → `grilling` + `domain-modeling`. Those base skills must be installed too, or the wrapper loads with no content behind it. The updater only fetches what's in `skills-lock.json`, so a missing base skill needs an explicit `npx skills@latest add mattpocock/skills/skills/<path>/<name>` (which also pins it). If a `/command` loads but does nothing, check for a missing base skill first.
+- **`issues/`** (`ISSUE-NN-<slug>.md`) — known defects and risks whose fix is **deferred**. Each carries `Deferred:` and `Revisit when:`. An issue is not an idea or a feature request — those go in `goals.md` or a handoff, or the folder silts up.
+- **`tickets/`** (`TICKET-NN-<slug>.md`) — work that is **ready for an agent to pick up cold and execute**. Each carries `Status: ready | in-progress` and, when relevant, `Blocked by:`. `/to-tickets` writes these.
 
-| Command | Purpose |
-|---------|---------|
-| `/aihelper` | Full context reload — reads all `.claude/aiHelper/` files then waits for your task |
-| `/improve-codebase-architecture` | Surface architectural seams and deepening opportunities |
-| `/grill-with-docs` | Grill session that cross-checks against domain docs and updates them inline |
-| `/to-prd` | Synthesise current context into a structured PRD |
-| `/to-issues` | Break a plan into vertical-slice issues on the issue tracker |
-| `/triage` | Move issues through the triage state machine |
-| `/diagnose` | Disciplined debug loop — reproduce → hypothesise → fix → regression-test |
-| `/tdd` | Test-driven development with red-green-refactor vertical slices |
-| `/prototype` | Build a throwaway prototype to answer a design question |
-| `/zoom-out` | Map modules and callers when unfamiliar with an area |
-| `/handoff` | Compact the conversation into a handoff doc for the next session |
-| `/caveman` | Ultra-compressed mode — full technical accuracy, zero filler |
-| `/setup-matt-pocock-skills` | One-time setup: issue tracker, triage labels, domain doc layout |
-| `/write-a-skill` | Create a new skill with proper structure |
-| `/project-mcp` | Canonical Supabase & Vercel MCP IDs, call recipes, and param-traps — load before any Supabase/Vercel MCP call to skip discovery thrash |
+Separate number sequences per folder — `ISSUE-01` and `TICKET-01` are unrelated files, so always say which. **No triage labels** anywhere; the folder is the state.
 
-## Agent skills
-
-### Issue tracker
-
-Issues live as local markdown files under `.claude/issue-tracker/issues/`. See `.claude/issue-tracker/issue-tracker.md`.
-
-### Triage labels
-
-Using the default five-role vocabulary (needs-triage, needs-info, ready-for-agent, ready-for-human, wontfix). See `.claude/issue-tracker/triage-labels.md`.
-
-### Domain docs
-
-Single-context repo — one `CONTEXT.md` + `docs/adr/` at the root. See `.claude/issue-tracker/domain.md`.
+- **Nothing enters `tickets/` without all four of**: a why, an explicit scope checklist, a spec link, and a done-when. Missing any one means it is an issue, or a question for `/grill-with-docs` — not a ticket.
+- **Promotion is a move**, never a copy: a deferred problem that becomes worth doing moves into `tickets/`, gets the next `TICKET-NN`, and is rewritten to the ticket template.
+- **File issues autonomously, but announce them.** When a session finds a real problem it is not fixing, it writes the issue itself and then says so in its reply, in one line, so the operator can review it.
+- **Open questions are neither.** They live in `.claude/handoffs/` — currently `launch-readiness.md`, which holds the three unresolved launch questions. Read it before assuming an open question is untracked. Resolving one produces an ADR or `CONTEXT.md` entry plus, usually, tickets. Wayfinder is retired; there is no map.
+- Domain docs: single-context repo — one `CONTEXT.md` + `docs/adr/` at the root. See `.claude/tracker/domain.md`.

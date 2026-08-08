@@ -29,13 +29,13 @@ function mockFetch(action: "added" | "removed" | "switched") {
 
 afterEach(() => vi.restoreAllMocks());
 
-// NominationCard renders a <tr> — must be inside <table><tbody> for valid DOM.
+// NominationCard renders an <li> — must be inside a <ul> for valid DOM.
 function setup(overrides: Partial<Parameters<typeof NominationCard>[0]> = {}) {
   const onVote     = vi.fn();
   const onReviewed = vi.fn();
   const user       = userEvent.setup();
   render(
-    <table><tbody>
+    <ul>
       <NominationCard
         nomination={nomination}
         myDeviceId="device-1"
@@ -46,7 +46,7 @@ function setup(overrides: Partial<Parameters<typeof NominationCard>[0]> = {}) {
         onReviewed={onReviewed}
         {...overrides}
       />
-    </tbody></table>,
+    </ul>,
   );
   return { user, onVote, onReviewed };
 }
@@ -56,8 +56,21 @@ function setup(overrides: Partial<Parameters<typeof NominationCard>[0]> = {}) {
 describe("NominationCard — rendering", () => {
   it("shows the word (CSS uppercases it, DOM text is lowercase)", () => {
     setup();
-    // The <td> has the Tailwind `uppercase` class — visual only, DOM stays lowercase.
+    // The word cell has the Tailwind `uppercase` class — visual only, DOM stays lowercase.
     expect(screen.getByTestId("nomination-card")).toHaveTextContent("αγαπη");
+  });
+
+  // The whole point of the card layout: on a phone the vote buttons sit beside
+  // the word instead of in a fourth column past the right edge of the screen.
+  // Both cells must live in the same element with no scroll container between —
+  // a regression there is invisible in jsdom unless it is asserted.
+  it("keeps the votes inside the card, in their own grid cell", () => {
+    setup();
+    const card = screen.getByTestId("nomination-card");
+    expect(card.tagName).toBe("LI");
+    expect(card.className).toContain("grid");
+    expect(card).toContainElement(screen.getByTestId("vote-up-button"));
+    expect(card).toContainElement(screen.getByTestId("vote-down-button"));
   });
 
   it("shows player name and note", () => {
@@ -193,13 +206,20 @@ describe("NominationCard — admin controls", () => {
     expect(screen.queryByTestId("admin-approve")).toBeNull();
   });
 
-  it("sends action=reject in the POST body for the reject button", async () => {
+  it("sends action=reject in the body and the secret in the X-Admin-Secret header", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: true, json: async () => ({}) } as Response);
     const { user } = setup({ isAdmin: true, adminSecret: "topsecret" });
     await user.click(screen.getByTestId("admin-reject"));
     await waitFor(() => expect(fetchSpy).toHaveBeenCalledOnce());
-    const body = JSON.parse(fetchSpy.mock.calls[0][1]!.body as string);
+
+    const init = fetchSpy.mock.calls[0][1]!;
+    const body = JSON.parse(init.body as string);
     expect(body.action).toBe("reject");
-    expect(body.adminSecret).toBe("topsecret");
+
+    // The admin secret travels in the header — the platform's one wire format
+    // (requireAdmin). It used to ride in the body, which is the second shape the
+    // route envelope removed.
+    expect((init.headers as Record<string, string>)["X-Admin-Secret"]).toBe("topsecret");
+    expect(body.adminSecret).toBeUndefined();
   });
 });

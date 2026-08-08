@@ -4,6 +4,7 @@
 import { describe, expect, it } from "vitest";
 
 import { validateVresTinFrasiSubmission } from "@/games/vrestifrasi/lib/validateSubmission";
+import { VRESTIFRASI } from "@/config/gameRules";
 import words3 from "@/data/leksiarxeio/words-3.json";
 import words4 from "@/data/leksiarxeio/words-4.json";
 import words5 from "@/data/leksiarxeio/words-5.json";
@@ -23,19 +24,31 @@ describe("validateVresTinFrasiSubmission", () => {
     }
   });
 
-  it("422 when the Phrase has fewer than 3 words", () => {
-    const result = validateVresTinFrasiSubmission({ phrase: `${w3} ${w4}` });
+  it("422 when the Phrase has fewer than MIN_PHRASE_WORDS words", () => {
+    const result = validateVresTinFrasiSubmission({ phrase: w3 });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.status).toBe(422);
-      expect(result.body.error).toBe("Η φράση πρέπει να έχει 3–4 λέξεις");
+      expect(result.body.error).toBe(
+        `Η φράση πρέπει να έχει ${VRESTIFRASI.MIN_PHRASE_WORDS}–${VRESTIFRASI.MAX_PHRASE_WORDS} λέξεις`,
+      );
     }
   });
 
-  it("422 when the Phrase has more than 4 words", () => {
-    const result = validateVresTinFrasiSubmission({ phrase: `${w3} ${w4} ${w5} ${w3} ${w4}` });
+  it("422 when the Phrase has more than MAX_PHRASE_WORDS words", () => {
+    const tooMany = Array(VRESTIFRASI.MAX_PHRASE_WORDS + 1).fill(w3).join(" ");
+    const result  = validateVresTinFrasiSubmission({ phrase: tooMany });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.status).toBe(422);
+  });
+
+  // The bounds were 3–4 while the shipped corpus was full of 5-word phrases and
+  // proverbs up to 9 — a player could not submit a phrase the game itself serves.
+  it("accepts the 5-word shape the daily corpus actually uses", () => {
+    const result = validateVresTinFrasiSubmission({
+      phrase: `η ${w3} ${w4} ${w5} ${w3}`,
+    });
+    expect(result.ok).toBe(true);
   });
 
   it("422 with a per-word error when a word is not in the pool", () => {
@@ -48,12 +61,33 @@ describe("validateVresTinFrasiSubmission", () => {
     }
   });
 
-  it("422 with a length error when a word exceeds 8 letters", () => {
-    const result = validateVresTinFrasiSubmission({ phrase: `${w3} ααααααααα ${w5}` });
+  it("422 with a length error when a word exceeds MAX_WORD_LENGTH", () => {
+    const tooLong = "α".repeat(VRESTIFRASI.MAX_WORD_LENGTH + 1);
+    const result  = validateVresTinFrasiSubmission({ phrase: `${w3} ${tooLong} ${w5}` });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       const errors = result.body.errors as Record<string, string>;
-      expect(errors["1"]).toBe("Κάθε λέξη πρέπει να έχει 2–8 γράμματα");
+      expect(errors["1"]).toBe(
+        `Κάθε λέξη πρέπει να έχει ${VRESTIFRASI.MIN_WORD_LENGTH}–${VRESTIFRASI.MAX_WORD_LENGTH} γράμματα`,
+      );
+    }
+  });
+
+  // The single-letter articles are the bug this pair of bounds shipped with:
+  // no 1-letter list existed, so «Η γλώσσα κόκαλα δεν έχει» was unsubmittable.
+  it("accepts the standalone articles «η» and «ο»", () => {
+    for (const article of ["η", "ο"]) {
+      const result = validateVresTinFrasiSubmission({ phrase: `${article} ${w4} ${w5}` });
+      expect(result.ok).toBe(true);
+    }
+  });
+
+  it("422 when a word is not in the pool even at a valid length", () => {
+    const result = validateVresTinFrasiSubmission({ phrase: `ξ ${w4} ${w5}` });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      const errors = result.body.errors as Record<string, string>;
+      expect(errors["0"]).toBe('"ξ" δεν βρέθηκε στη λίστα');
     }
   });
 

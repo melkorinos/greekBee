@@ -17,7 +17,7 @@ import { maxScore, scoreWord } from "./lib/scoring";
 
 const ENDPOINT = "/api/game-state";
 const ACHIEVEMENTS_ENDPOINT = "/api/achievements";
-const PANGRAMS_ENDPOINT = "/api/pangrams";
+const MILESTONES_ENDPOINT = "/api/milestones";
 const STATS_ENDPOINT = "/api/profile/stats";
 const GAME_ID = "leksokipos";
 
@@ -27,7 +27,23 @@ export interface LifetimeStatsRead {
   leksokipos_points: number | null;
   /** Size of the append-only pangram set — feeds the Κυνηγός Πανγκράμ self-heal. */
   pangram_count:     number | null;
+  /** Days the top rank was reached — feeds the Στην Κορυφή self-heal. */
+  top_rank_count:    number | null;
+  /** Days the found-word ratio was crossed — feeds the Τζιμάνι self-heal. */
+  tzimani_count:     number | null;
 }
+
+/** One milestone to record — the wire shape of a player_milestones row's payload. */
+export interface MilestonePost {
+  kind:    "pangram" | "word" | "top_rank" | "tzimani";
+  /** The word, on the two find kinds. Omitted on the day counters. */
+  detail?: string;
+  /** The found-word percentage, on tzimani only. Word length is stamped server-side. */
+  value?:  number;
+}
+
+/** Fresh lifetime totals, keyed by kind — only for the kinds the POST actually wrote. */
+export type MilestoneCounts = Partial<Record<MilestonePost["kind"], number>>;
 
 /**
  * Read this device's lifetime stats for the tiered-badge lanes in ONE round-trip
@@ -42,10 +58,13 @@ export async function fetchLifetimeStats(deviceUuid: string): Promise<LifetimeSt
       `${STATS_ENDPOINT}?device_uuid=${encodeURIComponent(deviceUuid)}`,
     );
     if (!res.ok) return null;
-    const data = (await res.json()) as { leksokipos_points?: number; pangram_count?: number };
+    const data = (await res.json()) as Partial<Record<keyof LifetimeStatsRead, number>>;
+    const num = (v: number | undefined) => (typeof v === "number" ? v : null);
     return {
-      leksokipos_points: typeof data.leksokipos_points === "number" ? data.leksokipos_points : null,
-      pangram_count:     typeof data.pangram_count === "number" ? data.pangram_count : null,
+      leksokipos_points: num(data.leksokipos_points),
+      pangram_count:     num(data.pangram_count),
+      top_rank_count:    num(data.top_rank_count),
+      tzimani_count:     num(data.tzimani_count),
     };
   } catch {
     return null;
@@ -53,27 +72,38 @@ export async function fetchLifetimeStats(deviceUuid: string): Promise<LifetimeSt
 }
 
 /**
- * Delta-post the pangram words a device just found and return its fresh lifetime
- * count (COUNT(*) over player_pangrams). Insert-if-absent server-side, so posting
- * an already-recorded find is a no-op. Returns null on any network/parse error so
- * the caller simply skips the crossing check this batch — the mount self-heal and
- * a later session recover it. Never throws (earning never affects gameplay).
+ * Delta-post the milestones a device just reached and return its fresh lifetime
+ * totals for the kinds that were actually recorded. One call for all four kinds,
+ * replacing the separate pangram and word posts (ADR 0013).
+ *
+ * Insert-if-absent server-side, so posting an already-recorded milestone is a
+ * no-op — and because the server skips its count query when nothing was written, a
+ * pure re-post comes back as an EMPTY map. That is a normal answer meaning "no
+ * total moved", not an error: a caller reads a missing kind as "no crossing to
+ * check", and the mount self-heal covers the gap.
+ *
+ * Returns null on any network/parse error, so the caller simply skips the crossing
+ * check this batch. Never throws (earning never affects gameplay).
  */
-export async function postPangrams(params: {
+export async function postMilestones(params: {
   deviceUuid: string;
   puzzleDate: string;
-  words:      string[];
-}): Promise<number | null> {
-  const { deviceUuid, puzzleDate, words } = params;
+  milestones: MilestonePost[];
+}): Promise<MilestoneCounts | null> {
+  const { deviceUuid, puzzleDate, milestones } = params;
   try {
-    const res = await fetch(PANGRAMS_ENDPOINT, {
+    const res = await fetch(MILESTONES_ENDPOINT, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ device_uuid: deviceUuid, puzzle_date: puzzleDate, words }),
+      body:    JSON.stringify({
+        device_uuid: deviceUuid,
+        puzzle_date: puzzleDate,
+        milestones,
+      }),
     });
     if (!res.ok) return null;
-    const data = (await res.json()) as { count?: number };
-    return typeof data.count === "number" ? data.count : null;
+    const data = (await res.json()) as { counts?: MilestoneCounts };
+    return data.counts && typeof data.counts === "object" ? data.counts : null;
   } catch {
     return null;
   }

@@ -17,12 +17,13 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { tableShim } from "@/test/helpers/supabaseMock";
 
 // ── Types the mock understands ──────────────────────────────────────────────────
 
 interface ScoreRow { id: number; game_id: string; puzzle_date: string; score: number }
 interface AchievementRow { id: number; achievement_id: string }
-interface PangramRow { id: number; puzzle_date: string; word: string }
+interface MilestoneRow { id: number; puzzle_date: string; kind: string; detail: string }
 interface Anchor   { device_uuid: string; display_name: string }
 
 interface DbState {
@@ -34,15 +35,18 @@ interface DbState {
   scoresByDevice?:  Record<string, ScoreRow[]>;
   /** player_achievements rows by device_uuid. */
   achievementsByDevice?: Record<string, AchievementRow[]>;
-  /** player_pangrams rows by device_uuid. */
-  pangramsByDevice?: Record<string, PangramRow[]>;
+  /** player_milestones rows by device_uuid. */
+  milestonesByDevice?: Record<string, MilestoneRow[]>;
   failUpsert?:      boolean;
   failAuditInsert?: boolean;
 }
 
 interface RecordedWrite {
   table:   string;
-  op:      "upsert" | "update" | "delete" | "insert";
+  /** A chain starts in "select" and is promoted by the first write verb it sees.
+   *  "select" is a real state of the mock's state machine — the tests below filter
+   *  it out with `op !== "select"` — so the union has to admit it. */
+  op:      "select" | "upsert" | "update" | "delete" | "insert";
   payload?: unknown;
   eqs:     [string, unknown][];
   ins:     [string, unknown[]][];
@@ -75,9 +79,9 @@ function resolveRead(table: string, eqs: [string, unknown][]) {
     const device = eqVal(eqs, "device_uuid") as string;
     return { data: _db.achievementsByDevice?.[device] ?? [], error: null };
   }
-  if (table === "player_pangrams") {
+  if (table === "player_milestones") {
     const device = eqVal(eqs, "device_uuid") as string;
-    return { data: _db.pangramsByDevice?.[device] ?? [], error: null };
+    return { data: _db.milestonesByDevice?.[device] ?? [], error: null };
   }
   return { data: null, error: null };
 }
@@ -93,9 +97,7 @@ function resolveWrite(w: RecordedWrite) {
 }
 
 function makeChain(table: string) {
-  const st: RecordedWrite & { op: RecordedWrite["op"] | "select" } = {
-    table, op: "select", eqs: [], ins: [],
-  };
+  const st: RecordedWrite = { table, op: "select", eqs: [], ins: [] };
   const chain: Record<string, unknown> = {};
   chain.select = () => chain;
   chain.update = (p: unknown) => { st.op = "update"; st.payload = p; return chain; };
@@ -105,25 +107,26 @@ function makeChain(table: string) {
   chain.in = (c: string, v: unknown[]) => { st.ins.push([c, v]); return chain; };
   chain.upsert = (p: unknown) => {
     st.op = "upsert"; st.payload = p;
-    _writes.push(st as RecordedWrite);
-    return Promise.resolve(resolveWrite(st as RecordedWrite));
+    _writes.push(st);
+    return Promise.resolve(resolveWrite(st));
   };
   chain.insert = (p: unknown) => {
     st.op = "insert"; st.payload = p;
-    _writes.push(st as RecordedWrite);
-    return Promise.resolve(resolveWrite(st as RecordedWrite));
+    _writes.push(st);
+    return Promise.resolve(resolveWrite(st));
   };
   chain.maybeSingle = () => Promise.resolve(resolveRead(table, st.eqs));
   chain.single      = () => Promise.resolve(resolveRead(table, st.eqs));
   chain.then = (resolve: (v: unknown) => void) => {
     if (st.op === "select") return resolve(resolveRead(table, st.eqs));
-    _writes.push(st as RecordedWrite);
-    return resolve(resolveWrite(st as RecordedWrite));
+    _writes.push(st);
+    return resolve(resolveWrite(st));
   };
   return chain;
 }
 
 vi.mock("@/lib/supabase", () => ({
+  table: tableShim,
   getSupabaseClient: () => ({
     auth: {
       getUser: () => Promise.resolve({ data: { user: _authUser }, error: _authError }),
@@ -317,9 +320,9 @@ describe("POST /api/auth/link — restore mode", () => {
     signedInAs("auth-abc");
     _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
     _db.achievementsByDevice = {
-      d1:    [{ id: 1, achievement_id: "leksokipos-tzimani" },
+      d1:    [{ id: 1, achievement_id: "leksokipos-tzimani-chalkino" },
               { id: 2, achievement_id: "leksokipos-sidirodromos" }],
-      canon: [{ id: 9, achievement_id: "leksokipos-first-daily" }],
+      canon: [{ id: 9, achievement_id: "leksokipos-stin-korifi-chalkino" }],
     };
     await POST(makePostReq(BASE));
 
@@ -335,8 +338,8 @@ describe("POST /api/auth/link — restore mode", () => {
     signedInAs("auth-abc");
     _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
     _db.achievementsByDevice = {
-      d1:    [{ id: 1, achievement_id: "leksokipos-tzimani" }],
-      canon: [{ id: 9, achievement_id: "leksokipos-tzimani" }], // already earned
+      d1:    [{ id: 1, achievement_id: "leksokipos-tzimani-chalkino" }],
+      canon: [{ id: 9, achievement_id: "leksokipos-tzimani-chalkino" }], // already earned
     };
     await POST(makePostReq(BASE));
 
@@ -346,36 +349,68 @@ describe("POST /api/auth/link — restore mode", () => {
     expect(_writes.some((w) => w.table === "player_achievements" && w.op === "update")).toBe(false);
   });
 
-  // ── Pangram merge (ADR 0013 lane C): the append-only find set must union on Restore ──
+  // ── Milestone merge (ADR 0013): the append-only fact set must union on Restore ──
+  //
+  // One merge covers all four kinds — pangram/word finds and the two day counters —
+  // replacing the separate pangram and word merges the two dropped tables each had.
 
-  it("re-points the old device's pangrams onto the canonical identity (union)", async () => {
+  it("re-points the old device's milestones onto the canonical identity (union)", async () => {
     signedInAs("auth-abc");
     _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
-    _db.pangramsByDevice = {
-      d1:    [{ id: 1, puzzle_date: "2026-07-06", word: "διακοπτησ" },
-              { id: 2, puzzle_date: "2026-07-07", word: "παρακολουθηση" }],
-      canon: [{ id: 9, puzzle_date: "2026-07-05", word: "θαλασσινοσ" }],
+    _db.milestonesByDevice = {
+      d1:    [{ id: 1, puzzle_date: "2026-07-06", kind: "pangram", detail: "διακοπτησ" },
+              { id: 2, puzzle_date: "2026-07-07", kind: "word", detail: "παρακολουθηση" },
+              { id: 3, puzzle_date: "2026-07-07", kind: "top_rank", detail: "" }],
+      canon: [{ id: 9, puzzle_date: "2026-07-05", kind: "pangram", detail: "θαλασσινοσ" }],
     };
     await POST(makePostReq(BASE));
 
-    const repoint = _writes.find((w) => w.table === "player_pangrams" && w.op === "update");
+    const repoint = _writes.find((w) => w.table === "player_milestones" && w.op === "update");
     expect(repoint?.payload).toEqual({ device_uuid: "canon" });
-    expect(repoint?.ins.find(([c]) => c === "id")?.[1]).toEqual(expect.arrayContaining([1, 2]));
-    expect(_writes.some((w) => w.table === "player_pangrams" && w.op === "delete")).toBe(false);
+    expect(repoint?.ins.find(([c]) => c === "id")?.[1]).toEqual(expect.arrayContaining([1, 2, 3]));
+    expect(_writes.some((w) => w.table === "player_milestones" && w.op === "delete")).toBe(false);
   });
 
-  it("drops the old duplicate pangram when the canonical already has the same day+word", async () => {
+  it("drops the old duplicate when the canonical already has the same day+kind+detail", async () => {
     signedInAs("auth-abc");
     _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
-    _db.pangramsByDevice = {
-      d1:    [{ id: 1, puzzle_date: "2026-07-06", word: "διακοπτησ" }],
-      canon: [{ id: 9, puzzle_date: "2026-07-06", word: "διακοπτησ" }], // exact overlap
+    _db.milestonesByDevice = {
+      d1:    [{ id: 1, puzzle_date: "2026-07-06", kind: "pangram", detail: "διακοπτησ" }],
+      canon: [{ id: 9, puzzle_date: "2026-07-06", kind: "pangram", detail: "διακοπτησ" }], // overlap
     };
     await POST(makePostReq(BASE));
 
-    const del = _writes.find((w) => w.table === "player_pangrams" && w.op === "delete");
+    const del = _writes.find((w) => w.table === "player_milestones" && w.op === "delete");
     expect(del?.ins).toContainEqual(["id", [1]]);
-    expect(_writes.some((w) => w.table === "player_pangrams" && w.op === "update")).toBe(false);
+    expect(_writes.some((w) => w.table === "player_milestones" && w.op === "update")).toBe(false);
+  });
+
+  it("keeps a day counter that differs from the canonical's only by kind", async () => {
+    // top_rank and tzimani both carry detail '' — merging on (date, detail) alone
+    // would silently delete one of them as a duplicate.
+    signedInAs("auth-abc");
+    _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
+    _db.milestonesByDevice = {
+      d1:    [{ id: 1, puzzle_date: "2026-07-06", kind: "tzimani", detail: "" }],
+      canon: [{ id: 9, puzzle_date: "2026-07-06", kind: "top_rank", detail: "" }],
+    };
+    await POST(makePostReq(BASE));
+
+    const repoint = _writes.find((w) => w.table === "player_milestones" && w.op === "update");
+    expect(repoint?.ins).toContainEqual(["id", [1]]);
+    expect(_writes.some((w) => w.table === "player_milestones" && w.op === "delete")).toBe(false);
+  });
+
+  it("runs one milestone merge, not one per kind", async () => {
+    signedInAs("auth-abc");
+    _db.anchorByAuth = { device_uuid: "canon", display_name: "OldName" };
+    _db.milestonesByDevice = {
+      d1: [{ id: 1, puzzle_date: "2026-07-06", kind: "pangram", detail: "διακοπτησ" },
+           { id: 2, puzzle_date: "2026-07-06", kind: "word", detail: "παρακολουθηση" }],
+    };
+    await POST(makePostReq(BASE));
+
+    expect(_writes.filter((w) => w.table === "player_milestones" && w.op === "update")).toHaveLength(1);
   });
 });
 
@@ -397,8 +432,8 @@ describe("POST /api/auth/link — occupied-device guard", () => {
     _db.profileByDevice = { d1: { display_name: "PlayerA", auth_user_id: "auth-A" } };
     // Resident history present — the bug would merge it into the caller.
     _db.scoresByDevice       = { d1: [{ id: 1, game_id: "leksokipos", puzzle_date: "2026-07-01", score: 40 }] };
-    _db.achievementsByDevice = { d1: [{ id: 7, achievement_id: "leksokipos-tzimani" }] };
-    _db.pangramsByDevice     = { d1: [{ id: 8, puzzle_date: "2026-07-01", word: "διακοπτησ" }] };
+    _db.achievementsByDevice = { d1: [{ id: 7, achievement_id: "leksokipos-tzimani-chalkino" }] };
+    _db.milestonesByDevice   = { d1: [{ id: 8, puzzle_date: "2026-07-01", kind: "pangram", detail: "διακοπτησ" }] };
 
     const res = await POST(makePostReq(BASE));
     expect(res.status).toBe(200);
@@ -406,10 +441,10 @@ describe("POST /api/auth/link — occupied-device guard", () => {
       device_uuid: "canonB", display_name: "PlayerB", restored: true,
     });
     // Resident A is fully untouched: no score merge, no achievement merge, no
-    // pangram merge, no profile delete or upsert.
+    // milestone merge, no profile delete or upsert.
     expect(writesTo("game_scores")).toHaveLength(0);
     expect(writesTo("player_achievements")).toHaveLength(0);
-    expect(writesTo("player_pangrams")).toHaveLength(0);
+    expect(writesTo("player_milestones")).toHaveLength(0);
     expect(writesTo("player_profiles")).toHaveLength(0);
   });
 

@@ -1,6 +1,12 @@
 {
   "permissions": {
-    "deny": [],
+    "deny": [
+      "Bash(git push)",
+      "Bash(git push:*)",
+      "PowerShell(git push)",
+      "PowerShell(git push*)",
+      "mcp__claude_ai_Vercel__deploy_to_vercel"
+    ],
     "allow": [
       "Edit",
       "Write",
@@ -70,7 +76,6 @@
       "Bash(npm run lint)",
       "Bash(eslint:*)",
       "Bash(vitest:*)",
-
       "mcp__claude_ai_Supabase__list_projects",
       "mcp__claude_ai_Supabase__list_tables",
       "mcp__claude_ai_Supabase__list_migrations",
@@ -88,7 +93,6 @@
       "mcp__claude_ai_Supabase__get_cost",
       "mcp__claude_ai_Supabase__generate_typescript_types",
       "mcp__claude_ai_Supabase__search_docs",
-
       "mcp__claude_ai_Vercel__list_projects",
       "mcp__claude_ai_Vercel__list_deployments",
       "mcp__claude_ai_Vercel__list_teams",
@@ -103,5 +107,8 @@
       "mcp__claude_ai_Vercel__search_vercel_documentation",
       "mcp__claude_ai_Vercel__web_fetch_vercel_url"
     ]
+  },
+  "skillOverrides": {
+    "setup-matt-pocock-skills": "off"
   }
 }

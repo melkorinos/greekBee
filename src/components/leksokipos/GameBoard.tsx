@@ -8,43 +8,40 @@ import { useGameIdentity } from "@/hooks/useGameIdentity";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfileVerification } from "@/hooks/useProfileVerification";
-import { getSuggestedWords, markSuggested } from "@/hooks/suggestions";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { usePhysicalKeyboard } from "@/hooks/usePhysicalKeyboard";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AchievementToast } from "./AchievementToast";
 import { FeedbackMessage } from "./FeedbackMessage";
 import { FoundWordsList } from "./FoundWordsList";
 import { FlowerGridPlayground as FlowerGrid } from "./FlowerGridPlayground";
 import { GiveUpModal } from "./GiveUpModal";
-import { GodModePanel } from "./GodModePanel";
-import { LeaderboardModal } from "./LeaderboardModal";
+import { GodModeOverlay } from "./GodModeOverlay";
+import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { MissedWordsList } from "./MissedWordsList";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { ScoreBar } from "./ScoreBar";
-import type { EndgameInfo } from "./ScoreBar";
 import { NominationModal } from "@/components/shared/NominationModal";
 import { WordInput } from "./WordInput";
-import { btnSecondary } from "@/styles/recipes";
+import { btnSecondary, chipWarning } from "@/styles/recipes";
+import { todayISO } from "@/lib/puzzleDate";
 import { useAchievementSync } from "@/games/leksokipos/hooks/useAchievementSync";
+import { FEATURE_FLAGS } from "@/config/featureFlags";
 import type { EarnedToast } from "@/games/leksokipos/lib/achievements";
 import { useDayChange } from "@/games/leksokipos/hooks/useDayChange";
 import { useGameState } from "@/games/leksokipos/hooks/useGameState";
+import { useIsGodMode } from "@/games/leksokipos/hooks/useIsGodMode";
+import { useWordSuggestions } from "@/games/leksokipos/hooks/useWordSuggestions";
 import { useGameStateSync } from "@/hooks/useGameStateSync";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
-import { isDailyPuzzle, isPangram, TOP_RANK } from "@/games/leksokipos/lib";
-
-// God mode never changes at runtime, so useSyncExternalStore needs no real
-// subscription. Module-level so its identity is stable across renders.
-const subscribeNever = () => () => {};
+import { computeEndgameInfo, getRemainingWords, isDailyPuzzle, isPangram, TOP_RANK } from "@/games/leksokipos/lib";
 
 interface GameBoardProps {
   puzzle: LeksokiposPuzzle;
-  /** Last 7 daily puzzle dates (newest-first), computed server-side. */
-  recentPuzzleDates?: string[];
   variant?: "pie" | "flower";
 }
 
-export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoardProps) {
+export function GameBoard({ puzzle, variant }: GameBoardProps) {
   const {
     puzzle: activePuzzle,
     currentInput,
@@ -66,40 +63,25 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
     resetGame,
   } = useGameState(puzzle);
 
-  // God mode — activated by ?godmode=zzkdgr3 in the URL. Never posts to DB.
-  // The server snapshot is always false so the SSR HTML and initial hydration
-  // render match (god mode off); useSyncExternalStore then reconciles to the
-  // real client value without a hydration mismatch. Reading window.location in
-  // a useState initializer would diverge from SSR (window absent) and mismatch.
-  const isGodMode = useSyncExternalStore(
-    subscribeNever,
-    () => new URLSearchParams(window.location.search).get("godmode") === "zzkdgr3",
-    () => false,
-  );
-  const [godModeOpen, setGodModeOpen] = useState(false);
+  // God mode injects test words; gate anything that writes to the DB on it.
+  // The 🧪 UI itself is self-gating — see GodModeOverlay at the bottom of the render.
+  const isGodMode = useIsGodMode();
 
   // Redirect to today's puzzle if this page is a stale daily puzzle (day rolled over).
-  useDayChange(puzzle);
+  // While Offline Mode is active the redirect is suppressed and this flag is raised
+  // instead — the banner below explains why the puzzle is stale.
+  const { dayChangedWhileOffline } = useDayChange(puzzle);
 
-  // ── Endgame / Τζιμάνι ────────────────────────────────────────────────────
-  // Endgame unlocks the moment the player reaches the top rank (Απολυτότητα):
-  // the ScoreBar ladder flips to the remaining-words panel. This is the rank
-  // threshold (80% of maxScore), NOT a perfect score — reaching the top level
-  // is the reward, and the panel then reveals what's left to hunt for.
+  // ── Endgame / all words found ───────────────────────────────────────────────
   const isDaily   = isDailyPuzzle(activePuzzle);
   const isEndgame = isDaily && currentRank === TOP_RANK;
 
-  const foundWordsSet = useMemo(
-    () => new Set(foundWords.map((w) => w.toLowerCase())),
-    [foundWords],
-  );
-
   const remainingWords = useMemo(
-    () => activePuzzle.validWords.filter((w) => !foundWordsSet.has(w.toLowerCase())),
-    [activePuzzle.validWords, foundWordsSet],
+    () => getRemainingWords(activePuzzle, foundWords),
+    [activePuzzle, foundWords],
   );
 
-  const isPerfect = remainingWords.length === 0;
+  const allWordsFound = remainingWords.length === 0;
 
   // Pangrams found this round — feeds the achievement pangram-tier lane. Memoized on
   // [foundWords, activePuzzle] so a stable array ref doesn't re-fire the lane each render.
@@ -108,25 +90,12 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
     [foundWords, activePuzzle],
   );
 
-  const endgameInfo = useMemo((): EndgameInfo | undefined => {
-    if (!isEndgame) return undefined;
-    const remainingPangrams = remainingWords.filter((w) => isPangram(w, activePuzzle)).length;
-    const lengthMap = new Map<number, number>();
-    for (const w of remainingWords) {
-      lengthMap.set(w.length, (lengthMap.get(w.length) ?? 0) + 1);
-    }
-    const byLength = Array.from(lengthMap.entries())
-      .sort(([a], [b]) => b - a)
-      .map(([length, count]) => ({ length, count }));
-    return { remainingTotal: remainingWords.length, remainingPangrams, byLength };
-  }, [isEndgame, remainingWords, activePuzzle]);
-
-  // Word suggestion
-  const [suggestWord,    setSuggestWord]    = useState<string | null>(null);
-  const [suggestedWords, setSuggestedWords] = useState<Set<string>>(
-    () => typeof window === "undefined" ? new Set() : new Set(getSuggestedWords())
+  const endgameInfo = useMemo(
+    () => isEndgame ? computeEndgameInfo(activePuzzle, remainingWords) : undefined,
+    [isEndgame, activePuzzle, remainingWords],
   );
-  const [justSuggested, setJustSuggested] = useState<string | null>(null);
+
+  const suggestions = useWordSuggestions();
 
   // Leaderboard + profile
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
@@ -143,16 +112,23 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
     deviceId,
     displayName,
     enabled:     isDaily && !isGodMode,
-    isPerfect,
   });
 
+  // Per-score metadata for fairness analysis: how many words / pangrams this score
+  // represents. Counts only — the word list never leaves the client (issue 10).
+  const scoreData = useMemo(
+    () => ({ words: foundWords.length, pangrams: foundPangrams.length }),
+    [foundWords.length, foundPangrams.length],
+  );
+
   // Auto-post whenever the score increases.
-  useEffect(() => { postScore(score); }, [score, postScore]);
+  useEffect(() => { postScore(score, scoreData); }, [score, scoreData, postScore]);
 
   // Detect + post earned achievements as the game state crosses their thresholds,
   // and surface each genuinely-new badge as an in-game unlock toast.
   const [achievementToasts, setAchievementToasts] = useState<EarnedToast[]>([]);
   useAchievementSync({
+    enabled: FEATURE_FLAGS.achievements,
     isDaily,
     isGodMode,
     deviceId,
@@ -169,7 +145,7 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
   const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } = useProfile({
     deviceId,
     onDeviceIdChange:    setDeviceIdState,
-    onDisplayNameChange: (name) => { setDisplayNameState(name); postScoreWithName(score, name); },
+    onDisplayNameChange: (name) => { setDisplayNameState(name); postScoreWithName(score, name, scoreData); },
   });
 
   // Cross-device sync — pushes state on every valid word, daily puzzles only.
@@ -192,46 +168,39 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
     postScoreWithName(score, name);
   }
 
-  function handleSuggest(word: string) {
-    setSuggestWord(word);
-    setJustSuggested(null);
-  }
-
-  function handleSuggestSuccess(word: string) {
-    markSuggested(word);
-    setSuggestedWords((prev) => new Set([...prev, word.toLowerCase()]));
-    setJustSuggested(word.toLowerCase());
-    setSuggestWord(null);
-  }
-
-  // Stable ref keyboard pattern — listener registered once, handler updated via layoutEffect.
-  const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
-  useLayoutEffect(() => {
-    keyHandlerRef.current = (e: KeyboardEvent) => {
-      if (givenUp || isPerfect) return; // board locked after give-up or full completion
-      if (e.key === "Enter") {
-        submitWord();
-      } else if (e.key === "Backspace") {
-        deleteLetter();
-      } else if (/^\p{L}$/u.test(e.key)) {
-        handleKeyboardLetter(e.key);
-      }
-    };
+  usePhysicalKeyboard((e) => {
+    if (givenUp || allWordsFound) return; // board locked after give-up or full completion
+    if (e.key === "Enter") {
+      submitWord();
+    } else if (e.key === "Backspace") {
+      deleteLetter();
+    } else if (/^\p{L}$/u.test(e.key)) {
+      handleKeyboardLetter(e.key);
+    }
   });
 
-  useEffect(() => {
-    const listener = (e: KeyboardEvent) => keyHandlerRef.current(e);
-    window.addEventListener("keydown", listener);
-    return () => window.removeEventListener("keydown", listener);
-  }, []);
-
-  const containerClass = "flex flex-col items-center gap-6 w-full max-w-sm mx-auto px-4 py-8";
+  const containerClass = "flex flex-col items-center gap-6 w-full max-w-game mx-auto px-4 py-8";
   const buttonRowClass  = "flex items-center gap-2 w-full justify-center";
 
   return (
     <div data-testid="game-board" className={containerClass}>
-      {/* Unlock toasts — fixed stack, one per genuinely-new badge, self-dismissing */}
-      {achievementToasts.length > 0 && (
+      {/* Day rolled over while Offline Mode was active. The redirect that normally
+          fetches the new puzzle is suppressed, so tell the player what happened and
+          what to do — refreshing without a connection would end this round. */}
+      {dayChangedWhileOffline && (
+        <p
+          data-testid="offline-day-changed"
+          className={`${chipWarning} mb-3 rounded-lg px-3 py-2 text-sm leading-snug`}
+        >
+          Το σημερινό παζλ άλλαξε — τελείωσε τον γύρο σου και απενεργοποίησε τη
+          λειτουργία εκτός σύνδεσης για να σταλεί το σκορ, μετά κάνε ανανέωση για το νέο παζλ.
+        </p>
+      )}
+
+      {/* Unlock toasts — fixed stack, one per genuinely-new badge, self-dismissing.
+          Gated behind the achievements flag; with it off the sync hook is inert and
+          this list never fills, but gate the render too so intent is explicit. */}
+      {FEATURE_FLAGS.achievements && achievementToasts.length > 0 && (
         <div className="fixed inset-x-0 top-4 z-50 flex flex-col items-center gap-2 px-4">
           {achievementToasts.map((badge) => (
             <AchievementToast
@@ -257,13 +226,13 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
       {/* Active game UI -- hidden once the player gives up */}
       {!givenUp && (
         <>
-          {isPerfect ? (
-            /* Τζιμάνι — all words found */
+          {allWordsFound ? (
+            /* All words found — round complete */
             <div
               data-testid="perfect-message"
               className="text-center font-bold text-2xl text-foreground py-2"
             >
-              ΤΟ ΠΕΘΑΝΕΣ 🏛️
+              ΤΟ ΠΕΘΑΝΕΣ 🏆
             </div>
           ) : (
             <>
@@ -280,31 +249,31 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
                   status={lastSubmission.result.status}
                   points={lastSubmission.result.points}
                   isPangram={lastSubmission.result.isPangram}
-                  onSuggest={() => handleSuggest(lastSubmission.word)}
-                  alreadySuggested={suggestedWords.has(lastSubmission.word.toLowerCase())}
-                  justSuggested={justSuggested === lastSubmission.word.toLowerCase()}
+                  onSuggest={() => suggestions.open(lastSubmission.word)}
+                  alreadySuggested={suggestions.isSuggested(lastSubmission.word)}
+                  justSuggested={suggestions.isJustSuggested(lastSubmission.word)}
                 />
               )}
             </>
           )}
 
           <NominationModal
-            word={suggestWord ?? ""}
+            word={suggestions.pendingWord ?? ""}
             direction="add"
-            isOpen={suggestWord !== null}
-            onClose={() => setSuggestWord(null)}
-            onSuccess={handleSuggestSuccess}
+            isOpen={suggestions.pendingWord !== null}
+            onClose={suggestions.close}
+            onSuccess={suggestions.confirm}
           />
 
-          {/* Flower grid — always visible; non-interactive once Τζιμάνι achieved */}
+          {/* Flower grid — always visible; non-interactive once all words are found */}
           <FlowerGrid
             centerLetter={activePuzzle.centerLetter}
             outerLetters={activePuzzle.outerLetters}
-            onLetterClick={isPerfect ? () => {} : (l) => { setJustSuggested(null); addLetter(l); }}
+            onLetterClick={allWordsFound ? () => {} : (l) => { suggestions.clearConfirmation(); addLetter(l); }}
             variant={variant}
           />
 
-          {!isPerfect && (
+          {!allWordsFound && (
             <div className={buttonRowClass}>
               <button
                 data-testid="btn-delete"
@@ -363,7 +332,7 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
       <FoundWordsList
         words={foundWords}
         puzzle={activePuzzle}
-        onGiveUp={isDaily && !givenUp && !isPerfect ? () => setGiveUpModalOpen(true) : undefined}
+        onGiveUp={isDaily && !givenUp && !allWordsFound ? () => setGiveUpModalOpen(true) : undefined}
         givenUp={givenUp}
       />
 
@@ -384,10 +353,11 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
 
       {/* Leaderboard modal -- only for daily puzzles */}
       {isDaily && (
-        <LeaderboardModal
+        <GameLeaderboardModal
+          gameId="leksokipos"
           isOpen={leaderboardOpen}
-          defaultPuzzleId={leaderboardPuzzleId}
-          recentDates={recentPuzzleDates}
+          today={todayISO()}
+          defaultDate={leaderboardPuzzleId}
           deviceId={deviceId}
           displayName={displayName}
           profileLinked={profileLinked}
@@ -404,27 +374,13 @@ export function GameBoard({ puzzle, recentPuzzleDates = [], variant }: GameBoard
         />
       )}
 
-      {/* God mode — only when ?godmode=zzkdgr3 is in the URL */}
-      {isGodMode && (
-        <>
-          <button
-            data-testid="btn-god-mode"
-            onClick={() => setGodModeOpen((v) => !v)}
-            aria-label="God Mode"
-            className="fixed bottom-4 right-4 z-40 w-10 h-10 rounded-full bg-surface border border-border shadow-lg flex items-center justify-center text-lg hover:bg-surface-raised transition-colors"
-          >
-            🧪
-          </button>
-          <GodModePanel
-            isOpen={godModeOpen}
-            onClose={() => setGodModeOpen(false)}
-            puzzle={activePuzzle}
-            foundWords={foundWords}
-            onInject={godModeInject}
-            onReset={resetGame}
-          />
-        </>
-      )}
+      {/* God mode — self-gating on ?godmode=zzkdgr3 */}
+      <GodModeOverlay
+        puzzle={activePuzzle}
+        foundWords={foundWords}
+        onInject={godModeInject}
+        onReset={resetGame}
+      />
     </div>
   );
 }

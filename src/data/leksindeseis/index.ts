@@ -1,5 +1,5 @@
 // Data loader for Leksindeseis puzzles.
-// Primary source: community_leksindeseis_puzzles (approved FIFO).
+// Primary source: the community puzzle scheduled for the requested date.
 // Fallback: puzzles-connections.json with deterministic date-based index.
 // Returns null if no puzzle is available (both sources empty).
 
@@ -16,12 +16,16 @@ interface LeksindeseisDaily {
 }
 
 /**
- * Returns today's Leksindeseis puzzle for `date`.
- * Checks the community queue first; falls back to static pool.
+ * Returns the Leksindeseis puzzle for `today`.
+ * A community puzzle scheduled for that date wins; otherwise the static pool's
+ * deterministic rotation. Both are stable across repeat calls.
  * Returns null puzzle if both sources are empty.
  */
 export async function getTodaysLeksindeseisPuzzle(today: string): Promise<LeksindeseisDaily> {
-  const consumed = await consumeApprovedPuzzle<LeksindeseisPuzzle["groups"]>("community_leksindeseis_puzzles");
+  const consumed = await consumeApprovedPuzzle<LeksindeseisPuzzle["groups"]>(
+    "community_leksindeseis_puzzles",
+    today,
+  );
   if (consumed) {
     const puzzle: LeksindeseisPuzzle = { date: today, groups: consumed.data };
     return { puzzle, submitter_name: consumed.submitter_name };

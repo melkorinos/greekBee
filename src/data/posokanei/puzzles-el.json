@@ -1,0 +1,15 @@
+[
+  {
+    "date": "2026-08-01",
+    "item": "Αγγούρι",
+    "itemType": "generic",
+    "unit": "τεμάχιο",
+    "price": 0.69,
+    "band": 0.15,
+    "photo": "/posokanei/sample.svg",
+    "photoSource": "Δείγμα (placeholder illustration)",
+    "photoLicense": "Placeholder — προς αντικατάσταση με εικόνα ανοιχτής άδειας",
+    "sourceStore": "Δείγμα",
+    "sourceDate": "2026-08-01"
+  }
+]

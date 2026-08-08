@@ -23,8 +23,9 @@ const PUZZLE: LeksiarxeioPuzzle = {
 };
 
 const PUZZLES: LeksiarxeioPuzzle[] = [PUZZLE];
+// Keys track LEKSIARXEIO.LENGTHS (4–8). There is no 3-letter Leksiarxeio.
 const WORD_LISTS: Record<LeksiarxeioLength, string[]> = {
-  3: [], 4: [], 5: ["αβγδε"], 6: [], 7: [], 8: [],
+  4: [], 5: ["αβγδε"], 6: [], 7: [], 8: [],
 };
 
 function renderHeader() {
@@ -48,13 +49,13 @@ describe("LeksiarxeioPageClient — header", () => {
 
   it("renders the HowToPlay ? trigger", () => {
     renderHeader();
-    expect(screen.getByRole("button", { name: /how to play/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: /πώς να παίξεις/i })).toBeDefined();
   });
 
   it("leaderboard button and help button appear in the same header row", () => {
     const { container } = renderHeader();
     const lbBtn   = screen.getByRole("button", { name: /πίνακας σκορ/i });
-    const helpBtn = screen.getByRole("button", { name: /how to play/i });
+    const helpBtn = screen.getByRole("button", { name: /πώς να παίξεις/i });
     // Both are descendants of the header row (first child of the fragment)
     const headerRow = container.firstElementChild as HTMLElement;
     expect(headerRow.contains(lbBtn)).toBe(true);
@@ -67,7 +68,7 @@ describe("LeksiarxeioPageClient — header", () => {
 describe("LeksiarxeioPageClient — rules scoring note", () => {
   it("opens the HowToPlay modal and shows a scoring note", async () => {
     renderHeader();
-    const helpBtn = screen.getByRole("button", { name: /how to play/i });
+    const helpBtn = screen.getByRole("button", { name: /πώς να παίξεις/i });
     await userEvent.click(helpBtn);
     // At least one element in the modal contains the word "Σκορ".
     // getAllByText is used because the bold-split rendering produces multiple

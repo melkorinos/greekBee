@@ -94,10 +94,26 @@ describe("buildCustomPuzzle", () => {
     expect(puzzle.validWords.length).toBe(0);
   });
 
-  it("sets date to today's ISO date", async () => {
-    const today = new Date().toISOString().split("T")[0];
+  it("leaves date empty — a custom puzzle is not date-bound", async () => {
     const puzzle = await buildCustomPuzzle("α", ["λ", "τ", "ι", "δ", "ε", "σ"]);
-    expect(puzzle.date).toBe(today);
+    expect(puzzle.date).toBe("");
+  });
+
+  it("does not read the clock, so a cached render can never go stale", async () => {
+    // The [center]/[outer] route caches this output for a week (revalidate).
+    // Anything derived from "now" here freezes into that HTML, which is exactly
+    // how the leaderboard day-strip shipped a build-time snapshot. Building the
+    // same combo on two different days must give byte-identical output.
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-07-16T12:00:00Z"));
+      const a = await buildCustomPuzzle("κ", ["α", "ε", "ι", "ο", "σ", "τ"]);
+      vi.setSystemTime(new Date("2027-01-01T12:00:00Z"));
+      const b = await buildCustomPuzzle("κ", ["α", "ε", "ι", "ο", "σ", "τ"]);
+      expect(a).toEqual(b);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

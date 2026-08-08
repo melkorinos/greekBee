@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import Link from "next/link";
 import { Modal } from "./Modal";
+import { LeaderboardBadge } from "./LeaderboardBadge";
 import type { LeaderboardUrlBuilder } from "@/hooks/useLeaderboard";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import {
@@ -31,7 +32,9 @@ import {
 
 /**
  * Creates a standard /api/game-scores URL builder for a given game.
- * Pass { sort: "asc" } for games where lower score is better (e.g. VresTinFrasi).
+ * Every leaderboard game is higher-is-better and sorts desc (ADR 0014), so no
+ * caller passes a sort override today; the { sort: "asc" } escape hatch remains
+ * for generality.
  */
 export function buildLeaderboardUrl(
   gameId: string,
@@ -47,18 +50,10 @@ export function buildLeaderboardUrl(
 
 // ── Day-label helpers ─────────────────────────────────────────────────────────
 
+// Parsed and read back in the *same* (local) clock, so the label matches the
+// date shown beside it in every timezone. Don't half-convert this to a UTC
+// parse while leaving getDay()/getDate() local — that breaks west of UTC.
 const GREEK_DAYS = ["Κυρ", "Δευ", "Τρι", "Τετ", "Πεμ", "Παρ", "Σαβ"] as const;
-
-/** Returns the last `n` dates (newest-first) starting from `today` (YYYY-MM-DD). */
-export function getLast7Dates(today: string, n = 7): string[] {
-  const dates: string[] = [];
-  for (let i = 0; i < n; i++) {
-    const d = new Date(today + "T00:00:00");
-    d.setDate(d.getDate() - i);
-    dates.push(d.toISOString().slice(0, 10));
-  }
-  return dates;
-}
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -282,7 +277,7 @@ export function LeaderboardModalBase({
                     <td className={lbTdRank}>{row.rank}</td>
                     <td className={lbTdName}>
                       {row.display_name}
-                      {row.is_perfect && <span className="ml-1">🏛️</span>}
+                      {row.badge && <LeaderboardBadge badge={row.badge} />}
                       {row.isPlayer && (
                         <span className="text-game-accent ml-1 text-xs">(εσύ)</span>
                       )}
@@ -303,7 +298,7 @@ export function LeaderboardModalBase({
                     <td className={lbTdRank}>{playerRow.rank}</td>
                     <td className={lbTdName}>
                       {playerRow.display_name}
-                      {playerRow.is_perfect && <span className="ml-1">🏛️</span>}
+                      {playerRow.badge && <LeaderboardBadge badge={playerRow.badge} />}
                       <span className="text-game-accent ml-1 text-xs">(εσύ)</span>
                     </td>
                     <td className={lbTdScore}>{formatScore(playerRow.score)}</td>

@@ -28,7 +28,7 @@ describe("GuessGrid — no inline submit button", () => {
 
 // Tiles are flex-1 aspect-square so each tile is naturally square at every level.
 // The grid container has a per-length max-width so narrower word counts don't
-// produce landscape-rectangle tiles. The keyboard stays full max-w-sm.
+// produce landscape-rectangle tiles. The keyboard stays full max-w-game.
 describe("GuessGrid — flex-fill tile sizing", () => {
   const EXPECTED_CLASSES = ["flex-1", "aspect-square"];
 

@@ -13,6 +13,7 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { tableShim } from "@/test/helpers/supabaseMock";
 
 type ResultFor = (table: string, kind: "single" | "await") => unknown;
 
@@ -56,6 +57,7 @@ const h = vi.hoisted(() => {
 });
 
 vi.mock("@/lib/supabase", () => ({
+  table: tableShim,
   getSupabaseClient:    () => ({ auth: { getUser: h.getUser } }),
   getServiceRoleClient: () => h.ref.client,
 }));

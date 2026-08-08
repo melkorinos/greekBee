@@ -108,7 +108,7 @@ export function LetterPickerModal({
         {/* Instructions */}
         <p className="text-xs text-muted mb-1 leading-relaxed">
           Επίλεξε <strong>7 γράμματα</strong>. Το πρώτο που θα πατήσεις γίνεται το{" "}
-          <span className="text-yellow-600 font-semibold">κεντρικό (υποχρεωτικό)</span> γράμμα.
+          <span className="text-accent font-semibold">κεντρικό (υποχρεωτικό)</span> γράμμα.
           Για να το αλλάξεις χρησιμοποίησε <strong>Επαναφορά</strong>.
         </p>
 
@@ -137,7 +137,7 @@ export function LetterPickerModal({
                     className={[
                       "w-9 h-9 rounded-lg border text-sm font-bold uppercase transition-colors select-none",
                       isCenter
-                        ? "bg-yellow-400 border-yellow-400 text-white cursor-default"
+                        ? "bg-brand border-brand text-white cursor-default"
                         : isOuter
                         ? "bg-inverted border-inverted text-inverted-foreground hover:opacity-90"
                         : isFull
@@ -183,7 +183,7 @@ export function LetterPickerModal({
             className={[
               "flex-1 py-2 rounded-xl text-sm font-bold border transition-colors",
               canGenerate
-                ? "bg-yellow-400 border-yellow-400 text-white hover:bg-yellow-500 active:bg-yellow-600"
+                ? "bg-brand border-brand text-white hover:opacity-90 active:opacity-80"
                 : "bg-surface-raised border-border text-muted cursor-not-allowed",
             ].join(" ")}
           >

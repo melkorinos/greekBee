@@ -6,9 +6,6 @@ import type { LeksokiposPuzzle } from "../types";
 /** Matches a YYYY-MM-DD date prefix (with optional suffix like "-el"). */
 const DAILY_ID_RE = /^\d{4}-\d{2}-\d{2}/;
 
-/** Matches a strict YYYY-MM-DD date string (no suffix). */
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
 /**
  * Returns true when the puzzle is a daily pre-built puzzle.
  *
@@ -17,12 +14,4 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
  */
 export function isDailyPuzzle(puzzle: Pick<LeksokiposPuzzle, "id">): boolean {
   return DAILY_ID_RE.test(puzzle.id);
-}
-
-/**
- * Returns true when the given string is a valid ISO date (YYYY-MM-DD).
- * Used by API route handlers to validate date parameters before querying the DB.
- */
-export function isISODate(value: string): boolean {
-  return ISO_DATE_RE.test(value);
 }

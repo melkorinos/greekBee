@@ -107,6 +107,16 @@ describe("Keyboard input", () => {
     await user.keyboard("{Backspace}");
     expect(screen.getAllByTestId("word-input-letter")).toHaveLength(2);
   });
+
+  it("ignores letters typed as a browser shortcut (Ctrl/⌘/Alt held)", async () => {
+    const { user } = setup();
+    // Each combo delivers a bare letter in e.key ("a"/"p"/"i") — without a modifier
+    // guard these land in the input as if the player had typed them.
+    await user.keyboard("{Control>}a{/Control}");
+    await user.keyboard("{Meta>}p{/Meta}");
+    await user.keyboard("{Alt>}i{/Alt}");
+    expect(screen.queryAllByTestId("word-input-letter")).toHaveLength(0);
+  });
 });
 
 // ── Word submission ────────────────────────────────────────────────────────────
@@ -203,6 +213,11 @@ describe("Word suggestion flow", () => {
     const { user } = setup();
     await user.keyboard("panda{Enter}");
     await user.click(screen.getByTestId("feedback-suggest-btn"));
+    // The in-game flag goes through the same mandatory name + explanation as the
+    // Leksikastirio form — the rule is the modal's, not one screen's.
+    await user.clear(screen.getByTestId("nomination-modal-name"));
+    await user.type(screen.getByTestId("nomination-modal-name"), "Νίκος");
+    await user.type(screen.getByTestId("nomination-modal-note"), "υπάρχει στο λεξικό");
     await user.click(screen.getByTestId("nomination-modal-submit"));
     // modal closes immediately on success; feedback area shows confirmation
     await waitFor(() =>
@@ -391,8 +406,10 @@ describe("Endgame Zone", () => {
   it("rank ladder still appears below the top rank (Απολυτότητα)", async () => {
     const user = userEvent.setup();
     render(<GameBoard puzzle={dailyPuzzle} />);
-    await submitWords(user, ["painted", "panted", "paid", "anti"]); // 22 pts: 75.9% < 80% → not top rank
-    expect(screen.getByTestId("score-label")).toHaveTextContent("22 pts");
+    // maxScore here is 25 (raw 33 × SCORE_SCALE 0.75), so the top rank sits at 20 pts.
+    // 16 pts = 64% — comfortably mid-ladder, which is what this test needs.
+    await submitWords(user, ["painted", "paid", "anti"]); // 16 pts: 64% < 80% → not top rank
+    expect(screen.getByTestId("score-label")).toHaveTextContent("16 pts");
     await user.click(screen.getByRole("button", { name: /εμφάνιση επιπέδων/i }));
     expect(screen.queryByTestId("endgame-panel")).toBeNull();
     // rank ladder rows are present (at least one rank name visible)
@@ -400,9 +417,9 @@ describe("Endgame Zone", () => {
   });
 });
 
-// ── Τζιμάνι (all words found) ─────────────────────────────────────────────────
+// ── All words found (completion state) ────────────────────────────────────────
 
-describe("Τζιμάνι — all words found", () => {
+describe("All words found — completion state", () => {
   const allWords = ["anti", "paid", "paint", "painted", "panted", "patina"];
 
   it("shows ΤΟ ΠΕΘΑΝΕΣ message after finding every word", async () => {
@@ -413,7 +430,7 @@ describe("Τζιμάνι — all words found", () => {
     expect(screen.getByTestId("perfect-message")).toHaveTextContent("ΤΟ ΠΕΘΑΝΕΣ");
   });
 
-  it("hides WordInput and action buttons after Τζιμάνι", async () => {
+  it("hides WordInput and action buttons after finding all words", async () => {
     const user = userEvent.setup();
     render(<GameBoard puzzle={dailyPuzzle} />);
     await submitWords(user, allWords);
@@ -422,7 +439,7 @@ describe("Τζιμάνι — all words found", () => {
     expect(screen.queryByTestId("btn-shuffle")).toBeNull();
   });
 
-  it("keyboard input is ignored after Τζιμάνι", async () => {
+  it("keyboard input is ignored after finding all words", async () => {
     const user = userEvent.setup();
     render(<GameBoard puzzle={dailyPuzzle} />);
     await submitWords(user, allWords);
@@ -430,14 +447,14 @@ describe("Τζιμάνι — all words found", () => {
     expect(screen.queryByTestId("word-input-letter")).toBeNull();
   });
 
-  it("give-up button is absent after Τζιμάνι", async () => {
+  it("give-up button is absent after finding all words", async () => {
     const user = userEvent.setup();
     render(<GameBoard puzzle={dailyPuzzle} />);
     await submitWords(user, allWords);
     expect(screen.queryByTestId("btn-give-up")).toBeNull();
   });
 
-  it("endgame panel shows 0 remaining words after Τζιμάνι", async () => {
+  it("endgame panel shows 0 remaining words after finding all words", async () => {
     const user = userEvent.setup();
     render(<GameBoard puzzle={dailyPuzzle} />);
     await submitWords(user, allWords);
@@ -491,15 +508,15 @@ describe("God Mode", () => {
       expect(document.querySelector(".fixed.inset-0.bg-black\\/20")).toBeInTheDocument();
     });
 
-    it("'Βρες Όλες' injects all words and triggers Τζιμάνι", async () => {
+    it("'Βρες Όλες' injects all words and triggers completion", async () => {
       const user = userEvent.setup();
       render(<GameBoard puzzle={dailyPuzzle} />);
       await user.click(screen.getByTestId("btn-god-mode"));
-      await user.click(screen.getByText(/βρες Όλες \(Τζιμάνι\)/i));
+      await user.click(screen.getByRole("button", { name: /Βρες Όλες$/ }));
       expect(screen.getByTestId("perfect-message")).toBeInTheDocument();
     });
 
-    it("'Βρες Όλες-1' injects all-but-last words and does not trigger Τζιμάνι", async () => {
+    it("'Βρες Όλες-1' injects all-but-last words and does not trigger completion", async () => {
       const user = userEvent.setup();
       render(<GameBoard puzzle={dailyPuzzle} />);
       await user.click(screen.getByTestId("btn-god-mode"));
@@ -550,5 +567,31 @@ describe("Leaderboard button", () => {
   it("is absent for non-daily (custom) puzzles", () => {
     setup();
     expect(screen.queryByTestId("btn-leaderboard")).toBeNull();
+  });
+});
+
+// ── Offline Mode day-boundary banner ──────────────────────────────────────────
+
+describe("GameBoard — day changed while Offline Mode is active", () => {
+  // The puzzle rotates at 03:00. Offline Mode suppresses useDayChange's redirect
+  // (the force-dynamic page could not load without a connection), so the board must
+  // explain the staleness instead of silently serving yesterday's puzzle.
+
+  it("shows the unlock banner when the day rolled over offline", async () => {
+    vi.resetModules();
+    vi.doMock("@/games/leksokipos/hooks/useDayChange", () => ({
+      useDayChange: () => ({ dayChangedWhileOffline: true }),
+    }));
+    const { GameBoard: Board } = await import("@/components/leksokipos/GameBoard");
+
+    render(<Board puzzle={puzzle} />);
+
+    expect(screen.getByText(/άλλαξε/i)).toBeInTheDocument();
+    vi.doUnmock("@/games/leksokipos/hooks/useDayChange");
+  });
+
+  it("shows no banner on a normal round", () => {
+    setup();
+    expect(screen.queryByText(/άλλαξε/i)).not.toBeInTheDocument();
   });
 });

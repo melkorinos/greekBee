@@ -9,38 +9,15 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-type ChainResult = { data?: unknown; error?: { message: string } | null; count?: number | null };
+import { makeQueuedClient, tableShim } from "@/test/helpers/supabaseMock";
 
-let _callQueue: ChainResult[] = [];
-
-function makeChain(result: ChainResult) {
-  const chain: Record<string, unknown> = {};
-  const ret = () => chain;
-  chain.select = ret;
-  chain.eq     = ret;
-  chain.order  = ret;
-  chain.gt     = ret;
-  chain.delete = ret;
-  chain.limit  = () => Promise.resolve(result);
-  chain.single = () => Promise.resolve(result);
-  chain.upsert = () => Promise.resolve(result);
-  chain.lt     = () => Promise.resolve(result);
-  chain.then   = (resolve: (v: ChainResult) => void) => resolve(result);
-  return chain;
-}
+const _db = makeQueuedClient();
+const enqueue = _db.enqueue;
 
 vi.mock("@/lib/supabase", () => ({
-  getSupabaseClient: () => ({
-    from: () => {
-      const result = _callQueue.shift() ?? { data: null, error: null, count: null };
-      return makeChain(result);
-    },
-  }),
+  table: tableShim,
+  getSupabaseClient: () => _db.client,
 }));
-
-function enqueue(...results: ChainResult[]) {
-  _callQueue.push(...results);
-}
 
 // ── Route handlers (imported after mock hoisting) ─────────────────────────────
 const { POST, GET } = await import("@/app/api/game-scores/route");
@@ -61,8 +38,8 @@ function makeGetReq(params: Record<string, string>): NextRequest {
   return new NextRequest(url.toString());
 }
 
-beforeEach(() => { _callQueue = []; });
-afterEach(()  => { _callQueue = []; });
+beforeEach(() => { _db.reset(); });
+afterEach(()  => { _db.reset(); });
 
 // ── POST — validation ─────────────────────────────────────────────────────────
 
@@ -76,7 +53,7 @@ describe("POST /api/game-scores — validation", () => {
     const res = await POST(req);
     expect(res.status).toBe(400);
     const json = await res.json() as { error: string };
-    expect(json.error).toMatch(/Invalid JSON/i);
+    expect(json.error).toBe("invalid_json");
   });
 
   it("returns 400 when game_id is missing", async () => {
@@ -148,14 +125,16 @@ describe("POST /api/game-scores — happy path", () => {
     expect(res.status).toBe(200);
   });
 
-  it("returns 500 when Supabase upsert returns an error", async () => {
-    enqueue({ error: { message: "DB exploded" } });
+  it("returns 500 without leaking the Postgres message when the upsert fails", async () => {
+    // This test used to assert the raw message reached the client. It didn't
+    // describe a requirement — it pinned the leak in place. The client gets a
+    // stable code; the detail goes to the server log (see apiRoute.test.ts).
+    enqueue({ error: { message: 'duplicate key value violates unique constraint "game_scores_pkey"' } });
     const res = await POST(makePostReq({
       game_id: "leksokipos", puzzle_date: "2026-05-22", device_id: "d1", display_name: "Νίκος", score: 10,
     }));
     expect(res.status).toBe(500);
-    const json = await res.json() as { error: string };
-    expect(json.error).toBe("DB exploded");
+    expect(await res.json()).toEqual({ error: "db_error" });
   });
 });
 
@@ -290,5 +269,68 @@ describe("GET /api/game-scores — happy path", () => {
     enqueue({ data: null, error: { message: "connection refused" } });
     const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22" }));
     expect(res.status).toBe(500);
+  });
+});
+
+// ── GET — display badges (Handoff B) ──────────────────────────────────────────
+//
+// After the score rows, the GET fans out to player_profiles.selected_badge_id for
+// the returned devices and — for tiered selections — to player_achievements to
+// resolve the highest earned tier. Each row carries `badge` (or null).
+
+const TIERED = "leksokipos-kynigos-pangram";
+const OTHER  = "leksokipos-stin-korifi";
+
+type BadgedRow = { display_name: string; badge: { achievementId: string; tier: string | null } | null };
+
+describe("GET /api/game-scores — display badges", () => {
+  it("attaches each device's resolved badge; a tiered selection resolves the highest earned tier", async () => {
+    enqueue(
+      { data: [
+        { device_id: "a", display_name: "Άννα", score: 100 },
+        { device_id: "b", display_name: "Βάσω", score: 80  },
+      ], error: null },
+      // profiles: two devices, two different badges picked
+      { data: [
+        { device_uuid: "a", selected_badge_id: TIERED },
+        { device_uuid: "b", selected_badge_id: OTHER  },
+      ], error: null },
+      // achievements: a holds χάλκινο + ασημένιο of the pangram badge; b only χάλκινο
+      // of the other. Each device resolves against its OWN earned rows.
+      { data: [
+        { device_uuid: "a", achievement_id: "leksokipos-kynigos-pangram-chalkino" },
+        { device_uuid: "a", achievement_id: "leksokipos-kynigos-pangram-asimenio" },
+        { device_uuid: "b", achievement_id: "leksokipos-stin-korifi-chalkino" },
+      ], error: null },
+    );
+
+    const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22", deviceId: "a" }));
+    expect(res.status).toBe(200);
+    const json = await res.json() as { top20: BadgedRow[] };
+    const anna = json.top20.find((r) => r.display_name === "Άννα")!;
+    const vaso = json.top20.find((r) => r.display_name === "Βάσω")!;
+    expect(anna.badge).toEqual({ achievementId: TIERED, tier: "asimenio" });
+    expect(vaso.badge).toEqual({ achievementId: OTHER,  tier: "chalkino" });
+  });
+
+  it("resolves a dangling tiered selection (no earned tier rows) to no badge", async () => {
+    enqueue(
+      { data: [{ device_id: "a", display_name: "Άννα", score: 100 }], error: null },
+      { data: [{ device_uuid: "a", selected_badge_id: TIERED }], error: null },
+      { data: [], error: null }, // achievements — none earned
+    );
+    const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22", deviceId: "a" }));
+    const json = await res.json() as { top20: BadgedRow[] };
+    expect(json.top20[0].badge).toBeNull();
+  });
+
+  it("carries null badge for a device with no selection", async () => {
+    enqueue(
+      { data: [{ device_id: "a", display_name: "Άννα", score: 100 }], error: null },
+      { data: [], error: null }, // profiles — no selection rows
+    );
+    const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22", deviceId: "a" }));
+    const json = await res.json() as { top20: BadgedRow[] };
+    expect(json.top20[0].badge).toBeNull();
   });
 });

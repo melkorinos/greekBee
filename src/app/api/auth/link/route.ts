@@ -25,10 +25,12 @@
 // Idempotent — safe to call on every sign-in.
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceRoleClient, getSupabaseClient } from "@/lib/supabase";
-import { planScoreMerge, type MergeRow } from "@/lib/scoreMerge";
-import { planAchievementMerge, type AchievementMergeRow } from "@/lib/achievementMerge";
-import { planPangramMerge, type PangramMergeRow } from "@/lib/pangramMerge";
+import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
+import { getServiceRoleClient, getSupabaseClient, table, type BoundTable } from "@/lib/supabase";
+
+/** This route's local table shorthand — see the `db` binding in POST. */
+type Db = BoundTable;
+import { mergeIdentityRows } from "@/lib/identityMerge";
 
 export const runtime = "edge";
 
@@ -41,38 +43,36 @@ export async function POST(req: NextRequest) {
   const authHeader = req.headers.get("Authorization") ?? "";
   const token = authHeader.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : "";
   if (!token) {
-    return NextResponse.json({ error: "Missing bearer token" }, { status: 401 });
+    return jsonError("unauthorized");
   }
 
   const { data: { user }, error: authError } = await getSupabaseClient().auth.getUser(token);
   if (authError || !user) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 401 });
+    // Missing vs. rejected token are one answer on the wire — telling an
+    // unauthenticated caller which of the two it was only helps an attacker.
+    return jsonError("unauthorized", authError?.message);
   }
 
   const auth_user_id = user.id;
   const googleName = (user.user_metadata?.["full_name"] as string | undefined) ?? null;
 
   // 2. device_uuid is the only body field — the caller's own device to link.
-  let body: LinkPayload;
-  try {
-    body = (await req.json()) as LinkPayload;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
-  }
+  const parsed = await parseJson<LinkPayload>(req);
+  if (!parsed.ok) return parsed.response;
 
-  const { device_uuid } = body;
+  const { device_uuid } = parsed.body;
   if (!device_uuid) {
-    return NextResponse.json({ error: "device_uuid is required" }, { status: 400 });
+    return jsonMessage("device_uuid is required");
   }
 
   const supabase = getServiceRoleClient();
 
-  // Bind `from` to the client: supabase-js's from() reads `this.rest`, so a
-  // detached `supabase.from` reference (ESM strict mode → this === undefined)
-  // throws "Cannot read properties of undefined (reading 'rest')". The `as any`
-  // keeps the dynamic table-name calls below untyped.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const db = supabase.from.bind(supabase) as any;
+  // Local shorthand over the shared table() accessor — this route makes ~20 calls
+  // and reads better without the client repeated each time. Generic, so binding
+  // the client does not flatten each table's Row/Insert types back to a union.
+  // table() calls from() as a method, so the old `this`-binding hazard
+  // ("Cannot read properties of undefined (reading 'rest')") cannot return here.
+  const db: Db = (name) => table(supabase, name);
 
   // 3. Is this auth account already anchored to a profile? The unique partial
   //    index on player_profiles.auth_user_id guarantees at most one.
@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
   );
 
   if (profileError) {
-    return NextResponse.json({ error: profileError.message }, { status: 500 });
+    return jsonError("db_error", profileError.message);
   }
 
   // 8. Audit the mapping change (ADR 0012): append an identity_audit row only
@@ -160,8 +160,7 @@ export async function POST(req: NextRequest) {
 // returned device_uuid (auth/callback → adoptDeviceIdentity), so no anonymous
 // history of the resident's is absorbed. restored:false — nothing came back.
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function linkFreshDevice(db: any, auth_user_id: string, googleName: string | null) {
+async function linkFreshDevice(db: Db, auth_user_id: string, googleName: string | null) {
   const device_uuid  = crypto.randomUUID();
   const display_name = googleName?.trim() || "Ανώνυμος";
 
@@ -170,7 +169,7 @@ async function linkFreshDevice(db: any, auth_user_id: string, googleName: string
     { onConflict: "device_uuid" }
   );
   if (profileError) {
-    return NextResponse.json({ error: profileError.message }, { status: 500 });
+    return jsonError("db_error", profileError.message);
   }
 
   const { error: auditError } = await db("identity_audit")
@@ -184,78 +183,17 @@ async function linkFreshDevice(db: any, auth_user_id: string, googleName: string
 
 // ── Sign-in Restore ──────────────────────────────────────────────────────────
 //
-// The account already lives on `anchor.device_uuid`. Merge this device's
-// game_scores into it (best score per puzzle wins), delete this device's old
-// profile row, and hand the canonical identity back for the client to adopt.
-// Row counts are small (leaderboard window is days, pruned by cleanup-scores),
-// so the per-batch writes here are cheap and one-time.
+// The account already lives on `anchor.device_uuid`. Move this device's history
+// onto it (scores, achievements, milestones — see identityMerge for the per-table
+// rules), delete this device's old profile row, and hand the canonical identity
+// back for the client to adopt.
 
 interface Anchor { device_uuid: string; display_name: string }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function restore(db: any, oldDevice: string, anchor: Anchor) {
+async function restore(db: Db, oldDevice: string, anchor: Anchor) {
   const canonical = anchor.device_uuid;
 
-  // Read both identities' scores and decide the winners off-DB.
-  const { data: oldRows }   = await db("game_scores")
-    .select("id, game_id, puzzle_date, score").eq("device_id", oldDevice) as { data: MergeRow[] | null };
-  const { data: canonRows } = await db("game_scores")
-    .select("id, game_id, puzzle_date, score").eq("device_id", canonical) as { data: MergeRow[] | null };
-
-  const plan = planScoreMerge(oldRows ?? [], canonRows ?? []);
-
-  // Re-point surviving old rows onto the adopted identity.
-  if (plan.repoint.length) {
-    await db("game_scores")
-      .update({ device_id: canonical })
-      .in("id", plan.repoint);
-  }
-  // Delete the losers so each surviving (game_id, puzzle_date) is unique.
-  if (plan.deleteCanonical.length) {
-    await db("game_scores").delete().in("id", plan.deleteCanonical);
-  }
-  if (plan.deleteOld.length) {
-    await db("game_scores").delete().in("id", plan.deleteOld);
-  }
-
-  // Merge earned achievements too (ADR 0013): union onto the canonical identity.
-  // Without this, restoring an account would drop the old device's badges. The
-  // set has no "better" — carry over what canonical lacks, drop duplicates the
-  // UNIQUE(device_uuid, achievement_id) constraint would otherwise reject.
-  const { data: oldAch }   = await db("player_achievements")
-    .select("id, achievement_id").eq("device_uuid", oldDevice) as { data: AchievementMergeRow[] | null };
-  const { data: canonAch } = await db("player_achievements")
-    .select("id, achievement_id").eq("device_uuid", canonical) as { data: AchievementMergeRow[] | null };
-
-  const achPlan = planAchievementMerge(oldAch ?? [], canonAch ?? []);
-  if (achPlan.repoint.length) {
-    await db("player_achievements")
-      .update({ device_uuid: canonical })
-      .in("id", achPlan.repoint);
-  }
-  if (achPlan.deleteOld.length) {
-    await db("player_achievements").delete().in("id", achPlan.deleteOld);
-  }
-
-  // Merge the pangram find-set too (ADR 0013 lane C, B2): union onto the canonical
-  // identity. Same shape as the achievement merge, but the dedup key is the
-  // composite (puzzle_date, word) — the same word on a different day is a distinct
-  // find. Carry over what canonical lacks; drop duplicates the
-  // UNIQUE(device_uuid, puzzle_date, word) constraint would otherwise reject.
-  const { data: oldPan }   = await db("player_pangrams")
-    .select("id, puzzle_date, word").eq("device_uuid", oldDevice) as { data: PangramMergeRow[] | null };
-  const { data: canonPan } = await db("player_pangrams")
-    .select("id, puzzle_date, word").eq("device_uuid", canonical) as { data: PangramMergeRow[] | null };
-
-  const panPlan = planPangramMerge(oldPan ?? [], canonPan ?? []);
-  if (panPlan.repoint.length) {
-    await db("player_pangrams")
-      .update({ device_uuid: canonical })
-      .in("id", panPlan.repoint);
-  }
-  if (panPlan.deleteOld.length) {
-    await db("player_pangrams").delete().in("id", panPlan.deleteOld);
-  }
+  await mergeIdentityRows(db, oldDevice, canonical);
 
   // Drop this device's now-merged profile row (unique device_uuid index).
   await db("player_profiles").delete().eq("device_uuid", oldDevice);

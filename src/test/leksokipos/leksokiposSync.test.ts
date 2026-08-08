@@ -10,7 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   fetchLifetimeStats,
-  postPangrams,
+  postMilestones,
   pullSnapshot,
   pushFoundWords,
 } from "@/games/leksokipos/sync";
@@ -44,18 +44,29 @@ describe("fetchLifetimeStats", () => {
     } as Response);
   }
 
-  it("reads both leksokipos_points and pangram_count off the one response", async () => {
-    const spy = mockStats({ leksokipos_points: 1500, pangram_count: 12, total_points: 9 });
+  it("reads every tiered badge's lifetime value off the one response", async () => {
+    // Four badges, four numbers, ONE round-trip — that is the point of this fetch.
+    const spy = mockStats({
+      leksokipos_points: 1500, pangram_count: 12,
+      top_rank_count: 4, tzimani_count: 2,
+      total_points: 9, // cross-game field the badge lanes ignore
+    });
     const stats = await fetchLifetimeStats("device-abc");
-    expect(stats).toEqual({ leksokipos_points: 1500, pangram_count: 12 });
+    expect(stats).toEqual({
+      leksokipos_points: 1500, pangram_count: 12, top_rank_count: 4, tzimani_count: 2,
+    });
     const url = (spy.mock.calls[0] as [string])[0];
     expect(url).toContain("/api/profile/stats");
     expect(url).toContain("device_uuid=device-abc");
   });
 
   it("nulls out fields the response omits or that aren't numbers", async () => {
+    // Null, not zero: absent must read as "no live source" so a lane skips its
+    // crossing check, never as a count of zero that would un-light a chip.
     mockStats({ total_points: 9 });
-    expect(await fetchLifetimeStats("d")).toEqual({ leksokipos_points: null, pangram_count: null });
+    expect(await fetchLifetimeStats("d")).toEqual({
+      leksokipos_points: null, pangram_count: null, top_rank_count: null, tzimani_count: null,
+    });
   });
 
   it("returns null on a non-ok response", async () => {
@@ -69,39 +80,66 @@ describe("fetchLifetimeStats", () => {
   });
 });
 
-// ── postPangrams (delta-post; returns the device's fresh lifetime count) ──────────
+// ── postMilestones (delta-post; returns fresh counts for the posted kinds) ────────
 
-describe("postPangrams", () => {
-  it("POSTs the pangram wire shape and returns the fresh count", async () => {
+describe("postMilestones", () => {
+  const oneMilestone = [{ kind: "pangram" as const, detail: "παρακολουθηση" }];
+
+  it("POSTs the milestone wire shape and returns the counts for the posted kinds", async () => {
     const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true, json: async () => ({ count: 11 }),
+      ok: true, json: async () => ({ counts: { pangram: 11 } }),
     } as Response);
 
-    const count = await postPangrams({
-      deviceUuid: "device-abc", puzzleDate: "2026-01-01", words: ["παρακολουθηση"],
+    const counts = await postMilestones({
+      deviceUuid: "device-abc", puzzleDate: "2026-01-01", milestones: oneMilestone,
     });
 
-    expect(count).toBe(11);
+    expect(counts).toEqual({ pangram: 11 });
     const [url, init] = spy.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/pangrams");
+    expect(url).toBe("/api/milestones");
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body as string)).toEqual({
       device_uuid: "device-abc",
       puzzle_date: "2026-01-01",
-      words:       ["παρακολουθηση"],
+      milestones:  [{ kind: "pangram", detail: "παρακολουθηση" }],
     });
+  });
+
+  it("returns an empty map when the server wrote nothing new", async () => {
+    // The count query is skipped server-side on a no-op insert, so an empty map is
+    // the normal answer to a re-post — it must read as 'no crossing', not an error.
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true, json: async () => ({ counts: {} }),
+    } as Response);
+    expect(await postMilestones({
+      deviceUuid: "d", puzzleDate: "2026-01-01", milestones: oneMilestone,
+    })).toEqual({});
+  });
+
+  it("carries a day counter with no detail", async () => {
+    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true, json: async () => ({ counts: { tzimani: 3 } }),
+    } as Response);
+    await postMilestones({
+      deviceUuid: "d", puzzleDate: "2026-01-01",
+      milestones: [{ kind: "tzimani", value: 74 }],
+    });
+    const [, init] = spy.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(init.body as string).milestones).toEqual([{ kind: "tzimani", value: 74 }]);
   });
 
   it("returns null on a non-ok response", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue({ ok: false, json: async () => ({}) } as Response);
-    expect(await postPangrams({ deviceUuid: "d", puzzleDate: "2026-01-01", words: ["x"] })).toBeNull();
+    expect(await postMilestones({
+      deviceUuid: "d", puzzleDate: "2026-01-01", milestones: oneMilestone,
+    })).toBeNull();
   });
 
   it("returns null (never throws) on a network error", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network"));
-    await expect(
-      postPangrams({ deviceUuid: "d", puzzleDate: "2026-01-01", words: ["x"] }),
-    ).resolves.toBeNull();
+    await expect(postMilestones({
+      deviceUuid: "d", puzzleDate: "2026-01-01", milestones: oneMilestone,
+    })).resolves.toBeNull();
   });
 });
 

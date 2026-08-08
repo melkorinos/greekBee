@@ -4,11 +4,12 @@
 // Provides a sticky header with the platform name, a theme toggle, and a
 // hamburger button that opens a slide-out drawer listing all available games.
 
-import { GAME_REGISTRY } from "@/config/games";
+import { GAME_REGISTRY, type RegistryGameId } from "@/config/games";
 import { PLATFORM_NAME } from "@/config/platform";
 import { FeedbackModal } from "./FeedbackModal";
+import { ProfileToggleButton } from "./ProfileToggleButton";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTheme } from "@/hooks/useTheme";
 
 // ── Hamburger icon ────────────────────────────────────────────────────────────
@@ -45,9 +46,16 @@ interface ShellProps {
   children: React.ReactNode;
 }
 
-// Games shown in the main nav section; leksikastirio is in its own community section.
-const GAME_IDS      = ["leksokipos", "leksiarxeio", "leksindeseis", "vrestifrasi", "stavrolekso"] as const;
-const COMMUNITY_IDS = ["leksikastirio"] as const;
+// Leksikastirio is the community word-court, not a Game (CONTEXT.md), so it gets
+// its own drawer section. It is the ONE explicit exclusion from the main nav —
+// typed against the registry, so a typo or a removed Game fails the build.
+const COMMUNITY_IDS: readonly RegistryGameId[] = ["leksikastirio"];
+
+// Every other registered Game is main nav, DERIVED from the registry so adding a
+// Game needs no edit here. Hand-typing this list is how topothesies went missing
+// from the drawer in session 121; registryCoverage.test.tsx pins the derivation.
+const GAME_IDS = (Object.keys(GAME_REGISTRY) as RegistryGameId[])
+  .filter((id) => !COMMUNITY_IDS.includes(id));
 
 // Under-construction (wip) games move to their own drawer section, keeping the
 // main list to finished games. Derived from the registry so a flag flip is enough.
@@ -58,6 +66,19 @@ export function Shell({ children }: ShellProps) {
   const [drawerOpen,   setDrawerOpen]   = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const { theme, toggle } = useTheme();
+
+  // Offline Mode is PARKED (2026-08-04) — the drawer toggle and its help modal are
+  // removed, so the mode can never be activated and this guard has nothing to guard.
+  // The hook, provider and outbox stay wired and inert (`active` defaults to false).
+  // See .claude/aiHelper/offlineFeature-handoff.md before reviving: the guard must
+  // come back with the toggle, and it confirms on EVERY in-app link until a real
+  // caching mechanism makes cross-game navigation survivable (ADR 0010).
+  const guardNavigation = useCallback(
+    () => () => {
+      setDrawerOpen(false);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -75,23 +96,19 @@ export function Shell({ children }: ShellProps) {
     <div className="min-h-screen flex flex-col">
       {/* ── Sticky header ─────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 w-full border-b border-border bg-surface px-4 py-3">
-        <div className="flex items-center justify-between max-w-sm mx-auto">
+        <div className="flex items-center justify-between max-w-game mx-auto">
           <Link
             href="/"
+            onClick={guardNavigation()}
             className="text-sm font-semibold text-foreground hover:opacity-80 transition-colors"
           >
             🎮 {PLATFORM_NAME}
           </Link>
 
           <div className="flex items-center gap-1">
-            {/* Profile — always-visible entry point to /profile */}
-            <Link
-              href="/profile"
-              aria-label="Το προφίλ μου"
-              className="flex items-center justify-center w-9 h-9 rounded-full text-muted hover:bg-surface-raised active:bg-border transition-colors text-base leading-none"
-            >
-              👤
-            </Link>
+            {/* Profile — toggle: opens /profile, and while on /profile returns you
+                to the page you came from (ProfileToggleButton). */}
+            <ProfileToggleButton />
 
             {/* Theme toggle */}
             <button
@@ -137,7 +154,7 @@ export function Shell({ children }: ShellProps) {
                   <li key={id}>
                     <Link
                       href={game.href}
-                      onClick={() => setDrawerOpen(false)}
+                      onClick={guardNavigation()}
                       className={navLinkClass}
                     >
                       {game.label}
@@ -159,7 +176,7 @@ export function Shell({ children }: ShellProps) {
                   <li key={id}>
                     <Link
                       href={game.href}
-                      onClick={() => setDrawerOpen(false)}
+                      onClick={guardNavigation()}
                       className={navLinkClass}
                     >
                       {game.label}
@@ -183,7 +200,7 @@ export function Shell({ children }: ShellProps) {
                       <li key={id}>
                         <Link
                           href={game.href}
-                          onClick={() => setDrawerOpen(false)}
+                          onClick={guardNavigation()}
                           className={navLinkClass}
                         >
                           {game.label}

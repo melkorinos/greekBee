@@ -1,41 +1,43 @@
 // profileStatsRoute.test.ts — GET /api/profile/stats.
 //
 // Read-only lifetime stats for one device: total points and puzzles played
-// (cross-game), plus Τζιμάνι count and leksokipos_points (leksokipos-only) from
-// the game_scores aggregate, and pangram_count — a parallel COUNT(*) over the
-// separate player_pangrams table (B2). Supabase is mocked; the game_scores
-// aggregation itself is covered by lifetimeStats.test.ts.
+// (cross-game), plus leksokipos_points (leksokipos-only) from the game_scores
+// aggregate, and the per-kind milestone counts that feed badge progress.
+//
+// The standalone player_pangrams COUNT(*) this route used to run is now one
+// GROUP BY kind (player_milestone_counts), so two more badges gain live progress
+// values while the route's query count stays flat — which matters on a hot route.
+// Supabase is mocked; the pure reduce itself is covered by lifetimeStats.test.ts.
 
 import { describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { holder, mockScoresEq, mockPangramEq, mockLt } = vi.hoisted(() => {
+const { holder, mockScoresEq, mockRpc, mockLt } = vi.hoisted(() => {
   const holder = {
     rows: [] as unknown[],
-    pangramCount: 0 as number | null,
+    counts: [] as unknown[],
     scoresError: null as { message: string } | null,
-    pangramError: null as { message: string } | null,
+    countsError: null as { message: string } | null,
   };
-  // game_scores: .eq() is terminal. .lt() is exposed so the test can prove the
-  // route never applies a date filter — a filter would window-cap "lifetime"
-  // stats (issue 03 / ADR 0012).
+  // game_scores device aggregate: .eq() is terminal. .lt() is exposed so the test
+  // can prove the route never applies a date filter — a filter would window-cap
+  // "lifetime" stats (issue 03 / ADR 0012).
   const mockLt = vi.fn(() => Promise.resolve({ data: holder.rows, error: holder.scoresError }));
   const mockScoresEq = vi.fn(() => {
     const p = Promise.resolve({ data: holder.rows, error: holder.scoresError }) as Promise<unknown> & { lt: typeof mockLt };
     p.lt = mockLt;
     return p;
   });
-  // player_pangrams: HEAD exact count scoped to the device — returns { count }.
-  const mockPangramEq = vi.fn(() => Promise.resolve({ count: holder.pangramCount, error: holder.pangramError }));
-  return { holder, mockScoresEq, mockPangramEq, mockLt };
+  // player_milestone_counts: one aggregate row per kind, no row data transferred.
+  const mockRpc = vi.fn(() => Promise.resolve({ data: holder.counts, error: holder.countsError }));
+  return { holder, mockScoresEq, mockRpc, mockLt };
 });
 
-vi.mock("@/lib/supabase", () => ({
+vi.mock("@/lib/supabase", async () => ({
+  table: (await import("@/test/helpers/supabaseMock")).tableShim,
   getSupabaseClient: () => ({
-    from: (table: string) =>
-      table === "player_pangrams"
-        ? { select: () => ({ eq: mockPangramEq }) }
-        : { select: () => ({ eq: mockScoresEq }) },
+    from: () => ({ select: () => ({ eq: mockScoresEq }) }),
+    rpc:  mockRpc,
   }),
 }));
 
@@ -47,11 +49,11 @@ function req(query: string) {
 
 function reset() {
   holder.rows = [];
-  holder.pangramCount = 0;
+  holder.counts = [];
   holder.scoresError = null;
-  holder.pangramError = null;
+  holder.countsError = null;
   mockScoresEq.mockClear();
-  mockPangramEq.mockClear();
+  mockRpc.mockClear();
   mockLt.mockClear();
 }
 
@@ -62,48 +64,87 @@ describe("GET /api/profile/stats", () => {
     expect(res.status).toBe(400);
   });
 
-  it("returns aggregated stats + pangram_count for the device", async () => {
+  it("returns aggregated scores plus a count per milestone kind", async () => {
     reset();
     holder.rows = [
-      { game_id: "leksokipos",  score: 120, is_perfect: true },
-      { game_id: "leksiarxeio", score: 30,  is_perfect: true },
+      { game_id: "leksokipos",  score: 120 },
+      { game_id: "leksiarxeio", score: 30  },
     ];
-    holder.pangramCount = 7;
+    holder.counts = [
+      { kind: "pangram",  count: 7 },
+      { kind: "top_rank", count: 3 },
+      { kind: "tzimani",  count: 1 },
+      { kind: "word",     count: 12 },
+    ];
     const res = await GET(req("?device_uuid=dev-A"));
     expect(res.status).toBe(200);
     expect(mockScoresEq).toHaveBeenCalledWith("device_id", "dev-A");
-    expect(mockPangramEq).toHaveBeenCalledWith("device_uuid", "dev-A");
+    expect(mockRpc).toHaveBeenCalledWith("player_milestone_counts", { p_device_uuid: "dev-A" });
     expect(await res.json()).toEqual({
-      total_points: 150, puzzles_played: 2, tzimani_count: 1,
-      leksokipos_points: 120, pangram_count: 7,
+      total_points: 150, puzzles_played: 2, leksokipos_points: 120,
+      pangram_count: 7, top_rank_count: 3, tzimani_count: 1,
     });
     expect(res.headers.get("Cache-Control")).toBe("private, max-age=60");
   });
 
-  it("defaults pangram_count to 0 when the device has no pangram rows", async () => {
+  it("reports every badge-bearing kind as 0 when the device has no milestones", async () => {
     reset();
-    holder.rows = [{ game_id: "leksokipos", score: 40, is_perfect: false }];
-    holder.pangramCount = null; // supabase returns null count for an empty set
+    holder.rows = [{ game_id: "leksokipos", score: 40 }];
+    holder.counts = [];
+    expect(await (await GET(req("?device_uuid=dev-A"))).json()).toMatchObject({
+      pangram_count: 0, top_rank_count: 0, tzimani_count: 0,
+    });
+  });
+
+  it("keeps one kind's absence from hiding another's count", async () => {
+    reset();
+    holder.counts = [{ kind: "tzimani", count: 4 }];
+    expect(await (await GET(req("?device_uuid=dev-A"))).json()).toMatchObject({
+      pangram_count: 0, top_rank_count: 0, tzimani_count: 4,
+    });
+  });
+
+  it("does not surface the word count — the per-length card is its only reader", async () => {
+    reset();
+    holder.counts = [{ kind: "word", count: 12 }];
+    expect(await (await GET(req("?device_uuid=dev-A"))).json()).not.toHaveProperty("word_count");
+  });
+
+  it("runs exactly one milestone query, whatever the kind count", async () => {
+    // The whole point of the GROUP BY: adding badge-bearing kinds must not add
+    // round-trips to a route the profile page hits on every load.
+    reset();
+    holder.counts = [
+      { kind: "pangram", count: 1 }, { kind: "word", count: 2 },
+      { kind: "top_rank", count: 3 }, { kind: "tzimani", count: 4 },
+    ];
+    await GET(req("?device_uuid=dev-A"));
+    expect(mockRpc).toHaveBeenCalledTimes(1);
+  });
+
+  it("500 when the game_scores aggregate query errors", async () => {
+    reset();
+    holder.scoresError = { message: "scores fetch failed" };
     const res = await GET(req("?device_uuid=dev-A"));
-    expect((await res.json()).pangram_count).toBe(0);
+    expect(res.status).toBe(500);
+  });
+
+  it("500 when the milestone aggregate errors", async () => {
+    reset();
+    holder.countsError = { message: "aggregate failed" };
+    const res = await GET(req("?device_uuid=dev-A"));
+    expect(res.status).toBe(500);
   });
 
   it("aggregates the FULL history — never applies a puzzle_date window filter", async () => {
     reset();
     holder.rows = [
-      { game_id: "leksokipos", score: 500, is_perfect: true },
-      { game_id: "leksokipos", score: 40,  is_perfect: false },
+      { game_id: "leksokipos", score: 500 },
+      { game_id: "leksokipos", score: 40  },
     ];
     const res = await GET(req("?device_uuid=dev-A"));
     expect(res.status).toBe(200);
     expect((await res.json()).total_points).toBe(540);
     expect(mockLt).not.toHaveBeenCalled();
-  });
-
-  it("500 when the pangram count query errors", async () => {
-    reset();
-    holder.pangramError = { message: "count failed" };
-    const res = await GET(req("?device_uuid=dev-A"));
-    expect(res.status).toBe(500);
   });
 });

@@ -6,21 +6,17 @@
 
 import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
 import { LEKSIARXEIO } from "@/config/gameRules";
-import {
-  migrateLeksiarxeioIdentity,
-  readSlice,
-  setDisplayName as saveDisplayName,
-} from "@/hooks/useGameStore";
-import { useGameIdentity } from "@/hooks/useGameIdentity";
-import { useProfile } from "@/hooks/useProfile";
-import { useAuth } from "@/hooks/useAuth";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { readSlice } from "@/hooks/useGameStore";
+import { usePhysicalKeyboard } from "@/hooks/usePhysicalKeyboard";
+import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { GuessGrid } from "./GuessGrid";
 import { Keyboard } from "./Keyboard";
-import { LeksiarxeioLeaderboardModal } from "./LeksiarxeioLeaderboardModal";
+import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { normalizeLetters } from "@/lib/normalize";
+import { todayISO } from "@/lib/puzzleDate";
 import { useLeksiarxeioScoreSubmission } from "@/hooks/useLeksiarxeioScoreSubmission";
 import { useLeksiarxeioState } from "@/games/leksiarxeio/hooks/useLeksiarxeioState";
 
@@ -81,22 +77,13 @@ function LengthPanel({
     clearMessage,
   } = useLeksiarxeioState(puzzle, validWords, handleGameEnd);
 
-  // Physical keyboard — only active panel handles keys
-  const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
-  useLayoutEffect(() => {
-    keyHandlerRef.current = (e: KeyboardEvent) => {
-      if (!isActive) return;
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === "Enter")     return submitGuess();
-      if (e.key === "Backspace") return deleteLetter();
-      if (GREEK_LETTER.test(e.key)) addLetter(normalizeLetters(e.key));
-    };
+  // Only the active panel handles keys — all lengths stay mounted.
+  usePhysicalKeyboard((e) => {
+    if (!isActive) return;
+    if (e.key === "Enter")     return submitGuess();
+    if (e.key === "Backspace") return deleteLetter();
+    if (GREEK_LETTER.test(e.key)) addLetter(normalizeLetters(e.key));
   });
-  useEffect(() => {
-    const listener = (e: KeyboardEvent) => keyHandlerRef.current(e);
-    window.addEventListener("keydown", listener);
-    return () => window.removeEventListener("keydown", listener);
-  }, []);
 
   // Auto-clear transient messages
   useEffect(() => {
@@ -118,13 +105,13 @@ function LengthPanel({
       </div>
 
       {/*
-        Single max-w-sm column: grid + switcher + keyboard all share the same
+        Single max-w-game column: grid + switcher + keyboard all share the same
         384 px bounding box so their left/right edges always line up on any
         screen width. Without this common ancestor, the grid (w-fit) and the
-        keyboard (w-full max-w-sm) centre independently and appear offset on PC.
+        keyboard (w-full max-w-game) centre independently and appear offset on PC.
       */}
-      <div className="w-full max-w-sm flex flex-col items-center gap-4 px-2">
-        {/* Grid fills the shared max-w-sm column via flex-1 tiles — no overflow possible */}
+      <div className="w-full max-w-game flex flex-col items-center gap-4 px-2">
+        {/* Grid fills the shared max-w-game column via flex-1 tiles — no overflow possible */}
         <GuessGrid
           guesses={guesses}
           currentInput={currentInput}
@@ -155,7 +142,7 @@ function LengthPanel({
           </button>
         </div>
 
-        {/* Keyboard — w-full fills the shared max-w-sm column exactly,
+        {/* Keyboard — w-full fills the shared max-w-game column exactly,
             so its edges align with the grid rows above. */}
         <Keyboard
           letterStates={letterStates}
@@ -181,18 +168,10 @@ export function LeksiarxeioBoard({
 }: LeksiarxeioBoardProps) {
   const [activeLength, setActiveLength] = useState<LeksiarxeioLength>(4);
 
-  // migrateLeksiarxeioIdentity must run before useGameIdentity reads the device ID,
-  // so that existing players' legacy UUID is promoted before getOrCreateDeviceId
-  // can create a fresh one. The function is idempotent — safe to call on every render.
-  if (typeof window !== "undefined") migrateLeksiarxeioIdentity();
-  const { deviceId, displayName, setDeviceId, setDisplayName } = useGameIdentity();
-  const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } =
-    useProfile({
-      deviceId,
-      onDeviceIdChange:    setDeviceId,
-      onDisplayNameChange: (name) => { setDisplayName(name); saveDisplayName(name); },
-    });
-  const { authLinked, authUserName, signInWithGoogle, signOut } = useAuth();
+  // usePlayerIdentity runs the legacy-identity migration before reading the device
+  // id, then assembles device + profile + auth (see its doc comment).
+  const identity = usePlayerIdentity();
+  const { deviceId, displayName } = identity;
 
   // Track which lengths are finished (won or lost) so auto-advance can skip them.
   // A ref is used alongside state to avoid stale-closure issues inside setTimeout.
@@ -288,7 +267,11 @@ export function LeksiarxeioBoard({
       {/* ── Length panels (all mounted, only active shown) ────────────────── */}
       {puzzles.map((puzzle) => (
         <LengthPanel
-          key={puzzle.length}
+          // Keyed by puzzle id, not Length: the id carries the date, so a
+          // switch of Daily Puzzle remounts each panel. Keying by Length alone
+          // is stable across dates and leaks the finished round onto the new
+          // date. A Session belongs to one Puzzle.
+          key={puzzle.id}
           puzzle={puzzle}
           validWords={wordLists[puzzle.length as LeksiarxeioLength]}
           isActive={puzzle.length === activeLength}
@@ -300,22 +283,13 @@ export function LeksiarxeioBoard({
       ))}
 
       {/* ── Leaderboard modal ─────────────────────────────────────────────── */}
-      <LeksiarxeioLeaderboardModal
+      <GameLeaderboardModal
+        gameId="leksiarxeio"
         isOpen={isLeaderboardOpen}
-        today={today}
-        deviceId={deviceId}
-        displayName={displayName}
-        profileLinked={profileLinked}
-        onSaveName={(name) => { setDisplayName(name); saveDisplayName(name); }}
-        onProfileCreate={createProfile}
-        onTransferGenerate={generateTransferCode}
-        onTransferClaim={claimTransferCode}
-        onDisconnect={disconnect}
-        authLinked={authLinked}
-        authUserName={authUserName}
-        onSignIn={signInWithGoogle}
-        onSignOut={signOut}
+        today={todayISO()}
+        defaultDate={today}
         onClose={onCloseLeaderboard}
+        {...identity.leaderboardProps}
       />
     </>
   );

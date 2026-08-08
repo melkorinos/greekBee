@@ -3,10 +3,11 @@
 import { useSyncExternalStore } from "react";
 
 import { GameBoard } from "./GameBoard";
+import { GameHeader } from "@/components/shared/GameHeader";
 import { HowToPlayModal } from "./HowToPlayModal";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { ShareButton } from "./ShareButton";
-import { btnHeaderIcon, btnHeaderIconSize } from "@/styles/recipes";
+import { btnHeaderIcon, btnHeaderIconSize, chipWarning, tooltipBubble } from "@/styles/recipes";
 
 // ── Variant preference store ──────────────────────────────────────────────────
 // Module-level pub/sub so useSyncExternalStore can subscribe without effects.
@@ -49,7 +50,7 @@ function VariantToggleButton({
       >
         {variant === "pie" ? "🌸" : "🥧"}
       </button>
-      <div className="pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-inverted px-2.5 py-1 text-xs text-inverted-foreground opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      <div className={tooltipBubble}>
         {nextLabel}
       </div>
     </div>
@@ -60,14 +61,12 @@ function VariantToggleButton({
 
 interface LeksokiposLayoutProps {
   puzzle: LeksokiposPuzzle;
-  recentPuzzleDates: string[];
   canonicalPath: string;
   tooFewWords: boolean;
 }
 
 export function LeksokiposLayout({
   puzzle,
-  recentPuzzleDates,
   canonicalPath,
   tooFewWords,
 }: LeksokiposLayoutProps) {
@@ -80,24 +79,21 @@ export function LeksokiposLayout({
   return (
     <>
       <header className="w-full border-b border-border bg-surface px-4 py-3">
-        <div className="flex items-center justify-between max-w-sm mx-auto">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">🌸 Leksokipos</h1>
-          <div className="flex items-center gap-2">
-            <VariantToggleButton variant={variant} onToggle={toggleVariant} />
-            <ShareButton canonicalPath={canonicalPath} />
-            <HowToPlayModal />
-          </div>
-        </div>
+        <GameHeader title="🌸 Leksokipos" className="mx-auto">
+          <VariantToggleButton variant={variant} onToggle={toggleVariant} />
+          <ShareButton canonicalPath={canonicalPath} />
+          <HowToPlayModal />
+        </GameHeader>
       </header>
       {tooFewWords && (
-        <div className="w-full max-w-sm mx-auto mt-3 px-4">
-          <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-center">
+        <div className="w-full max-w-game mx-auto mt-3 px-4">
+          <p className={`text-sm ${chipWarning} rounded-lg px-3 py-2 text-center`}>
             This letter combination has very few valid words. Try a different set!
           </p>
         </div>
       )}
       <div className="flex flex-1 w-full flex-col items-center bg-background">
-        <GameBoard key={puzzle.id} puzzle={puzzle} recentPuzzleDates={recentPuzzleDates} variant={variant} />
+        <GameBoard key={puzzle.id} puzzle={puzzle} variant={variant} />
       </div>
     </>
   );

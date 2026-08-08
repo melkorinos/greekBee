@@ -5,7 +5,7 @@
 // Used only in the /leksokipos/[center]/[outer] route for now.
 
 import { useCallback, useState } from "react";
-import { btnHeaderIconSize } from "@/styles/recipes";
+import { btnHeaderIconSize, tooltipBubble } from "@/styles/recipes";
 
 type CopyState = "idle" | "copied" | "error";
 
@@ -77,7 +77,7 @@ export function ShareButton({ canonicalPath }: ShareButtonProps) {
       >
         {icon}
       </button>
-      <div className="pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-inverted px-2.5 py-1 text-xs text-inverted-foreground opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      <div className={tooltipBubble}>
         {tooltip[copyState]}
       </div>
     </div>

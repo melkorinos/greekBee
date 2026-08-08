@@ -1,5 +1,7 @@
 import Link from "next/link";
-import { getSupabaseClient } from "@/lib/supabase";
+import { getSupabaseClient, table } from "@/lib/supabase";
+import { GamePageShell } from "@/components/shared/GamePageShell";
+import { GameHeader } from "@/components/shared/GameHeader";
 import type { StavroleksoPuzzleData } from "@/games/stavrolekso/types";
 
 export const dynamic = "force-dynamic";
@@ -15,13 +17,14 @@ interface PuzzleRow {
 async function getApprovedPuzzles(): Promise<PuzzleRow[]> {
   try {
     const supabase = getSupabaseClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase.from("community_stavrolekso_puzzles") as any)
+    const { data, error } = await table(supabase, "community_stavrolekso_puzzles")
       .select("id, title, submitter_name, data, created_at")
       .eq("status", "approved")
       .order("created_at", { ascending: false });
     if (error) return [];
-    return (data ?? []) as PuzzleRow[];
+    // `data` is jsonb — typed Json by the DB, narrowed here to the game-level
+    // contract that validateStavroleksoSubmission enforces on the way in.
+    return (data ?? []) as unknown as PuzzleRow[];
   } catch {
     return [];
   }
@@ -35,10 +38,10 @@ export default async function StavroleksoLandingPage() {
   const puzzles = await getApprovedPuzzles();
 
   return (
-    <main className="flex flex-col items-center min-h-screen bg-background px-4 py-6">
-      <div className="w-full max-w-sm space-y-5">
+    <GamePageShell gameId="stavrolekso">
+      <div className="w-full max-w-game space-y-5">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">♟️ Stavrolekso</h1>
+          <GameHeader title="♟️ Stavrolekso" />
           <p className="text-sm text-muted mt-1">Λύσε σταυρόλεξα της κοινότητας.</p>
         </div>
 
@@ -73,6 +76,6 @@ export default async function StavroleksoLandingPage() {
           Δημιούργησε το δικό σου σταυρόλεξο →
         </Link>
       </div>
-    </main>
+    </GamePageShell>
   );
 }

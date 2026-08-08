@@ -9,11 +9,18 @@
 // Invoked daily by Vercel Cron (see vercel.json). Auth via CRON_SECRET env var,
 // which Vercel injects automatically in production.
 // Uses the Supabase service role key to bypass RLS on DELETE.
+//
+// Deliberately outside the route envelope's jsonError discipline (ADR 0016):
+// this route has exactly one caller — Vercel Cron, behind CRON_SECRET — so the
+// raw Postgres message below reaches an operator's log, not a player. That makes
+// it a diagnostic rather than a leak, and it is the only trace of a failed
+// nightly prune. Do not "seal" it. Its auth is CRON_SECRET, not ADMIN_SECRET, so
+// requireAdmin does not apply either.
 
 import { NextRequest, NextResponse } from "next/server";
 
 import { NOMINATION_APPLIED_RETENTION_DAYS, SESSION_RETENTION_DAYS } from "@/config/retention";
-import { getServiceRoleClient } from "@/lib/supabase";
+import { getServiceRoleClient, table } from "@/lib/supabase";
 
 export const runtime = "edge";
 
@@ -35,14 +42,11 @@ export async function GET(req: NextRequest) {
   const supabase = getServiceRoleClient();
 
   const [stateResult, transferCodesResult, nominationsResult] = await Promise.all([
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from("game_state") as any).delete({ count: "exact" }).lt("puzzle_date", cutoffStr),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from("transfer_codes") as any).delete({ count: "exact" }).lt("created_at", cutoffStr),
+    table(supabase, "game_state").delete({ count: "exact" }).lt("puzzle_date", cutoffStr),
+    table(supabase, "transfer_codes").delete({ count: "exact" }).lt("created_at", cutoffStr),
     // Delete accepted nominations that have been applied (reviewed_at set) and are older than 30 days.
     // Rejected and pending nominations are never deleted.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from("nominations") as any).delete({ count: "exact" })
+    table(supabase, "nominations").delete({ count: "exact" })
       .eq("status", "accepted")
       .not("reviewed_at", "is", null)
       .lt("reviewed_at", nominationCutoffStr),

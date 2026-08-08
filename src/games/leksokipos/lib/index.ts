@@ -5,7 +5,9 @@
 export { validateWord } from "./validation";
 export { scoreWord, maxScore, computeScoreFromWords } from "./scoring";
 export { isPangram } from "./pangram";
+export { computeEndgameInfo, getRemainingWords } from "./endgame";
+export type { EndgameInfo } from "./endgame";
 export { calculateRank, RANKS, getRankEmoji, TOP_RANK } from "./ranking";
 export { normalizeLetters } from "./normalize";
-export { isDailyPuzzle, isISODate } from "./puzzle";
+export { isDailyPuzzle } from "./puzzle";
 export { pickRandom7, GREEK_VOWELS } from "./randomPuzzle";

@@ -32,7 +32,8 @@ const {
   mockReloadApp:          vi.fn(),
 }));
 
-vi.mock("@/lib/supabase", () => ({
+vi.mock("@/lib/supabase", async () => ({
+  table: (await import("@/test/helpers/supabaseMock")).tableShim,
   getSupabaseClient: () => ({
     auth: {
       getSession:        mockGetSession,
@@ -151,7 +152,8 @@ describe("useAuth — sign-out", () => {
   beforeEach(() => {
     mockIsAuthLinked.mockReturnValue(false);
     stubNoSession();
-    mockSignOutFn.mockResolvedValue({});
+    // signOut resolves to void — mockResolvedValue({}) was a type error.
+    mockSignOutFn.mockResolvedValue(undefined);
   });
 
   it("clears authLinked and authUserName after calling signOut", async () => {

@@ -1,4 +1,0 @@
-/leksiarxeio       median 7.218,3 ms  min 7.179,0 ms  body  2.414,2 KB
-/vres-tin-frasi    median 7.238,5 ms  min 7.170,9 ms  body  2.434,3 KB
-/leksindeseis      median 7.029,7 ms  min 7.022,9 ms  body     20,1 KB
-/stavrolekso       median 7.036,6 ms  min 7.023,3 ms  body     10,8 KB

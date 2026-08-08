@@ -1,20 +1,17 @@
 "use client";
 
 import type { VresTinFrasiPuzzle } from "@/games/vrestifrasi/types";
-import {
-  migrateLeksiarxeioIdentity,
-  setDisplayName as saveDisplayName,
-} from "@/hooks/useGameStore";
-import { useGameIdentity } from "@/hooks/useGameIdentity";
-import { useProfile } from "@/hooks/useProfile";
-import { useAuth } from "@/hooks/useAuth";
-import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { usePhysicalKeyboard } from "@/hooks/usePhysicalKeyboard";
+import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
+import { useCallback, useEffect } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { Keyboard } from "./Keyboard";
 import { PhraseGrid } from "./PhraseGrid";
-import { VresTinFrasiLeaderboardModal } from "./VresTinFrasiLeaderboardModal";
+import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { normalizeLetters } from "@/lib/normalize";
+import { todayISO } from "@/lib/puzzleDate";
+import { scoreVresTinFrasi } from "@/games/vrestifrasi/lib/scoring";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { useVresTinFrasiState } from "@/games/vrestifrasi/hooks/useVresTinFrasiState";
 
@@ -37,15 +34,8 @@ export function VresTinFrasiBoard({
   onOpenLeaderboard,
   onCloseLeaderboard,
 }: VresTinFrasiBoardProps) {
-  if (typeof window !== "undefined") migrateLeksiarxeioIdentity();
-  const { deviceId, displayName, setDeviceId, setDisplayName } = useGameIdentity();
-  const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } =
-    useProfile({
-      deviceId,
-      onDeviceIdChange:    setDeviceId,
-      onDisplayNameChange: (name) => { setDisplayName(name); saveDisplayName(name); },
-    });
-  const { authLinked, authUserName, signInWithGoogle, signOut } = useAuth();
+  const identity = usePlayerIdentity();
+  const { deviceId, displayName } = identity;
 
   const { submit: postScore } = useScoreSubmission({
     gameId:     "vrestifrasi",
@@ -56,8 +46,10 @@ export function VresTinFrasiBoard({
 
   const handleGameEnd = useCallback(
     (attempts: number, won: boolean) => {
-      const attemptCount = won ? attempts : 7;
-      postScore(attemptCount);
+      // Post points, higher-is-better (6 for a 1-guess win → 1 for a 6-guess
+      // win, 0 for a loss) — same scale as Leksiarxeio. The leaderboard sorts
+      // desc like every other game (ADR 0014); no lower-is-better boards.
+      postScore(scoreVresTinFrasi(attempts, won));
       setTimeout(() => onOpenLeaderboard(), 1500);
     },
     [postScore, onOpenLeaderboard],
@@ -77,21 +69,11 @@ export function VresTinFrasiBoard({
     clearMessage,
   } = useVresTinFrasiState(puzzle, validWords, handleGameEnd);
 
-  // Physical keyboard
-  const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
-  useLayoutEffect(() => {
-    keyHandlerRef.current = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key === "Enter")     return submitGuess();
-      if (e.key === "Backspace") return deleteLetter();
-      if (GREEK_LETTER.test(e.key)) addLetter(normalizeLetters(e.key));
-    };
+  usePhysicalKeyboard((e) => {
+    if (e.key === "Enter")     return submitGuess();
+    if (e.key === "Backspace") return deleteLetter();
+    if (GREEK_LETTER.test(e.key)) addLetter(normalizeLetters(e.key));
   });
-  useEffect(() => {
-    const listener = (e: KeyboardEvent) => keyHandlerRef.current(e);
-    window.addEventListener("keydown", listener);
-    return () => window.removeEventListener("keydown", listener);
-  }, []);
 
   // Auto-clear transient messages
   useEffect(() => {
@@ -110,7 +92,7 @@ export function VresTinFrasiBoard({
           />
         </div>
 
-        <div className="w-full max-w-sm flex flex-col items-center gap-4 px-2">
+        <div className="w-full max-w-game flex flex-col items-center gap-4 px-2">
           <PhraseGrid
             guesses={guesses}
             currentWords={currentWords}
@@ -135,22 +117,13 @@ export function VresTinFrasiBoard({
         </div>
       </div>
 
-      <VresTinFrasiLeaderboardModal
+      <GameLeaderboardModal
+        gameId="vrestifrasi"
         isOpen={isLeaderboardOpen}
-        today={today}
-        deviceId={deviceId}
-        displayName={displayName}
-        profileLinked={profileLinked}
-        onSaveName={(name) => { setDisplayName(name); saveDisplayName(name); }}
-        onProfileCreate={createProfile}
-        onTransferGenerate={generateTransferCode}
-        onTransferClaim={claimTransferCode}
-        onDisconnect={disconnect}
-        authLinked={authLinked}
-        authUserName={authUserName}
-        onSignIn={signInWithGoogle}
-        onSignOut={signOut}
+        today={todayISO()}
+        defaultDate={today}
         onClose={onCloseLeaderboard}
+        {...identity.leaderboardProps}
       />
     </>
   );

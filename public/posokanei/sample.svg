@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" role="img" aria-label="Δείγμα προϊόντος">
+  <rect width="400" height="400" fill="#f4f7f2"/>
+  <!-- Simple authored placeholder illustration of a cucumber (Αγγούρι).
+       Not a real product photo — swapped for an open-license / own photo when
+       real puzzle content is sourced (handoff posoKanei.md). -->
+  <g transform="rotate(-35 200 200)">
+    <ellipse cx="200" cy="200" rx="60" ry="150" fill="#4a7c2f"/>
+    <ellipse cx="200" cy="200" rx="44" ry="134" fill="#6aa84f"/>
+    <ellipse cx="182" cy="160" rx="10" ry="30" fill="#8fbc6b" opacity="0.7"/>
+    <g fill="#3c6626">
+      <circle cx="190" cy="120" r="4"/>
+      <circle cx="210" cy="150" r="4"/>
+      <circle cx="188" cy="185" r="4"/>
+      <circle cx="214" cy="215" r="4"/>
+      <circle cx="192" cy="250" r="4"/>
+      <circle cx="208" cy="280" r="4"/>
+    </g>
+    <rect x="190" y="46" width="20" height="18" rx="6" fill="#3c6626"/>
+  </g>
+  <text x="200" y="372" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" fill="#7a8a70">δείγμα</text>
+</svg>

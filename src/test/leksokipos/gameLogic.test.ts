@@ -6,10 +6,11 @@
 // This file absorbed the former greekLogic.test.ts (2026-07-02); its
 // getPuzzleForDate cases already live in leksokiposDataLoader.test.ts.
 
-import { MAX_SCORE_CAP, maxScore, scoreWord } from "@/games/leksokipos/lib/scoring";
+import { maxScore, scoreWord, softCap } from "@/games/leksokipos/lib/scoring";
 import { describe, expect, it } from "vitest";
 
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
+import { LEKSOKIPOS } from "@/config/gameRules";
 import { RANKS, calculateRank } from "@/games/leksokipos/lib/ranking";
 import { isPangram } from "@/games/leksokipos/lib/pangram";
 import { validateWord } from "@/games/leksokipos/lib/validation";
@@ -62,24 +63,48 @@ describe("scoreWord", () => {
 });
 
 describe("maxScore", () => {
-  it("returns 85% of the raw word-score total for small puzzles", () => {
+  it("returns SCORE_SCALE of the raw word-score total for small puzzles", () => {
     // raw: σαλα(1) + μαλα(1) + σαλος(5) + παλμος(6) + σαλεμα(6) + πολεμα(6) + πολεμας(14) = 39
-    // capped at 85%: ceil(39 * 0.85) = 34 — well below the 600-pt hard cap
-    expect(maxScore(puzzle)).toBe(34);
+    // scaled: ceil(39 * 0.75) = 30 — below SOFT_CAP_KNEE, so it passes through uncapped
+    expect(maxScore(puzzle)).toBe(30);
   });
 
-  it("never exceeds MAX_SCORE_CAP (600) regardless of word count", () => {
-    // Build a puzzle whose 85%-of-raw would be > 600
-    // 100 × 10-letter words each score 10 pts → raw = 1000, 85% = 850 > 600
+  it("compresses large puzzles above the knee without a hard ceiling", () => {
+    // Build a puzzle whose scaled raw lands well above the soft-cap knee.
+    // 100 × 10-letter words each score 10 pts → raw = 1000, scaled = 750 > knee (400).
     const bigWords = Array.from({ length: 100 }, (_, i) =>
       "αβγδεζηθι" + String.fromCharCode(945 + (i % 24))
     );
-    const bigPuzzle: LeksokiposPuzzle = {
-      ...puzzle,
-      validWords: bigWords,
-    };
-    expect(MAX_SCORE_CAP).toBe(600);
-    expect(maxScore(bigPuzzle)).toBe(MAX_SCORE_CAP);
+    const bigPuzzle: LeksokiposPuzzle = { ...puzzle, validWords: bigWords };
+    const scaled = Math.ceil(1000 * LEKSOKIPOS.SCORE_SCALE); // 850
+    const m = maxScore(bigPuzzle);
+    // Rose above the knee (no flat pin) but was compressed below the raw scaled total.
+    expect(m).toBeGreaterThan(LEKSOKIPOS.SOFT_CAP_KNEE);
+    expect(m).toBeLessThan(scaled);
+  });
+});
+
+// ── softCap ────────────────────────────────────────────────────────────────────
+
+describe("softCap", () => {
+  it("passes scores at or below the knee through unchanged", () => {
+    expect(softCap(0)).toBe(0);
+    expect(softCap(200)).toBe(200);
+    expect(softCap(LEKSOKIPOS.SOFT_CAP_KNEE)).toBe(LEKSOKIPOS.SOFT_CAP_KNEE);
+  });
+
+  it("compresses above the knee while staying strictly increasing (no ceiling)", () => {
+    const knee = LEKSOKIPOS.SOFT_CAP_KNEE;
+    const a = softCap(knee + 200);
+    const b = softCap(knee + 800);
+    const c = softCap(knee + 3200);
+    // Each richer puzzle yields a distinct, higher max — so the genius bar varies.
+    expect(a).toBeGreaterThan(knee);
+    expect(b).toBeGreaterThan(a);
+    expect(c).toBeGreaterThan(b);
+    // …but always below the uncompressed input (the cap is doing its job).
+    expect(a).toBeLessThan(knee + 200);
+    expect(c).toBeLessThan(knee + 3200);
   });
 });
 

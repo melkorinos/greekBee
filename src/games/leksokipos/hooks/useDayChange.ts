@@ -11,14 +11,21 @@
 //
 // Custom puzzles (id starts with "custom-") are never date-bound, so they are skipped.
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { isDailyPuzzle } from "@/games/leksokipos/lib";
+import { todayISO } from "@/lib/puzzleDate";
+import { useOfflineMode } from "@/hooks/useOfflineMode";
 
 export function useDayChange(puzzle: LeksokiposPuzzle) {
   const router = useRouter();
+  const { active: offlineActive } = useOfflineMode();
+
+  // Set instead of redirecting while Offline Mode is on, so the board can explain
+  // why the puzzle is stale rather than silently destroying the round.
+  const [dayChangedWhileOffline, setDayChangedWhileOffline] = useState(false);
 
   useEffect(() => {
     if (!isDailyPuzzle(puzzle)) return;
@@ -28,19 +35,28 @@ export function useDayChange(puzzle: LeksokiposPuzzle) {
     // Skip the redirect entirely — they should be able to play past puzzles.
     // The stale-tab case is covered below: a puzzle that was current at mount
     // will still be redirected via visibilitychange once the day rolls over.
-    const mountDate = new Date().toISOString().split("T")[0];
+    const mountDate = todayISO();
     if (puzzle.date < mountDate) return;
 
     function check() {
-      // Matches getTodaysPuzzle() server-side (UTC date), so client and server agree.
-      const today = new Date().toISOString().split("T")[0];
-      if (puzzle.date < today) {
-        router.replace("/leksokipos");
+      // todayISO() is what getTodaysPuzzle() uses server-side, so client and server agree.
+      if (puzzle.date >= todayISO()) return;
+
+      // Offline Mode: /leksokipos is force-dynamic, so with no connection this
+      // redirect would fail to load and take the round with it. Flag it and let the
+      // player finish and unlock on their own terms.
+      if (offlineActive) {
+        setDayChangedWhileOffline(true);
+        return;
       }
+
+      router.replace("/leksokipos");
     }
 
     // Check whenever the user returns to the tab after a day has rolled over.
     document.addEventListener("visibilitychange", check);
     return () => document.removeEventListener("visibilitychange", check);
-  }, [puzzle, router]);
+  }, [puzzle, router, offlineActive]);
+
+  return { dayChangedWhileOffline };
 }

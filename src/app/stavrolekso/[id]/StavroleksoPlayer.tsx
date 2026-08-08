@@ -154,7 +154,7 @@ export function StavroleksoPlayer({ id, puzzle }: Props) {
   const isComplete  = solvedCount === totalSlots;
 
   return (
-    <div className="w-full max-w-sm space-y-4">
+    <div className="w-full max-w-game space-y-4">
       {/* Progress */}
       <div className="flex items-center justify-between text-xs text-muted">
         <span>{solvedCount}/{totalSlots} slots λυμένα</span>

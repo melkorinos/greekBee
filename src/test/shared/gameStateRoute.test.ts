@@ -6,28 +6,13 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-type ChainResult = { data?: unknown; error?: { message: string; code?: string } | null };
+import { makeQueuedClient, tableShim } from "@/test/helpers/supabaseMock";
 
-let _callQueue: ChainResult[] = [];
-
-function makeChain(result: ChainResult) {
-  const chain: Record<string, unknown> = {};
-  const ret = () => chain;
-  chain.select      = ret;
-  chain.eq          = ret;
-  chain.upsert      = () => Promise.resolve(result);
-  chain.single      = () => Promise.resolve(result);
-  chain.then        = (resolve: (v: ChainResult) => void) => resolve(result);
-  return chain;
-}
+const _db = makeQueuedClient();
 
 vi.mock("@/lib/supabase", () => ({
-  getSupabaseClient: () => ({
-    from: () => {
-      const result = _callQueue.shift() ?? { data: null, error: null };
-      return makeChain(result);
-    },
-  }),
+  table: tableShim,
+  getSupabaseClient: () => _db.client,
 }));
 
 const { POST, GET } = await import("@/app/api/game-state/route");
@@ -48,10 +33,10 @@ function makeGetReq(params: Record<string, string>) {
   return new NextRequest(url.toString());
 }
 
-function enqueue(...results: ChainResult[]) { _callQueue.push(...results); }
+const enqueue = _db.enqueue;
 
-beforeEach(() => { _callQueue = []; });
-afterEach(()  => { _callQueue = []; });
+beforeEach(() => { _db.reset(); });
+afterEach(()  => { _db.reset(); });
 
 const VALID_POST = {
   device_uuid: "device-1",

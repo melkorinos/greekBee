@@ -9,35 +9,28 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-type ChainResult = { data?: unknown; error?: { message: string } | null };
+import { makeQueuedClient, tableShim } from "@/test/helpers/supabaseMock";
 
-let _callQueue: ChainResult[] = [];
+// Both clients draw from one queue: the tests care about the sequence of calls,
+// not which client made them. Which client the UPDATE uses is pinned separately
+// (getServiceRoleClient is spied on below) because RLS makes that the difference
+// between an edit persisting and silently vanishing.
+const _db = makeQueuedClient();
 
-function makeChain(result: ChainResult) {
-  const chain: Record<string, unknown> = {};
-  const ret = () => chain;
-  chain.select = ret;
-  chain.eq     = ret;
-  chain.update = ret;
-  chain.single = () => Promise.resolve(result);
-  chain.then   = (resolve: (v: ChainResult) => void) => resolve(result);
-  return chain;
-}
+const getServiceRoleClient = vi.fn(() => _db.client);
+const getSupabaseClient    = vi.fn(() => _db.client);
 
 vi.mock("@/lib/supabase", () => ({
-  getSupabaseClient: () => ({
-    from: () => {
-      const result = _callQueue.shift() ?? { data: null, error: null };
-      return makeChain(result);
-    },
-  }),
+  table: tableShim,
+  getSupabaseClient: () => getSupabaseClient(),
+  getServiceRoleClient: () => getServiceRoleClient(),
 }));
 
 const { GET, PATCH } = await import("@/app/api/community-puzzles/stavrolekso/[id]/route");
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function enqueue(...results: ChainResult[]) { _callQueue.push(...results); }
+const enqueue = _db.enqueue;
 
 function withParams(id: string) {
   return { params: Promise.resolve({ id }) };
@@ -67,8 +60,12 @@ const PUZZLE_DATA = {
   cells: {},
 };
 
-beforeEach(() => { _callQueue = []; });
-afterEach(()  => { _callQueue = []; });
+beforeEach(() => {
+  _db.reset();
+  getServiceRoleClient.mockClear();
+  getSupabaseClient.mockClear();
+});
+afterEach(()  => { _db.reset(); });
 
 // ── GET ───────────────────────────────────────────────────────────────────────
 
@@ -144,7 +141,7 @@ describe("PATCH /api/community-puzzles/stavrolekso/[id] — auth + state guards"
 describe("PATCH /api/community-puzzles/stavrolekso/[id] — happy path", () => {
   it("200 ok when PIN matches and puzzle is still pending", async () => {
     enqueue({ data: { status: "pending", edit_pin: "correct" }, error: null }); // fetch
-    enqueue({ error: null });                                                     // update
+    enqueue({ data: [{ id: 1 }], error: null });                                // update
     const res = await PATCH(
       makePatch("p1", { edit_pin: "correct", data: PUZZLE_DATA, title: "Νέος τίτλος" }),
       withParams("p1"),
@@ -155,7 +152,7 @@ describe("PATCH /api/community-puzzles/stavrolekso/[id] — happy path", () => {
 
   it("200 ok even when optional title/submitter_name are omitted", async () => {
     enqueue({ data: { status: "pending", edit_pin: "pin123" }, error: null });
-    enqueue({ error: null });
+    enqueue({ data: [{ id: 1 }], error: null });
     const res = await PATCH(makePatch("p1", { edit_pin: "pin123", data: PUZZLE_DATA }), withParams("p1"));
     expect(res.status).toBe(200);
   });
@@ -165,5 +162,44 @@ describe("PATCH /api/community-puzzles/stavrolekso/[id] — happy path", () => {
     enqueue({ error: { message: "update failed" } });
     const res = await PATCH(makePatch("p1", { edit_pin: "pin123", data: PUZZLE_DATA }), withParams("p1"));
     expect(res.status).toBe(500);
+  });
+});
+
+// The table grants anon INSERT and SELECT but no UPDATE, and RLS cannot see the
+// request's edit_pin. An anon UPDATE therefore matches zero rows *without error* —
+// so the edit is discarded and the creator is told ok:true. These two lock the fix.
+describe("PATCH /api/community-puzzles/stavrolekso/[id] — the edit actually persists", () => {
+  it("writes through the service-role client, which RLS grants UPDATE", async () => {
+    enqueue({ data: { status: "pending", edit_pin: "pin123" }, error: null });
+    enqueue({ data: [{ id: 1 }], error: null });
+    await PATCH(makePatch("p1", { edit_pin: "pin123", data: PUZZLE_DATA }), withParams("p1"));
+    expect(getServiceRoleClient).toHaveBeenCalled();
+  });
+
+  it("500s rather than ok:true when the UPDATE touches no row", async () => {
+    enqueue({ data: { status: "pending", edit_pin: "pin123" }, error: null });
+    enqueue({ data: [], error: null }); // RLS/no-match: empty set, no error
+    const res = await PATCH(makePatch("p1", { edit_pin: "pin123", data: PUZZLE_DATA }), withParams("p1"));
+    expect(res.status).toBe(500);
+    expect((await res.json()).ok).toBeUndefined();
+  });
+});
+
+// anon no longer holds a column grant on edit_pin (migration 20260717120000), so a
+// PIN lookup on the anon client comes back with the column missing — the PIN check
+// would compare against undefined and 403 every real creator. The read side of this
+// route is as privileged as the write side; neither may touch the anon client.
+describe("PATCH /api/community-puzzles/stavrolekso/[id] — never reads through anon", () => {
+  it("looks the PIN up with the service-role client", async () => {
+    enqueue({ data: { status: "pending", edit_pin: "pin123" }, error: null });
+    enqueue({ data: [{ id: 1 }], error: null });
+    await PATCH(makePatch("p1", { edit_pin: "pin123", data: PUZZLE_DATA }), withParams("p1"));
+    expect(getSupabaseClient).not.toHaveBeenCalled();
+  });
+
+  it("never touches the anon client on the 404 path either", async () => {
+    enqueue({ data: null, error: { message: "no rows" } });
+    await PATCH(makePatch("p1", { edit_pin: "pin123", data: PUZZLE_DATA }), withParams("p1"));
+    expect(getSupabaseClient).not.toHaveBeenCalled();
   });
 });

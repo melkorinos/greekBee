@@ -9,38 +9,19 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-type ChainResult = { data?: unknown; error?: { message: string } | null };
+import { makeQueuedClient, tableShim } from "@/test/helpers/supabaseMock";
 
-let _callQueue: ChainResult[] = [];
+const _db = makeQueuedClient();
 
-function makeChain(result: ChainResult) {
-  const chain: Record<string, unknown> = {};
-  const ret = () => chain;
-  chain.update = ret;
-  chain.delete = ret;
-  chain.eq     = () => Promise.resolve(result);
-  chain.then   = (resolve: (v: ChainResult) => void) => resolve(result);
-  return chain;
-}
+// Review handlers use the service-role client (RLS bypass); both resolve to the
+// same queue-backed mock here.
+vi.mock("@/lib/supabase", () => ({
+  table:                tableShim,
+  getSupabaseClient:    () => _db.client,
+  getServiceRoleClient: () => _db.client,
+}));
 
-vi.mock("@/lib/supabase", () => {
-  const client = {
-    from: () => {
-      const result = _callQueue.shift() ?? { data: null, error: null };
-      return makeChain(result);
-    },
-  };
-  // Review handlers use the service-role client (RLS bypass); both resolve to the
-  // same queue-backed mock here.
-  return {
-    getSupabaseClient:    () => client,
-    getServiceRoleClient: () => client,
-  };
-});
-
-function enqueue(...results: ChainResult[]) {
-  _callQueue.push(...results);
-}
+const enqueue = _db.enqueue;
 
 // ── Route handlers ────────────────────────────────────────────────────────────
 
@@ -72,11 +53,11 @@ function params(id: string) {
 }
 
 beforeEach(() => {
-  _callQueue = [];
+  _db.reset();
   process.env.ADMIN_SECRET = CORRECT_SECRET;
 });
 afterEach(() => {
-  _callQueue = [];
+  _db.reset();
   delete process.env.ADMIN_SECRET;
 });
 
@@ -114,13 +95,15 @@ describe("PATCH review — auth", () => {
 // ── Leksiarxeio — approve ────────────────────────────────────────────────────
 
 describe("PATCH /api/community-puzzles/leksiarxeio/[id]/review", () => {
-  it("approve → returns { ok: true }", async () => {
-    enqueue({ data: null, error: null });
+  it("approve → returns { ok: true } and the assigned release date", async () => {
+    // Two results: the schedule read, then the update.
+    enqueue({ data: [], error: null }, { data: null, error: null });
     const req = makePatchReq("leksiarxeio", "5", { action: "approve" }, CORRECT_SECRET);
     const res = await PATCH_LEKSIARXEIO(req, params("5"));
     expect(res.status).toBe(200);
-    const json = await res.json() as { ok: boolean };
+    const json = await res.json() as { ok: boolean; scheduled_date: string };
     expect(json.ok).toBe(true);
+    expect(json.scheduled_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   it("reject → returns { ok: true }", async () => {
@@ -133,7 +116,7 @@ describe("PATCH /api/community-puzzles/leksiarxeio/[id]/review", () => {
   });
 
   it("approve → returns 500 on DB error", async () => {
-    enqueue({ data: null, error: { message: "db fail" } });
+    enqueue({ data: [], error: null }, { data: null, error: { message: "db fail" } });
     const req = makePatchReq("leksiarxeio", "5", { action: "approve" }, CORRECT_SECRET);
     const res = await PATCH_LEKSIARXEIO(req, params("5"));
     expect(res.status).toBe(500);
@@ -144,7 +127,7 @@ describe("PATCH /api/community-puzzles/leksiarxeio/[id]/review", () => {
 
 describe("PATCH /api/community-puzzles/leksindeseis/[id]/review", () => {
   it("approve → returns { ok: true }", async () => {
-    enqueue({ data: null, error: null });
+    enqueue({ data: [], error: null }, { data: null, error: null });
     const req = makePatchReq("leksindeseis", "7", { action: "approve" }, CORRECT_SECRET);
     const res = await PATCH_LEKSINDESEIS(req, params("7"));
     expect(res.status).toBe(200);

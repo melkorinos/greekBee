@@ -1,54 +1,72 @@
 // GET /api/profile/stats?device_uuid= — lifetime stats for one device.
 //
-// Read-only aggregate over game_scores (RLS: anon SELECT is open), plus a parallel
-// COUNT(*) over the separate player_pangrams table. Returns { total_points,
-// puzzles_played, tzimani_count, leksokipos_points, pangram_count }. Points and
-// puzzle count are cross-game; Τζιμάνι and leksokipos_points are leksokipos-only
-// (see lifetimeStats); pangram_count is the size of the append-only pangram set
-// (B2, ADR 0013 lane C) — a route-level sibling query, NOT part of the game_scores
-// reduce. The device's game_scores row set is small (one row per game/day) so we
-// fetch and reduce in JS — no RPC; the pangram count is HEAD-only (no rows moved).
+// Read-only aggregate over game_scores (RLS: anon SELECT is open), plus one
+// GROUP BY kind over player_milestones. Returns { total_points, puzzles_played,
+// leksokipos_points, pangram_count, top_rank_count, tzimani_count }.
+// Points and puzzle count are cross-game; leksokipos_points is leksokipos-only
+// (see lifetimeStats); the three counts are the sizes of the append-only milestone
+// sets the tiered badges read their progress from (ADR 0013).
+//
+// The milestone read is ONE aggregate call, not one count per kind: this route
+// gained two badge-bearing kinds without gaining a round-trip, which is the whole
+// reason player_milestone_counts exists. `word` is deliberately not surfaced — its
+// only reader is the per-length card, which needs the length breakdown, not a total.
+//
+// Caching / scale: both queries are device-scoped, so the row count grows with
+// one player's history, not with the audience. Neither transfers row data. The 60s
+// private cache absorbs profile-page reloads.
 //
 // Reading by device_uuid is fine: it is the bearer of its own identity and the
-// response carries only aggregates (never the id back). No cache needed at this
-// scale; a short private cache is a courtesy.
+// response carries only aggregates (never the id back).
 
 import { NextRequest, NextResponse } from "next/server";
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { jsonError, jsonMessage } from "@/lib/apiRoute";
+import { getSupabaseClient, table } from "@/lib/supabase";
 import { aggregateLifetimeStats, type LifetimeStatRow } from "@/lib/lifetimeStats";
 
 export const runtime = "edge";
 
+/** One row of the player_milestone_counts aggregate. */
+interface KindCount {
+  kind:  string;
+  count: number;
+}
+
 export async function GET(req: NextRequest) {
   const deviceId = req.nextUrl.searchParams.get("device_uuid") ?? "";
   if (!deviceId) {
-    return NextResponse.json({ error: "device_uuid is required" }, { status: 400 });
+    return jsonMessage("device_uuid is required");
   }
 
   const supabase = getSupabaseClient();
-  const [scoresRes, pangramRes] = await Promise.all([
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from("game_scores") as any)
-      .select("game_id, score, is_perfect")
+  const [scoresRes, milestoneRes] = await Promise.all([
+    table(supabase, "game_scores")
+      .select("game_id, score")
       .eq("device_id", deviceId),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (supabase.from("player_pangrams") as any)
-      .select("*", { count: "exact", head: true })
-      .eq("device_uuid", deviceId),
+    supabase.rpc("player_milestone_counts", { p_device_uuid: deviceId }),
   ]);
 
   if (scoresRes.error) {
-    return NextResponse.json({ error: scoresRes.error.message }, { status: 500 });
+    return jsonError("db_error", scoresRes.error.message);
   }
-  if (pangramRes.error) {
-    return NextResponse.json({ error: pangramRes.error.message }, { status: 500 });
+  if (milestoneRes.error) {
+    return jsonError("db_error", milestoneRes.error.message);
   }
 
   const stats = aggregateLifetimeStats((scoresRes.data as LifetimeStatRow[]) ?? []);
 
+  // A kind with no rows is simply absent from the aggregate — read it as 0 so a
+  // player with no milestones still gets every progress denominator.
+  const counts = new Map(((milestoneRes.data as KindCount[]) ?? []).map((r) => [r.kind, r.count]));
+
   return NextResponse.json(
-    { ...stats, pangram_count: pangramRes.count ?? 0 },
+    {
+      ...stats,
+      pangram_count:  counts.get("pangram")  ?? 0,
+      top_rank_count: counts.get("top_rank") ?? 0,
+      tzimani_count:  counts.get("tzimani")  ?? 0,
+    },
     { headers: { "Cache-Control": "private, max-age=60" } },
   );
 }

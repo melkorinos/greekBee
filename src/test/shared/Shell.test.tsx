@@ -2,14 +2,39 @@
 // Verifies hamburger open/close, drawer content, Escape dismissal, backdrop click,
 // and the dark/light theme toggle button.
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 
-import { Shell } from "@/components/shared/Shell";
 import userEvent from "@testing-library/user-event";
+
+// The header profile button reads the current path and drives the router (toggle
+// behaviour). Mock next/navigation so the button has a router + pathname under test.
+let _pathname = "/leksokipos";
+const push = vi.fn();
+const back = vi.fn();
+const prefetch = vi.fn().mockResolvedValue(undefined);
+vi.mock("next/navigation", () => ({
+  usePathname: () => _pathname,
+  useRouter:   () => ({ push, back, prefetch }),
+}));
+
+const { Shell }               = await import("@/components/shared/Shell");
+const { OfflineModeProvider } = await import("@/hooks/useOfflineMode");
+
+// The toggle's accessible name. Kept as a constant because the visible label is a
+// plain switch now — no emoji, no state words baked into the text — so tests must
+// match on the stable name rather than on whatever the label currently reads.
+const OFFLINE_TOGGLE_NAME = /λειτουργία εκτός σύνδεσης/i;
 
 // ── cleanup ───────────────────────────────────────────────────────────────────
 // Theme toggle modifies document.documentElement and localStorage; reset between tests.
+beforeEach(() => {
+  _pathname = "/leksokipos";
+  push.mockClear();
+  back.mockClear();
+  prefetch.mockClear();
+});
+
 afterEach(() => {
   document.documentElement.classList.remove("dark");
   localStorage.clear();
@@ -47,10 +72,30 @@ describe("Shell rendering", () => {
     expect(getHamburger()).toBeInTheDocument();
   });
 
-  it("renders an always-visible profile link to /profile in the header", () => {
-    setup();
-    const profileLink = screen.getByRole("link", { name: "Το προφίλ μου" });
-    expect(profileLink).toHaveAttribute("href", "/profile");
+  it("renders an always-visible profile button that opens /profile from another page", async () => {
+    const { user } = setup();
+    const profileBtn = screen.getByRole("button", { name: "Το προφίλ μου" });
+    await user.click(profileBtn);
+    expect(push).toHaveBeenCalledWith("/profile");
+    expect(back).not.toHaveBeenCalled();
+  });
+
+  it("goes back from /profile when there is in-app history", async () => {
+    _pathname = "/profile";
+    window.history.replaceState({ ...window.history.state, idx: 2 }, "");
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Το προφίλ μου" }));
+    expect(back).toHaveBeenCalledTimes(1);
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("falls back to home from /profile with no in-app history", async () => {
+    _pathname = "/profile";
+    window.history.replaceState({ ...window.history.state, idx: 0 }, "");
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: "Το προφίλ μου" }));
+    expect(push).toHaveBeenCalledWith("/");
+    expect(back).not.toHaveBeenCalled();
   });
 
   it("renders children inside the shell", () => {
@@ -108,6 +153,8 @@ describe("Drawer game links", () => {
     expect(hrefs).toContain("/leksokipos");
     expect(hrefs).toContain("/leksiarxeio");
     expect(hrefs).toContain("/leksindeseis");
+    expect(hrefs).toContain("/leksodromia");
+    expect(hrefs).toContain("/leksoplegma");
     expect(hrefs).toContain("/stavrolekso");
   });
 
@@ -170,5 +217,72 @@ describe("Theme toggle", () => {
     const { user } = setup();
     await user.click(screen.getByRole("button", { name: /switch to dark mode/i }));
     expect(localStorage.getItem("theme-preference")).toBe("dark");
+  });
+});
+
+// ── Offline Mode: PARKED ──────────────────────────────────────────────────────
+// Parked 2026-08-04. The drawer toggle and its help modal are removed from the
+// Shell, so the mode is unreachable from the UI and the nav guard is inert. The
+// hook, provider and outbox remain wired but dormant (`active` defaults to false)
+// — see .claude/aiHelper/offlineFeature-handoff.md and ADR 0010.
+//
+// These tests are the guard against a partial revival: re-adding the toggle
+// without its navigation confirmation would send a player who goes offline
+// straight to a connection-error page and lose their round. Whoever un-parks the
+// feature must delete this block and restore the suite it replaced (see the
+// parking commit), not weaken it.
+
+function setupOffline() {
+  const user = userEvent.setup();
+  render(
+    <OfflineModeProvider>
+      <Shell><p>content</p></Shell>
+    </OfflineModeProvider>,
+  );
+  return { user };
+}
+
+async function openDrawer(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("button", { name: /open menu/i }));
+  return screen.getByRole("navigation", { name: /game navigation/i });
+}
+
+describe("Offline Mode — parked", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("exposes no Offline Mode toggle in the drawer", async () => {
+    const { user } = setupOffline();
+    const nav = await openDrawer(user);
+    expect(within(nav).queryByRole("switch", { name: OFFLINE_TOGGLE_NAME }))
+      .not.toBeInTheDocument();
+  });
+
+  it("exposes no Σύνδεση section or help affordance", async () => {
+    const { user } = setupOffline();
+    const nav = await openDrawer(user);
+    expect(within(nav).queryByText(/^Σύνδεση$/)).not.toBeInTheDocument();
+    expect(within(nav).queryByRole("button", { name: /τι είναι/i })).not.toBeInTheDocument();
+  });
+
+  it("never confirms on navigation — the mode cannot be activated", async () => {
+    // With no toggle there is no way to reach `active: true`, so every in-app link
+    // must navigate straight through exactly as it did before the feature existed.
+    const confirmSpy = vi.fn(() => true);
+    vi.stubGlobal("confirm", confirmSpy);
+
+    const { user } = setupOffline();
+    const nav = await openDrawer(user);
+    await user.click(within(nav).getByRole("link", { name: /leksiarxeio/i }));
+
+    expect(confirmSpy).not.toHaveBeenCalled();
+  });
+
+  it("prefetches nothing on drawer open", async () => {
+    // Activation was the only prefetch trigger. Nothing should warm routes now.
+    const { user } = setupOffline();
+    await openDrawer(user);
+    expect(prefetch.mock.calls.map(([href]) => href)).not.toContain("/leksokipos");
   });
 });

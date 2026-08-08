@@ -7,27 +7,19 @@ import { getTodaysLeksindeseisPuzzle, allLeksindeseisPuzzles } from "@/data/leks
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-type ChainResult = { data?: unknown; error?: { message: string } | null };
-
-function makeChain(result: ChainResult) {
-  const chain: Record<string, unknown> = {};
-  const ret = () => chain;
-  chain.select = ret;
-  chain.eq     = ret;
-  chain.order  = ret;
-  chain.limit  = ret;
-  chain.delete = ret;
-  chain.single = () => Promise.resolve(result);
-  chain.then   = (resolve: (v: ChainResult) => void) => resolve(result);
-  return chain;
-}
+import type { ChainResult } from "@/test/helpers/supabaseMock";
 
 let _mockResult: ChainResult = { data: null, error: { message: "no rows" } };
 
-vi.mock("@/lib/supabase", () => {
+vi.mock("@/lib/supabase", async () => {
+  const { makeChain, tableShim } = await import("@/test/helpers/supabaseMock");
   // consumeApprovedPuzzle uses the service-role client; point both at the mock.
   const client = { from: () => makeChain(_mockResult) };
-  return { getSupabaseClient: () => client, getServiceRoleClient: () => client };
+  return {
+    getSupabaseClient: () => client,
+    getServiceRoleClient: () => client,
+  table: tableShim,
+  };
 });
 
 // ── allLeksindeseisPuzzles ────────────────────────────────────────────────────

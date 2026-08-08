@@ -7,31 +7,19 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-type ChainResult = { data?: unknown; error?: { message: string; code?: string } | null };
+import { makeQueuedClient, tableShim } from "@/test/helpers/supabaseMock";
 
-let _callQueue: ChainResult[] = [];
 let _lastUpsert: { rows: unknown; options: unknown } | null = null;
 
-function makeChain(result: ChainResult) {
-  const chain: Record<string, unknown> = {};
-  const ret = () => chain;
-  chain.select = ret;
-  chain.eq     = ret;
-  chain.upsert = (rows: unknown, options: unknown) => {
-    _lastUpsert = { rows, options };
-    return Promise.resolve(result);
-  };
-  chain.then   = (resolve: (v: ChainResult) => void) => resolve(result);
-  return chain;
-}
+const _db = makeQueuedClient({
+  onCall: ({ op, args }) => {
+    if (op === "upsert") _lastUpsert = { rows: args[0], options: args[1] };
+  },
+});
 
 vi.mock("@/lib/supabase", () => ({
-  getSupabaseClient: () => ({
-    from: () => {
-      const result = _callQueue.shift() ?? { data: null, error: null };
-      return makeChain(result);
-    },
-  }),
+  table: tableShim,
+  getSupabaseClient: () => _db.client,
 }));
 
 const { POST, GET } = await import("@/app/api/achievements/route");
@@ -52,14 +40,14 @@ function makeGetReq(params: Record<string, string>) {
   return new NextRequest(url.toString());
 }
 
-function enqueue(...results: ChainResult[]) { _callQueue.push(...results); }
+const enqueue = _db.enqueue;
 
-beforeEach(() => { _callQueue = []; _lastUpsert = null; });
-afterEach(()  => { _callQueue = []; _lastUpsert = null; });
+beforeEach(() => { _db.reset(); _lastUpsert = null; });
+afterEach(()  => { _db.reset(); _lastUpsert = null; });
 
 const VALID_POST = {
   device_uuid:     "device-1",
-  achievement_ids: ["leksokipos-tzimani"],
+  achievement_ids: ["leksokipos-tzimani-chalkino"],
 };
 
 // ── POST — happy path ─────────────────────────────────────────────────────────
@@ -76,7 +64,7 @@ describe("POST /api/achievements — happy path", () => {
       ignoreDuplicates: true,
     });
     expect(_lastUpsert?.rows).toEqual([
-      { device_uuid: "device-1", achievement_id: "leksokipos-tzimani" },
+      { device_uuid: "device-1", achievement_id: "leksokipos-tzimani-chalkino" },
     ]);
   });
 
@@ -84,12 +72,12 @@ describe("POST /api/achievements — happy path", () => {
     enqueue({ error: null });
     const res = await POST(makePostReq({
       device_uuid:     "device-1",
-      achievement_ids: ["leksokipos-tzimani", "leksokipos-tzimani", "leksokipos-first-daily"],
+      achievement_ids: ["leksokipos-tzimani-chalkino", "leksokipos-tzimani-chalkino", "leksokipos-stin-korifi-chalkino"],
     }));
     expect(res.status).toBe(200);
     expect(_lastUpsert?.rows).toEqual([
-      { device_uuid: "device-1", achievement_id: "leksokipos-tzimani" },
-      { device_uuid: "device-1", achievement_id: "leksokipos-first-daily" },
+      { device_uuid: "device-1", achievement_id: "leksokipos-tzimani-chalkino" },
+      { device_uuid: "device-1", achievement_id: "leksokipos-stin-korifi-chalkino" },
     ]);
   });
 });
@@ -136,7 +124,7 @@ describe("POST /api/achievements — validation", () => {
   });
 
   it("400 when achievement_ids is not an array", async () => {
-    const res = await POST(makePostReq({ device_uuid: "device-1", achievement_ids: "leksokipos-tzimani" }));
+    const res = await POST(makePostReq({ device_uuid: "device-1", achievement_ids: "leksokipos-tzimani-chalkino" }));
     expect(res.status).toBe(400);
   });
 
@@ -158,12 +146,12 @@ describe("GET /api/achievements", () => {
 
   it("returns the device's earned achievement_ids", async () => {
     enqueue({ data: [
-      { achievement_id: "leksokipos-tzimani" },
-      { achievement_id: "leksokipos-first-daily" },
+      { achievement_id: "leksokipos-tzimani-chalkino" },
+      { achievement_id: "leksokipos-stin-korifi-chalkino" },
     ], error: null });
     const res = await GET(makeGetReq({ device_uuid: "device-1" }));
     expect(res.status).toBe(200);
-    expect((await res.json()).earned).toEqual(["leksokipos-tzimani", "leksokipos-first-daily"]);
+    expect((await res.json()).earned).toEqual(["leksokipos-tzimani-chalkino", "leksokipos-stin-korifi-chalkino"]);
   });
 
   it("returns an empty list when the device has earned nothing", async () => {

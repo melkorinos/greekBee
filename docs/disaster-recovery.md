@@ -84,4 +84,4 @@ have no custom roles, so this doesn't bite us.
 - [google-oauth-setup.md](google-oauth-setup.md) — auth provisioning (per-project config).
 - CONTEXT.md → *Persistence decisions* — the append-forever guarantees this doc leans on.
 - Open work (automating dumps, the dev/main split decision) is tracked in the issue
-  tracker: `.claude/issue-tracker/issues/02-no-disaster-recovery-backups.md`.
+  tracker: `.claude/tracker/issues/ISSUE-01-no-disaster-recovery-backups.md`.

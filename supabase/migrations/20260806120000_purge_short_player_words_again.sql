@@ -1,0 +1,15 @@
+-- Re-purge word-find rows below the ≥10 tracking floor.
+--
+-- 20260726120000_purge_short_player_words ran correctly but landed BEFORE the deploy
+-- that added the floor to /api/words, so the route kept writing 4–9-letter finds into
+-- the freshly-cleaned table for four more days (2026-07-26 → 07-30, 2781 rows). The
+-- floor is live now — nothing below 10 has been written since — so this second sweep
+-- is final rather than another race.
+--
+-- Lesson recorded rather than repeated: a data migration whose correctness depends on
+-- a code change must ship WITH that deploy, never ahead of it.
+--
+-- Same statement as the original, still idempotent: re-running it deletes nothing once
+-- the table holds only 10+ rows. 10 is kept in sync with WORDS_MIN_TRACKED in the app
+-- (derived from achievementTuning.wordLengthBadges).
+DELETE FROM public.player_words WHERE length < 10;

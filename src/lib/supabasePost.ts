@@ -1,18 +1,20 @@
 // Shared server-side upsert helper for score and game-state routes.
 // Old-row cleanup is handled by the daily Vercel Cron at /api/cleanup-scores.
 
-import { getSupabaseClient } from "@/lib/supabase";
+import { getSupabaseClient, table, type Insert, type TableName } from "@/lib/supabase";
 
-export async function upsertAndClean(
-  table:           string,
+export async function upsertAndClean<T extends TableName>(
+  tableName:       T,
   conflictColumns: string,
-  row:             Record<string, unknown>,
+  row:             Insert<T>,
 ): Promise<string | null> {
   const supabase = getSupabaseClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.from(table) as any).upsert(
-    row,
+  // The row is checked against `tableName`'s real Insert type at the call site.
+  // supabase-js cannot prove that for an unresolved T, so the payload is widened
+  // here; T is pinned by the caller's literal, so nothing is lost.
+  const { error } = await table(supabase, tableName).upsert(
+    row as never,
     { onConflict: conflictColumns },
   );
   return error ? error.message as string : null;
