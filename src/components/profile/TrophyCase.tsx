@@ -14,13 +14,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { BadgeMark } from "@/components/shared/BadgeMark";
 import { GAME_REGISTRY } from "@/config/games";
 import {
   KYNIGOS_PANGRAM_ID,
   LEKSOKIPOS_ACHIEVEMENTS,
   STIN_KORIFI_ID,
   SYLLEKTIS_PONTON_ID,
-  TIER_MEDALS,
   TZIMANI_ID,
   detectEarnedTiers,
   nextTierThreshold,
@@ -31,6 +31,9 @@ import {
 import type { ProfileStats } from "@/hooks/useProfileStats";
 
 const fmt = (n: number) => n.toLocaleString("el-GR");
+
+/** Tile badge size in px — the largest of the three badge surfaces. */
+const TILE_BADGE_PX = 32;
 
 function TierChips({
   tiers,
@@ -83,8 +86,8 @@ function TrophyTile({
   // it. The crossing half runs through detectEarnedTiers — the SAME function the
   // earning lanes use — so the Profile Page cannot drift from the game about which
   // tier a player holds. Resolved once here and handed down, so the tile, its chips
-  // and its medal read one answer. resolveDisplayBadge (rather than a local `some`)
-  // makes that medal the same highest-tier-wins answer the leaderboard chip shows.
+  // and its badge frame read one answer. resolveDisplayBadge (rather than a local
+  // `some`) makes that frame the same highest-tier-wins answer the leaderboard shows.
   const held: ReadonlySet<string> = new Set(
     tiers && liveValue !== undefined
       ? [...earned, ...detectEarnedTiers(tiers, liveValue)]
@@ -93,7 +96,6 @@ function TrophyTile({
 
   const resolved = resolveDisplayBadge(achievement.id, [...held]);
   const tileEarned = tiers ? resolved !== null : earned.has(achievement.id);
-  const medal = resolved?.tier ? TIER_MEDALS[resolved.tier] : null;
 
   // Only earned tiles are pickable as the display badge; locked ones are inert.
   const selectable = tileEarned;
@@ -130,14 +132,14 @@ function TrophyTile({
           : "border-border bg-surface-raised opacity-60")
       }
     >
-      <span className={tileEarned ? "text-2xl" : "text-2xl grayscale"} aria-hidden="true">
-        {tileEarned ? achievement.glyph : "🔒"}
-      </span>
-      {medal && (
-        <span data-testid={`tile-medal-${achievement.id}`} className="-mt-1 text-sm" aria-hidden="true">
-          {medal}
-        </span>
-      )}
+      {/* Earned and locked draw the SAME mark — locked only changes the frame, so a
+          player can see what they are chasing instead of a row of identical 🔒. */}
+      <BadgeMark
+        mark={achievement.mark}
+        tier={resolved?.tier ?? null}
+        size={TILE_BADGE_PX}
+        locked={!tileEarned}
+      />
       <span className="text-xs font-semibold text-foreground">{achievement.name}</span>
       <span className="text-[11px] leading-tight text-muted">{achievement.hint}</span>
       {tiers && <TierChips tiers={tiers} held={held} />}

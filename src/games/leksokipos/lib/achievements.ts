@@ -47,7 +47,7 @@ export type OneShotAchievementId =
 // A found word of EXACTLY N letters earns the badge for N. Detection is `===`,
 // never `>=`: a 13-letter find earns only the 13 badge, so each length is its own
 // accomplishment. The lengths live in tuning (a balance knob + the player_words
-// storage floor); the id/name/glyph per length are frozen display copy, here.
+// storage floor); the id and name per length are frozen display copy, here.
 
 /**
  * Frozen id + display copy for each exact word length that has a badge.
@@ -55,15 +55,19 @@ export type OneShotAchievementId =
  * `tier` maps each length onto a rung of the Μακρυλέξης ladder (below). The four
  * lengths remain four independent earned facts — only their *presentation* is
  * laddered, so nothing about detection or storage changes.
+ *
+ * There is no per-length art: the ladder is ONE badge wearing four tier frames
+ * (TICKET-03), so the four per-length emoji are gone and only the rung *labels*
+ * survive. Nothing ever rendered them anyway — the Trophy Case tier chips are text.
  */
 const WORD_LENGTH_BADGE_META: Record<
   number,
-  { id: OneShotAchievementId; name: string; glyph: string; tier: TierName }
+  { id: OneShotAchievementId; name: string; tier: TierName }
 > = {
-  10: { id: LEKSOKIPOS_ONESHOT_IDS.sidirodromos, name: "Σιδηρόδρομος", glyph: "🚂", tier: "chalkino" },
-  11: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength11,  name: "Υπερταχεία",   glyph: "🚄", tier: "asimenio" },
-  12: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength12,  name: "Νταλίκα",      glyph: "🚛", tier: "chryso" },
-  13: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength13,  name: "Σεντόνι",      glyph: "🛏️", tier: "diamanti" },
+  10: { id: LEKSOKIPOS_ONESHOT_IDS.sidirodromos, name: "Σιδηρόδρομος", tier: "chalkino" },
+  11: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength11,  name: "Υπερταχεία",   tier: "asimenio" },
+  12: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength12,  name: "Νταλίκα",      tier: "chryso" },
+  13: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength13,  name: "Σεντόνι",      tier: "diamanti" },
 };
 
 /**
@@ -76,7 +80,6 @@ export const WORD_LENGTH_BADGES: readonly {
   length: number;
   id:     OneShotAchievementId;
   name:   string;
-  glyph:  string;
   tier:   TierName;
 }[] = TUNING.wordLengthBadges.map((length) => {
   const meta = WORD_LENGTH_BADGE_META[length];
@@ -90,9 +93,51 @@ export type AchievementKind = "oneshot" | "tiered";
  * Tier rungs. The three metal names are the podium set used by the cumulative
  * badges (points, pangrams). `diamanti` is a fourth rung above gold, currently used
  * only by the word-length ladder, whose top rung (13 letters) is rarer than any
- * gold. Adding a name here requires a TIER_MEDALS entry — the Record type enforces it.
+ * gold. A tier is a COLOUR (ring + soft disc) and nothing else — adding a name here
+ * means adding its two `--tier-*` tokens in globals.css, not a new drawing.
  */
 export type TierName = "chalkino" | "asimenio" | "chryso" | "diamanti";
+
+/**
+ * A badge's drawn art: one flattened path on a shared 24×24 canvas.
+ *
+ * Deliberately path DATA, never raw SVG markup — the catalog stays plain data that
+ * no renderer has to trust, and BadgeMark owns the one `<svg>` element. The mark is
+ * always painted in `currentColor` and never carries tier colour, which is what lets
+ * five drawings serve every tier at every size (TICKET-03; the visual record is
+ * `.claude/aiHelper/html/badge-visual-grill.html`).
+ */
+export interface BadgeMarkArt {
+  path:    string;
+  viewBox: string;
+}
+
+/** Every mark shares this canvas, so one component can scale all five. */
+const MARK_VIEWBOX = "0 0 24 24";
+
+/**
+ * The five drawings. Each is one flattened path — Τζιμάνι's six petals are twelve
+ * arcs rather than six `<ellipse>` elements for exactly that reason.
+ *
+ * Τζιμάνι's petals are generated from FlowerGrid's own construction (six ellipses,
+ * major axis radial, at the board's real proportions petalLength 46 / petalWidth 37 /
+ * petalDist 90). If that geometry ever changes, this mark should follow it.
+ */
+const MARKS = {
+  /** Στην Κορυφή — two peaks, the taller one behind. */
+  korifi:  "M14 3.2 22 20.4H6zM6.8 9.8 12.6 20.4H2z",
+  /** Μακρυλέξης — rails and sleepers, the ladder of lengths. */
+  grammes: "M9.6 3h1.6L4.6 21H1.4zM12.8 3h1.6L22.6 21h-3.2zM8.2 9h7.6v1.9H8.2zM5.8 15.6h12.4v2.1H5.8z",
+  /** Τζιμάνι — the Leksokipos flower itself. */
+  petala:  "M12.00 8.90A3.8 3.2 -90.00 0 1 12.00 1.30A3.8 3.2 -90.00 0 1 12.00 8.90ZM14.68 10.45A3.8 3.2 -30.00 0 1 21.27 6.65A3.8 3.2 -30.00 0 1 14.68 10.45ZM14.68 13.55A3.8 3.2 30.00 0 1 21.27 17.35A3.8 3.2 30.00 0 1 14.68 13.55ZM12.00 15.10A3.8 3.2 90.00 0 1 12.00 22.70A3.8 3.2 90.00 0 1 12.00 15.10ZM9.32 13.55A3.8 3.2 150.00 0 1 2.73 17.35A3.8 3.2 150.00 0 1 9.32 13.55ZM9.32 10.45A3.8 3.2 210.00 0 1 2.73 6.65A3.8 3.2 210.00 0 1 9.32 10.45Z",
+  /** Κυνηγός Πανγκράμ — a bolt: the whole alphabet in one word. */
+  keravnos: "M14.2 2.2 3.6 13.9h5.9l-1 7.9L20.4 10.1h-6.1z",
+  /** Συλλέκτης Πόντων — a cut gem, points accumulated. */
+  lithos:  "M7.6 2.6h8.8l4.8 6.4L12 21.4 2.8 9z",
+} as const;
+
+/** Wrap a raw path in the shared canvas — the catalog never repeats the viewBox. */
+const mark = (path: string): BadgeMarkArt => ({ path, viewBox: MARK_VIEWBOX });
 
 export interface AchievementTier {
   /** Frozen award id — the player_achievements.achievement_id for this tier. */
@@ -107,8 +152,8 @@ export interface Achievement {
   id:     string;
   name:   string;
   hint:   string;
-  /** Single-emoji badge art — interim, swappable to icons later without a schema change. */
-  glyph:  string;
+  /** The badge's drawn art. One per badge — tiers reframe it, they never redraw it. */
+  mark:   BadgeMarkArt;
   kind:   AchievementKind;
   tiers?: readonly AchievementTier[];
 }
@@ -270,7 +315,7 @@ export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
     id:   STIN_KORIFI_ID,
     name: "Στην Κορυφή",
     hint: "Φτάσε στην κατάταξη Απολυτότητα σε ημερήσια παζλ.",
-    glyph: "👑",
+    mark: mark(MARKS.korifi),
     kind: "tiered",
     tiers: metalTiers(STIN_KORIFI_ID, TUNING.topRankTierThresholds),
   },
@@ -282,7 +327,7 @@ export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
     id:   MAKRYLEXIS_ID,
     name: "Μακρυλέξης",
     hint: "Βρες μεγάλες λέξεις — όσο πιο μεγάλες, τόσο πιο ψηλά.",
-    glyph: WORD_LENGTH_BADGES[WORD_LENGTH_BADGES.length - 1]?.glyph ?? "🚂",
+    mark: mark(MARKS.grammes),
     kind: "tiered",
     tiers: MAKRYLEXIS_TIERS,
   },
@@ -290,7 +335,7 @@ export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
     id:   TZIMANI_ID,
     name: "Τζιμάνι",
     hint: `Βρες το ${Math.round(TUNING.tzimaniFoundRatio * 100)}% των λέξεων σε ημερήσια παζλ.`,
-    glyph: "🌾",
+    mark: mark(MARKS.petala),
     kind: "tiered",
     tiers: metalTiers(TZIMANI_ID, TUNING.tzimaniTierThresholds),
   },
@@ -298,7 +343,7 @@ export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
     id:   KYNIGOS_PANGRAM_ID,
     name: "Κυνηγός Πανγκράμ",
     hint: "Βρες πανγκράμ σε ημερήσια παζλ.",
-    glyph: "✍️",
+    mark: mark(MARKS.keravnos),
     kind: "tiered",
     tiers: metalTiers(KYNIGOS_PANGRAM_ID, TUNING.pangramTierThresholds),
   },
@@ -306,7 +351,7 @@ export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
     id:   SYLLEKTIS_PONTON_ID,
     name: "Συλλέκτης Πόντων",
     hint: "Μάζεψε πόντους συνολικά.",
-    glyph: "💎",
+    mark: mark(MARKS.lithos),
     kind: "tiered",
     tiers: metalTiers(SYLLEKTIS_PONTON_ID, TUNING.pointsTierThresholds),
   },
@@ -412,8 +457,20 @@ export function detectEarnedTzimaniTiers(tzimaniDays: number): string[] {
 /** What the unlock toast shows for an earned id. */
 export interface EarnedDisplay {
   name:      string;
+  /**
+   * The BASE badge's drawn art. A tier is a frame, never its own drawing, so this
+   * is the same mark whichever rung was just earned — and it is the only way the
+   * toast can draw the right badge, since what it is handed is a TIER id.
+   */
+  mark:      BadgeMarkArt;
   /** Greek tier word (Χάλκινο/Ασημένιο/Χρυσό), present only for tier ids. */
   tierLabel?: string;
+  /**
+   * The rung just earned, for the badge FRAME. `tierLabel` is display copy and
+   * cannot be mapped back to a colour; without this the toast would draw the
+   * neutral frame, which is exactly what a LOCKED badge looks like.
+   */
+  tier?:     TierName;
 }
 
 /** A freshly-earned badge handed to the unlock toast (its id + display copy). */
@@ -428,9 +485,9 @@ export interface EarnedToast extends EarnedDisplay {
  */
 export function describeAchievement(id: string): EarnedDisplay | null {
   for (const a of LEKSOKIPOS_ACHIEVEMENTS) {
-    if (a.id === id) return { name: a.name };
+    if (a.id === id) return { name: a.name, mark: a.mark };
     const tier = a.tiers?.find((t) => t.id === id);
-    if (tier) return { name: a.name, tierLabel: tier.label };
+    if (tier) return { name: a.name, mark: a.mark, tierLabel: tier.label, tier: tier.tier };
   }
   return null;
 }
@@ -441,15 +498,6 @@ export function describeAchievement(id: string): EarnedDisplay | null {
 // beside their name on every leaderboard. What is STORED is the BASE achievement
 // id (never a tier id); the displayed tier is resolved at READ time from the
 // device's earned tier rows, so a later tier upgrade needs no write-back.
-
-/** Podium medal for each tier — shown beside the glyph for a tiered display badge. */
-export const TIER_MEDALS: Record<TierName, string> = {
-  chalkino: "🥉",
-  asimenio: "🥈",
-  chryso:   "🥇",
-  // Above gold — currently only the word-length ladder's top rung reaches it.
-  diamanti: "💠",
-};
 
 /**
  * The base ids a player may select as their display badge — every catalog entry,

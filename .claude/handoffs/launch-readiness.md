@@ -201,9 +201,10 @@ Carried over from the retired map. One line per resolved question.
   amendment records where it superseded the 2026-08-06 one (pangram thresholds 25/60/150, the
   ratio at 0.7, and `leksokipos-theristis` retired outright). `badgeIdeas.md` is discharged. Two
   things remain and both are operator actions, not build work: **the after-hours deploy window**,
-  and **running the reset on release day** (see the checklist bullet in question 1). Badge art is
-  designed and ticketed as of 2026-08-10 — `.claude/tracker/tickets/TICKET-03-badge-visual-system.md`,
-  still decoupled from everything above and safe to land in any order.
+  and **running the reset on release day** (see the checklist bullet in question 1). Badge art
+  **shipped 2026-08-10** (TICKET-03, ticket deleted): every emoji glyph is now a drawn SVG mark in a
+  tier-coloured frame, recorded in ADR 0013 §7. It was decoupled from everything above and landed
+  independently, exactly as planned. Still owed on it: an operator eye-check in both themes.
 - **2026-08-06 — Five islands added, Δήλος dropped, Topothesies is at 109 answers.** Neither a
   `place=island` override nor connected-component splitting was needed: a δήμος spanning several
   islands already arrives as **one polygon per island** — the islands only had to be *selected*,

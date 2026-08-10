@@ -12,7 +12,33 @@ Known mitigations applied (Session 25):
 Stripping `validWords` from `puzzles-el.json` was evaluated and rejected: saving ~4–10 ms of JSON
 parse time is outweighed by adding ~50–200 ms of dictionary computation on first request per puzzle.
 
-### 🟠 The deploy window's acceptance test only proves half of it (s142, live until the window runs)
+### 🟡 A component with no visual gate is verified by compiling it, not by rendering it (s144)
+
+Every emoji badge became a drawn `BadgeMark` and all four gates went green — but **nothing in this repo
+can tell a correct badge from a plausible one.** The unit tests assert `data-tier` attributes and path
+strings; jsdom has no layout, no CSS, and no idea whether a 14px ring is visible or a locked tile reads as
+locked. The one thing that could have failed silently and *did* get checked was a Tailwind class that never
+compiles: `bg-tier-chryso-soft`, `--badge-size` and the `max(1px,calc(…))` ring width were grepped **out of
+the production CSS bundle**, because a missing token renders a badge with no ring at all and every test
+still passes. That check is the local instance of the standing rule — *measure the artifact, don't trust
+the response* — applied to CSS rather than to an API.
+
+What is still owed, and is not a gate: an operator eye-check of the Trophy Case and the leaderboard chip in
+**both themes**. s143 established the standing method for exactly this (`.claude/aiHelper/html/` renders the
+decision and the human looks), and the spec page there is what shipped — but a spec page is not the app.
+
+The generalisable half: **for anything whose failure mode is "looks wrong", the test suite's job is to lock
+the decisions, not to prove the result.** Two decisions are locked that way here — a tier changes only the
+frame (same path `d` across two tiers) and a locked badge keeps its mark visible. Both would otherwise
+survive only as prose in an ADR, which is precisely the thing s139 showed rots.
+
+### 🟠 The deploy window's acceptance test only proves half of it (s142 — step 1 has now run, see below)
+
+**Update (s144):** the 5 `rlsInvariantsLiveDb` failures are gone and that suite is 30/30, so
+`player_milestones` exists in the live DB and the migration was pushed sometime after s142. Everything below
+still stands, and now matters *more*, not less: those green tests say the schema changed and nothing else.
+Whether the Vercel deploy that must accompany it has happened is still unverified by any gate here.
+
 The plan for the `player_milestones` window is: `npx supabase db push`, then the Vercel deploy, then re-run the tests and confirm all 5 `rlsInvariantsLiveDb` failures turn green. **Those 5 tests, and the whole e2e suite, validate step 1 and are blind to step 2.** They open a Supabase client and talk to Postgres directly; no deployed app code is exercised. So they go green the moment the migration lands — whether the deploy succeeded, failed, or was never started.
 
 That matters because the failure mode being guarded against lives precisely in the gap: the migration drops `player_pangrams` and `player_words`, and production serves code that writes to them until the deploy lands. A green suite would actively reassure the operator while every pangram find is 500ing. **The window needs one check that hits the deployed route** — a POST to `/api/milestones` on production, or Vercel runtime errors read for the minutes after the deploy. Until that is added, "all 5 green" should be read as "the schema changed", nothing more.
@@ -272,6 +298,44 @@ Two things to carry:
 ### 🟡 Word-length ladder may be near-unearnable + a thin card (s125)
 
 The word-length badges are **exact length** (operator's choice): a word of exactly 12 or 13 letters is genuinely rare on a Leksokipos board, so the 12/13 rungs may almost never earn, and a 14+ monster earns nothing at all. Same reason the "Λέξεις ανά μήκος" card (now 10/11/12/13+ only) will read near-empty for most players — most of a round's finds are short. Both are acceptable given the change's real goal (cap `player_words` growth, resolved issue 14), but if the badges feel dead or the card feels barren post-launch, the lever is `achievementTuning.wordLengthBadges` (drop to `[10,11,12]`, or make the top rung "13+") — everything (buckets, floor, detection, catalog) re-derives from that one array.
+
+---
+
+### 🟡 A licence label everyone repeats is still an unverified claim (s145)
+
+The Sound Cues grill set the bar at "CC0 only" and went looking. Pixabay is described as CC0 in
+search results, in blog posts, and in most developers' heads. **It is not** — it is the Pixabay
+Content License: no attribution, commercial use fine, but redistribution "on a standalone basis"
+forbidden. Reading the licence page took one fetch. The outcome barely changed (it still clears our
+bar, because a bundled MP3 is not standalone distribution) but **what would have been written into
+`src/config/sound.ts` was the word "CC0", which is false**, and provenance comments exist precisely
+so a future session can trust them.
+
+This is the standing "measure the artifact, don't trust the response" rule (s130, s132, s139) in a
+new costume: the unreliable narrator here is neither an API nor the repo's own spec, but **the
+consensus of every secondary source**. The tell is the same each time — a claim that is plausible,
+load-bearing, and cheap to check.
+
+Live consequence for `TICKET-05`: each of the three files needs its **actual** licence recorded, not
+the licence of the site it came from. Freesound in particular hosts CC0, CC-BY and CC-BY-NC side by
+side, and its most famous rooster is CC-BY.
+
+### 🟡 Sound Cues are spec'd, unbuilt, and depend on operator-sourced assets (s145)
+
+ADR 0021 closed nineteen decisions and `TICKET-04` can be built cold today with **zero audio files**,
+since nothing in this stack can assert audibility. `TICKET-05` — three MP3s, sourced and eye-checked
+(ear-checked) by a human — is the half no agent should do, for the s130 reason.
+
+**That shape has failed here before.** «Πόσο κάνει;» is a finished engine that has sat `wip:true`
+since s124 waiting on operator-sourced photos and prices, and its tracking was deleted out from
+under it; Λογοπαίγνιο's 144 assets are still 0 approved. Both are cases where the code was the easy
+half and the content never arrived. Sound Cues is far smaller — three files, not 150 — but it is the
+same dependency.
+
+Two guards, deliberately chosen: it is **pre-launch but explicitly non-blocking**, so it can be cut
+without ceremony rather than slipping a launch; and **neither ticket deploys alone**, because a 🔊
+toggle that plays silence is worse than no toggle. If `TICKET-04` lands and `TICKET-05` stalls, the
+correct state is *merged and undeployed*, not *shipped and mute*.
 
 ---
 
