@@ -202,7 +202,8 @@ Carried over from the retired map. One line per resolved question.
   ratio at 0.7, and `leksokipos-theristis` retired outright). `badgeIdeas.md` is discharged. Two
   things remain and both are operator actions, not build work: **the after-hours deploy window**,
   and **running the reset on release day** (see the checklist bullet in question 1). Badge art is
-  still open and still decoupled — `.claude/handoffs/badgeVisualSystem.md`.
+  designed and ticketed as of 2026-08-10 — `.claude/tracker/tickets/TICKET-03-badge-visual-system.md`,
+  still decoupled from everything above and safe to land in any order.
 - **2026-08-06 — Five islands added, Δήλος dropped, Topothesies is at 109 answers.** Neither a
   `place=island` override nor connected-component splitting was needed: a δήμος spanning several
   islands already arrives as **one polygon per island** — the islands only had to be *selected*,

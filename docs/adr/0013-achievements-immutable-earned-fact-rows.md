@@ -205,8 +205,12 @@ stays **allowed**; the badge changes instead.
 
 Every `glyph` becomes a drawn SVG mark, and tiers stop using the 🥉🥈🥇 `TIER_MEDALS` in favour of a tier
 treatment on the mark itself. **Art is display copy — no id, no schema, and no earned row depends on it**, so
-this is fully decoupled and can land whenever. Scope, the five marks, the tier treatment, the leaderboard chip
-and the Trophy Case states are all specified in `.claude/handoffs/badgeVisualSystem.md`.
+this is fully decoupled and can land whenever. **Designed and fully specified on 2026-08-10** (`/grill-with-docs`):
+a badge is a tier-coloured ring plus a soft disc behind a mark that is always `currentColor`, so five drawings
+serve every tier. Locked drops the tier entirely for a neutral frame — the mark stays visible. `TIER_MEDALS`
+and the four per-length emoji are deleted. The exact token values, the five path strings and the full scope
+live in `.claude/tracker/tickets/TICKET-03-badge-visual-system.md`; the visual record is
+`.claude/aiHelper/html/badge-visual-grill.html`. Amend this section again when that ticket ships.
 
 **Note the structural consequence of §3 + §4:** with Πρώτα Βήματα gone and Στην Κορυφή and Τζιμάνι tiered,
 **every remaining badge is tiered** — the catalog has no one-shot entries left. The tier treatment is therefore

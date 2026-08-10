@@ -19,6 +19,16 @@ That matters because the failure mode being guarded against lives precisely in t
 
 Second-order, and the reason this is worth a tension rather than a note: `dev` is currently **22 commits ahead of `origin/dev`**, so step 2 is not a button press — it is a push of a large backlog plus a build. The gap is measured in minutes at best, and whoever runs the window should size it before starting, not discover it midway.
 
+### 🟠 TICKET-03's marks were approved in a mock, not in the app (s143, live until the ticket ships)
+Every badge decision was made against `.claude/aiHelper/html/badge-visual-grill.html`, which is a **standalone page with its own CSS**. It reproduces the leaderboard row, the Trophy Case tile and the toast closely enough to choose between options — but it is not the app. It does not use `lbBadgeChip`'s real padding and divider, the real font stack, the real row density, or the actual `globals.css` tokens; its eight tier colours are hard-coded copies. **A mark that reads at 12px in the mock is not thereby proven to read at 12px in the real chip.**
+
+So the ticket's "done when" cannot be satisfied by the mock. Whoever builds it should render the real components early and look at them before finishing the drawings — and should expect **γραμμές to be the one that breaks first**, since it is the busiest of the five (four parts, thin tapering rails) and was already refined once from three crossbars to two for exactly this reason. Reverting to a simpler mark is a display-copy change with no id, schema or earned-row consequence, so it is cheap — but only if it happens before the ticket closes, not after players have seen it.
+
+### 🟡 A discharged handoff is a second source of truth until it is deleted (s143)
+`badgeIdeas.md` was fully discharged on 2026-08-07 — every build item shipped, every decision landed in ADR 0012/0013, `goals.md` and `launch-readiness.md` — and then **sat in `handoffs/` for three days**, because s140's Dream promoted its lessons but never removed the file. In the same window its sibling `badgeVisualSystem.md` went **stale on three facts** (a threshold, a tier ladder, and a citation to a superseded ADR amendment) with nothing flagging it, because a handoff has no mechanism that notices the world moved.
+
+The operator caught both by asking. That is the tension: **the Dream reliably promotes content and unreliably deletes files.** `tracker/` has the rule (done means delete, git is the archive); `handoffs/` has the same need and no rule. Worth a habit at Dream time — for every handoff still on disk, name the thread that is still open, and if none is, delete it. A handoff whose decisions have all landed elsewhere is not documentation, it is a stale copy that a cold session will read as current.
+
 ### 🟡 Authored content vs derived word lists (the s133 class of bug)
 Vres Tin Frasi shipped with 29% of its phrase corpus unsolvable — the game rejected its own answers — because **authored content (`phrases-el.json`) and the derived guess pool (fixed-length `words-N.json` lists) have no structural link.** A phrase can be written using any word; the pool only stocks lengths 1–8, and only what the dictionary happens to contain. Nothing failed loudly: the puzzle rendered fine and only the correct answer was refused.
 
