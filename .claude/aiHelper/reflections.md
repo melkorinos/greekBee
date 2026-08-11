@@ -2,6 +2,27 @@
 
 ## ⚠️ Active Tensions (watch these)
 
+### 🟠 A qualitative word in our own docs is an unmeasured claim (s147)
+
+The launch grill needed to know how bad the Leksindeseis fallback pool was. Three docs — this file,
+`goals.md` and the launch handoff — had called it **"thin"** for weeks, in the tone of something
+surveyed. It is **one puzzle**, dated 2026-05-12, with placeholder categories (Χρώματα, Ζώα,
+Φρούτα, Μαθηματικές πράξεις), rotating over a single-item array — so every day without a scheduled
+community puzzle serves the identical board. One `require()` of the JSON settled it. The same
+session, "the legal and privacy surface" and "error monitoring" turned out to mean **nothing exists
+at all**: no `/privacy`, no `/terms`, no `robots.ts`, no `sitemap.ts`, no `opengraph-image`, no
+favicon, and exactly four production dependencies.
+
+This is the standing **measure the artifact, don't trust the response** rule (s130, s132, s139,
+s145, s146) meeting a new unreliable narrator — not an external API, not a spec, not the consensus
+of secondary sources, but **our own hedging adjectives**. "Thin", "minimal", "sparse", "some
+coverage", "a few" all read as the output of a count and almost never are. They are worse than a
+wrong number, because a wrong number invites checking and a vague word invites agreement.
+
+The tell is unchanged and the check is still cheap. Practical form: **when a decision turns on a
+qualitative word in a doc, replace it with the number before deciding** — and when writing one,
+either put the number in or say explicitly that it was never counted.
+
 ### 🟡 Vercel Fluid Active CPU (primary cost constraint)
 After 5 active days, Fluid Active CPU was already at 21m 7s vs a 4h/day pro-rated cap.  
 Known mitigations applied (Session 25):
@@ -62,8 +83,8 @@ Vres Tin Frasi shipped with 29% of its phrase corpus unsolvable — the game rej
 
 Related trap, same session: a derived file can be **regenerated empty**. `words-1.json` had to be authored and deliberately placed outside `src/data/leksiarxeio/`, because the re-sync adapter rebuilds those from `words-el.json`, which has no single-letter entries. Any future "just add a list" instinct should first ask whether a re-sync owns that directory.
 
-### Leksindeseis puzzle supply (`puzzles-connections.json`)
-Community-submitted Leksindeseis puzzles are the primary source, with `puzzles-connections.json` as the static fallback. The fallback pool is thin — operator must manually add new dated entries. No reminder system exists. Add a cron check or at minimum document the procedure clearly before going to production.
+### Leksindeseis puzzle supply (`puzzles-connections.json`) — measured s147, and parked
+Community-submitted Leksindeseis puzzles are the primary source, with `puzzles-connections.json` as the static fallback. **The fallback is ONE puzzle** (dated 2026-05-12, placeholder categories) rotating over a single-item array, so every unscheduled day serves the same board — not "thin", a placeholder. No reminder system exists. **Parked, not fixed:** the operator hid the Game for launch (`TICKET-06`), so nothing ships. This becomes live work again the moment a wip→live flip is considered — and the flip is a checklist (registry state + `Shell.tsx GAME_IDS` + HomeTrophy branch + docs), never a one-line edit.
 
 ### Leksindeseis "one away" UX gap
 The reducer detects "one away" and sets feedback text, but `GroupGrid` has no visual highlight indicating _which_ group the player is close to. NYT shows colour intensity. Consider adding in Phase 4 polish.
@@ -76,6 +97,7 @@ Modern messaging apps (WhatsApp, Telegram, iMessage) and all mainstream browsers
 
 ### 🟡 API rate limiting (accepted risk)
 All INSERT-capable API routes write to Supabase with no per-device throttle. RLS policies allow unlimited anon inserts. At current scale this is acceptable — the most likely abuse vector is an accidental client bug, not coordinated attack. Decision: **accept risk and monitor** (Option C). Set a Supabase row-count alert on `game_scores` at 50 000 rows and `nominations` at 5 000 rows; revisit with Redis sliding-window rate limiting when DAU exceeds ~500. Alert must be configured in the Supabase dashboard by the operator.
+*s147: **no evidence those alerts were ever configured**, which means the mitigation half of this decision may never have happened and the risk is simply unmitigated. `TICKET-09` closes exactly that gap — the alerts plus a first read of the Supabase Free-plan limits against a soft-launch estimate. The rate-limiting trigger above is unchanged and stays out of scope.*
 *Scope sharpened 2026-07-16: this accepted risk is now **INSERT spam only**. The adjacent-but-different exposure — anon UPDATE/DELETE table-wide via the old `ALL (true)` policies (erasable trophies/pangrams/state, the `transfer_codes` device_uuid oracle) — was never part of this decision and is closed (migrations `20260716120000`/`120100`). Dedup spam via double-submit is also DB-bounded now (`120200`).*
 
 ### 🟡 Topothesies — the answer set is DONE; the gate that guards it is weaker than it looks (s136)

@@ -5,6 +5,32 @@
 
 ---
 
+## Session 147 — 2026-08-11: launch question 1 resolved — five tickets, one issue, no code
+
+`/grill-with-docs` on what "launch-ready" actually requires. Resolved as a **soft launch** — a wider
+circle, no broadcast — because the site is *already publicly deployed*, so launch is an act of
+promotion rather than a change in exposure, and that framing is what makes the checklist finite.
+Output: a blocking/accepted-as-is split, five tickets (`TICKET-06`–`10`), `ISSUE-03`, and a
+release-day runbook whose **order is load-bearing** — deploy → verify prod serves the merge commit
+→ `db:backup` off-machine → `launch-reset.sql` → announce.
+
+**Two of the repo's own descriptions were euphemisms, and both were one command to check.** The
+Leksindeseis static fallback pool has been called "thin" for weeks: it is **one puzzle**, dated
+2026-05-12, generic categories, rotating over a single-item array — every day without a scheduled
+community puzzle serves the same board. And the legal/monitoring surface is **nothing at all**: no
+`/privacy`, `/terms`, `robots.ts`, `sitemap.ts`, `opengraph-image` or favicon, and exactly four
+production dependencies. **A qualitative word in a doc is an unmeasured claim** — "thin" and
+"minimal" read as surveyed and neither was.
+
+Third measured fact, and it set the runbook order: **`BadgeMark` is absent from `main`**, so
+production holds the rebuilt tiered catalog with the *old emoji glyphs* and a reset run before the
+launch deploy would re-earn every badge against retired art. Vercel MCP 404s and the CLI hangs on
+device login, so "is `main` actually deployed" became a runbook line, not a fact handed over.
+
+Operator calls: all three `wip:true` Games are **hidden** — not promoted, not finished — retiring the
+content-supply, wip-flip and Leksindeseis-pool threads in one answer; terms of service and E2E
+expansion accepted as-is; the **UI question struck from the handoff** (separate sessions). Docs only.
+
 ## Session 146 — 2026-08-11: the Platform makes a noise — TICKET-04 built
 
 Five TDD slices, and the design ADR 0021 wrote held up unchanged: `selectSoundCue` is three lines,
@@ -17,43 +43,25 @@ mobile now, and **nothing guards that**: ADR 0021 named `mobileLayout.test.tsx`,
 `HowToPlayModal` and has never touched the Shell, and jsdom has no layout engine so no test here
 could. Moved to `TICKET-05`'s done-when, which already puts the operator on a phone.
 
-**The ticket's own jsdom instruction was wrong, and it was the s132 trap wearing a new hat.** It
-said to stub `HTMLMediaElement.play` "guarded the same way the `scrollIntoView` stub is" — but
-`if (!Element.prototype.scrollIntoView)` works only because jsdom genuinely lacks that method.
-jsdom **does define `play()`**: it logs "Not implemented", returns **`undefined`**, and the guard
-therefore never fires. Probed rather than assumed, which mattered twice — the stub had to become
-unconditional, and the return value being `undefined` rather than a Promise is exactly what killed
-Offline Mode in s132 (`router.prefetch` returns void). The hook ships `audio.play()?.catch(() => {})`
-and a test pins each half separately, because older Safari does the same thing a real browser never
-documents. For the same reason `useSoundCue.test.ts` subclasses the real `Audio` instead of
-substituting a fake one: a hand-rolled Audio mock would be a claim about the contract, and the
-claim is what has been wrong every previous time.
+**The ticket's own jsdom instruction was wrong — the s132 trap wearing a new hat.** It said to stub
+`HTMLMediaElement.play` "guarded the same way the `scrollIntoView` stub is", but that guard works
+only because jsdom genuinely lacks `scrollIntoView`. jsdom **does define `play()`**: it logs "Not
+implemented" and returns **`undefined`**, so the guard never fires. Probing rather than assuming
+mattered twice — the stub had to become unconditional, and a `undefined` return dressed as a Promise
+is exactly what killed Offline Mode in s132. The hook ships `audio.play()?.catch(() => {})`, and
+`useSoundCue.test.ts` **subclasses the real `Audio`** instead of faking one: a hand-rolled mock is a
+claim about the contract, and the claim has been wrong every previous time.
 
-`selectSoundCue` extended `gameLogic.test.ts` rather than opening a file, per the ticket's own
-grep-the-coverage-map instruction, and every case is driven through the **real** `validateWord` —
-a hand-built `ValidationResult` could drift from the validator in silence. Gates: **192 files /
-2450 tests**, eslint 0, build 0, e2e **7 passed / 2 skipped** after clearing `.next`. The five
-`rlsInvariantsLiveDb` failures stayed gone. `TICKET-04` deleted; `TICKET-05`'s deploy gate rewritten
-to say what is now true — **the 🔊 button renders on every page and plays silence**, so `dev` is
-merged-and-undeployed until the three MP3s land.
-
-## Session 145 — 2026-08-10: Sound Cues designed — ADR 0021 + two tickets, no code
-
-The Platform has shipped eleven Games and has never made a sound: zero audio in `src/`, no audio dependency, `public/` holds only SVGs. An operator request for three Leksokipos sounds (rooster on Pangram, click on Word found, sarcastic clap on `missing_center`) was grilled to nineteen closed decisions and landed as **ADR 0021 + `TICKET-04` (the primitive) + `TICKET-05` (the three MP3s)**. No implementation.
-
-**The design needed almost no new machinery, and that was the finding.** `ValidationStatus` already names all six submission outcomes, and `lastSubmission` is a fresh object per submit that is deliberately not persisted — so the event source already existed. The reducer stays untouched: a pure `selectSoundCue(result)` in `games/leksokipos/lib/` plus one `useEffect` in `GameBoard` is the entire seam. Cues are named for **the moment, not the noise** (`pangram`/`wordFound`/`missingCenter`), so swapping the rooster later is a file replace, not a rename.
-
-**Two claims would have entered the repo as facts if unchecked.** First, **Pixabay is not CC0** — it is the Pixabay Content License (no attribution, commercial fine, but no redistribution "on a standalone basis"), while every casual reference calls it CC0. It still clears the bar, since a bundled MP3 is not standalone distribution, but it must be *recorded* as Pixabay. CC-BY is refused outright: it obliges a permanent credit line in the How-to-Play modal, which is exactly why `topothesies/attribution.ts` exists, and three tiny sounds do not justify one. Second, **ADR 0020 landed two days earlier and appeared to contradict the design** — "behaviour enrols" would make sound a `GameCapability`. Its own stated criterion settled it: behaviour is *what a Game does to the shared database*, and a Cue writes nothing, so it sits with Offline Mode and drawer section, which that ADR already names as presentation.
-
-**The artifact asked for was a handoff; the correct one was an ADR.** This repo's rule is that handoffs hold *open questions*, and none survived the grill. Sound Cues is genuinely architecture: a Platform primitive, a permanent third `localStorage` key outside the envelope, a licensing bar, and a frozen cue vocabulary. Also settled: off by default (mobile blocks the first play anyway, so on-by-default is both unreliable and rude), the toggle inline beside ☀️/🌙 with the icon as its own discoverability, iOS's silent switch accepted with no workaround, and **no test may assert audibility** — nothing in this stack can. Pre-launch but explicitly **non-blocking**, since the launch checklist is itself still an open question.
-
-Docs only, three files, no gates owed. Two corrections caught during the Dream, both from the same cause — two sessions had logged between this one's context read and its writes: the entry is **145, not 143**, and the tickets are **04/05, not 01/02**, because 01–03 are spent and numbers are never reused. Announced, not fixed: **`ISSUE-02` is cited by `memory.md` and `goals.md` but no file exists in `.claude/tracker/issues/`.**
-
+`selectSoundCue` extended `gameLogic.test.ts` per the coverage-map rule, driven through the **real**
+`validateWord`. Gates: **192 files / 2450 tests**, eslint 0, build 0, e2e 7/2-skipped after clearing
+`.next`. `TICKET-04` deleted; `TICKET-05` is now the only thing between Sound Cues and a deploy —
+**the 🔊 button renders on every page playing silence**.
 
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 145 | 2026-08-10 | **Sound Cues designed — ADR 0021 + `TICKET-04`/`05`, no code.** Eleven Games and the Platform had never made a sound (zero audio in `src/`, no dependency). Nineteen decisions closed. **The design needed almost no new machinery, and that was the finding:** `ValidationStatus` already names all six submission outcomes and `lastSubmission` is a fresh per-submit object, so the event source existed — pure `selectSoundCue(result)` plus one `useEffect` in `GameBoard` is the entire seam, reducer untouched. Cues named for **the moment, not the noise**, so swapping the rooster is a file replace. **Two claims would have entered as facts:** **Pixabay is not CC0** (it is the Pixabay Content License — still clears the bar since a bundled MP3 is not standalone distribution, but must be *recorded* as Pixabay), and ADR 0020's "behaviour enrols" appeared to make sound a `GameCapability` until its own criterion settled it — behaviour is what a Game does to the *shared database*, and a Cue writes nothing. CC-BY refused outright (a permanent How-to-Play credit line is why `topothesies/attribution.ts` exists). **The artifact asked for was a handoff; the correct one was an ADR** — handoffs hold open questions and none survived. Off by default; no test may assert audibility. Announced, not fixed: `ISSUE-02` is cited by `memory.md`/`goals.md` with no file on disk. |
 | 144 | 2026-08-10 | **Every emoji badge becomes a drawn mark in a tier frame** (TICKET-03, test-first in five slices). `glyph`, `TIER_MEDALS` (🥉🥈🥇💠), the 🔒 fallback, the `grayscale` class and the toast's fixed 🏆 all deleted for one `BadgeMark` + **five drawings**: a ring in the tier's strong colour, a soft disc, a mark always `currentColor` — so a tier is a *colour*, never a different picture, which is why five drawings cover four tiers across three surfaces (chip 14px / tile 32px / toast 34px). Eight `--tier-*` tokens **verified compiled out of the production CSS bundle** rather than assumed (a missing token renders no ring and every test still passes). **The ticket's flagged check paid out:** `EarnedToast` carries `id`, but TICKET-02 made every badge tiered so that id is always a *tier* id → `achievementById` returns undefined on every unlock; and `tierLabel` is Greek display copy that cannot map back to a colour, so without a new `tier: TierName` field the toast draws the **neutral** frame — an unlock rendering as *locked*, the kind of bug every gate passes. Two decisions moved from prose into tests: *changes only the frame between tiers* (same path `d` across two tiers) and *keeps the mark visible when locked*. `achievementToast.test.tsx` rewritten to build every fixture through `describeAchievement` — it had been carrying the retired `leksokipos-first-daily` id, the s140 pattern exactly. 13 files; 191/2430 green; **the 5 `rlsInvariantsLiveDb` failures are gone** (migration pushed between s142 and now, suite 30/30). Still owed: an operator eye-check of the Trophy Case in both themes. |
 | 143 | 2026-08-10 | **Badge visual system designed end-to-end; both badge handoffs retired** (docs only, zero source files). `badgeIdeas.md` was **discharged and should already have been deleted** at s140's Dream; `badgeVisualSystem.md` was live but **stale on three facts** (Τζιμάνι 80%, pangram tiers 10/20/50, citing the superseded 08-06 amendment). **The durable lesson is the operator's method:** two batches had been answered in prose when the instruction came — *no visual decision gets made in text, put every option in HTML and let me look*. Every agreed visual answer was reopened as a rendered comparison, and **one answer changed on sight** (locked: greyscale filter → neutral frame). **Prose grilling is the wrong instrument for anything whose failure mode is "looks wrong at 12px"**; `.claude/aiHelper/html/` is now the standing home for look-at-it artifacts. Reading the code settled two things the grill could not: `FlowerGrid` is six petals + a centre disc, so a *complete* flower literally is the seven-letter set = a pangram (a real fork, not a preference; honeycomb retired outright), and `TierChips` are text-only, so **four of nine catalogue emoji had never rendered anywhere**. One storage-shape catch before the ticket: `mark: {path, viewBox}` (topothesies precedent) cannot express six rotated ellipses → every mark **flattened to one path**, and the spec page renders the flattened version, so what was reviewed is what ships. Settled: circle frame, ring = size/10, mark 66% and always `currentColor` (**five drawings, not nineteen**), Palette A / eight tokens, Διαμάντι as hue only, `TIER_MEDALS` + every `glyph` deleted. Landed as `TICKET-03` + an ADR 0013 §7 amendment; both handoffs deleted, five references repointed. |
 | 142 | 2026-08-08 | **`isISODate` graduates to `src/lib/puzzleDate.ts`** — an operator proposal whose move was right and whose stated reasons mostly were not. Both headline wins (edge bundles, cold-parse CPU) are worth ~zero: every symbol the leksokipos barrel re-exports is a small pure function, so tree-shaking already dropped them. **What actually justified it went unmentioned: `ISO_DATE_RE` was duplicated verbatim** in `puzzleDate.ts` and `leksokipos/lib/puzzle.ts` — one rule, two copies, in two modules a single route imported two lines apart. **No re-export shim**, deliberately unlike the `normalizeLetters` precedent the proposal cited: nothing inside the game used it, so a shim would be dead on arrival. `isDailyPuzzle` stays (it takes a puzzle and keys off an unanchored prefix rule). **The expensive lesson was in the gates:** e2e failed on `/` with `Unexpected end of JSON input`, s140 had logged that flake as "clean on re-run", so re-run stability was read as proof it was real → a stash-and-bisect for nothing. **The stale Turbopack chunk survives re-runs**; `Remove-Item .next` is the distinguishing test. Also recorded: the 5 `rlsInvariantsLiveDb` failures and the e2e suite validate the migration only, never the deploy — they go green whether or not Vercel shipped. |
@@ -91,16 +99,8 @@ Docs only, three files, no gates owed. Two corrections caught during the Dream, 
 | 108 | 2026-07-18 | Perfect-round/Τζιμάνι removed on all four surfaces (pickup-01): catalog, stats/strip, 🏛️ leaderboard glyphs, whole `isPerfect` wire; Leksokipos completion kept as `allWordsFound` (🏆 win glyph). Prod DELETE was a no-op (0 rows) — id clean for re-award. ADR 0013: first deliberate frozen-id exception. |
 | 107 | 2026-07-18 | Docs-only close-out of the achievements/stats handoffs → pickups 01/02/03 + `badges-parked.md`. Decisions: Τζιμάνι removed completely, words-by-length is Leksokipos-only, consecutive-submissions stat dropped; B2/B1 smoke check → issue 11 (ready-for-human). |
 | 106 | 2026-07-17 | Fixed 28 zero-pangram Leksokipos boards (issue 09): ADR 0015 re-sync had silently stripped last pangrams. Regenerated the 26 future boards (2 already-played dates left, allowlisted); new `everyPuzzleHasPangram.test.ts` drift guard; re-sync adapter now warns when a removal strips a board's last pangram. |
-| 105 | 2026-07-17 | Redesign-prep doc session closing the 01/02/03 handoff chain: ADR 0008 extension (status/shape tokens, `--container-game`), ADR 0009 layout seam (GamePageShell/GameHeader, 8/8 accent map, redesign surface). FeedbackBanner tokenization parked in goals. |
-| 104 | 2026-07-17 | Handoff 03: status tokens (`warning`/`info` trios + `danger`/`success` companions — NominationModal to 0 `dark:` pairs), `btnInfo`/`chipWarning` recipes, shape tokens (`--radius-card/control`, `--shadow-card`, byte-identical compile), accent rows for stavrolekso (sky) + leksikastirio (indigo) → all 8 surfaces. |
-| 103 | 2026-07-17 | Handoff 02: recipe leaks closed — ~9 inline inverted buttons → `btnModalSubmit`/`btnModalPrimary` (recipe owns colour/type/radius, call site owns layout), 4×-pasted `tooltipBubble`, `cardShell`/`cardShellInteractive`; recipes.test.ts contracts; greps clean (0 leaks left). |
-| 102 | 2026-07-17 | Handoff 01: game-page frame → `GamePageShell` + `GameHeader` + `max-w-game` (`--container-game: 24rem`); `max-w-sm` swept to 0 in shipped `.tsx` with new `noLiteralColumnWidth.test.ts` guard. Leksokipos kept its bespoke full-bleed wrapper (operator decision); only its header moved to GameHeader. |
-| 101 | 2026-07-17 | Nominations dedup backstops verified against the live DB (issue 08): real `23505`s for the pending (word,direction) partial unique + the vote pair (mocked tests only proved route branches). Sentinel word seeded + wiped both sides; zero sentinels survive. |
-| 100 | 2026-07-17 | CI at last (issue 03): `ci.yml` (eslint + tsc + vitest; no live-DB secrets by design); `loadEnv` in vitest.config forwards the 3 Supabase keys so the live-DB suites execute locally for the first time; `cleanupScoresLiveDb` rewritten to seeded-sentinel effect assertions; 24 stale tsc errors fixed in fixtures only. |
-| 99 | 2026-07-17 | Vres Tin Frasi short guess pools (`words-2/3.json`) joined the ADR 0015 registry via a `vrestifrasi` adapter (`lengthSlicedWords.ts`, issue 05); 118 blocklisted pool words pinned as a shrink-only ratchet. Separate un-ticketed find: 147/498 phrases already unwinnable vs the 2–8 pool. |
-| 98 | 2026-07-17 | `assertNotBlocked` gates the apply orchestrator (issue 07): approve-then-blocklist can no longer write a proper noun — throws and stops the whole batch (a skip would re-trigger forever); exempts the deferred overlap; never gates removes. |
-| 97 | 2026-07-17 | Blocklist ∩ dictionary became a guarded shrink-only invariant (issue 06): `ατλασ`/`ορκα` removed as false positives (nominatable again); `DEFERRED_BLOCKLIST_DICTIONARY_OVERLAP` (14 month names) exported and pinned to *equal* the overlap exactly. |
-| 96 | 2026-07-17 | Stavrolekso `edit_pin` no longer readable by the public anon key (issue 04): migration `20260717120000` — column-level REVOKE/GRANT for anon **and** authenticated; PATCH PIN lookup → service role. 5 live-DB + 2 unit locks; table had 0 rows, nothing to rotate. Classifier trap re-hit (recorded in `/project-mcp` #3). |
+| 102–105 | 2026-07-17 | **Redesign-prep era** — the 01/02/03 handoff chain, all doc/refactor, no features. Game-page frame extracted to `GamePageShell` + `GameHeader` + `max-w-game` (`--container-game: 24rem`) with `max-w-sm` swept to zero behind a new `noLiteralColumnWidth` guard (Leksokipos kept its bespoke full-bleed wrapper by operator decision). Recipe leaks closed: ~9 inline inverted buttons → `btnModalSubmit`/`btnModalPrimary`, the 4×-pasted `tooltipBubble`, `cardShell`/`cardShellInteractive`, with `recipes.test.ts` contracts and greps clean. Status tokens (`warning`/`info` trios + `danger`/`success`) took NominationModal to 0 `dark:` pairs; shape tokens (`--radius-card/control`, `--shadow-card`) compiled byte-identical; accent rows for stavrolekso (sky) + leksikastirio (indigo) completed 8/8. Closed with the **ADR 0008 extension** and **ADR 0009** layout seam naming the redesign surface; FeedbackBanner tokenization parked in goals. |
+| 96–101 | 2026-07-17 | **Hardening + CI era.** CI at last (`ci.yml`: eslint + tsc + vitest, no live-DB secrets by design; `loadEnv` in vitest.config forwarded the 3 Supabase keys so the live-DB suites ran locally for the first time). Stavrolekso `edit_pin` made unreadable by the anon key (migration `20260717120000`, column-level REVOKE/GRANT for anon **and** authenticated; PATCH lookup → service role). Nominations dedup backstops verified against the **live DB** with seeded sentinels — mocked tests had only ever proved route branches. Blocklist ∩ dictionary became a guarded shrink-only invariant, `assertNotBlocked` gated the apply orchestrator (throws and stops the batch — a skip would re-trigger forever), and Vres Tin Frasi's short guess pools joined the ADR 0015 registry. Un-ticketed find that became s133: 147/498 phrases were already unwinnable against the 2–8 pool. |
 | 95 | 2026-07-17 | dev→main production deploy: pre-merge verification, operator merged `3614145`, then the deploy-coupled vrestifrasi flip `20260715120100` applied via dashboard SQL editor (classifier pre-blocked MCP). Verified live 2/3/6 → 5/4/1; ADR 0014 fully live. |
 | 94 | 2026-07-17 | Full documentation audit — every doc cross-checked vs code + live DB. Fixed: README (rank ladder fully wrong, leaderboard direction, missing boards/games), CLAUDE.md, project-mcp, goals/CONTEXT (**Offline Lock/Outbox marked designed-NOT-built**), memory coverage map completed. Filed issue 05; reconstructed unlogged commit `de4810a`. |
 | 92 | 2026-07-16 | All four DB-hardening handoffs applied (4 migrations, 4 commits): transfer codes server-only + atomic claim + `crypto.getRandomValues`; anon RLS narrowed per-command (append-only enforced, ADR 0013 amended); dedup backstops (vote UNIQUE + pending partial unique, POST 23505 → 409 already_pending); `community_puzzle_status` PG enum (regen types caught a raw `?status=` `.eq()` bug). |

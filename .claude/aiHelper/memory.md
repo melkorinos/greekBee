@@ -2,6 +2,26 @@
 
 > **Rule (2026-07-18):** keep this file under **120 lines** — decisions and pointers, never narrative. Long prose belongs in an ADR with a pointer here. Maintained by the end-of-session Dream (soul.md).
 
+## 🚀 Launch posture (2026-08-11, s147)
+
+**Launch = a SOFT launch** — a wider circle, no broadcast. The site is already publicly deployed, so
+launch is an act of promotion, not a change in exposure; that framing is what made the checklist
+finite. **`launch-readiness.md` question 1 is RESOLVED** and holds the blocking/accepted split, the
+five tickets it produced (`TICKET-06`–`10`) and the release-day runbook. **Only sequencing is open.**
+
+- **All three `wip:true` Games are HIDDEN at launch** (`TICKET-06`) — not promoted, not finished.
+  This retires the Leksindeseis-pool, wip-flip and content-supply threads entirely. `TICKET-06`
+  introduces a **third registry state**: `wip` = unfinished, `hidden` = deliberately not shown; ADR
+  owed, because the `games.ts` header documents its state design and a future session will otherwise
+  collapse the two flags back into one.
+- **Runbook order is load-bearing**: deploy → **verify prod serves the merge commit** → `db:backup`
+  off-machine → `launch-reset.sql` → announce. The reset must follow the deploy (`BadgeMark` is on
+  `dev` only, so running it early re-earns every badge against the retired emoji glyphs), and the
+  dump is the only undo that exists on a Free-plan project with no PITR.
+- **Accepted as-is:** terms of service (not written), E2E depth (gate = existing suites green,
+  `ISSUE-03`), backups automation (`ISSUE-01`), API rate limiting, Λογοπαίγνιο's trademark note.
+- **The UI question is NOT tracked here** — the operator drives it in separate sessions.
+
 ## ⚡ Current State (2026-08-06)
 Seven live games + the Leksikastirio word-court + custom puzzle URLs, and **three `wip:true` builds**: Leksindeseis (never flipped), **Πόσο κάνει;** (`posokanei` 🛒, s124) and **Λογοπαίγνιο** (`logopaignio` 🔎, s126–127). `wip` lives in `src/config/games.ts` and is the source of truth for this table; a wip game still renders but the picker and drawer file it under «Υπό κατασκευή». Run `npm run test -- --run` for the current test count.
 
@@ -78,7 +98,7 @@ supabase/       config.toml + migrations/ — version-controlled DB schema (auth
 ---
 
 ## 🛠 Known Tech Debt
-Everything lives in `.claude/tracker/` (redesigned 2026-08-06, conventions in its README): **`issues/`** holds only `ISSUE-01` (no disaster-recovery backups) — **`ISSUE-02` is cited here and in `goals.md` but its FILE DOES NOT EXIST** (`rlsInvariantsLiveDb`'s `game_state` DELETE flake; also note s144 found those 5 failures gone, the migration having been pushed — resolve or re-file). **`tickets/`** holds **`TICKET-05`** only (source the three Sound Cue MP3s — **operator work**, and the sole thing blocking a Sound Cues deploy). Numbers are **never reused**: 01 shipped s139, 02 s140, 03 s144, 04 s146, all deleted per the rule — read the log before picking a number, not the folder. No triage labels — the folder is the state; resolved files are deleted, never marked done. Open *questions* are neither, and live in `.claude/handoffs/launch-readiness.md`; read it before assuming something is untracked. Wayfinder is retired.
+Everything lives in `.claude/tracker/` (redesigned 2026-08-06, conventions in its README). **`issues/`**: `ISSUE-01` (no disaster-recovery backups) and `ISSUE-03` (thin E2E coverage — 7 tests across 8 launching Games, deferred s147). **`ISSUE-02` is cited here and in `goals.md` but its FILE DOES NOT EXIST** (`rlsInvariantsLiveDb`'s `game_state` DELETE flake; s144 found those 5 failures gone — resolve or re-file, and note the number stays spent either way). **`tickets/`**: `TICKET-05` (three Sound Cue MP3s — **operator work**, the sole thing blocking a Sound Cues deploy) plus the five launch tickets from s147 — **06** hide the three unlaunched Games, **07** privacy page, **08** error monitoring, **09** operational headroom, **10** share preview. Two ordering constraints live in the tickets themselves: **08 before 07** (or the privacy page's "no third-party tracking" line goes stale silently) and **06 before the play-through**. Numbers are **never reused**: 01 shipped s139, 02 s140, 03 s144, 04 s146, all deleted per the rule — read the log before picking a number, not the folder. No triage labels — the folder is the state; resolved files are deleted, never marked done. Open *questions* are neither, and live in `.claude/handoffs/launch-readiness.md`; read it before assuming something is untracked. Wayfinder is retired.
 
 ---
 
