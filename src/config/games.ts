@@ -48,7 +48,7 @@ export const GAME_REGISTRY = {
     label:       "✏️ Leksiarxeio",
     emoji:       "✏️",
     title:       "Leksiarxeio",
-    description: "Μάντεψε τη λέξη σε 6 προσπάθειες — 5 γράμματα.",
+    description: "Μάντεψε τη λέξη σε 6 προσπάθειες — 4 έως 8 γράμματα.",
     href:         "/leksiarxeio",
     wip:          false,
     // Posts through useLeksiarxeioScoreSubmission (a row per word length), not the
