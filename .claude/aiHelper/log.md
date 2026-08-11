@@ -5,6 +5,36 @@
 
 ---
 
+## Session 146 — 2026-08-11: the Platform makes a noise — TICKET-04 built
+
+Five TDD slices, and the design ADR 0021 wrote held up unchanged: `selectSoundCue` is three lines,
+the reducer was never touched, and `lastSubmission` was already the event source. New files are
+`config/sound.ts` (Cue registry + fixed per-Cue volumes + the provenance block `TICKET-05` fills),
+pure `leksokipos/lib/soundCue.ts`, `useSoundEnabled` (a `useTheme` clone on key `sound-preference`,
+the third standalone localStorage carve-out) and `useSoundCue` (one lazy `Audio` per Cue, restart
+not stack). Toggle 🔊/🔇 inline in `Shell.tsx` beside ☀️/🌙 — the header is four buttons wide on
+mobile now, and `mobileLayout.test.tsx` stayed green.
+
+**The ticket's own jsdom instruction was wrong, and it was the s132 trap wearing a new hat.** It
+said to stub `HTMLMediaElement.play` "guarded the same way the `scrollIntoView` stub is" — but
+`if (!Element.prototype.scrollIntoView)` works only because jsdom genuinely lacks that method.
+jsdom **does define `play()`**: it logs "Not implemented", returns **`undefined`**, and the guard
+therefore never fires. Probed rather than assumed, which mattered twice — the stub had to become
+unconditional, and the return value being `undefined` rather than a Promise is exactly what killed
+Offline Mode in s132 (`router.prefetch` returns void). The hook ships `audio.play()?.catch(() => {})`
+and a test pins each half separately, because older Safari does the same thing a real browser never
+documents. For the same reason `useSoundCue.test.ts` subclasses the real `Audio` instead of
+substituting a fake one: a hand-rolled Audio mock would be a claim about the contract, and the
+claim is what has been wrong every previous time.
+
+`selectSoundCue` extended `gameLogic.test.ts` rather than opening a file, per the ticket's own
+grep-the-coverage-map instruction, and every case is driven through the **real** `validateWord` —
+a hand-built `ValidationResult` could drift from the validator in silence. Gates: **192 files /
+2450 tests**, eslint 0, build 0, e2e **7 passed / 2 skipped** after clearing `.next`. The five
+`rlsInvariantsLiveDb` failures stayed gone. `TICKET-04` deleted; `TICKET-05`'s deploy gate rewritten
+to say what is now true — **the 🔊 button renders on every page and plays silence**, so `dev` is
+merged-and-undeployed until the three MP3s land.
+
 ## Session 145 — 2026-08-10: Sound Cues designed — ADR 0021 + two tickets, no code
 
 The Platform has shipped eleven Games and has never made a sound: zero audio in `src/`, no audio dependency, `public/` holds only SVGs. An operator request for three Leksokipos sounds (rooster on Pangram, click on Word found, sarcastic clap on `missing_center`) was grilled to nineteen closed decisions and landed as **ADR 0021 + `TICKET-04` (the primitive) + `TICKET-05` (the three MP3s)**. No implementation.
@@ -18,42 +48,11 @@ The Platform has shipped eleven Games and has never made a sound: zero audio in 
 Docs only, three files, no gates owed. Two corrections caught during the Dream, both from the same cause — two sessions had logged between this one's context read and its writes: the entry is **145, not 143**, and the tickets are **04/05, not 01/02**, because 01–03 are spent and numbers are never reused. Announced, not fixed: **`ISSUE-02` is cited by `memory.md` and `goals.md` but no file exists in `.claude/tracker/issues/`.**
 
 
-## Session 144 — 2026-08-10: every emoji badge becomes a drawn mark in a tier frame
-
-TICKET-03, built test-first in five slices. The catalog's `glyph` field, `TIER_MEDALS` (🥉🥈🥇💠), the 🔒
-fallback, the `grayscale` class and the fixed 🏆 on the unlock toast are all gone; what replaced them is one
-`BadgeMark` component and **five drawings**. A badge is a ring in the tier's strong colour, a soft disc, and a
-mark that is always `currentColor` — so a tier is a *colour*, never a different picture, which is why five
-drawings cover four tiers across three surfaces (chip 14px, tile 32px, toast 34px). Eight `--tier-*` tokens
-declared light and dark, and **verified compiled** out of the production CSS bundle rather than assumed:
-`bg-tier-chryso-soft`, `--badge-size` and the `max(1px,calc(…))` ring width all present.
-
-**The ticket flagged one check and it paid out.** "Check whether `EarnedToast` carries the base achievement
-id" — it carries `id`, but since TICKET-02 made **every** badge tiered that id is always a **tier** id, so
-`achievementById` would have returned undefined on every unlock; only `describeAchievement`, which already
-walks tiers, reaches the base badge's drawing. A second field was needed for a reason nobody had written
-down: `tierLabel` is Greek display copy («Ασημένιο») and cannot be mapped back to a colour, so without
-`tier: TierName` the toast draws the **neutral** frame — exactly what *locked* looks like. An unlock toast
-rendering as locked is the kind of bug every gate passes.
-
-Two design decisions are now locked by tests rather than prose: *"changes only the frame between tiers"* (same
-`d` across two tiers — give a tier its own art and it fails, forcing the catalog to grow instead) and *"keeps
-the mark visible when locked"*. The Trophy Case's four medal tests became four tier-frame tests, the same
-question asked of `data-tier` instead of an emoji. `achievementToast.test.tsx` was rewritten so every fixture
-is built through `describeAchievement` — it had been hand-written objects carrying the **retired**
-`leksokipos-first-daily` id, the s140 pattern exactly.
-
-Net 13 files. Gates: **191 files / 2430 tests, all passing**; eslint 0; build 0; e2e 7 passed / 2 skipped
-(after clearing `.next` per the s142 rule). **The 5 documented `rlsInvariantsLiveDb` failures are gone** —
-`player_milestones` exists in the live DB, so the migration was pushed between s142 and now; that suite is
-30/30. ADR 0013 §7 rewritten from *specified* to *shipped*; `TICKET-03` deleted. Branch `dev`, not pushed.
-**Still owed: an operator eye-check of the Trophy Case in both themes** — no gate here can tell a correct
-badge from a plausible one.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 144 | 2026-08-10 | **Every emoji badge becomes a drawn mark in a tier frame** (TICKET-03, test-first in five slices). `glyph`, `TIER_MEDALS` (🥉🥈🥇💠), the 🔒 fallback, the `grayscale` class and the toast's fixed 🏆 all deleted for one `BadgeMark` + **five drawings**: a ring in the tier's strong colour, a soft disc, a mark always `currentColor` — so a tier is a *colour*, never a different picture, which is why five drawings cover four tiers across three surfaces (chip 14px / tile 32px / toast 34px). Eight `--tier-*` tokens **verified compiled out of the production CSS bundle** rather than assumed (a missing token renders no ring and every test still passes). **The ticket's flagged check paid out:** `EarnedToast` carries `id`, but TICKET-02 made every badge tiered so that id is always a *tier* id → `achievementById` returns undefined on every unlock; and `tierLabel` is Greek display copy that cannot map back to a colour, so without a new `tier: TierName` field the toast draws the **neutral** frame — an unlock rendering as *locked*, the kind of bug every gate passes. Two decisions moved from prose into tests: *changes only the frame between tiers* (same path `d` across two tiers) and *keeps the mark visible when locked*. `achievementToast.test.tsx` rewritten to build every fixture through `describeAchievement` — it had been carrying the retired `leksokipos-first-daily` id, the s140 pattern exactly. 13 files; 191/2430 green; **the 5 `rlsInvariantsLiveDb` failures are gone** (migration pushed between s142 and now, suite 30/30). Still owed: an operator eye-check of the Trophy Case in both themes. |
 | 143 | 2026-08-10 | **Badge visual system designed end-to-end; both badge handoffs retired** (docs only, zero source files). `badgeIdeas.md` was **discharged and should already have been deleted** at s140's Dream; `badgeVisualSystem.md` was live but **stale on three facts** (Τζιμάνι 80%, pangram tiers 10/20/50, citing the superseded 08-06 amendment). **The durable lesson is the operator's method:** two batches had been answered in prose when the instruction came — *no visual decision gets made in text, put every option in HTML and let me look*. Every agreed visual answer was reopened as a rendered comparison, and **one answer changed on sight** (locked: greyscale filter → neutral frame). **Prose grilling is the wrong instrument for anything whose failure mode is "looks wrong at 12px"**; `.claude/aiHelper/html/` is now the standing home for look-at-it artifacts. Reading the code settled two things the grill could not: `FlowerGrid` is six petals + a centre disc, so a *complete* flower literally is the seven-letter set = a pangram (a real fork, not a preference; honeycomb retired outright), and `TierChips` are text-only, so **four of nine catalogue emoji had never rendered anywhere**. One storage-shape catch before the ticket: `mark: {path, viewBox}` (topothesies precedent) cannot express six rotated ellipses → every mark **flattened to one path**, and the spec page renders the flattened version, so what was reviewed is what ships. Settled: circle frame, ring = size/10, mark 66% and always `currentColor` (**five drawings, not nineteen**), Palette A / eight tokens, Διαμάντι as hue only, `TIER_MEDALS` + every `glyph` deleted. Landed as `TICKET-03` + an ADR 0013 §7 amendment; both handoffs deleted, five references repointed. |
 | 142 | 2026-08-08 | **`isISODate` graduates to `src/lib/puzzleDate.ts`** — an operator proposal whose move was right and whose stated reasons mostly were not. Both headline wins (edge bundles, cold-parse CPU) are worth ~zero: every symbol the leksokipos barrel re-exports is a small pure function, so tree-shaking already dropped them. **What actually justified it went unmentioned: `ISO_DATE_RE` was duplicated verbatim** in `puzzleDate.ts` and `leksokipos/lib/puzzle.ts` — one rule, two copies, in two modules a single route imported two lines apart. **No re-export shim**, deliberately unlike the `normalizeLetters` precedent the proposal cited: nothing inside the game used it, so a shim would be dead on arrival. `isDailyPuzzle` stays (it takes a puzzle and keys off an unanchored prefix rule). **The expensive lesson was in the gates:** e2e failed on `/` with `Unexpected end of JSON input`, s140 had logged that flake as "clean on re-run", so re-run stability was read as proof it was real → a stash-and-bisect for nothing. **The stale Turbopack chunk survives re-runs**; `Remove-Item .next` is the distinguishing test. Also recorded: the 5 `rlsInvariantsLiveDb` failures and the e2e suite validate the migration only, never the deploy — they go green whether or not Vercel shipped. |
 | 141 | 2026-08-07 | **Six game pages collapse onto one `GamePageChrome`** — an operator proposal evaluated first, then rescoped. **Four of its claims failed measurement:** it counted 5 duplicate page clients (there are **6**, Vres Tin Frasi was missed); it scoped itself to the slot-fill family to avoid ADR 0019 while **listing Λεξοδρομία, the game that ADR names as a permanent non-member** — page chrome is simply not the round-spine axis; "five files become one" is impossible because Topothesies declares five board props and Πόσο κάνει; one, so a config object needs `any`; and "the adapters differ only in type names" holds for two of three, so **the adapters were left alone**. Shipped: `GamePageChrome` owning the title row, both header triggers, and the **Session-key remount** (a five-line comment pasted above each board became one `<Fragment key={sessionKey}>`); board and rules modal arrive as render props. `GameHelpButton` single-sources the `?` trigger and unified a stray English `aria-label` onto the Greek six pages used. **Leksiarxeio deliberately excluded** — two *server* components render its rules modal, so joining would buy 20 lines and cost a dual-mode component; the honest boundary is smaller than the tidy one. −255/+383 over 13 files; page clients ~58→~30 lines. Gates 2386/2391 (the 5 documented `rlsInvariantsLiveDb` failures await the un-pushed migration), e2e 7 passed / 2 skipped. |

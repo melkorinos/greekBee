@@ -34,6 +34,8 @@ import { useIsGodMode } from "@/games/leksokipos/hooks/useIsGodMode";
 import { useWordSuggestions } from "@/games/leksokipos/hooks/useWordSuggestions";
 import { useGameStateSync } from "@/hooks/useGameStateSync";
 import { useScoreSubmission } from "@/hooks/useScoreSubmission";
+import { useSoundCue } from "@/hooks/useSoundCue";
+import { selectSoundCue } from "@/games/leksokipos/lib/soundCue";
 import { computeEndgameInfo, getRemainingWords, isDailyPuzzle, isPangram, TOP_RANK } from "@/games/leksokipos/lib";
 
 interface GameBoardProps {
@@ -123,6 +125,17 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
 
   // Auto-post whenever the score increases.
   useEffect(() => { postScore(score, scoreData); }, [score, scoreData, postScore]);
+
+  // Sound Cues (ADR 0021). lastSubmission is a fresh object on every submit and is
+  // deliberately never persisted, so it is already the event source — the reducer
+  // needs no change. selectSoundCue owns which moments make a noise; play() is a
+  // no-op while the preference is off.
+  const { play: playCue } = useSoundCue();
+  useEffect(() => {
+    if (!lastSubmission) return;
+    const cue = selectSoundCue(lastSubmission.result);
+    if (cue) playCue(cue);
+  }, [lastSubmission, playCue]);
 
   // Detect + post earned achievements as the game state crosses their thresholds,
   // and surface each genuinely-new badge as an in-game unlock toast.

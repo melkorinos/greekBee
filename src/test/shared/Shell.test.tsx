@@ -220,6 +220,47 @@ describe("Theme toggle", () => {
   });
 });
 
+// ── sound toggle ──────────────────────────────────────────────────────────────
+// ADR 0021. A Platform preference like theme, so it renders on every page even
+// though only Leksokipos has Cues — hiding it per-route would force the Shell to
+// know which Games make noise. Off by default: unexpected audio is the most
+// complained-about behaviour on the web, and mobile blocks the first play anyway.
+
+describe("Sound toggle", () => {
+  it("renders muted by default (sound is opt-in)", () => {
+    setup();
+    expect(screen.getByRole("button", { name: /turn sound on/i })).toBeInTheDocument();
+  });
+
+  it("clicking the toggle turns sound on", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: /turn sound on/i }));
+    expect(screen.getByRole("button", { name: /turn sound off/i })).toBeInTheDocument();
+  });
+
+  it("persists the sound preference to localStorage", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: /turn sound on/i }));
+    expect(localStorage.getItem("sound-preference")).toBe("on");
+  });
+
+  it("clicking the toggle twice returns to muted and persists it", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: /turn sound on/i }));
+    await user.click(screen.getByRole("button", { name: /turn sound off/i }));
+    expect(screen.getByRole("button", { name: /turn sound on/i })).toBeInTheDocument();
+    expect(localStorage.getItem("sound-preference")).toBe("off");
+  });
+
+  it("sits beside the theme toggle in the header", () => {
+    setup();
+    const themeBtn = screen.getByRole("button", { name: /switch to dark mode/i });
+    const soundBtn = screen.getByRole("button", { name: /turn sound on/i });
+    expect(themeBtn.parentElement).toBe(soundBtn.parentElement);
+    expect(themeBtn.nextElementSibling).toBe(soundBtn);
+  });
+});
+
 // ── Offline Mode: PARKED ──────────────────────────────────────────────────────
 // Parked 2026-08-04. The drawer toggle and its help modal are removed from the
 // Shell, so the mode is unreachable from the UI and the nav guard is inert. The

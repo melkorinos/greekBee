@@ -55,4 +55,8 @@ Neither ticket blocks the other's implementation. Neither ships without the othe
 - [ ] Each file's source URL and licence recorded in `src/config/sound.ts`.
 - [ ] All three heard in the running game, on a phone and on desktop, and judged not annoying.
 - [ ] `npm run build` clean.
-- [ ] **Deploy only once `TICKET-04` is also closed.**
+- [ ] **This ticket is now the only thing between Sound Cues and a deploy.** `TICKET-04` shipped
+      on 2026-08-11 (built, gated, merged into `dev`, **not deployed**) and its file is deleted per
+      the tracker rule. The toggle, the hook and the three Leksokipos Cues are all live in code and
+      currently play silence: the 🔊 button renders on every page today. Until these files land,
+      the correct state is **merged and undeployed** — do not push `dev` to production.

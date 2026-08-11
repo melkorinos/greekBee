@@ -320,11 +320,34 @@ Live consequence for `TICKET-05`: each of the three files needs its **actual** l
 the licence of the site it came from. Freesound in particular hosts CC0, CC-BY and CC-BY-NC side by
 side, and its most famous rooster is CC-BY.
 
-### 🟡 Sound Cues are spec'd, unbuilt, and depend on operator-sourced assets (s145)
+### 🟠 A spec's *trap list* is as unreliable as its reasons, and it fails at the same place (s146)
 
-ADR 0021 closed nineteen decisions and `TICKET-04` can be built cold today with **zero audio files**,
-since nothing in this stack can assert audibility. `TICKET-05` — three MP3s, sourced and eye-checked
-(ear-checked) by a human — is the half no agent should do, for the s130 reason.
+ADR 0021 and `TICKET-04` both carried the line "jsdom does not implement `HTMLMediaElement.play` — it
+needs a global stub, alongside the `scrollIntoView` stub added in s123 for the same reason." Every
+clause is wrong in a way that would have shipped silently: **jsdom defines `play()`**, so the copied
+`if (!Element.prototype.scrollIntoView)` guard never fires and the stub would have been dead code; and
+what jsdom actually returns is **`undefined`, not a Promise**, so `audio.play().catch(…)` is a
+TypeError rather than a swallowed rejection. A ten-second probe test found both.
+
+This is the s139 lesson — *a spec's stated reason can be false while its decision is right* — one
+level deeper. Here the decision (stub it) was right, the reason was right, and the **mechanism**
+was wrong, which is worse: mechanisms get pasted verbatim because they name a real precedent in the
+repo. The precedent was real and the analogy was false. The tell is unchanged and the check is
+still cheap: **a claim about someone else's runtime is a claim to measure, not to inherit** — this
+is the fourth time (s130 Commons, s132 `router.prefetch`, s139 the feature flag, now this), and the
+second time specifically that a **void return dressed as a Promise** was the thing that got through.
+`useSoundCue.test.ts` therefore subclasses the real `Audio` rather than substituting a fake one, and
+pins the `undefined` return in its own test.
+
+### 🟡 Sound Cues are built and mute — the deploy gate is now the only guard (s145, updated s146)
+
+`TICKET-04` shipped 2026-08-11: the toggle, the preference, the playback hook and all three Cues are
+live in code, and **the 🔊 button renders on every page today playing silence**. `TICKET-05` — three
+MP3s, sourced and ear-checked by a human — is the half no agent should do, for the s130 reason, and
+is now the *only* thing between this and a deploy. The risk changed shape rather than going away:
+before, an unbuilt feature could be cut for free; now the wrong deploy ships a visibly broken toggle
+on eleven Games. Nothing in the test suite can see this — every gate is green with `public/sounds/`
+empty, by design.
 
 **That shape has failed here before.** «Πόσο κάνει;» is a finished engine that has sat `wip:true`
 since s124 waiting on operator-sourced photos and prices, and its tracking was deleted out from
@@ -333,9 +356,10 @@ half and the content never arrived. Sound Cues is far smaller — three files, n
 same dependency.
 
 Two guards, deliberately chosen: it is **pre-launch but explicitly non-blocking**, so it can be cut
-without ceremony rather than slipping a launch; and **neither ticket deploys alone**, because a 🔊
-toggle that plays silence is worse than no toggle. If `TICKET-04` lands and `TICKET-05` stalls, the
-correct state is *merged and undeployed*, not *shipped and mute*.
+without ceremony rather than slipping a launch; and **neither ticket deploys alone**. That second
+guard is the live one now, and it lives in exactly two places — `TICKET-05`'s "done when" and the
+memory.md row. **Cutting it is not free any more**: with the code merged, "cut it" means reverting
+the toggle, not declining to write it.
 
 ---
 

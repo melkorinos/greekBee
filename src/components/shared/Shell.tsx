@@ -10,6 +10,7 @@ import { FeedbackModal } from "./FeedbackModal";
 import { ProfileToggleButton } from "./ProfileToggleButton";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useSoundEnabled } from "@/hooks/useSoundEnabled";
 import { useTheme } from "@/hooks/useTheme";
 
 // ── Hamburger icon ────────────────────────────────────────────────────────────
@@ -66,6 +67,7 @@ export function Shell({ children }: ShellProps) {
   const [drawerOpen,   setDrawerOpen]   = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const { theme, toggle } = useTheme();
+  const { soundEnabled, toggle: toggleSound } = useSoundEnabled();
 
   // Offline Mode is PARKED (2026-08-04) — the drawer toggle and its help modal are
   // removed, so the mode can never be activated and this guard has nothing to guard.
@@ -117,6 +119,18 @@ export function Shell({ children }: ShellProps) {
               className="flex items-center justify-center w-9 h-9 rounded-full text-muted hover:bg-surface-raised active:bg-border transition-colors"
             >
               {theme === "dark" ? "☀️" : "🌙"}
+            </button>
+
+            {/* Sound toggle — a Platform preference like theme (ADR 0021), so it
+                renders on every page even though only Leksokipos has Cues today.
+                Written inline exactly like the theme toggle rather than extracted:
+                the two are siblings and should read as one pair. */}
+            <button
+              onClick={toggleSound}
+              aria-label={soundEnabled ? "Turn sound off" : "Turn sound on"}
+              className="flex items-center justify-center w-9 h-9 rounded-full text-muted hover:bg-surface-raised active:bg-border transition-colors"
+            >
+              {soundEnabled ? "🔊" : "🔇"}
             </button>
 
             {/* Hamburger */}
