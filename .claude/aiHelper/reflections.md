@@ -332,7 +332,15 @@ TypeError rather than a swallowed rejection. A ten-second probe test found both.
 This is the s139 lesson — *a spec's stated reason can be false while its decision is right* — one
 level deeper. Here the decision (stub it) was right, the reason was right, and the **mechanism**
 was wrong, which is worse: mechanisms get pasted verbatim because they name a real precedent in the
-repo. The precedent was real and the analogy was false. The tell is unchanged and the check is
+repo. The precedent was real and the analogy was false.
+
+**The same ADR did it twice, and the second one is still open.** Its consequences named
+`mobileLayout.test.tsx` as the existing guard for the header growing from three buttons to four.
+That file renders `HowToPlayModal` and has never touched the Shell — and no test here *could*,
+because jsdom has no layout engine. So a header that wraps at 320 px is green everywhere. Both
+false claims share a shape worth naming: **a citation to a named artifact in this repo reads as
+verified and almost never is.** Checking one costs a single `Read`. The mitigation is an operator
+eye-check on `TICKET-05`, not a test, per the s144 rule. The tell is unchanged and the check is
 still cheap: **a claim about someone else's runtime is a claim to measure, not to inherit** — this
 is the fourth time (s130 Commons, s132 `router.prefetch`, s139 the feature flag, now this), and the
 second time specifically that a **void return dressed as a Promise** was the thing that got through.

@@ -54,6 +54,10 @@ Neither ticket blocks the other's implementation. Neither ships without the othe
 - [ ] Three files in `public/sounds/`, each within its size and duration ceiling.
 - [ ] Each file's source URL and licence recorded in `src/config/sound.ts`.
 - [ ] All three heard in the running game, on a phone and on desktop, and judged not annoying.
+- [ ] **While on the phone, look at the Shell header.** `TICKET-04` made it four buttons wide
+      (👤 / ☀️🌙 / 🔊 / ☰) and **nothing guards that** — ADR 0021 named `mobileLayout.test.tsx`,
+      which only renders `HowToPlayModal`, and jsdom has no layout engine, so a header that wraps
+      or overflows at 320 px passes every gate. This eye-check is the only cover.
 - [ ] `npm run build` clean.
 - [ ] **This ticket is now the only thing between Sound Cues and a deploy.** `TICKET-04` shipped
       on 2026-08-11 (built, gated, merged into `dev`, **not deployed**) and its file is deleted per

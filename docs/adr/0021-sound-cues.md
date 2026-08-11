@@ -1,7 +1,7 @@
 # ADR 0021 — Sound Cues
 
-**Status:** accepted (2026-08-10)
-**Tickets:** `.claude/tracker/tickets/TICKET-04-sound-cue-primitive.md`, `TICKET-05-sound-cue-assets.md`
+**Status:** accepted (2026-08-10) · **built 2026-08-11, not deployed** — see the 2026-08-11 amendment
+**Tickets:** [TICKET-05-sound-cue-assets.md](../../.claude/tracker/tickets/TICKET-05-sound-cue-assets.md) (open — the three MP3s). `TICKET-04` (the primitive) shipped 2026-08-11 and its file is deleted per the tracker rule; git history is the archive.
 
 ## Context
 
@@ -103,7 +103,9 @@ experience (s130: Commons matched ΔΕΗ to Namibia Power), and nobody can eye-c
   hook is not a component, and the toggle has to live in the Shell either way. Adding a fourth Cue
   later is a registry row and a selector branch.
 - The Shell header goes from three buttons to four on mobile (👤 / theme / 🔊 / ☰). Watch the
-  layout at narrow widths; `mobileLayout.test.tsx` is the existing guard.
+  layout at narrow widths. ⚠️ **`mobileLayout.test.tsx` is NOT a guard for this** — corrected
+  2026-08-11; it holds HowToPlayModal overflow contracts only and never renders the header. No
+  test in this repo can guard it either: jsdom has no layout. See the amendment below.
 - Rank-up, Genius, and round-completion Cues were considered and **deliberately excluded from v1**.
   A rank-up chime competing with an achievement toast is a tuning problem not worth opening before
   launch. The registry makes it a one-line change when it is.
@@ -120,8 +122,55 @@ experience (s130: Commons matched ΔΕΗ to Namibia Power), and nobody can eye-c
   "enable audio" priming step is needed**.
 - **jsdom does not implement `HTMLMediaElement.play`** — it needs a global stub in
   `src/test/setup.ts`, alongside the `scrollIntoView` stub added in s123 for the same reason.
+  ⚠️ **This trap is stated wrongly — see the 2026-08-11 amendment.** The stub is needed; the
+  mechanism described here does not work and the return value is not what it implies.
 - **No test can assert that a sound is audible.** Nothing in this stack can. The tests assert which
   Cue is selected and whether `play` was called; the sound itself is checked by ear, once, by a
   human.
 - **Neither ticket ships alone.** A 🔊 toggle that plays silence is worse than no toggle, so the
   deploy gate is both tickets closed — even though neither blocks the other's implementation.
+
+## Amendment (2026-08-11) — the jsdom trap was stated wrongly, in the way that matters
+
+`TICKET-04` is built and merged. Every decision above survived implementation unchanged; the one
+thing that did not was a **trap**, and it failed at precisely the point traps are supposed to help.
+
+The original line — *"jsdom does not implement `HTMLMediaElement.play`, alongside the
+`scrollIntoView` stub added in s123 for the same reason"* — is wrong twice:
+
+- **jsdom defines `play()`.** It is a real function on the prototype that logs
+  `Not implemented: HTMLMediaElement's play() method` to the virtual console. So the guarded form
+  the analogy invites, `if (!HTMLMediaElement.prototype.play) { … }`, **never fires** and the stub
+  is dead code. `scrollIntoView` is genuinely absent, which is the only reason that guard works
+  there. The stub in `src/test/setup.ts` is therefore an **unconditional assignment**, and it must
+  stay one.
+- **jsdom's `play()` returns `undefined`, not a Promise.** The trap said the promise needed
+  swallowing, which implies there is always a promise to swallow. `audio.play().catch(() => {})`
+  is a `TypeError` on jsdom, and on older Safari, which returns nothing either. The shipped call is
+  `audio.play()?.catch(() => {})` and `useSoundCue.test.ts` pins the `undefined` return in a test of
+  its own, separately from the rejection case.
+
+Both were found by a ten-second probe test, and neither would have been found by reading. The
+generalisable half is recorded in `reflections.md`: this repo has now been bitten four times by a
+claim about someone else's runtime (s130 Commons metadata, s132 `router.prefetch` returning `void`,
+s139 a feature flag's documented value, and this), and **twice specifically by a void return
+described as a Promise**. A mechanism copied from a real precedent in this codebase is not thereby
+verified — the precedent was real and the analogy was still false.
+
+Consequence for the test suite: `useSoundCue.test.ts` subclasses the **real** `Audio` and spies on
+the prototype rather than substituting a fake Audio class. A hand-rolled mock is a claim about the
+browser's contract, and the claim is what has been wrong every previous time.
+
+**A second claim in this ADR was also false, found the same way.** The consequence above cited
+`mobileLayout.test.tsx` as the existing guard for the header going from three buttons to four. That
+file renders `HowToPlayModal` and nothing else; it has never touched the Shell. Worse, **no test
+here can cover it** — jsdom has no layout engine, so a header that wraps or overflows at 320 px is
+green in every suite. This is the s144 rule again (*for anything whose failure mode is "looks
+wrong", the suite locks decisions and cannot prove results*), and the honest mitigation is a human
+on a phone: the check is added to `TICKET-05`'s done-when, which already puts the operator on a
+phone with this feature.
+
+Nothing about the design changes. `SOUND_CUES` shipped with volumes 0.7 / 0.2 / 0.5 (rooster, click,
+slow clap), and `TICKET-05` remains open, which means **the toggle currently renders on every page
+and plays silence** — the deploy gate above is now the only thing enforcing that, and it is live
+rather than hypothetical.
