@@ -5,7 +5,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import type { Metadata, Viewport } from "next";
 import { Shell } from "@/components/shared/Shell";
 import { OfflineModeProvider } from "@/hooks/useOfflineMode";
-import { PLATFORM_NAME, PLATFORM_DESCRIPTION } from "@/config/platform";
+import { PLATFORM_NAME, PLATFORM_DESCRIPTION, PLATFORM_ORIGIN } from "@/config/platform";
 
 // Greek subset is mandatory — this is a Greek word-game platform. Without it,
 // every Greek glyph falls back to a system font.
@@ -19,9 +19,30 @@ const mono = JetBrains_Mono({
   subsets: ["latin", "greek"],
 });
 
+// A shared link is the whole soft launch, so this block is what a stranger sees
+// first. `opengraph-image` / `icon` / `apple-icon` are NOT listed here — Next's
+// file conventions inject those tags from src/app/, and naming them twice is how
+// they drift. metadataBase is what turns those generated paths into the absolute
+// URLs scrapers demand.
 export const metadata: Metadata = {
+  metadataBase: new URL(PLATFORM_ORIGIN),
   title: PLATFORM_NAME,
   description: PLATFORM_DESCRIPTION,
+  openGraph: {
+    title:       PLATFORM_NAME,
+    description: PLATFORM_DESCRIPTION,
+    url:         "/",
+    siteName:    PLATFORM_NAME,
+    locale:      "el_GR",
+    type:        "website",
+  },
+  // Cheap, and worth more than Twitter itself here: several scrapers that are
+  // not Twitter read these tags in preference to the Open Graph ones.
+  twitter: {
+    card:        "summary_large_image",
+    title:       PLATFORM_NAME,
+    description: PLATFORM_DESCRIPTION,
+  },
 };
 
 // Lock the viewport so pinch-to-zoom can't push the game UI out of the layout on mobile.

@@ -182,6 +182,35 @@ describe("registry coverage — Offline Mode set", () => {
   });
 });
 
+// ── Seam 1d: the SEO description (src/config/platform.ts) ─────────────────────
+// The fourth enumerating surface, and the most public one: PLATFORM_DESCRIPTION
+// is what layout.tsx serves as <meta name="description">, and what the share
+// card reuses (TICKET-10). It walked the whole registry filtering only
+// `leksikastirio`, so from the day the three Games were hidden it named all
+// three to every scraper — a surface no player-facing filter reached.
+
+const { PLATFORM_DESCRIPTION } = await import("@/config/platform");
+
+describe("registry coverage — SEO description", () => {
+  it("names a finished, visible Game", () => {
+    expect(
+      PLATFORM_DESCRIPTION,
+      "PLATFORM_DESCRIPTION dropped a visible Game — it must derive from the " +
+        "registry rather than from a hand-typed title list.",
+    ).toContain("Probe");
+  });
+
+  it("names no hidden Game", () => {
+    expect(
+      PLATFORM_DESCRIPTION,
+      "PLATFORM_DESCRIPTION names a `hidden` Game. The description is served " +
+        "as <meta name=\"description\"> and reused by the share card, so a " +
+        "hidden Game here is advertised to every scraper while appearing on no " +
+        "surface a player can reach (ADR 0022).",
+    ).not.toContain("Hidden Probe");
+  });
+});
+
 // ── Seam 2: per-game accent tokens in globals.css ─────────────────────────────
 // The probe trick cannot work here: a stylesheet has no way to grow a rule for a
 // mocked Game, so this seam is checked against the REAL registry. It is a

@@ -3,6 +3,17 @@
 **Status:** ready
 **Spec:** [docs/adr/0021-sound-cues.md](../../../docs/adr/0021-sound-cues.md)
 
+## Current state (checked 2026-08-12)
+
+- `public/sounds/` exists and holds **only `.gitkeep`** — zero audio files. Committed empty by
+  `cade542` alongside the `TICKET-04` machine.
+- `src/config/sound.ts` has the three `SOUND_CUES` rows wired to `/sounds/pangram.mp3`,
+  `/sounds/word-found.mp3`, `/sounds/missing-center.mp3` with volumes 0.7 / 0.2 / 0.5, plus the
+  provenance comment block with three `<url>` placeholders waiting to be filled.
+- **`/tdd` is the wrong command for this ticket.** There is no logic left to drive test-first —
+  `TICKET-04` already built and gated the whole machine, and no test in this stack can assert that
+  a sound is audible. The remaining work is sourcing, listening, and one comment block.
+
 ## Why
 
 `TICKET-04` builds the whole Sound Cue machine and can be fully tested without a single audio
@@ -28,7 +39,8 @@ Neither ticket blocks the other's implementation. Neither ships without the othe
 - [ ] **Normalised relative to each other** — the click must be clearly quieter than the rooster.
       Fine-tune afterwards with the per-cue `volume` in `src/config/sound.ts` rather than
       re-encoding.
-- [ ] **Licence: CC0 or the Pixabay Content License only. CC-BY is refused** — it obliges a
+- [ ] **Licence: CC0, the Pixabay Content License, or the operator's own recording. CC-BY is
+      refused** — it obliges a
       permanent credit line in the How-to-Play modal (the reason `topothesies/attribution.ts` and
       `posokanei/attribution.ts` exist), and three tiny sounds do not justify that. Using a CC-BY
       file without its credit is a breach, not a shortcut.
@@ -48,11 +60,23 @@ Neither ticket blocks the other's implementation. Neither ships without the othe
   attribution, but is **not CC0** — it is the Pixabay Content License, which forbids redistributing
   content "on a standalone basis". An MP3 bundled inside a Game is not standalone distribution, so
   it clears the bar; record it as Pixabay, never as CC0.
+- **Self-recorded audio is allowed and is the cleanest option of the three.** The operator owns the
+  recording outright, so the licence question disappears: record it as
+  `licence: own recording (operator), <date>` in the provenance block. It suits all three cues —
+  the slow clap is literally two hands, the click can be a fingernail on a desk, and a phone voice
+  memo of a real rooster is fine. Constraints are unchanged: mono, MP3, within the size and
+  duration ceilings, and normalised against each other. Convert with
+  `ffmpeg -i in.wav -ac 1 -b:a 64k -t 1.5 out.mp3` (drop `-t` for the click and trim instead).
+  Watch for room noise and clipping — a quiet hiss under the click is more annoying at every
+  submission than the click itself.
 
 ## Done when
 
 - [ ] Three files in `public/sounds/`, each within its size and duration ceiling.
-- [ ] Each file's source URL and licence recorded in `src/config/sound.ts`.
+- [ ] Each file's source URL and licence recorded in `src/config/sound.ts` (the three `<url>`
+      placeholders in the provenance block are gone). Self-recorded files record the date instead
+      of a URL.
+- [ ] `public/sounds/.gitkeep` deleted — the real files now hold the folder open.
 - [ ] All three heard in the running game, on a phone and on desktop, and judged not annoying.
 - [ ] **While on the phone, look at the Shell header.** `TICKET-04` made it four buttons wide
       (👤 / ☀️🌙 / 🔊 / ☰) and **nothing guards that** — ADR 0021 named `mobileLayout.test.tsx`,
