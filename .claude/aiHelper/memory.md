@@ -11,13 +11,21 @@ five tickets it produced (`TICKET-06`–`10`) and the release-day runbook. **Onl
 
 - **All three `wip:true` Games are HIDDEN — SHIPPED s148, `TICKET-06` deleted, ADR 0022.** `wip` and
   `hidden` are **orthogonal required fields** on `GameRegistryRow`: `wip` = unfinished, `hidden` =
-  deliberately not shown, finished or not (Leksindeseis is both, and is finished). **Hidden means
-  unlisted, NOT disabled** — the routes stay live by direct URL in every environment, no redirect, no
-  404, no env gate (revealing them off-production was considered and declined: the preview picker
-  must match production). Filters live in `page.tsx`, `Shell.tsx` and `useOfflineMode.tsx`, all three
-  probe-tested in `registryCoverage.test.tsx`. The «Υπό κατασκευή» section AND the card chip are
-  DELETED, not dormant — an unfinished Game is hidden, never signposted. Retires the
-  Leksindeseis-pool, wip-flip and content-supply threads entirely.
+  deliberately not shown, finished or not (Leksindeseis is both). **Hidden means unlisted, NOT
+  disabled** — routes stay live by direct URL everywhere, no redirect, no 404, no env gate. Filters
+  in `page.tsx`, `Shell.tsx`, `useOfflineMode.tsx`, all probe-tested in `registryCoverage.test.tsx`;
+  «Υπό κατασκευή» and the card chip are DELETED, not dormant.
+- **Privacy Page SHIPPED s149, `TICKET-07` deleted.** `/privacy`, Greek; controller in `platform.ts`,
+  retention imported from `retention.ts`. **Deliberately unadvertised** — one drawer link under
+  Βοήθεια, no footer, no banner, no consent dialog — which holds ONLY while there is no analytics and
+  no ad cookie. **FormSubmit is the Platform's one third-party processor**, and had been since the
+  Feedback surface was built; payload is now exactly `message` + `device_id` (the DeviceId stays so an
+  erasure request arrives carrying its own key). `privacyPage.test.tsx` **pins the four production
+  dependencies** — an `npm install` fails the suite pointing at the page.
+- **Error monitoring DECIDED s149 (operator): no third-party SDK, Vercel's built-in observability
+  only** — this is what keeps the page's "no third-party tracking" line true. **`TICKET-08` is now a
+  write-up** (ADR, a scheduled manual check, one thrown error verified in a preview), and the **`08`
+  before `07` constraint is WITHDRAWN**, returning only if the SDK ruling reverses.
 - **Runbook order is load-bearing**: deploy → **verify prod serves the merge commit** → `db:backup`
   off-machine → `launch-reset.sql` → announce. The reset must follow the deploy (`BadgeMark` is on
   `dev` only, so running it early re-earns every badge against the retired emoji glyphs), and the
@@ -49,7 +57,7 @@ Seven live games + the Leksikastirio word-court + custom puzzle URLs = **the eig
 
 | Topic | Decision |
 |-------|----------|
-| **Routing** | `/leksokipos`, `/leksiarxeio`, `/leksindeseis`, `/vres-tin-frasi`, `/leksodromia`, `/leksoplegma`, `/topothesies`, `/posokanei`, `/logopaignio`, `/stavrolekso` (+ `/[id]`, `/maker`), `/leksikastirio`, `/profile`, `/` picker. Custom: `/leksokipos/[center]/[outer]` |
+| **Routing** | `/leksokipos`, `/leksiarxeio`, `/leksindeseis`, `/vres-tin-frasi`, `/leksodromia`, `/leksoplegma`, `/topothesies`, `/posokanei`, `/logopaignio`, `/stavrolekso` (+ `/[id]`, `/maker`), `/leksikastirio`, `/profile`, **`/privacy`** (s149 — static, the only legal surface, linked solely from the drawer), `/` picker. Custom: `/leksokipos/[center]/[outer]` |
 | **Persistence** | Single `wordgames:state` key. `useGameStore` is the ONLY localStorage writer. Exception: `leksokipos-variant` standalone key (display pref, not game state). |
 | **Types** | Root `src/types/index.ts` = `Language`, `SliceId`, `PersistenceEnvelope` only. Game types in `src/games/*/types.ts`. (`SliceId` is the **persistence-slice** union — every game with a store slice plus `suggestions`/`reports`; it is NOT the game registry — `stavrolekso`/`leksikastirio` have no store slice so they're absent by design. For "every registered game" use `RegistryGameId` from `@/config/games`.) |
 | **Config / single sources of truth** | `src/config/` holds the platform's tuning knobs — never hardcode a value that lives here, import it. `games.ts` = `GAME_REGISTRY` + `RegistryGameId` (nav/picker/titles derive from it; **two orthogonal required presentation flags, `wip` and `hidden` — ADR 0022**). `gameRules.ts` = every numeric knob per game (`LEKSOKIPOS.MIN_WORD_LENGTH/PANGRAM_BONUS/SCORE_SCALE/SOFT_CAP_KNEE/SOFT_CAP_K`, `LEKSIARXEIO.MAX_GUESSES/LENGTHS`, `VRESTIFRASI.MAX_GUESSES`, `LEKSINDESEIS.MAX_MISTAKES`, `STAVROLEKSO.VALID_GRID_SIZES`, `LEKSODROMIA.*` decay-scoring knobs, `LEKSOPLEGMA.*` word-web points knobs, `TOPOTHESIES.*` / `POSOKANEI.*` / `LOGOPAIGNIO.*` slot-fill knobs). `achievementTuning.ts` = achievement trigger thresholds/scales/rates (balance knobs). `platform.ts` = brand name + derived SEO description. `retention.ts` = DB retention windows (cron). `LeksiarxeioLength` type must track `LEKSIARXEIO.LENGTHS`. |
@@ -102,15 +110,10 @@ supabase/       config.toml + migrations/ — version-controlled DB schema (auth
 ---
 
 ## 🛠 Known Tech Debt
-Everything lives in `.claude/tracker/` (redesigned 2026-08-06, conventions in its README). **`issues/`**: `ISSUE-01` (no disaster-recovery backups) and `ISSUE-03` (thin E2E coverage — 7 tests across 8 launching Games, deferred s147). **`ISSUE-02` is cited here and in `goals.md` but its FILE DOES NOT EXIST** (`rlsInvariantsLiveDb`'s `game_state` DELETE flake; s144 found those 5 failures gone — resolve or re-file, and note the number stays spent either way). **`tickets/`**: `TICKET-05` (three Sound Cue MP3s — **operator work**, the sole thing blocking a Sound Cues deploy) plus four of the five launch tickets from s147 — **07** privacy page, **08** error monitoring, **09** operational headroom, **10** share preview. One ordering constraint remains, in the tickets themselves: **08 before 07** (or the privacy page's "no third-party tracking" line goes stale silently). Numbers are **never reused**: 01 shipped s139, 02 s140, 03 s144, 04 s146, **06 s148**, all deleted per the rule — read the log before picking a number, not the folder. No triage labels — the folder is the state; resolved files are deleted, never marked done. Open *questions* are neither, and live in `.claude/handoffs/launch-readiness.md`; read it before assuming something is untracked. Wayfinder is retired.
-
----
+Everything lives in `.claude/tracker/` (redesigned 2026-08-06, conventions in its README). **`issues/`**: `ISSUE-01` (no disaster-recovery backups) and `ISSUE-03` (thin E2E coverage — 7 tests across 8 launching Games, deferred s147). **`ISSUE-02` is cited here and in `goals.md` but its FILE DOES NOT EXIST** (`rlsInvariantsLiveDb`'s `game_state` DELETE flake; s144 found those 5 failures gone — resolve or re-file, and note the number stays spent either way). **`tickets/`**: `TICKET-05` (three Sound Cue MP3s — **operator work**, the sole thing blocking a Sound Cues deploy) plus three of the five launch tickets from s147 — **08** error monitoring (decided s149; only the write-up remains), **09** operational headroom, **10** share preview. **No ordering constraints remain** — the 08-before-07 one was withdrawn in s149, not satisfied. Numbers are **never reused**: 01 shipped s139, 02 s140, 03 s144, 04 s146, 06 s148, **07 s149**, all deleted per the rule — read the log before picking a number, not the folder. No triage labels — the folder is the state; resolved files are deleted, never marked done. Open *questions* are neither, and live in `.claude/handoffs/launch-readiness.md`; read it before assuming something is untracked. Wayfinder is retired.
 
 ## 🧪 Test Coverage Map
-
 Moved to **`.claude/aiHelper/coverageMap.md`** (2026-07-18). Not loaded at session start — grep it before writing any new test (if the function already appears, read that test file first) and update it in the end-of-session Dream (soul.md).
-
----
 
 ## 🔑 Test Accounts
 Throwaway, no real security, don't reuse for anything real. Google (manual auth testing): `testDimi91@gmail.com` / `zzkdgr33`.

@@ -2,6 +2,29 @@
 
 ## ⚠️ Active Tensions (watch these)
 
+### 🔴 A ticket that names a future risk is often blind to the present instance of it (s149)
+
+`TICKET-07` carried a prominent warning block: install error monitoring after the privacy page ships
+and the "no third-party tracking" line becomes false with nothing in the suite to notice. The
+warning was sound, well-argued, and **aimed at the wrong time**. `FeedbackModal.tsx` had been
+posting the message, the page URL, the **user agent** and the DeviceId to `formsubmit.co` since the
+Feedback surface was built. The line was already false. The ticket even described the Feedback flow
+elsewhere in the repo — nobody had joined the two thoughts.
+
+The shape is worth naming because it will recur. A ticket that says *"careful, X might happen"* has
+already done the hard part: it identified X as the thing that matters. The failure is that having
+named X as a **hazard**, the author stops treating it as a **question** — nobody greps for X in the
+present tense. Both the ticket and the launch handoff then encoded the phantom dependency as a
+sequencing constraint (`08` before `07`), which is how a missed fact becomes scheduling.
+
+Practical form: **when a ticket warns that some future change would make a claim false, first check
+whether the claim is true today.** The grep costs one command and it is the same grep either way.
+The correcting question is not "which order?" but "is it already happening?"
+
+Second-order note, because it changed the design: once found, the honest fix was **not** a longer
+disclosure. Two of the four fields were dropped, so the page had less to admit to. A privacy page
+is the one document where shrinking the truth beats describing it well.
+
 ### 🟠 A qualitative word in our own docs is an unmeasured claim (s147)
 
 The launch grill needed to know how bad the Leksindeseis fallback pool was. Three docs — this file,
@@ -11,7 +34,7 @@ surveyed. It is **one puzzle**, dated 2026-05-12, with placeholder categories (�
 community puzzle serves the identical board. One `require()` of the JSON settled it. The same
 session, "the legal and privacy surface" and "error monitoring" turned out to mean **nothing exists
 at all**: no `/privacy`, no `/terms`, no `robots.ts`, no `sitemap.ts`, no `opengraph-image`, no
-favicon, and exactly four production dependencies.
+favicon, and exactly four production dependencies. (`/privacy` exists as of s149; the rest stand.)
 
 This is the standing **measure the artifact, don't trust the response** rule (s130, s132, s139,
 s145, s146) meeting a new unreliable narrator — not an external API, not a spec, not the consensus
