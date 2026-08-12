@@ -189,6 +189,37 @@ describe("Drawer game links", () => {
   });
 });
 
+// ── privacy link ──────────────────────────────────────────────────────────────
+// TICKET-07. The drawer is the privacy page's ONLY entry point — there is no
+// footer, no header slot and no home-page link — so if this link goes, the page
+// becomes unreachable in practice while still returning 200. Nothing else in the
+// suite would catch that, which is why the reachability is asserted here rather
+// than left to the route test.
+
+describe("Drawer privacy link", () => {
+  it("links to /privacy from the drawer", async () => {
+    const { user } = setup();
+    await user.click(getHamburger());
+    const nav = screen.getByRole("navigation", { name: /game navigation/i });
+    expect(within(nav).getByRole("link", { name: /απόρρητο/i })).toHaveAttribute("href", "/privacy");
+  });
+
+  it("keeps it out of the header, which is already four buttons wide", () => {
+    setup();
+    const header = document.querySelector("header");
+    expect(header).not.toBeNull();
+    expect(within(header as HTMLElement).queryByRole("link", { name: /απόρρητο/i })).not.toBeInTheDocument();
+  });
+
+  it("closes the drawer when the privacy link is clicked", async () => {
+    const { user } = setup();
+    await user.click(getHamburger());
+    const nav = screen.getByRole("navigation", { name: /game navigation/i });
+    await user.click(within(nav).getByRole("link", { name: /απόρρητο/i }));
+    expect(screen.queryByRole("navigation", { name: /game navigation/i })).not.toBeInTheDocument();
+  });
+});
+
 // ── theme toggle ──────────────────────────────────────────────────────────────
 
 describe("Theme toggle", () => {

@@ -5,6 +5,10 @@
 // endpoint → stays on page, JSON response). Not persisted server-side. Opened
 // from the Shell hamburger drawer.
 //
+// FormSubmit is the Platform's ONE third-party processor, and /privacy discloses
+// it by name. Exactly two fields leave the browser: the message and the device
+// id. Do not add a third without updating that page in the same change.
+//
 // MVP is text-only; screenshot attachment is deferred (FormSubmit's AJAX
 // endpoint doesn't accept file uploads, and email attachments are a paid
 // feature on the alternatives).
@@ -57,12 +61,16 @@ export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
 
     setStatus("submitting");
     try {
+      // Payload is deliberately minimal (TICKET-07). `user_agent` and `page_url`
+      // were dropped 2026-08-12: they are the most tracking-shaped fields the
+      // Platform sends anywhere, they went to a third party, and neither earned
+      // its keep — players describe where they were in the message itself.
+      // `device_id` stays, and is the reason it stays: a deletion request sent
+      // from this form arrives already carrying the key needed to action it.
       const form = new FormData();
       form.append("message",     trimmed);
       form.append("_subject",    "Leksarxeia — Σχόλιο παίκτη");
       form.append("_captcha",    "false");
-      form.append("page_url",    typeof window !== "undefined" ? window.location.href : "");
-      form.append("user_agent",  typeof navigator !== "undefined" ? navigator.userAgent : "");
       form.append("device_id",   getOrCreateDeviceId());
 
       const res = await fetch(FORMSUBMIT_URL, {

@@ -215,6 +215,20 @@ export function Shell({ children }: ShellProps) {
                   💬 Σχόλια / Πρόβλημα
                 </button>
               </li>
+              {/* The privacy page's ONLY entry point (TICKET-07). Deliberately here
+                  and nowhere else: no footer, no header slot, no home-page link and
+                  no consent banner, so a player who never opens the drawer never
+                  meets it. Sits under Feedback because the two share a destination
+                  — the erasure route the page describes is that same form. */}
+              <li>
+                <Link
+                  href="/privacy"
+                  onClick={guardNavigation()}
+                  className={navLinkClass}
+                >
+                  🔒 Απόρρητο
+                </Link>
+              </li>
             </ul>
           </nav>
         </>

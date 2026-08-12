@@ -35,7 +35,7 @@ in exposure.
 |---|---|---|
 | ~~`TICKET-06`~~ | ~~Hide the three unlaunched Games from picker, drawer and Offline Mode~~ — **✅ shipped 2026-08-12**, ADR 0022 (`hidden` is a second presentation state, orthogonal to `wip`; hidden routes stay live) | agent |
 | `TICKET-07` | Privacy page in Greek, linked from the Shell | agent |
-| `TICKET-08` | Error monitoring — compare, choose, install **or** decline in writing | agent |
+| `TICKET-08` | Error monitoring — **decided 2026-08-12: no third-party SDK, Vercel's built-in observability only.** Remaining work is the ADR, a written manual check, and one thrown error verified in a preview | agent |
 | `TICKET-09` | Operational headroom — the two Supabase alerts + Free-plan limits read | operator |
 | `TICKET-10` | Share preview — Open Graph card and favicon | agent |
 | `TICKET-05` | Three Sound Cue MP3s — **blocks any deploy**, the toggle ships playing silence | operator |
@@ -93,10 +93,14 @@ create tickets ready for agent pickup."*
 
 ### Output
 
-1. **An ordered list**, each item pointing at the decision that authorised it. Two known
-   constraints: `TICKET-08` should precede `TICKET-07`, or the privacy page's "no third-party
-   tracking" line goes stale silently; and `TICKET-06` should precede the play-through, so the
-   operator reviews the eight-Game picker strangers will see.
+1. **An ordered list**, each item pointing at the decision that authorised it. One known constraint
+   remains: `TICKET-06` should precede the play-through, so the operator reviews the picker
+   strangers will see — **done 2026-08-12**, ADR 0022.
+   The `TICKET-08`-before-`TICKET-07` constraint is **withdrawn (2026-08-12)**. It existed because
+   installing an error monitor would falsify the privacy page's "no third-party tracking" line. The
+   operator has since ruled out any third-party error SDK — monitoring is Vercel's built-in
+   observability only — so the dependency is dissolved, not merely reordered, and the two tickets
+   may close in either order. The coupling only returns if that ruling is reversed.
 2. **The `dev → main` merge** placed explicitly, with its play-through — Leksodromia and Leksoplegma
    (`goals.md` item 1), the sessions 102–104 visual shifts, and the badge art eye-check in **both
    themes** still owed from TICKET-03. One session, on a preview of `dev`.
