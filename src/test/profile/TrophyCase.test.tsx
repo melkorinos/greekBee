@@ -27,6 +27,16 @@ function tierChip(tierId: string): HTMLElement {
   return screen.getByTestId(`tier-chip-${tierId}`);
 }
 
+/** The drawn badge inside a tile — every tile has exactly one, earned or locked. */
+function markIn(tile: HTMLElement): HTMLElement {
+  return tile.querySelector("[data-testid='badge-mark']") as HTMLElement;
+}
+
+/** The catalog's own art for a base badge id — the tile must draw exactly this. */
+function markPathOf(baseId: string): string {
+  return LEKSOKIPOS_ACHIEVEMENTS.find((a) => a.id === baseId)!.mark.path;
+}
+
 interface CaseOptions {
   earned?:   string[];
   points?:   number;
@@ -124,18 +134,38 @@ describe("TrophyCase", () => {
     expect(tileFor("Μακρυλέξης")).toHaveAttribute("data-earned", "false");
   });
 
-  it("shows an earned tile's own glyph instead of the generic trophy", async () => {
+  it("draws an earned tile's own mark, framed in the tier it holds", async () => {
     renderCase({ earned: ["leksokipos-stin-korifi-chalkino"] });
 
     await waitFor(() =>
       expect(tileFor("Στην Κορυφή")).toHaveAttribute("data-earned", "true"),
     );
-    expect(tileFor("Στην Κορυφή")).toHaveTextContent("👑");
+    const badge = markIn(tileFor("Στην Κορυφή"));
+    expect(badge).toHaveAttribute("data-tier", "chalkino");
+    expect(badge.querySelector("path")).toHaveAttribute("d", markPathOf("leksokipos-stin-korifi"));
   });
 
-  it("shows the lock glyph on a tile the device has not earned", () => {
+  it("still draws the mark on a locked tile, so a player can see what they are chasing", () => {
+    // Replaces the 🔒, which showed every unearned badge as the same padlock. The
+    // locked frame is neutral — never a dimmed version of a tier not yet earned.
     render(<TrophyCase deviceId="" />);
-    expect(tileFor("Μακρυλέξης")).toHaveTextContent("🔒");
+    const badge = markIn(tileFor("Μακρυλέξης"));
+
+    expect(badge).toHaveAttribute("data-locked", "true");
+    expect(badge).not.toHaveAttribute("data-tier");
+    expect(badge.querySelector("path")).toHaveAttribute("d", markPathOf("leksokipos-makrylexis"));
+  });
+
+  it("shows no emoji on any tile, earned or locked", async () => {
+    renderCase({ earned: ["leksokipos-stin-korifi-chalkino"] });
+
+    await waitFor(() =>
+      expect(tileFor("Στην Κορυφή")).toHaveAttribute("data-earned", "true"),
+    );
+    // Only the beta notice keeps its 🚧; the tiles themselves are text + drawings.
+    for (const tile of screen.getAllByTestId("trophy-tile")) {
+      expect(tile.textContent ?? "").not.toMatch(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u);
+    }
   });
 
   it("keeps every tile locked when the device has earned nothing", async () => {
@@ -308,52 +338,58 @@ describe("TrophyCase", () => {
     expect(screen.queryByTestId("tier-progress-leksokipos-tzimani")).not.toBeInTheDocument();
   });
 
-  // ── Tier medals on the tile: a top-tier holder must not look like a bronze one ──
+  // ── The tile's tier frame: a top-tier holder must not look like a bronze one ──
+  //
+  // This was three 🥉🥈🥇 medal spans until TICKET-03. The frame replaced them, so
+  // the assertions moved onto the mark's resolved tier — same question, no emoji.
 
-  it("shows the medal of the highest earned tier on a tiered tile", async () => {
+  it("frames a tiered tile in the highest earned tier", async () => {
     renderCase({ earned: ["leksokipos-kynigos-pangram-chryso"] });
 
     await waitFor(() =>
-      expect(screen.getByTestId("tile-medal-leksokipos-kynigos-pangram")).toHaveTextContent("🥇"),
+      expect(markIn(tileFor("Κυνηγός Πανγκράμ"))).toHaveAttribute("data-tier", "chryso"),
     );
   });
 
-  it("shows the bronze medal when only the lowest tier is held", async () => {
+  it("frames in bronze when only the lowest tier is held", async () => {
     renderCase({ earned: ["leksokipos-kynigos-pangram-chalkino"] });
 
     await waitFor(() =>
-      expect(screen.getByTestId("tile-medal-leksokipos-kynigos-pangram")).toHaveTextContent("🥉"),
+      expect(markIn(tileFor("Κυνηγός Πανγκράμ"))).toHaveAttribute("data-tier", "chalkino"),
     );
   });
 
-  it("shows a medal for a tier reached only by the live value", async () => {
+  it("frames a tier reached only by the live value", async () => {
     renderCase({ earned: [], points: 30000 }); // past χρυσό, nothing recorded server-side
 
     await waitFor(() =>
-      expect(screen.getByTestId("tile-medal-leksokipos-syllektis-ponton")).toHaveTextContent("🥇"),
+      expect(markIn(tileFor("Συλλέκτης Πόντων"))).toHaveAttribute("data-tier", "chryso"),
     );
   });
 
-  it("shows no medal on a tile whose badge has no tier held", async () => {
+  it("leaves a tile with no tier held in the neutral locked frame", async () => {
     renderCase({ earned: ["leksokipos-stin-korifi-chalkino"] });
 
     await waitFor(() =>
-      expect(screen.getByTestId("tile-medal-leksokipos-stin-korifi")).toHaveTextContent("🥉"),
+      expect(markIn(tileFor("Στην Κορυφή"))).toHaveAttribute("data-tier", "chalkino"),
     );
-    // The other four tiles are locked and must carry no medal at all.
-    expect(screen.queryByTestId("tile-medal-leksokipos-tzimani")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("tile-medal-leksokipos-makrylexis")).not.toBeInTheDocument();
+    // The other four tiles are locked: neutral frame, no borrowed tier colour.
+    for (const name of ["Τζιμάνι", "Μακρυλέξης"]) {
+      expect(markIn(tileFor(name))).toHaveAttribute("data-locked", "true");
+      expect(markIn(tileFor(name))).not.toHaveAttribute("data-tier");
+    }
   });
 
   // ── Word-length ladder: one climbing badge over the four frozen length ids ──
 
-  it("lights the ladder tile from a frozen word-length id and shows that rung's medal", async () => {
+  it("lights the ladder tile from a frozen word-length id and frames it at that rung", async () => {
     renderCase({ earned: ["leksokipos-word-13"] });
 
     await waitFor(() =>
       expect(tileFor("Μακρυλέξης")).toHaveAttribute("data-earned", "true"),
     );
-    expect(screen.getByTestId("tile-medal-leksokipos-makrylexis")).toHaveTextContent("💠");
+    // Σεντόνι is the diamanti rung — the fourth tier above gold.
+    expect(markIn(tileFor("Μακρυλέξης"))).toHaveAttribute("data-tier", "diamanti");
   });
 
   it("selects the ladder by its base id, not the frozen rung id", async () => {

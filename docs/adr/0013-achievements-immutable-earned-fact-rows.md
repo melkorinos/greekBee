@@ -196,17 +196,47 @@ it is now a **closed question, not a deferred one** — no precedence system wil
 needs to anticipate one. Already the shipped behaviour (`player_profiles.selected_badge_id`, singular), so this
 records intent rather than changing code.
 
-### 7. Badge art: emoji glyphs are retired, but not by this ADR
+### 7. Badge art: emoji glyphs are retired — SHIPPED 2026-08-10
 
 The operator's verdict on emoji glyphs: they read as cheap and they do not scale cleanly. They also collide
 with player names — `display_name` has **zero validation** (`/api/profile` does `trim()` and falls back to
 `Ανώνυμος`), so an emoji in a name sits beside an emoji badge and the two are indistinguishable. Emoji in names
-stays **allowed**; the badge changes instead.
+stays **allowed**; the badge changed instead.
 
-Every `glyph` becomes a drawn SVG mark, and tiers stop using the 🥉🥈🥇 `TIER_MEDALS` in favour of a tier
-treatment on the mark itself. **Art is display copy — no id, no schema, and no earned row depends on it**, so
-this is fully decoupled and can land whenever. Scope, the five marks, the tier treatment, the leaderboard chip
-and the Trophy Case states are all specified in `.claude/handoffs/badgeVisualSystem.md`.
+**Art is display copy — no id, no schema, and no earned row depends on it**, which is why this shipped
+independently of the deploy window and of `launch-reset.sql`. Designed on 2026-08-10 (`/grill-with-docs`) and
+built the same day (TICKET-03, `/tdd`).
+
+**What ships.** A badge is three layers: a **ring** in the tier's strong colour, a **disc** behind the mark in
+the tier's soft colour, and the **mark**, always `currentColor` and never tinted. Because the mark never carries
+tier colour there are **five drawings total**, reused at every tier and every size — a tier is a colour, not a
+different picture, and `badgeMark.test.tsx` locks that ("changes only the frame between tiers"). Ring width is
+`size / 10` with a 1px floor; the mark occupies 66% of the inner box.
+
+- One `src/components/shared/BadgeMark.tsx` serves all three surfaces — leaderboard chip (14px), Trophy Case
+  tile (32px), unlock toast (34px). It earns its place in `shared/` by consumer count, not by anticipation.
+  Tailwind cannot emit an arbitrary runtime pixel value, so the size arrives as a `--badge-size` custom
+  property and both the box and the ring width derive from it.
+- **Eight `--tier-*` tokens** in `globals.css` (four tiers × ring + soft disc), declared light and dark and
+  exposed through `@theme inline`. Raw hex is correct **there only** — that file is where tokens are defined.
+- **Locked is a neutral frame** built from existing tokens (`border` ring, `surface-raised` disc, `muted` mark,
+  55% opacity) — never a dimmed version of a tier not yet earned, and never a greyscale filter. **The mark
+  stays visible**, so a player can see what they are chasing. This deleted the 🔒, which had shown every
+  unearned badge as the same padlock.
+- `TIER_MEDALS`, `lbBadgeMedal` and every `glyph` field are **gone**, including the four per-length emoji on
+  `WORD_LENGTH_BADGES` — nothing rendered them anyway, because the Trophy Case tier chips are text-only.
+  Μακρυλέξης is **one badge with four tier frames**; its four frozen award ids and its rung *labels*
+  (Σιδηρόδρομος / Υπερταχεία / Νταλίκα / Σεντόνι) are untouched. Διαμάντι is a hue and nothing else.
+- **`EarnedDisplay` gained `mark` and `tier`.** The toast is handed a freshly-earned id, which — now that every
+  badge is tiered — is always a **tier** id, so `describeAchievement` (which already walks tiers) is the only
+  thing that can resolve the base badge's drawing. `tierLabel` is Greek display copy and cannot be mapped back
+  to a colour; without the `tier` field the toast would draw the neutral frame, i.e. it would look *locked* at
+  the exact moment something was unlocked.
+- **Per-game accent is deliberately deferred** — the mark stays neutral on all eleven boards. Revisit only if
+  badge earning ever leaves Leksokipos.
+
+The visual record — every mark at every real size in both themes — is
+`.claude/aiHelper/html/badge-visual-grill.html`.
 
 **Note the structural consequence of §3 + §4:** with Πρώτα Βήματα gone and Στην Κορυφή and Τζιμάνι tiered,
 **every remaining badge is tiered** — the catalog has no one-shot entries left. The tier treatment is therefore

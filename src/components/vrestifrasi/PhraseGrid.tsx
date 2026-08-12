@@ -1,6 +1,8 @@
 "use client";
 
 import type { PhraseGuessResult, PhraseTileState } from "@/games/vrestifrasi/types";
+import type { LineRange } from "./phraseLayout";
+import { packLines, TILE_SIZE_CLASS, TILE_TEXT_CLASS } from "./phraseLayout";
 import { Tile } from "./Tile";
 
 interface PhraseGridProps {
@@ -36,59 +38,13 @@ function buildLine(
   return items;
 }
 
-/**
- * Split words into 1 or 2 visual lines per guess row.
- * ≤2 words → single line; 3–4 words → 2 lines (ceil(n/2) words on line 1).
- */
 function buildLines(
   words: string[],
   tiles: PhraseTileState[][],
   wordLengths: number[],
+  lineRanges: LineRange[],
 ): RowItem[][] {
-  const n = wordLengths.length;
-  if (n <= 2) return [buildLine(words, tiles, wordLengths, 0, n)];
-  const split = Math.ceil(n / 2);
-  return [
-    buildLine(words, tiles, wordLengths, 0, split),
-    buildLine(words, tiles, wordLengths, split, n),
-  ];
-}
-
-/**
- * Compute a single fixed tile size that fits the densest line.
- * All tiles in the grid share this size — guarantees visual consistency
- * across both lines regardless of how many tiles each line has.
- *
- * Layout constants:
- *   available = 368px (max-w-game 384px – px-2 16px)
- *   spacer    = 12px  (w-3)
- *   gap       =  4px  (gap-1, between every adjacent flex child)
- *
- * For N tiles and S spacers:  total = N*t + S*12 + (N+S-1)*4 ≤ 368
- *                              t_max = (368 – S*12 – (N+S-1)*4) / N
- */
-function computeTileClass(wordLengths: number[]): { sizeClass: string; textClass: string } {
-  const n = wordLengths.length;
-  const split = n <= 2 ? n : Math.ceil(n / 2);
-
-  const tMax = (wLens: number[]) => {
-    const N = wLens.reduce((s, l) => s + l, 0);
-    const S = Math.max(0, wLens.length - 1);
-    if (N === 0) return 999;
-    return (368 - S * 12 - (N + S - 1) * 4) / N;
-  };
-
-  const line1 = wordLengths.slice(0, split);
-  const line2 = wordLengths.slice(split);
-  const t = Math.min(tMax(line1), line2.length > 0 ? tMax(line2) : 999);
-
-  if (t >= 40) return { sizeClass: "w-10 h-10", textClass: "text-sm" };
-  if (t >= 36) return { sizeClass: "w-9  h-9",  textClass: "text-sm" };
-  if (t >= 32) return { sizeClass: "w-8  h-8",  textClass: "text-sm" };
-  if (t >= 28) return { sizeClass: "w-7  h-7",  textClass: "text-xs" };
-  if (t >= 24) return { sizeClass: "w-6  h-6",  textClass: "text-xs" };
-  if (t >= 20) return { sizeClass: "w-5  h-5",  textClass: "text-xs" };
-  return               { sizeClass: "w-4  h-4",  textClass: "text-xs" };
+  return lineRanges.map(({ from, to }) => buildLine(words, tiles, wordLengths, from, to));
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -100,7 +56,7 @@ export function PhraseGrid({
   wordLengths,
   maxGuesses = 6,
 }: PhraseGridProps) {
-  const { sizeClass, textClass } = computeTileClass(wordLengths);
+  const lineRanges = packLines(wordLengths);
 
   type RowData = { words: string[]; tiles: PhraseTileState[][] };
   const rows: RowData[] = [];
@@ -122,6 +78,9 @@ export function PhraseGrid({
     });
   }
 
+  // The full six-row frame is always drawn, even when unplayed. The empty rows
+  // are not decoration: they are how the player sees at a glance how many
+  // attempts are left, and they keep the board from jumping as guesses land.
   while (rows.length < maxGuesses) {
     rows.push({
       words: wordLengths.map((len) => " ".repeat(len)),
@@ -136,22 +95,22 @@ export function PhraseGrid({
       aria-label="Phrase guess grid"
     >
       {rows.map((row, ri) => {
-        const lines = buildLines(row.words, row.tiles, wordLengths);
+        const lines = buildLines(row.words, row.tiles, wordLengths, lineRanges);
         return (
           <div key={ri} className="flex flex-col gap-1 py-1.5" role="row">
             {lines.map((items, li) => (
               <div key={li} className="flex gap-1 items-center justify-center w-full">
                 {items.map((item, idx) =>
                   item.kind === "spacer" ? (
-                    <div key={`sp-${idx}`} className="flex-none w-3" aria-hidden />
+                    <div key={`sp-${idx}`} className="flex-none w-2" aria-hidden />
                   ) : (
                     <Tile
                       key={idx}
                       letter={item.letter.trim() ? item.letter.toUpperCase() : ""}
                       state={item.state}
                       animate={ri < guesses.length}
-                      sizeClass={sizeClass}
-                      textClass={textClass}
+                      sizeClass={TILE_SIZE_CLASS}
+                      textClass={TILE_TEXT_CLASS}
                     />
                   )
                 )}

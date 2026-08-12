@@ -51,6 +51,22 @@
   --present:   var(--color-yellow-500);
   --absent:    var(--color-stone-500);
   --misplaced: var(--color-purple-600);
+
+  /* Achievement badge tiers (TICKET-03) — one strong colour for the ring and one
+     soft colour for the disc behind the mark. The mark itself is always
+     currentColor and never tinted, which is what lets five drawings serve all four
+     tiers. Raw hex is correct HERE ONLY: these are tier identities with no
+     equivalent in the neutral palette, and this file is where tokens are defined.
+     Anywhere else a literal fails noRawPaletteClasses. Locked badges use no tier at
+     all — they borrow --border / --surface-raised / --muted. */
+  --tier-chalkino:      #b0713a;
+  --tier-chalkino-soft: #f6e8dc;
+  --tier-asimenio:      #8a94a0;
+  --tier-asimenio-soft: #edeff2;
+  --tier-chryso:        #c2951c;
+  --tier-chryso-soft:   #faf0cf;
+  --tier-diamanti:      #4f9fbc;
+  --tier-diamanti-soft: #e2f2f8;
 }
 
 .dark {
@@ -77,6 +93,18 @@
   --info-border:     var(--color-sky-800);
   --success-surface: var(--color-green-950);
   --success-border:  var(--color-green-700);
+
+  /* Badge tiers, dark. The ring lifts (a dark ring vanishes against a dark page)
+     and the disc drops to a deep tint of the same hue, so the ring/disc/mark
+     relationship reads identically in both themes. */
+  --tier-chalkino:      #d99a5f;
+  --tier-chalkino-soft: #3a2a1d;
+  --tier-asimenio:      #b6c0cc;
+  --tier-asimenio-soft: #2b3138;
+  --tier-chryso:        #e8c04e;
+  --tier-chryso-soft:   #3d3218;
+  --tier-diamanti:      #7fd0e3;
+  --tier-diamanti-soft: #17323c;
 }
 
 /* Per-game brand accents (ADR 0009) — each game's signature colour, set once
@@ -133,6 +161,16 @@
   --color-present:        var(--present);
   --color-absent:         var(--absent);
   --color-misplaced:      var(--misplaced);
+
+  /* Badge tiers → bg-tier-chryso / bg-tier-chryso-soft and friends (TICKET-03). */
+  --color-tier-chalkino:      var(--tier-chalkino);
+  --color-tier-chalkino-soft: var(--tier-chalkino-soft);
+  --color-tier-asimenio:      var(--tier-asimenio);
+  --color-tier-asimenio-soft: var(--tier-asimenio-soft);
+  --color-tier-chryso:        var(--tier-chryso);
+  --color-tier-chryso-soft:   var(--tier-chryso-soft);
+  --color-tier-diamanti:      var(--tier-diamanti);
+  --color-tier-diamanti-soft: var(--tier-diamanti-soft);
 
   /* Shared icon size for the leaderboard 🏆 — one place to resize it everywhere. */
   --text-trophy: 1.25rem;

@@ -70,7 +70,7 @@ describe("FeedbackModal — required text", () => {
 // ── Submission ────────────────────────────────────────────────────────────────
 
 describe("FeedbackModal — submission", () => {
-  it("POSTs to FormSubmit with message + metadata", async () => {
+  it("POSTs to FormSubmit with the message and the device id", async () => {
     const fetchSpy = mockFetch(true);
     const { user } = setup();
 
@@ -85,10 +85,32 @@ describe("FeedbackModal — submission", () => {
     const body = postBody(fetchSpy);
     expect(body).toBeInstanceOf(FormData);
     expect(body.get("message")).toBe("το κουμπί δεν δουλεύει");
-    // Debugging metadata rides along.
-    expect(typeof body.get("page_url")).toBe("string");
-    expect(typeof body.get("user_agent")).toBe("string");
+    // device_id earns its place: a deletion request sent from this form arrives
+    // already carrying the key the operator needs to action it (/privacy).
     expect(typeof body.get("device_id")).toBe("string");
+  });
+
+  // TICKET-07. FormSubmit is the Platform's one third-party processor and
+  // /privacy states by name that exactly two things leave the browser. This is
+  // the guard on that sentence: a well-meaning "let's send the user agent for
+  // debugging" would make a published privacy claim false, and nothing else in
+  // the suite would notice.
+  it("sends NOTHING beyond the message, the device id and FormSubmit's own controls", async () => {
+    const fetchSpy = mockFetch(true);
+    const { user } = setup();
+
+    await user.type(screen.getByTestId("feedback-modal-message"), "δοκιμή");
+    await user.click(screen.getByTestId("feedback-modal-submit"));
+    await waitFor(() => expect(postCall(fetchSpy)).toBeTruthy());
+
+    const body = postBody(fetchSpy);
+    expect(body.get("user_agent")).toBeNull();
+    expect(body.get("page_url")).toBeNull();
+
+    // `_`-prefixed keys are FormSubmit's own directives (subject, captcha), not
+    // player data — they never reach anyone but the maintainer's inbox subject line.
+    const playerFields = [...body.keys()].filter((k) => !k.startsWith("_")).sort();
+    expect(playerFields).toEqual(["device_id", "message"]);
   });
 
   it("shows success state after a successful POST", async () => {

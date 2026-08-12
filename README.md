@@ -4,7 +4,12 @@ A multi-game browser platform for Greek (and English) word games, built with **N
 
 ## Games
 
-Status comes from the `wip` flag in [`src/config/games.ts`](src/config/games.ts) — that registry is the source of truth if this table drifts. A `wip: true` game still renders and is playable, but the picker and the shell drawer file it under «Υπό κατασκευή».
+Status comes from two independent flags in [`src/config/games.ts`](src/config/games.ts) — that registry is the source of truth if this table drifts ([ADR 0022](docs/adr/0022-hidden-is-not-wip.md)):
+
+- **`wip`** — the game is unfinished. On its own this changes nothing a player sees.
+- **`hidden`** — the game is not listed on the picker or in the shell drawer. **Its route stays live**: it loads and plays normally for anyone who types the URL, in every environment.
+
+The three hidden games below are out of scope for the launch, so no player-facing list mentions them. There is no «Υπό κατασκευή» section any more — an unfinished game is hidden rather than signposted.
 
 | Game | Route | Status | Description |
 |------|-------|--------|-------------|
@@ -16,9 +21,9 @@ Status comes from the `wip` flag in [`src/config/games.ts`](src/config/games.ts)
 | 🕸️ Leksoplegma | `/leksoplegma` | Live | Daily word-web — trace authored words across a 4×4 tile grid (no timer) |
 | 🗺️ Topothesies | `/topothesies` | Live | Guess the Greek regional unit from its silhouette, then its capital |
 | ⚖️ Leksikastirio | `/leksikastirio` | Live | Community word court — vote on words to add or remove from the dictionary |
-| 🔗 Leksindeseis | `/leksindeseis` | wip | Group 16 curated words into 4 categories of 4 |
-| 🛒 Πόσο κάνει; | `/posokanei` | wip | Guess a supermarket product's price in 6 guesses — awaiting real content |
-| 🔎 Λογοπαίγνιο | `/logopaignio` | wip | Guess the Greek company from its de-blurring, name-stripped logo mark |
+| 🔗 Leksindeseis | `/leksindeseis` | wip + **hidden** | Group 16 curated words into 4 categories of 4 — **finished**, simply not launching |
+| 🛒 Πόσο κάνει; | `/posokanei` | wip + **hidden** | Guess a supermarket product's price in 6 guesses — awaiting real content |
+| 🔎 Λογοπαίγνιο | `/logopaignio` | wip + **hidden** | Guess the Greek company from its de-blurring, name-stripped logo mark |
 
 All games share a common shell (hamburger navigation menu), a unified persistence layer, and a consistent design foundation. Each game's logic, state, and data are fully isolated.
 
@@ -342,7 +347,7 @@ scripts/            Puzzle generation & curation CLIs (batch-generate, curate-an
 
 **Leksiarxeio** — live. Rolling 7-day daily leaderboard via Supabase (`game_scores` with `game_id = "leksiarxeio"`, per-length rows via `word_length`). Score = sum of in-game points across all 5 lengths (4–8) for a given day (6 pts for a 1st-guess solve … 1 pt at the 6th); higher = better. Failed/unplayed length = 0. Players appear on the board as soon as they finish at least one length.
 
-**Leksindeseis** — board wired, game still `wip: true`. Per-puzzle leaderboard via Supabase (`game_scores` with `game_id = "leksindeseis"`). Score = mistakes remaining (1–4) when won; higher = better. Lost games do not appear on the board.
+**Leksindeseis** — board wired, game still `wip: true` and `hidden: true` (reachable by direct URL only). Per-puzzle leaderboard via Supabase (`game_scores` with `game_id = "leksindeseis"`). Score = mistakes remaining (1–4) when won; higher = better. Lost games do not appear on the board.
 
 **Vres Tin Frasi** — live. Per-day leaderboard via Supabase (`game_scores` with `game_id = "vrestifrasi"`). Score = points from `scoreVresTinFrasi` (6 pts for a 1-guess win … 1 pt for a 6-guess win; loss = 0); higher = better (ADR 0014 — every leaderboard is higher-is-better).
 
@@ -352,7 +357,7 @@ scripts/            Puzzle generation & curation CLIs (batch-generate, curate-an
 
 **Topothesies** — live. Per-day leaderboard (`game_id = "topothesies"`). Score = 100 per remaining shape guess (of 5) + 40 per remaining capital guess (of 3); a failed stage scores nothing but the other still counts. Higher = better.
 
-**Πόσο κάνει;** and **Λογοπαίγνιο** — wired into the same board (`posokanei` / `logopaignio`), 100 points per remaining guess, but both games are still `wip: true` and run on a single placeholder puzzle.
+**Πόσο κάνει;** and **Λογοπαίγνιο** — wired into the same board (`posokanei` / `logopaignio`), 100 points per remaining guess, but both games are still `wip: true`, `hidden: true` (reachable by direct URL only) and run on a single placeholder puzzle.
 
 ---
 

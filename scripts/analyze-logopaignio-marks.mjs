@@ -1,8 +1,8 @@
 // Λογοπαίγνιο — mark isolation worksheet.
 //
 //   node scripts/analyze-logopaignio-marks.mjs
-//   -> .claude/aiHelper/logopaignio-marks.html   (one page, all staged assets)
-//   -> .claude/aiHelper/logopaignio-marks.json   (the measurements, for the cropper)
+//   -> .claude/aiHelper/html/logopaignio-marks.html   (one page, all staged assets)
+//   -> .claude/aiHelper/html/logopaignio-marks.json   (the measurements, for the cropper)
 //
 // Reads public/logopaignio/_raw/ and NEVER writes to it. Nothing here is
 // destructive: the output is a crop BOX per asset, not a cropped image, so a
@@ -29,8 +29,8 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const RAW_DIR = join(ROOT, "public", "logopaignio", "_raw");
-const OUT_HTML = join(ROOT, ".claude", "aiHelper", "logopaignio-marks.html");
-const OUT_JSON = join(ROOT, ".claude", "aiHelper", "logopaignio-marks.json");
+const OUT_HTML = join(ROOT, ".claude", "aiHelper", "html", "logopaignio-marks.html");
+const OUT_JSON = join(ROOT, ".claude", "aiHelper", "html", "logopaignio-marks.json");
 
 const RASTER_EXT = new Set([".png", ".jpg", ".jpeg", ".webp"]);
 

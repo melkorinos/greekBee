@@ -1,10 +1,11 @@
 ﻿// Component tests for GameBoard — tests real user interactions using RTL.
 // Verifies that clicking hexes, typing, submitting and error messages all work.
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { SOUND_CUES, SOUND_PREFERENCE_KEY } from "@/config/sound";
 import { GameBoard } from "@/components/leksokipos/GameBoard";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { RANKS } from "@/games/leksokipos/lib/ranking";
@@ -593,5 +594,78 @@ describe("GameBoard — day changed while Offline Mode is active", () => {
   it("shows no banner on a normal round", () => {
     setup();
     expect(screen.queryByText(/άλλαξε/i)).not.toBeInTheDocument();
+  });
+});
+
+// ── Sound Cues ────────────────────────────────────────────────────────────────
+// ADR 0021. The reducer emits nothing; an effect keyed on lastSubmission selects
+// the Cue and plays it. These tests assert WHICH file plays, never that a sound
+// is audible — nothing in this stack can assert that.
+
+describe("Sound Cues", () => {
+  let playSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    playSpy = vi.spyOn(HTMLMediaElement.prototype, "play");
+  });
+
+  afterEach(() => {
+    playSpy.mockRestore();
+  });
+
+  /** The src of every Audio element play() was called on, in order. */
+  function playedSources() {
+    return (playSpy.mock.contexts as HTMLAudioElement[]).map((a) => a.src);
+  }
+
+  function enableSound() {
+    localStorage.setItem(SOUND_PREFERENCE_KEY, "on");
+  }
+
+  it("plays the pangram Cue on a pangram — and only that one", async () => {
+    enableSound();
+    const { user } = setup();
+    await user.keyboard("painted{Enter}");
+
+    const played = playedSources();
+    expect(played).toHaveLength(1);
+    expect(played[0]).toContain(SOUND_CUES.pangram.src);
+    expect(played[0]).not.toContain(SOUND_CUES.wordFound.src);
+  });
+
+  it("plays the word-found Cue on a valid non-pangram", async () => {
+    enableSound();
+    const { user } = setup();
+    await user.keyboard("paint{Enter}");
+
+    expect(playedSources()).toEqual([expect.stringContaining(SOUND_CUES.wordFound.src)]);
+  });
+
+  it("plays the missing-centre Cue when the centre letter is forgotten", async () => {
+    enableSound();
+    const { user } = setup();
+    await user.keyboard("pint{Enter}");
+
+    expect(playedSources()).toEqual([expect.stringContaining(SOUND_CUES.missingCenter.src)]);
+  });
+
+  it("stays silent on the rejections that have no Cue", async () => {
+    enableSound();
+    const { user } = setup();
+    await user.keyboard("panda{Enter}"); // not_in_list — the most common rejection
+    await user.keyboard("ant{Enter}");   // too_short
+
+    expect(playSpy).not.toHaveBeenCalled();
+  });
+
+  it("stays silent for every Cue while the preference is off", async () => {
+    // No enableSound() — the default. A player who never opts in hears nothing
+    // and fetches nothing.
+    const { user } = setup();
+    await user.keyboard("painted{Enter}");
+    await user.keyboard("paint{Enter}");
+    await user.keyboard("pint{Enter}");
+
+    expect(playSpy).not.toHaveBeenCalled();
   });
 });

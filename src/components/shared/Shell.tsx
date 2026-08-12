@@ -10,6 +10,7 @@ import { FeedbackModal } from "./FeedbackModal";
 import { ProfileToggleButton } from "./ProfileToggleButton";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useSoundEnabled } from "@/hooks/useSoundEnabled";
 import { useTheme } from "@/hooks/useTheme";
 
 // ── Hamburger icon ────────────────────────────────────────────────────────────
@@ -54,18 +55,20 @@ const COMMUNITY_IDS: readonly RegistryGameId[] = ["leksikastirio"];
 // Every other registered Game is main nav, DERIVED from the registry so adding a
 // Game needs no edit here. Hand-typing this list is how topothesies went missing
 // from the drawer in session 121; registryCoverage.test.tsx pins the derivation.
-const GAME_IDS = (Object.keys(GAME_REGISTRY) as RegistryGameId[])
-  .filter((id) => !COMMUNITY_IDS.includes(id));
-
-// Under-construction (wip) games move to their own drawer section, keeping the
-// main list to finished games. Derived from the registry so a flag flip is enough.
-const MAIN_GAME_IDS = GAME_IDS.filter((id) => !GAME_REGISTRY[id].wip);
-const WIP_GAME_IDS  = GAME_IDS.filter((id) =>  GAME_REGISTRY[id].wip);
+//
+// `hidden` Games are absent from the drawer entirely — not filed under a section,
+// not greyed out (ADR 0022). Their routes stay live, so the link still works for
+// anyone holding it; the drawer simply stops advertising them. There is no
+// «Υπό κατασκευή» section any more: an unfinished Game is hidden, never signposted.
+const MAIN_GAME_IDS = (Object.keys(GAME_REGISTRY) as RegistryGameId[]).filter(
+  (id) => !COMMUNITY_IDS.includes(id) && !GAME_REGISTRY[id].hidden,
+);
 
 export function Shell({ children }: ShellProps) {
   const [drawerOpen,   setDrawerOpen]   = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const { theme, toggle } = useTheme();
+  const { soundEnabled, toggle: toggleSound } = useSoundEnabled();
 
   // Offline Mode is PARKED (2026-08-04) — the drawer toggle and its help modal are
   // removed, so the mode can never be activated and this guard has nothing to guard.
@@ -117,6 +120,18 @@ export function Shell({ children }: ShellProps) {
               className="flex items-center justify-center w-9 h-9 rounded-full text-muted hover:bg-surface-raised active:bg-border transition-colors"
             >
               {theme === "dark" ? "☀️" : "🌙"}
+            </button>
+
+            {/* Sound toggle — a Platform preference like theme (ADR 0021), so it
+                renders on every page even though only Leksokipos has Cues today.
+                Written inline exactly like the theme toggle rather than extracted:
+                the two are siblings and should read as one pair. */}
+            <button
+              onClick={toggleSound}
+              aria-label={soundEnabled ? "Turn sound off" : "Turn sound on"}
+              className="flex items-center justify-center w-9 h-9 rounded-full text-muted hover:bg-surface-raised active:bg-border transition-colors"
+            >
+              {soundEnabled ? "🔊" : "🔇"}
             </button>
 
             {/* Hamburger */}
@@ -186,32 +201,6 @@ export function Shell({ children }: ShellProps) {
               })}
             </ul>
 
-            {WIP_GAME_IDS.length > 0 && (
-              <>
-                <hr className="my-4 border-zinc-700" />
-
-                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-4 px-2">
-                  🚧 Υπό κατασκευή
-                </p>
-                <ul className="space-y-1">
-                  {WIP_GAME_IDS.map((id) => {
-                    const game = GAME_REGISTRY[id];
-                    return (
-                      <li key={id}>
-                        <Link
-                          href={game.href}
-                          onClick={guardNavigation()}
-                          className={navLinkClass}
-                        >
-                          {game.label}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </>
-            )}
-
             <hr className="my-4 border-zinc-700" />
 
             <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-4 px-2">
@@ -225,6 +214,20 @@ export function Shell({ children }: ShellProps) {
                 >
                   💬 Σχόλια / Πρόβλημα
                 </button>
+              </li>
+              {/* The privacy page's ONLY entry point (TICKET-07). Deliberately here
+                  and nowhere else: no footer, no header slot, no home-page link and
+                  no consent banner, so a player who never opens the drawer never
+                  meets it. Sits under Feedback because the two share a destination
+                  — the erasure route the page describes is that same form. */}
+              <li>
+                <Link
+                  href="/privacy"
+                  onClick={guardNavigation()}
+                  className={navLinkClass}
+                >
+                  🔒 Απόρρητο
+                </Link>
               </li>
             </ul>
           </nav>

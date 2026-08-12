@@ -39,6 +39,11 @@ vi.mock("next/navigation", () => ({
 // anywhere, so it fails unless the surface genuinely derives from the registry.
 const PROBE_HREF = "/probe-game";
 
+// A second probe for the OTHER presentation axis: `hidden` (TICKET-06, ADR 0022).
+// It is deliberately `wip: false` — a finished Game that is simply not shown — so
+// a surface filtering on `wip` alone cannot pass these assertions by accident.
+const HIDDEN_PROBE_HREF = "/probe-hidden";
+
 vi.mock("@/config/games", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/config/games")>();
   return {
@@ -52,14 +57,35 @@ vi.mock("@/config/games", async (importOriginal) => {
         description: "Test-only Game injected by registryCoverage.test.tsx.",
         href:         PROBE_HREF,
         wip:          false,
+        hidden:       false,
+        capabilities: [],
+      },
+      probehidden: {
+        label:       "🙈 Hidden Probe",
+        emoji:       "🙈",
+        title:       "Hidden Probe",
+        description: "Test-only hidden Game injected by registryCoverage.test.tsx.",
+        href:         HIDDEN_PROBE_HREF,
+        wip:          false,
+        hidden:       true,
         capabilities: [],
       },
     },
   };
 });
 
-const { Shell }               = await import("@/components/shared/Shell");
-const { OfflineModeProvider } = await import("@/hooks/useOfflineMode");
+// The picker pairs every registry row with rules copy held in app/page.tsx, keyed
+// `Record<keyof typeof GAME_REGISTRY, …>` — so a real Game without rules is a
+// COMPILE error and there is no runtime guard. A probe injected past the compiler
+// has no rules, and the real modal throws on `items.map`. Stubbing it keeps this
+// file's assertions on the surface it owns (which cards exist) instead of on copy
+// the compiler already guarantees.
+vi.mock("@/components/shared/HowToPlayModal", () => ({
+  HowToPlayModal: () => null,
+}));
+
+const { Shell }                                    = await import("@/components/shared/Shell");
+const { OfflineModeProvider, OFFLINE_GAME_IDS }    = await import("@/hooks/useOfflineMode");
 
 async function openDrawer() {
   const user = userEvent.setup();
@@ -85,6 +111,103 @@ describe("registry coverage — Shell drawer", () => {
         "derive its nav from the registry (Object.keys) rather than from a " +
         "hand-typed id array — otherwise adding a Game silently skips the nav.",
     ).toContain(PROBE_HREF);
+  });
+
+  it("omits a hidden Game, even though it is finished (wip:false)", async () => {
+    const hrefs = await openDrawer();
+
+    expect(
+      hrefs,
+      "The drawer rendered a `hidden` Game. `hidden` means finished-or-not, " +
+        "deliberately not shown (ADR 0022) — the drawer must filter on it, and " +
+        "filtering on `wip` alone is exactly the bug this asserts against.",
+    ).not.toContain(HIDDEN_PROBE_HREF);
+  });
+});
+
+// ── Seam 1b: the picker (app/page.tsx) ────────────────────────────────────────
+// The drawer and the picker are two independent hand-maintained lists over the
+// same registry, so the probe has to be run past both. Hiding a Game from one and
+// not the other is the failure this pair exists to catch.
+
+const HomePage = (await import("@/app/page")).default;
+
+function pickerHrefs(): (string | null)[] {
+  const { container } = render(<HomePage />);
+  return [...container.querySelectorAll("a")].map((a) => a.getAttribute("href"));
+}
+
+describe("registry coverage — picker", () => {
+  it("renders a card for a Game that exists only in the registry", () => {
+    expect(
+      pickerHrefs(),
+      "The picker did not render a Game present in GAME_REGISTRY. app/page.tsx " +
+        "must derive its card list from the registry rather than from a " +
+        "hand-typed array.",
+    ).toContain(PROBE_HREF);
+  });
+
+  it("omits a hidden Game, even though it is finished (wip:false)", () => {
+    expect(
+      pickerHrefs(),
+      "The picker rendered a `hidden` Game. A hidden Game appears in NO player-" +
+        "facing list (ADR 0022) — and filtering on `wip` alone does not achieve " +
+        "that, which is what this probe proves.",
+    ).not.toContain(HIDDEN_PROBE_HREF);
+  });
+});
+
+// ── Seam 1c: the Offline Mode game set ────────────────────────────────────────
+// Offline Mode is PARKED and unreachable (ADR 0010), so nothing here breaks today.
+// The guard exists because parked code is exactly what a future revival trusts: a
+// hidden Game silently joining the prefetch set would be discovered by whoever
+// revives the feature, not by whoever hid the Game.
+
+describe("registry coverage — Offline Mode set", () => {
+  it("includes a finished, visible Game", () => {
+    expect(
+      OFFLINE_GAME_IDS,
+      "OFFLINE_GAME_IDS dropped a finished, visible Game — the set must derive " +
+        "from the registry (see OFFLINE_EXCLUDED for the deliberate exceptions).",
+    ).toContain("probegame");
+  });
+
+  it("excludes a hidden Game that is not wip", () => {
+    expect(
+      OFFLINE_GAME_IDS,
+      "OFFLINE_GAME_IDS contains a `hidden` Game. The filter reads `!wip` alone, " +
+        "so a finished-but-hidden Game joins the offline set and Offline Mode " +
+        "advertises a Game no surface links to (ADR 0022).",
+    ).not.toContain("probehidden");
+  });
+});
+
+// ── Seam 1d: the SEO description (src/config/platform.ts) ─────────────────────
+// The fourth enumerating surface, and the most public one: PLATFORM_DESCRIPTION
+// is what layout.tsx serves as <meta name="description">, and what the share
+// card reuses (TICKET-10). It walked the whole registry filtering only
+// `leksikastirio`, so from the day the three Games were hidden it named all
+// three to every scraper — a surface no player-facing filter reached.
+
+const { PLATFORM_DESCRIPTION } = await import("@/config/platform");
+
+describe("registry coverage — SEO description", () => {
+  it("names a finished, visible Game", () => {
+    expect(
+      PLATFORM_DESCRIPTION,
+      "PLATFORM_DESCRIPTION dropped a visible Game — it must derive from the " +
+        "registry rather than from a hand-typed title list.",
+    ).toContain("Probe");
+  });
+
+  it("names no hidden Game", () => {
+    expect(
+      PLATFORM_DESCRIPTION,
+      "PLATFORM_DESCRIPTION names a `hidden` Game. The description is served " +
+        "as <meta name=\"description\"> and reused by the share card, so a " +
+        "hidden Game here is advertised to every scraper while appearing on no " +
+        "surface a player can reach (ADR 0022).",
+    ).not.toContain("Hidden Probe");
   });
 });
 

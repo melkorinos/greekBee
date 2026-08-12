@@ -11,7 +11,6 @@ import {
   LEKSOKIPOS_ACHIEVEMENTS,
   WORD_LENGTH_BADGES,
   SELECTABLE_BADGE_IDS,
-  TIER_MEDALS,
   qualifyingEarnedIds,
   resolveDisplayBadge,
   detectEarnedAchievements,
@@ -117,33 +116,37 @@ describe("LEKSOKIPOS_ACHIEVEMENTS catalog", () => {
     expect(new Set(all).size).toBe(all.length);
   });
 
-  it("gives every entry a non-empty glyph", () => {
+  it("gives every entry a drawn mark on the shared 24×24 canvas", () => {
+    // One flattened path per badge, so the catalog stores path DATA and never raw
+    // SVG markup. A shared viewBox is what lets one BadgeMark scale all five.
     for (const a of LEKSOKIPOS_ACHIEVEMENTS) {
-      expect(a.glyph).toBeTruthy();
+      expect(a.mark.viewBox).toBe("0 0 24 24");
+      expect(a.mark.path).toMatch(/^M/);
     }
   });
 
-  it("assigns the operator-approved glyph to each badge", () => {
-    // Glyphs are display copy the operator signed off on — a silent change should fail.
-    const glyphByName = Object.fromEntries(
-      LEKSOKIPOS_ACHIEVEMENTS.map((a) => [a.name, a.glyph]),
+  it("assigns the operator-approved mark to each badge", () => {
+    // The five drawings are art the operator signed off on (TICKET-03, rendered in
+    // .claude/aiHelper/html/badge-visual-grill.html) — a silent change should fail.
+    // Marks never carry tier colour, so these five serve every tier at every size.
+    const pathByName = Object.fromEntries(
+      LEKSOKIPOS_ACHIEVEMENTS.map((a) => [a.name, a.mark.path]),
     );
-    // Interim emoji — drawn marks land separately (badgeVisualSystem.md), which is
-    // why the art is decoupled from this ticket. Τζιμάνι keeps the retired
-    // Θεριστής glyph: same accomplishment, new name and id.
-    expect(glyphByName).toEqual({
-      "Στην Κορυφή":      "👑",
-      "Μακρυλέξης":      "🛏️", // the ladder wears its top rung's glyph
-      "Τζιμάνι":         "🌾",
-      "Κυνηγός Πανγκράμ": "✍️",
-      "Συλλέκτης Πόντων": "💎",
+    expect(pathByName).toEqual({
+      "Στην Κορυφή":      "M14 3.2 22 20.4H6zM6.8 9.8 12.6 20.4H2z",
+      "Μακρυλέξης":      "M9.6 3h1.6L4.6 21H1.4zM12.8 3h1.6L22.6 21h-3.2zM8.2 9h7.6v1.9H8.2zM5.8 15.6h12.4v2.1H5.8z",
+      "Τζιμάνι":         "M12.00 8.90A3.8 3.2 -90.00 0 1 12.00 1.30A3.8 3.2 -90.00 0 1 12.00 8.90ZM14.68 10.45A3.8 3.2 -30.00 0 1 21.27 6.65A3.8 3.2 -30.00 0 1 14.68 10.45ZM14.68 13.55A3.8 3.2 30.00 0 1 21.27 17.35A3.8 3.2 30.00 0 1 14.68 13.55ZM12.00 15.10A3.8 3.2 90.00 0 1 12.00 22.70A3.8 3.2 90.00 0 1 12.00 15.10ZM9.32 13.55A3.8 3.2 150.00 0 1 2.73 17.35A3.8 3.2 150.00 0 1 9.32 13.55ZM9.32 10.45A3.8 3.2 210.00 0 1 2.73 6.65A3.8 3.2 210.00 0 1 9.32 10.45Z",
+      "Κυνηγός Πανγκράμ": "M14.2 2.2 3.6 13.9h5.9l-1 7.9L20.4 10.1h-6.1z",
+      "Συλλέκτης Πόντων": "M7.6 2.6h8.8l4.8 6.4L12 21.4 2.8 9z",
     });
   });
 
-  it("keeps the operator-approved per-length glyphs on the ladder's rungs", () => {
-    expect(
-      Object.fromEntries(WORD_LENGTH_BADGES.map((b) => [b.length, b.glyph])),
-    ).toMatchObject({ 10: "🚂", 11: "🚄", 12: "🚛", 13: "🛏️" });
+  it("carries no emoji glyph on any badge or ladder rung", () => {
+    // TICKET-03 deleted `glyph` outright — emoji render differently on every platform
+    // and, worse, are indistinguishable from an emoji a player put in their own
+    // display_name (which has no validation). Re-adding one must fail here.
+    for (const a of LEKSOKIPOS_ACHIEVEMENTS) expect(a).not.toHaveProperty("glyph");
+    for (const b of WORD_LENGTH_BADGES) expect(b).not.toHaveProperty("glyph");
   });
 });
 
@@ -418,17 +421,29 @@ describe("nextPangramTierThreshold — Trophy Case 'X / N' denominator", () => {
 
 describe("describeAchievement — earned-id → toast display", () => {
   it("resolves a bare word-length rung to the ladder's name plus its rung label", () => {
-    expect(describeAchievement("leksokipos-word-13")).toEqual({
+    expect(describeAchievement("leksokipos-word-13")).toMatchObject({
       name: "Μακρυλέξης",
       tierLabel: "Σεντόνι",
     });
   });
 
   it("resolves a tier id to the badge name plus the Greek tier label", () => {
-    expect(describeAchievement("leksokipos-syllektis-ponton-asimenio")).toEqual({
+    expect(describeAchievement("leksokipos-syllektis-ponton-asimenio")).toMatchObject({
       name: "Συλλέκτης Πόντων",
       tierLabel: "Ασημένιο",
     });
+  });
+
+  it("carries the BASE badge's mark for a tier id, not the tier's own", () => {
+    // The toast is handed a freshly-earned id, which for every badge in the rebuilt
+    // catalog is a TIER id — so the only way it can draw the right art is if the
+    // resolver that already walks tiers hands the mark down. A tier never has its
+    // own drawing: the tier is the frame, the mark is the badge.
+    const ladder = LEKSOKIPOS_ACHIEVEMENTS.find((a) => a.id === "leksokipos-makrylexis");
+    expect(describeAchievement("leksokipos-word-11")?.mark).toEqual(ladder?.mark);
+
+    const points = LEKSOKIPOS_ACHIEVEMENTS.find((a) => a.id === "leksokipos-syllektis-ponton");
+    expect(describeAchievement("leksokipos-syllektis-ponton-chryso")?.mark).toEqual(points?.mark);
   });
 
   it("returns null for an unknown id", () => {
@@ -500,17 +515,6 @@ describe("resolveDisplayBadge — the word-length ladder shows the rarest rung h
 
   it("is null when no rung has been earned", () => {
     expect(resolveDisplayBadge("leksokipos-makrylexis", ["leksokipos-word-nope"])).toBeNull();
-  });
-});
-
-describe("TIER_MEDALS — Greek tier → medal glyph", () => {
-  it("maps each tier to its podium medal, with a rung above gold", () => {
-    expect(TIER_MEDALS).toEqual({
-      chalkino: "🥉",
-      asimenio: "🥈",
-      chryso:   "🥇",
-      diamanti: "💠",
-    });
   });
 });
 

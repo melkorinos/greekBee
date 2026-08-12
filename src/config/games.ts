@@ -10,6 +10,18 @@
  * entry, so a new Game is inert by default: it writes nothing until someone says so
  * here. Both wip content games shipped placeholder Scores into production precisely
  * because the old lists spelled this "everything except…".
+ *
+ * TWO PRESENTATION STATES, and they are ORTHOGONAL (ADR 0022):
+ *
+ *   `wip`    — the Game is UNFINISHED. Placeholder content, missing copy, an
+ *              unflipped flag. Says nothing about whether a player can see it.
+ *   `hidden` — the Game is DELIBERATELY NOT SHOWN, finished or not. It is absent
+ *              from the picker and the drawer, and its route stays live: anyone
+ *              holding the link still plays it. Not a redirect, not a 404.
+ *
+ * Leksindeseis is why the split exists: it is finished and community-backed, and
+ * it is out of scope for launch. Collapsing the two back into one flag would lose
+ * that distinction and re-brand a finished Game as unfinished.
  */
 
 /**
@@ -30,7 +42,10 @@ interface GameRegistryRow {
   title:        string;
   description:  string;
   href:         string;
+  /** Unfinished. Independent of `hidden` — see the header block. */
   wip:          boolean;
+  /** Not listed on any player-facing surface. The route stays live regardless. */
+  hidden:       boolean;
   capabilities: readonly GameCapability[];
 }
 
@@ -42,23 +57,28 @@ export const GAME_REGISTRY = {
     description: "Βρες λέξεις με τα 7 γράμματα του κήπου.",
     href:         "/leksokipos",
     wip:          false,
+    hidden:       false,
     capabilities: ["scores", "leaderboard"],
   },
   leksiarxeio: {
     label:       "✏️ Leksiarxeio",
     emoji:       "✏️",
     title:       "Leksiarxeio",
-    description: "Μάντεψε τη λέξη σε 6 προσπάθειες — 5 γράμματα.",
+    description: "Μάντεψε τη λέξη σε 6 προσπάθειες — 4 έως 8 γράμματα.",
     href:         "/leksiarxeio",
     wip:          false,
+    hidden:       false,
     // Posts through useLeksiarxeioScoreSubmission (a row per word length), not the
     // generic hook — but "may write Scores" is the same capability either way.
     capabilities: ["scores", "leaderboard"],
   },
   // Fully built and community-backed, but DELIBERATELY still wip:true — confirmed
   // by the operator on 2026-08-06, when a docs audit found every doc calling it
-  // Live. Do not "fix" this flag; promoting it is a launch decision (see the
-  // wayfinder map, .claude/issue-tracker/tickets/).
+  // Live. Do not "fix" this flag; promoting it is a launch decision.
+  //
+  // hidden:true since 2026-08-12 (TICKET-06): out of scope for the soft launch.
+  // This is the row the `wip`/`hidden` split exists for — the Game is FINISHED and
+  // simply not launching, which is not the same fact as `wip`.
   leksindeseis: {
     label:       "🔗 Leksindeseis",
     emoji:       "🔗",
@@ -66,8 +86,10 @@ export const GAME_REGISTRY = {
     description: "Ομαδοποίησε 16 λέξεις σε 4 κατηγορίες των 4.",
     href:         "/leksindeseis",
     wip:          true,
+    hidden:       true,
     // wip:true is a launch decision, not missing content (see above) — the Game is
-    // finished and community-backed, so it keeps both capabilities.
+    // finished and community-backed, so it keeps both capabilities. Hiding it does
+    // not revoke them: the route stays live and a Score posted from it is real.
     capabilities: ["scores", "leaderboard"],
   },
   vrestifrasi: {
@@ -77,6 +99,7 @@ export const GAME_REGISTRY = {
     description: "Βρες τη φράση της ημέρας σε 6 προσπάθειες.",
     href:         "/vres-tin-frasi",
     wip:          false,
+    hidden:       false,
     capabilities: ["scores", "leaderboard"],
   },
   leksodromia: {
@@ -86,6 +109,7 @@ export const GAME_REGISTRY = {
     description: "Ξεμπέρδεψε 10 λέξεις — όσο πιο γρήγορα, τόσο περισσότεροι πόντοι.",
     href:         "/leksodromia",
     wip:          false,
+    hidden:       false,
     capabilities: ["scores", "leaderboard"],
   },
   leksoplegma: {
@@ -95,6 +119,7 @@ export const GAME_REGISTRY = {
     description: "Βρες τις κρυμμένες λέξεις πάνω στις γραμμές του πλέγματος.",
     href:         "/leksoplegma",
     wip:          false,
+    hidden:       false,
     capabilities: ["scores", "leaderboard"],
   },
   stavrolekso: {
@@ -104,6 +129,7 @@ export const GAME_REGISTRY = {
     description: "Λύσε και δημιούργησε σταυρόλεξα της κοινότητας.",
     href:         "/stavrolekso",
     wip:          false,
+    hidden:       false,
     // A browsable pool of community crosswords, not a dated Puzzle — no Score to
     // post and nothing to rank.
     capabilities: [],
@@ -115,6 +141,7 @@ export const GAME_REGISTRY = {
     description: "Ψηφίστε λέξεις για προσθήκη ή αφαίρεση από τη λίστα.",
     href:         "/leksikastirio",
     wip:          false,
+    hidden:       false,
     // The community word-court, not a Game at all (CONTEXT.md).
     capabilities: [],
   },
@@ -128,12 +155,15 @@ export const GAME_REGISTRY = {
     description: "Μάντεψε την περιφερειακή ενότητα από το σχήμα της.",
     href:         "/topothesies",
     wip:          false,
+    hidden:       false,
     capabilities: ["scores", "leaderboard"],
   },
   // Daily "guess the supermarket price" game. Ships wip:true (single placeholder
   // puzzle + sample photo); flip to false once real content is sourced (photos +
   // gov reference prices). No handoff or issue tracks that work any more — the
   // live summary is the «Πόσο κάνει;» section of .claude/aiHelper/reflections.md.
+  // hidden:true since 2026-08-12 (TICKET-06) — unfinished AND out of scope for the
+  // soft launch. Both flags are true here for two independent reasons.
   posokanei: {
     label:       "🛒 Πόσο κάνει;",
     emoji:       "🛒",
@@ -141,6 +171,7 @@ export const GAME_REGISTRY = {
     description: "Μάντεψε την τιμή του προϊόντος του σούπερ μάρκετ.",
     href:         "/posokanei",
     wip:          true,
+    hidden:       true,
     // No capabilities while the content is a single placeholder puzzle: a Score
     // against a fake price is a permanent junk row in the shared production
     // game_scores table, which is append-forever. Grant both the day real content
@@ -151,6 +182,8 @@ export const GAME_REGISTRY = {
   // wip:true (single placeholder puzzle); flip to false once ~30 real brands are
   // sourced (mark assets + accept-lists). Brief:
   // .claude/handoffs/logopaignio-content-pool.md — deliberately off the launch map.
+  // hidden:true since 2026-08-12 (TICKET-06), same as posokanei: unfinished AND
+  // out of scope for the soft launch.
   logopaignio: {
     label:       "🔎 Λογοπαίγνιο",
     emoji:       "🔎",
@@ -158,6 +191,7 @@ export const GAME_REGISTRY = {
     description: "Μάντεψε την εταιρεία από το λογότυπό της.",
     href:         "/logopaignio",
     wip:          true,
+    hidden:       true,
     // Same as posokanei: one placeholder brand, so nothing worth writing yet.
     capabilities: [],
   },

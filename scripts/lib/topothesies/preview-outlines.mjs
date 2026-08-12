@@ -7,7 +7,7 @@
 // placeholder cards). Regenerate both with:
 //     TOPO_PREVIEW=1 npx tsx scripts/generateTopothesies.ts
 //     node scripts/lib/topothesies/preview-outlines.mjs
-// Output lands in .claude/aiHelper/outlines-preview.html (a tracked-in-place dev
+// Output lands in .claude/aiHelper/html/outlines-preview.html (a tracked-in-place dev
 // reference, not gitignored source).
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -116,6 +116,6 @@ const html = `<!doctype html><html lang="el"><head><meta charset="utf-8">
     b.onclick = () => { q.value = b.dataset.f; apply(b.dataset.f); };
 </script></body></html>`;
 
-const out = join(here, "..", "..", "..", ".claude", "aiHelper", "outlines-preview.html");
+const out = join(here, "..", "..", "..", ".claude", "aiHelper", "html", "outlines-preview.html");
 writeFileSync(out, html);
 console.log("Wrote", out, `(${cards.length} cards: ${count("live")} live, ${count("deferred")} deferred, ${count("placeholder")} backlog)`);

@@ -13,7 +13,7 @@ import { PLATFORM_NAME } from "@/config/platform";
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
 import { HomeTrophyButton } from "@/components/shared/HomeTrophyButton";
 import { SubmitPuzzleButton } from "@/components/shared/SubmitPuzzleButton";
-import { btnHeaderIcon, btnHeaderIconSize, cardShellInteractive, chipWarning } from "@/styles/recipes";
+import { btnHeaderIcon, btnHeaderIconSize, cardShellInteractive } from "@/styles/recipes";
 import Link from "next/link";
 
 function StavroleksoMakerButton() {
@@ -31,34 +31,35 @@ function StavroleksoMakerButton() {
 
 // Picker-specific content (HowToPlay copy) — not platform metadata, stays here.
 // Extract to src/data/gameRules.ts when a third consumer appears.
+//
+// No bulletIcon field: the rule bullet IS the Game's registry emoji, derived in
+// GameCard. Hand-typing it here is how Leksiarxeio ended up bulleting its rules
+// with a generic ▸ while every other Game showed its own icon.
 const GAME_RULES = {
   leksokipos: {
     rulesTitle: "Πώς να παίξεις — Leksokipos",
-    bulletIcon: "🌸",
     rules: [
       "Βρες όσες λέξεις μπορείς χρησιμοποιώντας τα 7 γράμματα.",
       "Κάθε λέξη πρέπει να περιέχει το **κεντρικό γράμμα**.",
       "Οι λέξεις πρέπει να έχουν τουλάχιστον **4 γράμματα**.",
       "Τα γράμματα μπορούν να χρησιμοποιηθούν **περισσότερες από μία φορά**.",
       "Μια λέξη που χρησιμοποιεί **και τα 7 γράμματα** κερδίζει επιπλέον bonus πόντους!",
-      "Ανέβα στην κατάταξη από Ψαράκι μέχρι Απολυτότητα! 🌸",
     ],
   },
   leksiarxeio: {
     rulesTitle: "Πώς να παίξεις — Leksiarxeio",
-    bulletIcon: "▸",
     rules: [
       "Μάντεψε τη λέξη της ημέρας σε **6 προσπάθειες**.",
-      "Κάθε προσπάθεια πρέπει να είναι έγκυρη 5γράμματη ελληνική λέξη.",
+      "Χρησιμοποίησε τα **- / +** για να αλλάξεις μήκος λέξης (**4–8 γράμματα**).",
+      "Κάθε προσπάθεια πρέπει να είναι έγκυρη ελληνική λέξη του επιλεγμένου μήκους.",
       "🟩 **Πράσινο** = σωστό γράμμα στη σωστή θέση.",
       "🟨 **Κίτρινο** = σωστό γράμμα, λάθος θέση.",
       "⬛ **Γκρι** = το γράμμα δεν υπάρχει στη λέξη.",
-      "Νέα λέξη κάθε μέρα!",
+      "Νέα λέξη κάθε μέρα για κάθε μήκος!",
     ],
   },
   leksindeseis: {
     rulesTitle: "Πώς να παίξεις — Leksindeseis",
-    bulletIcon: "🔗",
     rules: [
       "Οι 16 λέξεις χωρίζονται σε **4 κατηγορίες των 4 λέξεων**.",
       "Επίλεξε 4 λέξεις που νομίζεις ότι ανήκουν μαζί και πάτησε **Υποβολή**.",
@@ -69,7 +70,6 @@ const GAME_RULES = {
   },
   vrestifrasi: {
     rulesTitle: "Πώς να παίξεις — Vres Tin Frasi",
-    bulletIcon: "💬",
     rules: [
       "Μάντεψε τη φράση της ημέρας σε **6 προσπάθειες**.",
       "Η φράση έχει 2–4 λέξεις. Γράψε κάθε λέξη ξεχωριστά.",
@@ -81,7 +81,6 @@ const GAME_RULES = {
   },
   stavrolekso: {
     rulesTitle: "Πώς να παίξεις — Stavrolekso",
-    bulletIcon: "♟️",
     rules: [
       "Επίλεξε ένα παζλ από τη λίστα εγκεκριμένων σταυρόλεξων.",
       "Πάτησε ένα κελί για να επιλέξεις **Slot** (Οριζόντια ή Κάθετα).",
@@ -91,7 +90,6 @@ const GAME_RULES = {
   },
   leksodromia: {
     rulesTitle: "Πώς να παίξεις — Leksodromia",
-    bulletIcon: "🏁",
     rules: [
       "Ξεμπέρδεψε **10 ανακατεμένες λέξεις** — 2 από κάθε μήκος, 4 έως 8 γράμματα.",
       "Δεν υπάρχει χρονόμετρο αποτυχίας: όσο πιο **γρήγορα** λύσεις, τόσο περισσότερους πόντους παίρνεις.",
@@ -102,19 +100,16 @@ const GAME_RULES = {
   },
   leksoplegma: {
     rulesTitle: "Πώς να παίξεις — Leksoplegma",
-    bulletIcon: "🕸️",
     rules: [
       "Βρες τις **9 κρυμμένες λέξεις** σύροντας πάνω στα γράμματα — μόνο κατά μήκος των γραμμών.",
       "Μπορείς να σχηματίζεις κάθε λέξη **προς όποια κατεύθυνση** θες.",
       "Όταν βρίσκεις μια λέξη, τα γράμματα που δεν χρειάζονται πια **θαμπώνουν** — αλλά παίζουν ως το τέλος.",
-      "Κάθε κρυμμένη λέξη δίνει **10 πόντους ανά γράμμα** — χωρίς ρολόι, με την ησυχία σου.",
+      "Κάθε κρυμμένη λέξη δίνει **10 πόντους ανά γράμμα**.",
       "Κάθε άλλη υπαρκτή λέξη πάνω στις γραμμές δίνει **+25 πόντους** — πάτα ✓ για να την υποβάλεις.",
-      "Ίδιο παζλ για όλους κάθε μέρα!",
     ],
   },
   leksikastirio: {
     rulesTitle: "Πώς λειτουργεί — Λεξικαστήριο",
-    bulletIcon: "⚖️",
     rules: [
       "Πρότεινε λέξεις που **λείπουν** από τη λίστα ή που **δεν πρέπει** να είναι εκεί.",
       "Ψήφισε τις προτάσεις άλλων παικτών.",
@@ -126,7 +121,6 @@ const GAME_RULES = {
   // below is final.
   topothesies: {
     rulesTitle: "Πώς να παίξεις — Topothesies",
-    bulletIcon: "🗺️",
     rules: [
       "Δες τη **σιλουέτα** μιας περιφερειακής ενότητας και μάντεψέ την σε **4 προσπάθειες**.",
       "Μετά από κάθε λάθος παίρνεις **απόσταση, κατεύθυνση** και ποσοστό **εγγύτητας**.",
@@ -135,7 +129,6 @@ const GAME_RULES = {
   },
   posokanei: {
     rulesTitle: "Πώς να παίξεις — Πόσο κάνει;",
-    bulletIcon: "🛒",
     rules: [
       "Δες ένα **προϊόν** του σούπερ μάρκετ και μάντεψε την **τιμή** του σε **6 προσπάθειες**.",
       "Μετά από κάθε λάθος μαθαίνεις αν η σωστή τιμή είναι **πιο πάνω** ή **πιο κάτω**, με ποσοστό **εγγύτητας**.",
@@ -144,24 +137,27 @@ const GAME_RULES = {
   },
   logopaignio: {
     rulesTitle: "Πώς να παίξεις — Λογοπαίγνιο",
-    bulletIcon: "🔎",
     rules: [
       "Δες το **λογότυπο** μιας ελληνικής εταιρείας — χωρίς το όνομά της — και γράψε το όνομα.",
       "Το λογότυπο ξεκινά **θολό** και ξεθολώνει λίγο σε κάθε λάθος προσπάθεια.",
       "Ο **τομέας** της εταιρείας φαίνεται σαν βοήθεια — όσο πιο νωρίς τη βρεις, τόσο περισσότεροι πόντοι!",
     ],
   },
-} as const satisfies Record<keyof typeof GAME_REGISTRY, { rulesTitle: string; bulletIcon: string; rules: readonly string[] }>;
+} as const satisfies Record<keyof typeof GAME_REGISTRY, { rulesTitle: string; rules: readonly string[] }>;
 
 const GAMES = (Object.keys(GAME_REGISTRY) as Array<keyof typeof GAME_REGISTRY>).map(
   (id) => ({ id, ...GAME_REGISTRY[id], ...GAME_RULES[id] }),
 );
 
-// Under-construction games (wip flag) move to their own section; everything else
-// stays in the main list. Community (leksikastirio) has its own section below.
-const gameList      = GAMES.filter((g) => g.id !== "leksikastirio" && !g.wip);
-const wipList       = GAMES.filter((g) => g.id !== "leksikastirio" &&  g.wip);
-const communityList = GAMES.filter((g) => g.id === "leksikastirio");
+// `hidden` Games are on no list at all — not the main one, not a section of their
+// own (ADR 0022). Their routes stay live, so a held link still plays; the picker
+// simply stops advertising them. There is no «Υπό κατασκευή» section any more: an
+// unfinished Game is hidden rather than signposted, which is also why the card
+// below no longer carries a 🚧 chip.
+// Community (leksikastirio) keeps its own section.
+const visible       = GAMES.filter((g) => !g.hidden);
+const gameList      = visible.filter((g) => g.id !== "leksikastirio");
+const communityList = visible.filter((g) => g.id === "leksikastirio");
 
 // Read from the registry rather than from GameLeaderboardModal's runtime export:
 // this is a Server Component, and a value imported from a "use client" module
@@ -199,13 +195,8 @@ function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submit
       <Link href={game.href} className="flex-1 flex items-start gap-4 p-5">
         <span className="text-3xl mt-0.5">{game.emoji}</span>
         <div>
-          <p className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
+          <p className="font-semibold text-foreground">
             {game.title}
-            {game.wip && (
-              <span className={`text-xs font-normal ${chipWarning} px-1.5 py-0.5 rounded-full`}>
-                🚧 Υπό κατασκευή
-              </span>
-            )}
           </p>
           <p className="text-sm text-muted mt-0.5">{game.description}</p>
         </div>
@@ -214,7 +205,7 @@ function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submit
         <HowToPlayModal
           title={game.rulesTitle}
           items={game.rules}
-          bulletIcon={game.bulletIcon}
+          bulletIcon={game.emoji}
         />
         {submitButton}
       </div>
@@ -248,25 +239,6 @@ export default function HomePage() {
         {communityList.map((game) => <GameCard key={game.id} game={game} />)}
       </ul>
 
-      {wipList.length > 0 && (
-        <>
-          <div className="w-full max-w-game mt-8 mb-4 flex items-center gap-3">
-            <hr className="flex-1 border-border" />
-            <span className="text-xs font-semibold text-muted uppercase tracking-widest">🚧 Υπό κατασκευή</span>
-            <hr className="flex-1 border-border" />
-          </div>
-
-          <ul className="w-full max-w-game space-y-4">
-            {wipList.map((game) => (
-              <GameCard
-                key={game.id}
-                game={game}
-                submitButton={submitButtonFor(game.id)}
-              />
-            ))}
-          </ul>
-        </>
-      )}
     </div>
   );
 }

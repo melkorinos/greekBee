@@ -12,7 +12,7 @@
 // call. Every card therefore shows the evidence (full logo, byte size, license,
 // path count, warnings) and states plainly what still needs a human.
 //
-// Output: .claude/aiHelper/logopaignio-preview.html (gitignored? no — it is a
+// Output: .claude/aiHelper/html/logopaignio-preview.html (gitignored? no — it is a
 // review artifact the operator opens directly; it stays small because assets are
 // referenced by relative path, not inlined).
 
@@ -24,7 +24,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "..");
 const RAW_DIR = join(ROOT, "public", "logopaignio", "_raw");
 const MANIFEST = join(RAW_DIR, "manifest.json");
-const OUT = join(ROOT, ".claude", "aiHelper", "logopaignio-preview.html");
+const OUT = join(ROOT, ".claude", "aiHelper", "html", "logopaignio-preview.html");
 
 /**
  * Sectors the operator has parked. Their cards still render (the assets are

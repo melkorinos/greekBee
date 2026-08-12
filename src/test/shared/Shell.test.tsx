@@ -142,7 +142,7 @@ describe("Hamburger drawer", () => {
 // ── drawer content ────────────────────────────────────────────────────────────
 
 describe("Drawer game links", () => {
-  it("lists all games in the drawer", async () => {
+  it("lists the launched games in the drawer", async () => {
     const { user } = setup();
     await user.click(getHamburger());
 
@@ -152,10 +152,14 @@ describe("Drawer game links", () => {
 
     expect(hrefs).toContain("/leksokipos");
     expect(hrefs).toContain("/leksiarxeio");
-    expect(hrefs).toContain("/leksindeseis");
     expect(hrefs).toContain("/leksodromia");
     expect(hrefs).toContain("/leksoplegma");
     expect(hrefs).toContain("/stavrolekso");
+
+    // Hidden since TICKET-06 (ADR 0022) — finished, deliberately not launching. The
+    // route stays live; the drawer just stops advertising it. The derivation itself
+    // is probe-tested in registryCoverage.test.tsx; this pins today's roster.
+    expect(hrefs).not.toContain("/leksindeseis");
   });
 
   it("closes the drawer when a game link is clicked", async () => {
@@ -182,6 +186,37 @@ describe("Drawer game links", () => {
     await user.click(getHamburger());
     const nav = screen.getByRole("navigation", { name: /game navigation/i });
     expect(nav.querySelector("hr")).toBeInTheDocument();
+  });
+});
+
+// ── privacy link ──────────────────────────────────────────────────────────────
+// TICKET-07. The drawer is the privacy page's ONLY entry point — there is no
+// footer, no header slot and no home-page link — so if this link goes, the page
+// becomes unreachable in practice while still returning 200. Nothing else in the
+// suite would catch that, which is why the reachability is asserted here rather
+// than left to the route test.
+
+describe("Drawer privacy link", () => {
+  it("links to /privacy from the drawer", async () => {
+    const { user } = setup();
+    await user.click(getHamburger());
+    const nav = screen.getByRole("navigation", { name: /game navigation/i });
+    expect(within(nav).getByRole("link", { name: /απόρρητο/i })).toHaveAttribute("href", "/privacy");
+  });
+
+  it("keeps it out of the header, which is already four buttons wide", () => {
+    setup();
+    const header = document.querySelector("header");
+    expect(header).not.toBeNull();
+    expect(within(header as HTMLElement).queryByRole("link", { name: /απόρρητο/i })).not.toBeInTheDocument();
+  });
+
+  it("closes the drawer when the privacy link is clicked", async () => {
+    const { user } = setup();
+    await user.click(getHamburger());
+    const nav = screen.getByRole("navigation", { name: /game navigation/i });
+    await user.click(within(nav).getByRole("link", { name: /απόρρητο/i }));
+    expect(screen.queryByRole("navigation", { name: /game navigation/i })).not.toBeInTheDocument();
   });
 });
 
@@ -217,6 +252,47 @@ describe("Theme toggle", () => {
     const { user } = setup();
     await user.click(screen.getByRole("button", { name: /switch to dark mode/i }));
     expect(localStorage.getItem("theme-preference")).toBe("dark");
+  });
+});
+
+// ── sound toggle ──────────────────────────────────────────────────────────────
+// ADR 0021. A Platform preference like theme, so it renders on every page even
+// though only Leksokipos has Cues — hiding it per-route would force the Shell to
+// know which Games make noise. Off by default: unexpected audio is the most
+// complained-about behaviour on the web, and mobile blocks the first play anyway.
+
+describe("Sound toggle", () => {
+  it("renders muted by default (sound is opt-in)", () => {
+    setup();
+    expect(screen.getByRole("button", { name: /turn sound on/i })).toBeInTheDocument();
+  });
+
+  it("clicking the toggle turns sound on", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: /turn sound on/i }));
+    expect(screen.getByRole("button", { name: /turn sound off/i })).toBeInTheDocument();
+  });
+
+  it("persists the sound preference to localStorage", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: /turn sound on/i }));
+    expect(localStorage.getItem("sound-preference")).toBe("on");
+  });
+
+  it("clicking the toggle twice returns to muted and persists it", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: /turn sound on/i }));
+    await user.click(screen.getByRole("button", { name: /turn sound off/i }));
+    expect(screen.getByRole("button", { name: /turn sound on/i })).toBeInTheDocument();
+    expect(localStorage.getItem("sound-preference")).toBe("off");
+  });
+
+  it("sits beside the theme toggle in the header", () => {
+    setup();
+    const themeBtn = screen.getByRole("button", { name: /switch to dark mode/i });
+    const soundBtn = screen.getByRole("button", { name: /turn sound on/i });
+    expect(themeBtn.parentElement).toBe(soundBtn.parentElement);
+    expect(themeBtn.nextElementSibling).toBe(soundBtn);
   });
 });
 

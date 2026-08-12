@@ -2,6 +2,7 @@
 // Thin wrapper around the shared HowToPlayModal primitive.
 
 import { HowToPlayModal as SharedModal } from "@/components/shared/HowToPlayModal";
+import { GAME_REGISTRY } from "@/config/games";
 
 const TITLE = "Πώς να παίξεις — Leksokipos";
 
@@ -13,9 +14,8 @@ const ITEMS = [
   "Μια λέξη που χρησιμοποιεί **και τα 7 γράμματα** κερδίζει επιπλέον bonus πόντους!",
   "Οι μεγαλύτερες λέξεις δίνουν περισσότερους πόντους.",
   "Πάτησε το εικονίδιο με τις **μπάρες** δίπλα στο επίπεδό σου για να δεις τους πόντους κάθε επιπέδου.",
-  "Ανέβα στην κατάταξη από Ψαράκι μέχρι Απολυτότητα! 🌸",
 ];
 
 export function HowToPlayModal() {
-  return <SharedModal title={TITLE} items={ITEMS} bulletIcon="🌸" />;
+  return <SharedModal title={TITLE} items={ITEMS} bulletIcon={GAME_REGISTRY.leksokipos.emoji} />;
 }

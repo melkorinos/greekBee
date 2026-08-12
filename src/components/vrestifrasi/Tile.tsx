@@ -7,11 +7,12 @@
 import type { PhraseTileState } from "@/games/vrestifrasi/types";
 
 interface TileProps {
-  letter?:    string;
-  state:      PhraseTileState;
-  animate?:   boolean;
-  sizeClass?: string;
-  textClass?: string;
+  letter?:   string;
+  state:     PhraseTileState;
+  animate?:  boolean;
+  /** Sizing is owned by PhraseGrid, which does the line-fitting maths. */
+  sizeClass: string;
+  textClass: string;
 }
 
 const STATE_CLASSES: Record<PhraseTileState, string> = {
@@ -24,18 +25,19 @@ const STATE_CLASSES: Record<PhraseTileState, string> = {
 };
 
 export function Tile({
-  letter    = "",
+  letter  = "",
   state,
-  animate   = false,
-  sizeClass = "w-12 h-12",
-  textClass = "text-base",
+  animate = false,
+  sizeClass,
+  textClass,
 }: TileProps) {
   return (
     <div
       className={[
         "flex items-center justify-center",
         sizeClass,
-        "border-2 rounded",
+        // 1px border, not 2 — every pixel of border is a pixel the letter loses.
+        "border rounded",
         textClass,
         "font-bold uppercase select-none",
         "transition-all duration-300",

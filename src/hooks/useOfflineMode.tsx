@@ -32,10 +32,19 @@ import { postScoreAwaitable } from "@/lib/postScore";
  */
 const OFFLINE_EXCLUDED: readonly RegistryGameId[] = ["stavrolekso", "leksikastirio"];
 
-/** The games Offline Mode prefetches and allows navigation between. */
+/**
+ * The games Offline Mode prefetches and allows navigation between.
+ *
+ * Both presentation flags disqualify a Game, for different reasons: `wip` means the
+ * content is not ready, and `hidden` means no surface links to it, so prefetching it
+ * would warm a route the player cannot reach from anywhere (ADR 0022).
+ */
 export const OFFLINE_GAME_IDS: readonly RegistryGameId[] = (
   Object.keys(GAME_REGISTRY) as RegistryGameId[]
-).filter((id) => !GAME_REGISTRY[id].wip && !OFFLINE_EXCLUDED.includes(id));
+).filter(
+  (id) =>
+    !GAME_REGISTRY[id].wip && !GAME_REGISTRY[id].hidden && !OFFLINE_EXCLUDED.includes(id),
+);
 
 /** The routes prefetched on activation — also the set nav interception treats as safe. */
 export const OFFLINE_GAME_HREFS: readonly string[] = OFFLINE_GAME_IDS.map(

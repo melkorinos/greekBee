@@ -13,6 +13,7 @@ import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { LEKSOKIPOS } from "@/config/gameRules";
 import { RANKS, calculateRank } from "@/games/leksokipos/lib/ranking";
 import { isPangram } from "@/games/leksokipos/lib/pangram";
+import { selectSoundCue } from "@/games/leksokipos/lib/soundCue";
 import { validateWord } from "@/games/leksokipos/lib/validation";
 
 // ── Shared test fixture ────────────────────────────────────────────────────────
@@ -178,5 +179,36 @@ describe("validateWord", () => {
     // Uppercase Greek — normalizeLetters lowercases and folds final sigma ς→σ
     const result = validateWord("ΣΑΛΟΣ", puzzle, []);
     expect(result.status).toBe("valid");
+  });
+});
+
+// ── selectSoundCue ─────────────────────────────────────────────────────────────
+// ADR 0021. Every case is driven through the REAL validateWord rather than a
+// hand-built ValidationResult, so the cue rule is proven against what the game
+// actually emits — a literal fixture could drift from the validator silently.
+
+describe("selectSoundCue", () => {
+  it("plays the pangram cue for a pangram, never the word cue too", () => {
+    // Precedence: "πολεμας" is valid AND isPangram — one event, one cue.
+    const result = validateWord("πολεμας", puzzle, []);
+    expect(result.isPangram).toBe(true);
+    expect(selectSoundCue(result)).toBe("pangram");
+  });
+
+  it("plays the word-found cue for a valid non-pangram", () => {
+    expect(selectSoundCue(validateWord("σαλος", puzzle, []))).toBe("wordFound");
+  });
+
+  it("plays the missing-centre cue for a word without the centre letter", () => {
+    expect(selectSoundCue(validateWord("πολεμος", puzzle, []))).toBe("missingCenter");
+  });
+
+  it("stays silent for the other four rejections", () => {
+    // Deliberate: not_in_list is the most common rejection by far, and taunting
+    // every mistyped word turns hostile inside a minute.
+    expect(selectSoundCue(validateWord("μελα", puzzle, []))).toBeNull();        // not_in_list
+    expect(selectSoundCue(validateWord("σαλα", puzzle, ["σαλα"]))).toBeNull();  // already_found
+    expect(selectSoundCue(validateWord("σαλ", puzzle, []))).toBeNull();         // too_short
+    expect(selectSoundCue(validateWord("βαλε", puzzle, []))).toBeNull();        // invalid_letter
   });
 });
