@@ -1,7 +1,33 @@
 # Operational headroom — set the alerts that were decided but never configured
 
-**Status:** ready
+**Status:** in-progress
 **Spec:** [.claude/handoffs/launch-readiness.md](../../handoffs/launch-readiness.md) — the launch checklist, line "Operational readiness"
+
+## Agent half DONE 2026-08-12 (s151) — what is left is operator-only
+
+Everything measurable from an agent session is measured and written into the rate-limiting entry in
+`reflections.md`, which is where the "done when" sends it. **Read that entry before touching this
+ticket** — it holds the table, the traffic estimate and the binding constraint, and this file only
+tracks what remains.
+
+**The first scope item's premise is false and the ticket's own escape clause fired.** Supabase has
+no row-count alert on *any* plan — row count is not a metric it tracks; the usage page bills size,
+egress, MAU, storage and compute. The substitute the ticket pre-authorised (a database-size alert)
+**is also not configurable on Free**: the only automatic signal is a quota-exceeded email at 100%,
+and real alerting needs the Metrics API behind Prometheus/Grafana, which is the engineering this
+ticket excludes. Recorded substitution: one SQL row-count read folded into the ADR 0023 monitoring
+habit. **Caveat worth one minute of the operator's time** — this rests on Supabase's *documentation*,
+which is the only surface an agent can read. If the dashboard shows an alerts UI the docs do not
+describe, say so and the substitution is withdrawn.
+
+**Still owed, both dashboard-only:**
+
+- [ ] **Egress** — the one Free-plan number that is not readable via SQL or MCP. Organization →
+      Usage → Egress. Everything else in the table is measured; this cell says "operator read owed".
+- [ ] **Vercel Fluid Active CPU** — Observability → Functions. Unchanged from the original scope
+      below, and unchanged by ADR 0023: the Vercel MCP connector 403s on every project-scoped call
+      and the CLI does not expose per-function CPU.
+- [ ] **Accept or reject the substitution** above. If accepted, this ticket is done and gets deleted.
 
 ## Why
 

@@ -152,6 +152,64 @@ All INSERT-capable API routes write to Supabase with no per-device throttle. RLS
 *s147: **no evidence those alerts were ever configured**, which means the mitigation half of this decision may never have happened and the risk is simply unmitigated. `TICKET-09` closes exactly that gap — the alerts plus a first read of the Supabase Free-plan limits against a soft-launch estimate. The rate-limiting trigger above is unchanged and stays out of scope.*
 *Scope sharpened 2026-07-16: this accepted risk is now **INSERT spam only**. The adjacent-but-different exposure — anon UPDATE/DELETE table-wide via the old `ALL (true)` policies (erasable trophies/pangrams/state, the `transfer_codes` device_uuid oracle) — was never part of this decision and is closed (migrations `20260716120000`/`120100`). Dedup spam via double-submit is also DB-bounded now (`120200`).*
 
+#### s150 / `TICKET-09` — the alert this decision was conditioned on cannot be built, on any plan
+
+**Supabase has no row-count alert, and not because the plan is Free.** Row count is not a metric it
+tracks anywhere: the usage page bills database size, egress, MAU, storage and compute, and none of
+its per-metric docs mention rows. Free additionally has **no user-configurable threshold alert of
+any kind** — what exists is an automatic quota-exceeded email to the billing address (fires at 100%,
+not at a number you choose) and the Metrics API behind Prometheus/Grafana Cloud, which is an
+external collector plus a secret key, i.e. engineering this ticket excluded. So the 2026 decision
+above was conditioned on a control that never existed to configure. **Recorded substitution:** one
+SQL row-count read folded into the existing ADR 0023 monitoring habit, same cadence, same operator,
+no new machinery:
+
+```sql
+SELECT (SELECT count(*) FROM game_scores) AS scores, (SELECT count(*) FROM nominations) AS noms,
+       pg_size_pretty(pg_database_size(current_database())) AS db_size;
+```
+
+**Measured 2026-08-12** (`execute_sql`, live DB) against the Free ceilings read off supabase.com/pricing:
+
+| | now | Free limit | at limit |
+|---|---|---|---|
+| Database size | **13 MB** (public tables 1.4 MB; the rest is catalog/auth overhead) | 500 MB | **2.6%** |
+| MAU | **8** auth users, lifetime | 50 000 | 0.02% |
+| File storage | **0 bytes, 0 buckets** | 1 GB | 0% |
+| Connections | **22 in use at idle** | 60 (`max_connections`, Nano) | 37% |
+| Egress | not readable via SQL or MCP — **operator read owed** | 5 GB/mo | — |
+| `game_scores` | **505** rows | (the 50 000 tripwire) | 1.0% |
+| `nominations` | **189** rows | (the 5 000 tripwire) | 3.8% |
+
+**Traffic estimate, stated so it can be argued with:** 50 active days hold 505 scores from 51
+lifetime devices — a 30-day mean of **10.5 scores/day across 8.9 distinct devices**, so **≈1.2 score
+rows per player per day**. A soft launch to a wider circle plausibly lands 30–50 daily players; the
+arithmetic below uses **50/day**, a deliberately generous 5.6× the measured figure. At 50 players a
+day: 60 score rows/day at a measured **730 bytes per row including indexes** ≈ **16 MB/year**, so
+the 500 MB ceiling is **~25 years** away and the 50 000-row tripwire **~2.3 years**. Egress at an
+estimated ~100 KB/player/day is ~150 MB/month, **3%** of 5 GB; it needs roughly **1 700 players/day**
+to bind.
+
+**The binding constraint is not one of the four quotas.** Ranked:
+
+1. **Nano compute — shared CPU, 500 MB RAM, 60 connections with 22 already gone at idle.** A
+   performance wall rather than a quota, so it has no gauge, no percentage and no email. It is what
+   actually degrades first.
+2. **Database size, because of *how* it fails.** Free enters **read-only mode above 500 MB, with no
+   grace period** — `cannot execute INSERT in a read-only transaction`, i.e. every score post 500s
+   and the Platform silently stops recording. Twenty-five years away on the estimate; the only thing
+   that shortens that is a write loop, which is precisely the INSERT-spam risk this entry exists for.
+   That coupling is the reason the row-count read is worth keeping despite the comfortable margin.
+3. **Egress**, ~1 700 players/day.
+4. **MAU is structurally unreachable, not merely distant.** It counts Supabase Auth logins and token
+   refreshes only; the Platform's players are anonymous device ids that never touch Auth. Google
+   sign-in is optional and has 8 lifetime users. Cross it off rather than tracking it.
+
+**Trigger for moving to Pro** — not a row count: database size crossing **250 MB** (half the
+read-only cliff), *or* the first sustained slowness report (constraint 1, which no number here will
+warn about), *or* wanting PITR, which is `ISSUE-01`'s real fix rather than a capacity decision.
+The Redis rate-limiting trigger (~500 DAU) is untouched and still out of scope.
+
 ### 🟡 Topothesies — the answer set is DONE; the gate that guards it is weaker than it looks (s136)
 
 109 answers, live, `wip:false`. Every backlog list is empty (`DEFERRED_ANSWER_IDS`,
