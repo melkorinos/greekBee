@@ -31,10 +31,13 @@ function StavroleksoMakerButton() {
 
 // Picker-specific content (HowToPlay copy) — not platform metadata, stays here.
 // Extract to src/data/gameRules.ts when a third consumer appears.
+//
+// No bulletIcon field: the rule bullet IS the Game's registry emoji, derived in
+// GameCard. Hand-typing it here is how Leksiarxeio ended up bulleting its rules
+// with a generic ▸ while every other Game showed its own icon.
 const GAME_RULES = {
   leksokipos: {
     rulesTitle: "Πώς να παίξεις — Leksokipos",
-    bulletIcon: "🌸",
     rules: [
       "Βρες όσες λέξεις μπορείς χρησιμοποιώντας τα 7 γράμματα.",
       "Κάθε λέξη πρέπει να περιέχει το **κεντρικό γράμμα**.",
@@ -45,7 +48,6 @@ const GAME_RULES = {
   },
   leksiarxeio: {
     rulesTitle: "Πώς να παίξεις — Leksiarxeio",
-    bulletIcon: "▸",
     rules: [
       "Μάντεψε τη λέξη της ημέρας σε **6 προσπάθειες**.",
       "Χρησιμοποίησε τα **- / +** για να αλλάξεις μήκος λέξης (**4–8 γράμματα**).",
@@ -58,7 +60,6 @@ const GAME_RULES = {
   },
   leksindeseis: {
     rulesTitle: "Πώς να παίξεις — Leksindeseis",
-    bulletIcon: "🔗",
     rules: [
       "Οι 16 λέξεις χωρίζονται σε **4 κατηγορίες των 4 λέξεων**.",
       "Επίλεξε 4 λέξεις που νομίζεις ότι ανήκουν μαζί και πάτησε **Υποβολή**.",
@@ -69,7 +70,6 @@ const GAME_RULES = {
   },
   vrestifrasi: {
     rulesTitle: "Πώς να παίξεις — Vres Tin Frasi",
-    bulletIcon: "💬",
     rules: [
       "Μάντεψε τη φράση της ημέρας σε **6 προσπάθειες**.",
       "Η φράση έχει 2–4 λέξεις. Γράψε κάθε λέξη ξεχωριστά.",
@@ -81,7 +81,6 @@ const GAME_RULES = {
   },
   stavrolekso: {
     rulesTitle: "Πώς να παίξεις — Stavrolekso",
-    bulletIcon: "♟️",
     rules: [
       "Επίλεξε ένα παζλ από τη λίστα εγκεκριμένων σταυρόλεξων.",
       "Πάτησε ένα κελί για να επιλέξεις **Slot** (Οριζόντια ή Κάθετα).",
@@ -91,7 +90,6 @@ const GAME_RULES = {
   },
   leksodromia: {
     rulesTitle: "Πώς να παίξεις — Leksodromia",
-    bulletIcon: "🏁",
     rules: [
       "Ξεμπέρδεψε **10 ανακατεμένες λέξεις** — 2 από κάθε μήκος, 4 έως 8 γράμματα.",
       "Δεν υπάρχει χρονόμετρο αποτυχίας: όσο πιο **γρήγορα** λύσεις, τόσο περισσότερους πόντους παίρνεις.",
@@ -102,7 +100,6 @@ const GAME_RULES = {
   },
   leksoplegma: {
     rulesTitle: "Πώς να παίξεις — Leksoplegma",
-    bulletIcon: "🕸️",
     rules: [
       "Βρες τις **9 κρυμμένες λέξεις** σύροντας πάνω στα γράμματα — μόνο κατά μήκος των γραμμών.",
       "Μπορείς να σχηματίζεις κάθε λέξη **προς όποια κατεύθυνση** θες.",
@@ -113,7 +110,6 @@ const GAME_RULES = {
   },
   leksikastirio: {
     rulesTitle: "Πώς λειτουργεί — Λεξικαστήριο",
-    bulletIcon: "⚖️",
     rules: [
       "Πρότεινε λέξεις που **λείπουν** από τη λίστα ή που **δεν πρέπει** να είναι εκεί.",
       "Ψήφισε τις προτάσεις άλλων παικτών.",
@@ -125,7 +121,6 @@ const GAME_RULES = {
   // below is final.
   topothesies: {
     rulesTitle: "Πώς να παίξεις — Topothesies",
-    bulletIcon: "🗺️",
     rules: [
       "Δες τη **σιλουέτα** μιας περιφερειακής ενότητας και μάντεψέ την σε **4 προσπάθειες**.",
       "Μετά από κάθε λάθος παίρνεις **απόσταση, κατεύθυνση** και ποσοστό **εγγύτητας**.",
@@ -134,7 +129,6 @@ const GAME_RULES = {
   },
   posokanei: {
     rulesTitle: "Πώς να παίξεις — Πόσο κάνει;",
-    bulletIcon: "🛒",
     rules: [
       "Δες ένα **προϊόν** του σούπερ μάρκετ και μάντεψε την **τιμή** του σε **6 προσπάθειες**.",
       "Μετά από κάθε λάθος μαθαίνεις αν η σωστή τιμή είναι **πιο πάνω** ή **πιο κάτω**, με ποσοστό **εγγύτητας**.",
@@ -143,14 +137,13 @@ const GAME_RULES = {
   },
   logopaignio: {
     rulesTitle: "Πώς να παίξεις — Λογοπαίγνιο",
-    bulletIcon: "🔎",
     rules: [
       "Δες το **λογότυπο** μιας ελληνικής εταιρείας — χωρίς το όνομά της — και γράψε το όνομα.",
       "Το λογότυπο ξεκινά **θολό** και ξεθολώνει λίγο σε κάθε λάθος προσπάθεια.",
       "Ο **τομέας** της εταιρείας φαίνεται σαν βοήθεια — όσο πιο νωρίς τη βρεις, τόσο περισσότεροι πόντοι!",
     ],
   },
-} as const satisfies Record<keyof typeof GAME_REGISTRY, { rulesTitle: string; bulletIcon: string; rules: readonly string[] }>;
+} as const satisfies Record<keyof typeof GAME_REGISTRY, { rulesTitle: string; rules: readonly string[] }>;
 
 const GAMES = (Object.keys(GAME_REGISTRY) as Array<keyof typeof GAME_REGISTRY>).map(
   (id) => ({ id, ...GAME_REGISTRY[id], ...GAME_RULES[id] }),
@@ -213,7 +206,7 @@ function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submit
         <HowToPlayModal
           title={game.rulesTitle}
           items={game.rules}
-          bulletIcon={game.bulletIcon}
+          bulletIcon={game.emoji}
         />
         {submitButton}
       </div>

@@ -2,6 +2,7 @@
 // Thin wrapper around the shared HowToPlayModal primitive.
 
 import { HowToPlayModal as SharedModal } from "@/components/shared/HowToPlayModal";
+import { GAME_REGISTRY } from "@/config/games";
 
 const TITLE = "Πώς να παίξεις — Leksokipos";
 
@@ -16,5 +17,5 @@ const ITEMS = [
 ];
 
 export function HowToPlayModal() {
-  return <SharedModal title={TITLE} items={ITEMS} bulletIcon="🌸" />;
+  return <SharedModal title={TITLE} items={ITEMS} bulletIcon={GAME_REGISTRY.leksokipos.emoji} />;
 }

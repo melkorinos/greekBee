@@ -5,6 +5,7 @@ import { HowToPlayModal }              from "@/components/shared/HowToPlayModal"
 import { GamePageShell }               from "@/components/shared/GamePageShell";
 import { GameHeader }                  from "@/components/shared/GameHeader";
 import { getTodaysLeksindeseisPuzzle } from "@/data/leksindeseis";
+import { GAME_REGISTRY }               from "@/config/games";
 import { todayISO }                    from "@/lib/puzzleDate";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +29,7 @@ export default async function LeksindeseisPage() {
         <HowToPlayModal
           title="Πώς να παίξεις — Leksindeseis"
           items={CONNECTIONS_RULES}
-          bulletIcon="🔗"
+          bulletIcon={GAME_REGISTRY.leksindeseis.emoji}
         />
       </GameHeader>
       <p className="text-muted text-xs mb-1 self-start max-w-game">

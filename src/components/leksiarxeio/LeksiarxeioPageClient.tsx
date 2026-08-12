@@ -1,6 +1,7 @@
 "use client";
 
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
+import { GAME_REGISTRY } from "@/config/games";
 import { GameHeader } from "@/components/shared/GameHeader";
 import { GameHeaderTrophyButton } from "@/components/shared/GameHeaderTrophyButton";
 import { LeksiarxeioBoard } from "./LeksiarxeioBoard";
@@ -35,7 +36,7 @@ export function LeksiarxeioPageClient({ puzzles, wordLists, today }: Leksiarxeio
         <HowToPlayModal
           title="Πώς να παίξεις — Leksiarxeio"
           items={LEKSIARXEIO_RULES}
-          bulletIcon="▸"
+          bulletIcon={GAME_REGISTRY.leksiarxeio.emoji}
         />
       </GameHeader>
       <LeksiarxeioBoard
