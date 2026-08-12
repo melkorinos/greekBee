@@ -9,12 +9,11 @@ launch is an act of promotion, not a change in exposure; that framing is what ma
 finite. **`launch-readiness.md` question 1 is RESOLVED** and holds the blocking/accepted split, the
 five tickets it produced (`TICKET-06`–`10`) and the release-day runbook. **Only sequencing is open.**
 
-- **All three `wip:true` Games are HIDDEN — SHIPPED s148, `TICKET-06` deleted, ADR 0022.** `wip` and
-  `hidden` are **orthogonal required fields** on `GameRegistryRow`: `wip` = unfinished, `hidden` =
-  deliberately not shown, finished or not (Leksindeseis is both). **Hidden means unlisted, NOT
-  disabled** — routes stay live by direct URL everywhere, no redirect, no 404, no env gate. Filters
-  in `page.tsx`, `Shell.tsx`, `useOfflineMode.tsx`, all probe-tested in `registryCoverage.test.tsx`;
-  «Υπό κατασκευή» and the card chip are DELETED, not dormant.
+- **All three `wip:true` Games are HIDDEN — SHIPPED s148, `TICKET-06` deleted, ADR 0022.** `wip`
+  (unfinished) and `hidden` (deliberately not shown) are **orthogonal required fields** on
+  `GameRegistryRow`; Leksindeseis is both. **Hidden means unlisted, NOT disabled** — routes stay live
+  by direct URL everywhere. Filters in `page.tsx`/`Shell.tsx`/`useOfflineMode.tsx`, probe-tested in
+  `registryCoverage.test.tsx`; «Υπό κατασκευή» and the card chip are DELETED, not dormant.
 - **Privacy Page SHIPPED s149, `TICKET-07` deleted.** `/privacy`, Greek; controller in `platform.ts`,
   retention imported from `retention.ts`. **Deliberately unadvertised** — one drawer link under
   Βοήθεια, no footer, no banner, no consent dialog — which holds ONLY while there is no analytics and
@@ -22,10 +21,12 @@ five tickets it produced (`TICKET-06`–`10`) and the release-day runbook. **Onl
   Feedback surface was built; payload is now exactly `message` + `device_id` (the DeviceId stays so an
   erasure request arrives carrying its own key). `privacyPage.test.tsx` **pins the four production
   dependencies** — an `npm install` fails the suite pointing at the page.
-- **Error monitoring DECIDED s149 (operator): no third-party SDK, Vercel's built-in observability
-  only** — this is what keeps the page's "no third-party tracking" line true. **`TICKET-08` is now a
-  write-up** (ADR, a scheduled manual check, one thrown error verified in a preview), and the **`08`
-  before `07` constraint is WITHDRAWN**, returning only if the SDK ruling reverses.
+- **Error monitoring SHIPPED s150, `TICKET-08` deleted — ADR 0023 is the whole story.** No third-party
+  SDK, Vercel only; it keeps `/privacy`'s "no tracking tools" line true, so reversing it means revising
+  that page in the SAME branch. Check = `npx vercel logs --environment production --level error --since
+  24h`, daily then weekly, window under the ~7-day retention. **Vercel MCP is 403 on every
+  project-scoped call → the CLI is the only surface**; **previews are SSO-protected (302)**, so only the
+  operator can exercise one. Baseline is ~1000 rows/day and **zero errors** — any error row is signal.
 - **Runbook order is load-bearing**: deploy → **verify prod serves the merge commit** → `db:backup`
   off-machine → `launch-reset.sql` → announce. The reset must follow the deploy (`BadgeMark` is on
   `dev` only, so running it early re-earns every badge against the retired emoji glyphs), and the
@@ -110,7 +111,7 @@ supabase/       config.toml + migrations/ — version-controlled DB schema (auth
 ---
 
 ## 🛠 Known Tech Debt
-Everything lives in `.claude/tracker/` (redesigned 2026-08-06, conventions in its README). **`issues/`**: `ISSUE-01` (no disaster-recovery backups) and `ISSUE-03` (thin E2E coverage — 7 tests across 8 launching Games, deferred s147). **`ISSUE-02` is cited here and in `goals.md` but its FILE DOES NOT EXIST** (`rlsInvariantsLiveDb`'s `game_state` DELETE flake; s144 found those 5 failures gone — resolve or re-file, and note the number stays spent either way). **`tickets/`**: `TICKET-05` (three Sound Cue MP3s — **operator work**, the sole thing blocking a Sound Cues deploy) plus three of the five launch tickets from s147 — **08** error monitoring (decided s149; only the write-up remains), **09** operational headroom, **10** share preview. **No ordering constraints remain** — the 08-before-07 one was withdrawn in s149, not satisfied. Numbers are **never reused**: 01 shipped s139, 02 s140, 03 s144, 04 s146, 06 s148, **07 s149**, all deleted per the rule — read the log before picking a number, not the folder. No triage labels — the folder is the state; resolved files are deleted, never marked done. Open *questions* are neither, and live in `.claude/handoffs/launch-readiness.md`; read it before assuming something is untracked. Wayfinder is retired.
+Everything lives in `.claude/tracker/` (redesigned 2026-08-06, conventions in its README). **`issues/`**: `ISSUE-01` (no disaster-recovery backups) and `ISSUE-03` (thin E2E coverage — 7 tests across 8 launching Games, deferred s147). **`ISSUE-02` is cited here and in `goals.md` but its FILE DOES NOT EXIST** (`rlsInvariantsLiveDb`'s `game_state` DELETE flake; s144 found those 5 failures gone — resolve or re-file, and note the number stays spent either way). **`tickets/`**: `TICKET-05` (three Sound Cue MP3s — **operator work**, the sole thing blocking a Sound Cues deploy) plus two of the five launch tickets from s147 — **09** operational headroom, **10** share preview. **No ordering constraints remain** — the 08-before-07 one was withdrawn in s149, not satisfied. Numbers are **never reused**: 01 shipped s139, 02 s140, 03 s144, 04 s146, 06 s148, **07 s149**, **08 s150**, all deleted per the rule — read the log before picking a number, not the folder. No triage labels — the folder is the state; resolved files are deleted, never marked done. Open *questions* are neither, and live in `.claude/handoffs/launch-readiness.md`; read it before assuming something is untracked. Wayfinder is retired.
 
 ## 🧪 Test Coverage Map
 Moved to **`.claude/aiHelper/coverageMap.md`** (2026-07-18). Not loaded at session start — grep it before writing any new test (if the function already appears, read that test file first) and update it in the end-of-session Dream (soul.md).

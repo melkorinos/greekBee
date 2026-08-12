@@ -35,7 +35,7 @@ in exposure.
 |---|---|---|
 | ~~`TICKET-06`~~ | ~~Hide the three unlaunched Games from picker, drawer and Offline Mode~~ — **✅ shipped 2026-08-12**, ADR 0022 (`hidden` is a second presentation state, orthogonal to `wip`; hidden routes stay live) | agent |
 | `TICKET-07` | Privacy page in Greek, linked from the Shell | agent |
-| `TICKET-08` | Error monitoring — **decided 2026-08-12: no third-party SDK, Vercel's built-in observability only.** Remaining work is the ADR, a written manual check, and one thrown error verified in a preview | agent |
+| ~~`TICKET-08`~~ | ~~Error monitoring~~ — **✅ shipped 2026-08-12**, ADR 0023 (no third-party SDK; the check is `npx vercel logs --environment production --level error --since 24h`, daily for the first week then weekly, and it was walked through against a real induced error). Two ticket claims failed measurement: the Vercel **MCP connector is 403 on every project-scoped call**, so the CLI is the only working surface; and **previews are SSO-protected**, so the proof ran read-only against production with operator approval | agent |
 | `TICKET-09` | Operational headroom — the two Supabase alerts + Free-plan limits read | operator |
 | `TICKET-10` | Share preview — Open Graph card and favicon | agent |
 | `TICKET-05` | Three Sound Cue MP3s — **blocks any deploy**, the toggle ships playing silence | operator |
@@ -101,6 +101,9 @@ create tickets ready for agent pickup."*
    operator has since ruled out any third-party error SDK — monitoring is Vercel's built-in
    observability only — so the dependency is dissolved, not merely reordered, and the two tickets
    may close in either order. The coupling only returns if that ruling is reversed.
+   **Both shipped 2026-08-12**, in the order `07` then `08`, which the withdrawal is what allowed.
+   The surviving coupling is recorded in **ADR 0023**: reversing the no-SDK ruling means revising
+   `/privacy` in the same branch.
 2. **The `dev → main` merge** placed explicitly, with its play-through — Leksodromia and Leksoplegma
    (`goals.md` item 1), the sessions 102–104 visual shifts, and the badge art eye-check in **both
    themes** still owed from TICKET-03. One session, on a preview of `dev`.

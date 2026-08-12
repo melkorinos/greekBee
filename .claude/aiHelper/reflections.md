@@ -2,6 +2,35 @@
 
 ## ⚠️ Active Tensions (watch these)
 
+### 🟠 A skill file is a cache, and a stale cache speaks with authority (s150)
+
+`project-mcp` exists so sessions stop re-deriving infrastructure facts. It worked — and **two of its
+entries were wrong in opposite directions**, both load-bearing for `TICKET-08`:
+
+- It said `npx vercel logs` **"live-streams runtime logs from now (no lookback)"**. It does not:
+  streaming is opt-in via `--follow`, and the default is a *historical* query with `--since`,
+  `--until`, `--level`, `--status-code`. The entire manual check this session had to write is
+  only writable because of flags the skill said did not exist. Had I trusted it, the honest
+  conclusion would have been "no queryable history exists, so the check must be a dashboard habit" —
+  a worse artifact, reached by obedience.
+- Conversely it presents the MCP tools as the primary path, and **every project-scoped Vercel MCP
+  call is now 403/404** while `list_teams` still succeeds. That combination is the nasty one: the
+  connector looks alive, so the natural reading is "I passed the wrong id", which is exactly the
+  thrash the skill exists to prevent.
+
+The tension is structural, not a one-off correction. **A skill is the only doc in this repo that is
+read *instead of* checking**, which is its value and its whole risk. `CLAUDE.md` already says the
+tracker's folder is its state and that git is the archive; skills have no such freshness mechanism,
+and the entries most worth caching (external tool behaviour) are precisely the ones that drift
+without anyone touching this repo. The file's own "When this is wrong" footer is the right instinct
+and it depends entirely on someone noticing.
+
+Practical form, and it is cheap: **when a skill entry is about to decide something, spend the one
+command to confirm it** — `--help` for a CLI claim, one call for a tool-reachability claim. The
+skill's job is to tell you *what to check and with which id*, not to excuse the check. Two entries
+were corrected this session and the corrections are dated in the file; date the next ones too, so a
+future session can see which claims have been touched since anyone last looked.
+
 ### 🔴 A ticket that names a future risk is often blind to the present instance of it (s149)
 
 `TICKET-07` carried a prominent warning block: install error monitoring after the privacy page ships
@@ -403,6 +432,18 @@ than on the spec. **A ticket's file list is a hypothesis; grep is the map.** The
 "verify, do not assume, that nothing else enumerates Games" line was the right instinct, and it was
 right about `page.tsx`, `Shell.tsx` and `useOfflineMode.tsx` — it simply never ran the same check
 over the *tests*.
+
+**Sixth instance, s150, and the artifact was a tool.** `TICKET-08` justified "Vercel's built-in
+observability is enough" partly with *"`get_runtime_errors` and `get_runtime_logs` are reachable from
+an agent session via MCP"* — a capability claim about someone else's service, stated in the same
+confident register as a claim about a file in this repo. Both tools return **403** and `get_project`
+404s on every id form. The decision survived (the CLI covers it, and the privacy argument was always
+the load-bearing one), which makes this the **s139 shape as well**: *a spec's stated reason can be
+false while its decision is right.* Note what is new — the previous five instances were all checkable
+with one `Read` or one `grep`, but a tool-reachability claim can only be checked by **calling the
+tool**, and nothing about reading the ticket prompts that. Practical form: **a spec that names a tool
+as its mechanism should have that tool invoked before the spec is believed**, not after the plan is
+built on it.
 
 ### 🟡 Sound Cues are built and mute — the deploy gate is now the only guard (s145, updated s146)
 

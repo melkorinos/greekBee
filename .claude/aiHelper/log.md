@@ -5,6 +5,37 @@
 
 ---
 
+## Session 150 — 2026-08-12: the monitoring that was already there, and the tool that could not reach it
+
+`TICKET-08` shipped as **ADR 0023** — no third-party error SDK, Vercel only, because a monitor is a
+processor and `/privacy` says there are none. Docs only, no source changed. Gates 193/2467, 0, 0.
+
+**The ticket's own mechanism was false, and it was the third reason the decision rested on.** It
+stated `get_runtime_errors` and `get_runtime_logs` "are reachable from an agent session via MCP".
+They are not: `list_teams` works, so the connector looks authenticated, but **every project-scoped
+call fails** — `get_project` 404 on both the slug and the `prj_…` id, both log tools **403**,
+`list_projects` `[]`. Re-authorizing changed nothing. This is the s146 shape again — **a citation to
+a named artifact reads as verified and almost never is** — except the artifact was a *tool the ticket
+assumed it could call*.
+
+**The working surface is the CLI, and `project-mcp` was wrong about it in the opposite direction:**
+the skill said `vercel logs` "live-streams from now (no lookback)". It queries history (`--since`,
+`--until`, `--level`, `--status-code`, `--json`), which is the only reason a manual check is writable
+at all. Both corrections are now in the skill, with three traps measured on the way: the human output
+prints **time-of-day with no date** (parse `timestampInMs`), `--limit` truncates newest-first rather
+than windowing (`--since 7d --limit 1000` returned 1000 rows from one day), and **`No logs found`
+reads identically to a broken query** — an absence of errors must be re-run unfiltered to be believed.
+
+Verified rather than trusted: retention reaches **7 days** (walked back to 2026-08-06 by ISO
+timestamp), previews return **302 to SSO** so an agent cannot exercise one, and the production
+baseline is ~1000 rows/day of `200`/`304` with **zero errors across the window** — which is what
+makes a single error row real signal. Operator approved a read-only production probe in place of the
+ticket's preview: `GET /api/community-puzzles/stavrolekso/abc-not-a-number` → `Number(id)` → `NaN` →
+rejected integer cast → retrieved as `[api] not_found: invalid input syntax for type integer: "NaN"`.
+**No route here can be made to crash from outside** — ADR 0016's envelope converts every fault into a
+coded 4xx — so a handled error is the strongest proof available, recorded so it does not read as
+laziness.
+
 ## Session 149 — 2026-08-12: the privacy page, and the third party that was already there
 
 `/grill-with-docs` then build. `TICKET-07` shipped: `/privacy` in Greek, plain-voiced, one drawer
@@ -34,42 +65,11 @@ dependencies**: the ticket feared "nothing in the suite will notice" an install;
 notice. `TICKET-08` was decided in the same breath (no third-party SDK) purely so this page stays
 true. Gates 193/2467, eslint 0, build 0 (`/privacy` static), e2e 13 passed / 2 skipped.
 
-## Session 148 — 2026-08-12: three Games leave the shelf — TICKET-06 built
-
-`/tdd`, three slices, one seam each: drawer, picker, Offline Mode. New `hidden: boolean` on
-`GameRegistryRow`, **required not optional** — `GAME_REGISTRY` is `as const satisfies`, so an omitted
-field makes `GAME_REGISTRY[id].hidden` a type error on the union, and requiring it forces every new
-Game to state its intent. `wip` and `hidden` are orthogonal; **ADR 0022** records why, because
-Leksindeseis is `wip:true` **and** genuinely finished **and** not launching, three facts one flag
-would flatten. Hidden means **unlisted, not disabled**: routes stay live by direct URL everywhere.
-Revealing them off-production was offered and declined — the preview picker must match production.
-
-**Two of the ticket's own claims were wrong, and both were one file to check.** It said to update
-`e2e/games.spec.ts` "for the eight-Game picker" — that spec has **no picker assertions at all**, it
-visits three game pages directly, so there was nothing to update and it passes untouched. And it
-never mentioned the test that actually broke: `Shell.test.tsx` asserted the drawer contains
-`/leksindeseis`. This is the s146 pattern exactly — **a citation to a named artifact in this repo
-reads as verified and almost never is**, and the check costs one `Read`.
-
-The probe trick from `registryCoverage.test.tsx` extended cleanly to a **second** probe
-(`wip:false, hidden:true`) across all three surfaces, each with a positive control so a surface
-cannot pass by rendering nothing. Two finds while writing it: `app/page.tsx` **does** render in
-jsdom (identity and trophy buttons included), and a probe crashes the real `HowToPlayModal` because
-rules copy is keyed `Record<keyof typeof GAME_REGISTRY, …>` — a compile-time guarantee with no
-runtime guard, so the modal is stubbed. The Offline Mode fix is for **parked** code (ADR 0010): its
-`!wip` filter would have let a finished-but-hidden Game join the prefetch set, breaking for whoever
-revives the feature rather than for whoever hid the Game.
-
-Deleted rather than left dormant: the «Υπό κατασκευή» section in both surfaces **and** the card's 🚧
-chip. An unfinished Game is hidden now, never signposted. Gates: **192 files / 2455 tests**, eslint
-0, build 0 (all three hidden routes still emitted), **e2e 10 passed / 2 skipped — the baseline moved
-from 7 on purpose**, and the Leksindeseis spec passing is the live proof that hiding did not disable.
-`TICKET-06` deleted; `TICKET-10` and `ISSUE-03` updated where they cited it.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 148 | 2026-08-12 | **Three Games leave the shelf — `TICKET-06` built** (`/tdd`, three slices: drawer, picker, Offline Mode). New **required** `hidden: boolean` on `GameRegistryRow` — `GAME_REGISTRY` is `as const satisfies`, so omitting it is a type error on the union, which forces every new Game to state its intent. `wip` and `hidden` are **orthogonal** (**ADR 0022**): Leksindeseis is `wip:true` **and** finished **and** not launching, three facts one flag would flatten. **Hidden means unlisted, not disabled** — routes stay live by direct URL everywhere; revealing them off-production was offered and declined, because the preview picker must match production. **Two ticket claims were wrong, each one file to check:** `e2e/games.spec.ts` has **no picker assertions at all** (nothing to update, passed untouched), and the test that actually broke — `Shell.test.tsx`'s drawer assertion on `/leksindeseis` — appeared in no list; the s146 pattern exactly. The `registryCoverage.test.tsx` probe trick extended to a **second** probe (`wip:false, hidden:true`) across all three surfaces, each with a positive control so a surface cannot pass by rendering nothing. Two finds: `app/page.tsx` **does** render in jsdom, and a probe crashes the real `HowToPlayModal` (rules copy keyed `Record<keyof typeof GAME_REGISTRY, …>` — a compile-time guarantee with no runtime guard), so it is stubbed. The Offline Mode fix is for **parked** code (ADR 0010) — its `!wip` filter would have let a finished-but-hidden Game join the prefetch set. «Υπό κατασκευή» and the 🚧 chip **deleted, not dormant**. 192 files / 2455 tests, eslint 0, build 0, **e2e 10 passed / 2 skipped (baseline moved from 7 on purpose)**. |
 | 147 | 2026-08-11 | **Launch question 1 resolved — five tickets, one issue, no code** (`/grill-with-docs`). **Soft launch** — a wider circle, no broadcast — because the site is *already publicly deployed*, so launch is promotion rather than a change in exposure, and that framing is what makes the checklist finite. Output: a blocking/accepted-as-is split, `TICKET-06`–`10`, `ISSUE-03`, and a release-day runbook whose **order is load-bearing** (deploy → verify prod serves the merge commit → `db:backup` off-machine → `launch-reset.sql` → announce). **Two of the repo's own descriptions were euphemisms, both one command to check**: the Leksindeseis fallback pool called "thin" for weeks is **one puzzle** rotating over a single-item array, and the legal/monitoring surface was **nothing at all** — the s147 reflections tension. Third measured fact, which set the runbook order: **`BadgeMark` is absent from `main`**, so a reset run before the launch deploy would re-earn every badge against retired emoji art. Operator calls: all three `wip:true` Games **hidden** (retiring the content-supply, wip-flip and Leksindeseis-pool threads at once), terms of service and E2E depth accepted as-is, the **UI question struck from the handoff**. |
 | 146 | 2026-08-11 | **The Platform makes a noise — TICKET-04 built** (`/tdd`, five slices). ADR 0021's design held up unchanged: `selectSoundCue` is three lines, the reducer was never touched, `lastSubmission` was already the event source. New: `config/sound.ts` (Cue registry + fixed per-Cue volumes + the provenance block `TICKET-05` fills), pure `leksokipos/lib/soundCue.ts`, `useSoundEnabled` (a `useTheme` clone on key `sound-preference`, third standalone localStorage carve-out), `useSoundCue` (one lazy `Audio` per Cue, restart not stack). Toggle 🔊/🔇 inline in `Shell.tsx` beside ☀️/🌙 — the header is four buttons wide on mobile and **nothing guards that**: ADR 0021 named `mobileLayout.test.tsx`, which renders `HowToPlayModal` and has never touched the Shell, and jsdom has no layout engine so no test could. Moved to `TICKET-05`'s done-when. **The ticket's own jsdom instruction was wrong — the s132 trap in a new hat:** it said to stub `HTMLMediaElement.play` "guarded the same way the `scrollIntoView` stub is", but jsdom **does define `play()`** (logs "Not implemented", returns **`undefined`**), so the copied guard never fires and a void dressed as a Promise is exactly what killed Offline Mode. Stub became unconditional; `useSoundCue.test.ts` **subclasses the real `Audio`** rather than faking one. 192 files / 2450 tests, e2e 7/2-skipped after clearing `.next`. `TICKET-04` deleted; **the 🔊 button renders on every page playing silence** until `TICKET-05` lands. |
 | 145 | 2026-08-10 | **Sound Cues designed — ADR 0021 + `TICKET-04`/`05`, no code.** Eleven Games and the Platform had never made a sound (zero audio in `src/`, no dependency). Nineteen decisions closed. **The design needed almost no new machinery, and that was the finding:** `ValidationStatus` already names all six submission outcomes and `lastSubmission` is a fresh per-submit object, so the event source existed — pure `selectSoundCue(result)` plus one `useEffect` in `GameBoard` is the entire seam, reducer untouched. Cues named for **the moment, not the noise**, so swapping the rooster is a file replace. **Two claims would have entered as facts:** **Pixabay is not CC0** (it is the Pixabay Content License — still clears the bar since a bundled MP3 is not standalone distribution, but must be *recorded* as Pixabay), and ADR 0020's "behaviour enrols" appeared to make sound a `GameCapability` until its own criterion settled it — behaviour is what a Game does to the *shared database*, and a Cue writes nothing. CC-BY refused outright (a permanent How-to-Play credit line is why `topothesies/attribution.ts` exists). **The artifact asked for was a handoff; the correct one was an ADR** — handoffs hold open questions and none survived. Off by default; no test may assert audibility. Announced, not fixed: `ISSUE-02` is cited by `memory.md`/`goals.md` with no file on disk. |
