@@ -55,13 +55,14 @@ const COMMUNITY_IDS: readonly RegistryGameId[] = ["leksikastirio"];
 // Every other registered Game is main nav, DERIVED from the registry so adding a
 // Game needs no edit here. Hand-typing this list is how topothesies went missing
 // from the drawer in session 121; registryCoverage.test.tsx pins the derivation.
-const GAME_IDS = (Object.keys(GAME_REGISTRY) as RegistryGameId[])
-  .filter((id) => !COMMUNITY_IDS.includes(id));
-
-// Under-construction (wip) games move to their own drawer section, keeping the
-// main list to finished games. Derived from the registry so a flag flip is enough.
-const MAIN_GAME_IDS = GAME_IDS.filter((id) => !GAME_REGISTRY[id].wip);
-const WIP_GAME_IDS  = GAME_IDS.filter((id) =>  GAME_REGISTRY[id].wip);
+//
+// `hidden` Games are absent from the drawer entirely — not filed under a section,
+// not greyed out (ADR 0022). Their routes stay live, so the link still works for
+// anyone holding it; the drawer simply stops advertising them. There is no
+// «Υπό κατασκευή» section any more: an unfinished Game is hidden, never signposted.
+const MAIN_GAME_IDS = (Object.keys(GAME_REGISTRY) as RegistryGameId[]).filter(
+  (id) => !COMMUNITY_IDS.includes(id) && !GAME_REGISTRY[id].hidden,
+);
 
 export function Shell({ children }: ShellProps) {
   const [drawerOpen,   setDrawerOpen]   = useState(false);
@@ -199,32 +200,6 @@ export function Shell({ children }: ShellProps) {
                 );
               })}
             </ul>
-
-            {WIP_GAME_IDS.length > 0 && (
-              <>
-                <hr className="my-4 border-zinc-700" />
-
-                <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-4 px-2">
-                  🚧 Υπό κατασκευή
-                </p>
-                <ul className="space-y-1">
-                  {WIP_GAME_IDS.map((id) => {
-                    const game = GAME_REGISTRY[id];
-                    return (
-                      <li key={id}>
-                        <Link
-                          href={game.href}
-                          onClick={guardNavigation()}
-                          className={navLinkClass}
-                        >
-                          {game.label}
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </>
-            )}
 
             <hr className="my-4 border-zinc-700" />
 

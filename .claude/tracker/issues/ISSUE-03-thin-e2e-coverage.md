@@ -1,4 +1,4 @@
-# E2E coverage is seven tests across eight launching Games
+# E2E coverage is ten tests across eight launching Games
 
 **Deferred:** 2026-08-11
 **Revisit when:** the first bug that reaches production is one a happy-path browser test would have
@@ -7,9 +7,10 @@ caught — or when a Game's page, layout or shared chrome is next reworked, whic
 ## Problem
 
 `npm run test:e2e` runs four spec files — `games`, `flows`, `profile`, `offlineMode` — with a
-baseline of **7 passed, 2 skipped**. The two skipped are the Offline Mode acceptance tests, which
-fail on purpose and are deliberately not a gate. So the real browser coverage of a Platform about
-to show eight Games to strangers is seven tests.
+baseline of **10 passed, 2 skipped** (7 before TICKET-06 added three on 2026-08-12). The two skipped
+are the Offline Mode acceptance tests, which fail on purpose and are deliberately not a gate. So the
+real browser coverage of a Platform about to show eight Games to strangers is ten tests, and the
+three new ones cover visibility rather than gameplay — the per-Game happy paths below are untouched.
 
 `goals.md` item 6 has wanted happy-path coverage per Game for some time. It has never been sized.
 
@@ -38,8 +39,9 @@ behind it.
 
 Growing it properly means a happy-path spec per Game — eight new specs, each needing a stable
 selector strategy against pages that the UI redesign may still move. Doing that now risks writing
-selectors twice. TICKET-06 already forces one `games.spec.ts` edit for the eight-Game picker; that
-is the extent of the work the launch justifies.
+selectors twice. TICKET-06 added the three `games.spec.ts` tests its own change needed (the picker
+shows no hidden Game; the two hidden routes still load); that is the extent of the work the launch
+justifies.
 
 This flips when a production bug turns out to be browser-visible and unit-invisible. That is the
 evidence that would make the cost worth paying, and none exists yet.

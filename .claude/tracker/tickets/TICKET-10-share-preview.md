@@ -34,8 +34,9 @@ what the audience actually uses.
       scrapers read the Twitter tags in preference to Open Graph.
 - [ ] **`src/app/opengraph-image`** — 1200×630. Either a static asset or Next's `ImageResponse`
       generator. Whichever is chosen, it must survive the eight-Game picker: **do not put the game
-      emoji grid in it** if TICKET-06 has not landed yet, or it will advertise Games that are
-      hidden. Prefer the Platform name and a single strong mark.
+      emoji grid in it**. TICKET-06 shipped on 2026-08-12, so three Games are now `hidden` (ADR
+      0022) and an emoji grid would advertise Games no surface links to. Prefer the Platform name
+      and a single strong mark.
 - [ ] **`src/app/icon`** and **`apple-icon`** — there is no favicon at all today, so browser tabs
       and phone home screens show a blank page glyph.
 - [ ] Consider a `manifest.ts` while in the neighbourhood. **Optional** — decide, do not drift into

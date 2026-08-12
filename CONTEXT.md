@@ -8,7 +8,9 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Platform** — The entire application: shell, navigation, persistence, and all games. Named **Leksarxeia** (the brand shown in the Shell header and picker). (Not: app, site)
 
-**Game** — A distinct game mode. Live: Leksokipos, Leksiarxeio, Vres Tin Frasi, Stavrolekso, Leksodromia, Leksoplegma, Topothesies (plus the Leksikastirio word-court, which is not a Game). In progress (`wip: true` in `src/config/games.ts`, still rendered but filed under «Υπό κατασκευή»): Leksindeseis, Πόσο κάνει;, Λογοπαίγνιο. The platform's scope widened from "Greek word games" to "Greek **games**" with Topothesies (ADR 0018). (Not: app mode, level)
+**Game** — A distinct game mode. Live: Leksokipos, Leksiarxeio, Vres Tin Frasi, Stavrolekso, Leksodromia, Leksoplegma, Topothesies (plus the Leksikastirio word-court, which is not a Game). Hidden: Leksindeseis, Πόσο κάνει;, Λογοπαίγνιο. The platform's scope widened from "Greek word games" to "Greek **games**" with Topothesies (ADR 0018). (Not: app mode, level)
+
+**Hidden** *(of a Game)* — Listed on no player-facing surface: absent from the picker and the shell drawer. Its **route stays live** — it loads and plays for anyone holding the link, in every environment, with no redirect and no 404. `hidden: true` in `src/config/games.ts`, and **orthogonal to `wip`**: `wip` says the Game is unfinished, `hidden` says it is deliberately not shown, finished or not. Leksindeseis is both and is genuinely finished. See ADR 0022. (Not: disabled, unpublished, wip)
 
 **Regional unit** *(Topothesies)* — Greek περιφερειακή ενότητα; the admin level a Topothesies answer identifies. Island-cluster units are split into per-island entries; see ADR 0018. (Not: prefecture, νομός — retired admin level.)
 

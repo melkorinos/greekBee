@@ -84,7 +84,7 @@ Vres Tin Frasi shipped with 29% of its phrase corpus unsolvable — the game rej
 Related trap, same session: a derived file can be **regenerated empty**. `words-1.json` had to be authored and deliberately placed outside `src/data/leksiarxeio/`, because the re-sync adapter rebuilds those from `words-el.json`, which has no single-letter entries. Any future "just add a list" instinct should first ask whether a re-sync owns that directory.
 
 ### Leksindeseis puzzle supply (`puzzles-connections.json`) — measured s147, and parked
-Community-submitted Leksindeseis puzzles are the primary source, with `puzzles-connections.json` as the static fallback. **The fallback is ONE puzzle** (dated 2026-05-12, placeholder categories) rotating over a single-item array, so every unscheduled day serves the same board — not "thin", a placeholder. No reminder system exists. **Parked, not fixed:** the operator hid the Game for launch (`TICKET-06`), so nothing ships. This becomes live work again the moment a wip→live flip is considered — and the flip is a checklist (registry state + `Shell.tsx GAME_IDS` + HomeTrophy branch + docs), never a one-line edit.
+Community-submitted Leksindeseis puzzles are the primary source, with `puzzles-connections.json` as the static fallback. **The fallback is ONE puzzle** (dated 2026-05-12, placeholder categories) rotating over a single-item array, so every unscheduled day serves the same board — not "thin", a placeholder. No reminder system exists. **Parked, not fixed:** the Game is `hidden: true` since 2026-08-12 (`TICKET-06`, ADR 0022), so nothing ships. This becomes live work again the moment unhiding is considered — and unhiding is a checklist (both registry flags + accent row + capabilities + content supply + docs), never a one-line edit. The drawer and picker now derive from `hidden` and are probe-tested, so the s121 "forgot `GAME_IDS`" half of that checklist is closed by construction; the content half is not.
 
 ### Leksindeseis "one away" UX gap
 The reducer detects "one away" and sets feedback text, but `GroupGrid` has no visual highlight indicating _which_ group the player is close to. NYT shows colour intensity. Consider adding in Phase 4 polish.
@@ -368,6 +368,18 @@ is the fourth time (s130 Commons, s132 `router.prefetch`, s139 the feature flag,
 second time specifically that a **void return dressed as a Promise** was the thing that got through.
 `useSoundCue.test.ts` therefore subclasses the real `Audio` rather than substituting a fake one, and
 pins the `undefined` return in its own test.
+
+**Fifth instance, s148, and this time the artifact was a test file.** `TICKET-06` instructed "update
+`e2e/games.spec.ts` for the eight-Game picker" and separately listed the files that enumerate Games.
+That spec **has no picker assertions at all** — it visits three game pages directly — so there was
+nothing to update and it passed untouched; meanwhile the test that genuinely broke,
+`Shell.test.tsx`'s drawer assertion on `/leksindeseis`, appeared in no list. Note the asymmetry that
+makes this shape dangerous: the false instruction was *harmless* (an edit that turns out to be
+unnecessary), while the missing one would have shown up as a red suite blamed on the change rather
+than on the spec. **A ticket's file list is a hypothesis; grep is the map.** The ticket's own
+"verify, do not assume, that nothing else enumerates Games" line was the right instinct, and it was
+right about `page.tsx`, `Shell.tsx` and `useOfflineMode.tsx` — it simply never ran the same check
+over the *tests*.
 
 ### 🟡 Sound Cues are built and mute — the deploy gate is now the only guard (s145, updated s146)
 

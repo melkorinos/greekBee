@@ -13,7 +13,7 @@ import { PLATFORM_NAME } from "@/config/platform";
 import { HowToPlayModal } from "@/components/shared/HowToPlayModal";
 import { HomeTrophyButton } from "@/components/shared/HomeTrophyButton";
 import { SubmitPuzzleButton } from "@/components/shared/SubmitPuzzleButton";
-import { btnHeaderIcon, btnHeaderIconSize, cardShellInteractive, chipWarning } from "@/styles/recipes";
+import { btnHeaderIcon, btnHeaderIconSize, cardShellInteractive } from "@/styles/recipes";
 import Link from "next/link";
 
 function StavroleksoMakerButton() {
@@ -149,11 +149,15 @@ const GAMES = (Object.keys(GAME_REGISTRY) as Array<keyof typeof GAME_REGISTRY>).
   (id) => ({ id, ...GAME_REGISTRY[id], ...GAME_RULES[id] }),
 );
 
-// Under-construction games (wip flag) move to their own section; everything else
-// stays in the main list. Community (leksikastirio) has its own section below.
-const gameList      = GAMES.filter((g) => g.id !== "leksikastirio" && !g.wip);
-const wipList       = GAMES.filter((g) => g.id !== "leksikastirio" &&  g.wip);
-const communityList = GAMES.filter((g) => g.id === "leksikastirio");
+// `hidden` Games are on no list at all — not the main one, not a section of their
+// own (ADR 0022). Their routes stay live, so a held link still plays; the picker
+// simply stops advertising them. There is no «Υπό κατασκευή» section any more: an
+// unfinished Game is hidden rather than signposted, which is also why the card
+// below no longer carries a 🚧 chip.
+// Community (leksikastirio) keeps its own section.
+const visible       = GAMES.filter((g) => !g.hidden);
+const gameList      = visible.filter((g) => g.id !== "leksikastirio");
+const communityList = visible.filter((g) => g.id === "leksikastirio");
 
 // Read from the registry rather than from GameLeaderboardModal's runtime export:
 // this is a Server Component, and a value imported from a "use client" module
@@ -191,13 +195,8 @@ function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submit
       <Link href={game.href} className="flex-1 flex items-start gap-4 p-5">
         <span className="text-3xl mt-0.5">{game.emoji}</span>
         <div>
-          <p className="font-semibold text-foreground flex items-center gap-2 flex-wrap">
+          <p className="font-semibold text-foreground">
             {game.title}
-            {game.wip && (
-              <span className={`text-xs font-normal ${chipWarning} px-1.5 py-0.5 rounded-full`}>
-                🚧 Υπό κατασκευή
-              </span>
-            )}
           </p>
           <p className="text-sm text-muted mt-0.5">{game.description}</p>
         </div>
@@ -240,25 +239,6 @@ export default function HomePage() {
         {communityList.map((game) => <GameCard key={game.id} game={game} />)}
       </ul>
 
-      {wipList.length > 0 && (
-        <>
-          <div className="w-full max-w-game mt-8 mb-4 flex items-center gap-3">
-            <hr className="flex-1 border-border" />
-            <span className="text-xs font-semibold text-muted uppercase tracking-widest">🚧 Υπό κατασκευή</span>
-            <hr className="flex-1 border-border" />
-          </div>
-
-          <ul className="w-full max-w-game space-y-4">
-            {wipList.map((game) => (
-              <GameCard
-                key={game.id}
-                game={game}
-                submitButton={submitButtonFor(game.id)}
-              />
-            ))}
-          </ul>
-        </>
-      )}
     </div>
   );
 }

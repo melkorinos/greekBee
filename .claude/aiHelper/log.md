@@ -5,6 +5,38 @@
 
 ---
 
+## Session 148 — 2026-08-12: three Games leave the shelf — TICKET-06 built
+
+`/tdd`, three slices, one seam each: drawer, picker, Offline Mode. New `hidden: boolean` on
+`GameRegistryRow`, **required not optional** — `GAME_REGISTRY` is `as const satisfies`, so an omitted
+field makes `GAME_REGISTRY[id].hidden` a type error on the union, and requiring it forces every new
+Game to state its intent. `wip` and `hidden` are orthogonal; **ADR 0022** records why, because
+Leksindeseis is `wip:true` **and** genuinely finished **and** not launching, three facts one flag
+would flatten. Hidden means **unlisted, not disabled**: routes stay live by direct URL everywhere.
+Revealing them off-production was offered and declined — the preview picker must match production.
+
+**Two of the ticket's own claims were wrong, and both were one file to check.** It said to update
+`e2e/games.spec.ts` "for the eight-Game picker" — that spec has **no picker assertions at all**, it
+visits three game pages directly, so there was nothing to update and it passes untouched. And it
+never mentioned the test that actually broke: `Shell.test.tsx` asserted the drawer contains
+`/leksindeseis`. This is the s146 pattern exactly — **a citation to a named artifact in this repo
+reads as verified and almost never is**, and the check costs one `Read`.
+
+The probe trick from `registryCoverage.test.tsx` extended cleanly to a **second** probe
+(`wip:false, hidden:true`) across all three surfaces, each with a positive control so a surface
+cannot pass by rendering nothing. Two finds while writing it: `app/page.tsx` **does** render in
+jsdom (identity and trophy buttons included), and a probe crashes the real `HowToPlayModal` because
+rules copy is keyed `Record<keyof typeof GAME_REGISTRY, …>` — a compile-time guarantee with no
+runtime guard, so the modal is stubbed. The Offline Mode fix is for **parked** code (ADR 0010): its
+`!wip` filter would have let a finished-but-hidden Game join the prefetch set, breaking for whoever
+revives the feature rather than for whoever hid the Game.
+
+Deleted rather than left dormant: the «Υπό κατασκευή» section in both surfaces **and** the card's 🚧
+chip. An unfinished Game is hidden now, never signposted. Gates: **192 files / 2455 tests**, eslint
+0, build 0 (all three hidden routes still emitted), **e2e 10 passed / 2 skipped — the baseline moved
+from 7 on purpose**, and the Leksindeseis spec passing is the live proof that hiding did not disable.
+`TICKET-06` deleted; `TICKET-10` and `ISSUE-03` updated where they cited it.
+
 ## Session 147 — 2026-08-11: launch question 1 resolved — five tickets, one issue, no code
 
 `/grill-with-docs` on what "launch-ready" actually requires. Resolved as a **soft launch** — a wider
@@ -31,36 +63,11 @@ Operator calls: all three `wip:true` Games are **hidden** — not promoted, not 
 content-supply, wip-flip and Leksindeseis-pool threads in one answer; terms of service and E2E
 expansion accepted as-is; the **UI question struck from the handoff** (separate sessions). Docs only.
 
-## Session 146 — 2026-08-11: the Platform makes a noise — TICKET-04 built
-
-Five TDD slices, and the design ADR 0021 wrote held up unchanged: `selectSoundCue` is three lines,
-the reducer was never touched, and `lastSubmission` was already the event source. New files are
-`config/sound.ts` (Cue registry + fixed per-Cue volumes + the provenance block `TICKET-05` fills),
-pure `leksokipos/lib/soundCue.ts`, `useSoundEnabled` (a `useTheme` clone on key `sound-preference`,
-the third standalone localStorage carve-out) and `useSoundCue` (one lazy `Audio` per Cue, restart
-not stack). Toggle 🔊/🔇 inline in `Shell.tsx` beside ☀️/🌙 — the header is four buttons wide on
-mobile now, and **nothing guards that**: ADR 0021 named `mobileLayout.test.tsx`, which renders
-`HowToPlayModal` and has never touched the Shell, and jsdom has no layout engine so no test here
-could. Moved to `TICKET-05`'s done-when, which already puts the operator on a phone.
-
-**The ticket's own jsdom instruction was wrong — the s132 trap wearing a new hat.** It said to stub
-`HTMLMediaElement.play` "guarded the same way the `scrollIntoView` stub is", but that guard works
-only because jsdom genuinely lacks `scrollIntoView`. jsdom **does define `play()`**: it logs "Not
-implemented" and returns **`undefined`**, so the guard never fires. Probing rather than assuming
-mattered twice — the stub had to become unconditional, and a `undefined` return dressed as a Promise
-is exactly what killed Offline Mode in s132. The hook ships `audio.play()?.catch(() => {})`, and
-`useSoundCue.test.ts` **subclasses the real `Audio`** instead of faking one: a hand-rolled mock is a
-claim about the contract, and the claim has been wrong every previous time.
-
-`selectSoundCue` extended `gameLogic.test.ts` per the coverage-map rule, driven through the **real**
-`validateWord`. Gates: **192 files / 2450 tests**, eslint 0, build 0, e2e 7/2-skipped after clearing
-`.next`. `TICKET-04` deleted; `TICKET-05` is now the only thing between Sound Cues and a deploy —
-**the 🔊 button renders on every page playing silence**.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 146 | 2026-08-11 | **The Platform makes a noise — TICKET-04 built** (`/tdd`, five slices). ADR 0021's design held up unchanged: `selectSoundCue` is three lines, the reducer was never touched, `lastSubmission` was already the event source. New: `config/sound.ts` (Cue registry + fixed per-Cue volumes + the provenance block `TICKET-05` fills), pure `leksokipos/lib/soundCue.ts`, `useSoundEnabled` (a `useTheme` clone on key `sound-preference`, third standalone localStorage carve-out), `useSoundCue` (one lazy `Audio` per Cue, restart not stack). Toggle 🔊/🔇 inline in `Shell.tsx` beside ☀️/🌙 — the header is four buttons wide on mobile and **nothing guards that**: ADR 0021 named `mobileLayout.test.tsx`, which renders `HowToPlayModal` and has never touched the Shell, and jsdom has no layout engine so no test could. Moved to `TICKET-05`'s done-when. **The ticket's own jsdom instruction was wrong — the s132 trap in a new hat:** it said to stub `HTMLMediaElement.play` "guarded the same way the `scrollIntoView` stub is", but jsdom **does define `play()`** (logs "Not implemented", returns **`undefined`**), so the copied guard never fires and a void dressed as a Promise is exactly what killed Offline Mode. Stub became unconditional; `useSoundCue.test.ts` **subclasses the real `Audio`** rather than faking one. 192 files / 2450 tests, e2e 7/2-skipped after clearing `.next`. `TICKET-04` deleted; **the 🔊 button renders on every page playing silence** until `TICKET-05` lands. |
 | 145 | 2026-08-10 | **Sound Cues designed — ADR 0021 + `TICKET-04`/`05`, no code.** Eleven Games and the Platform had never made a sound (zero audio in `src/`, no dependency). Nineteen decisions closed. **The design needed almost no new machinery, and that was the finding:** `ValidationStatus` already names all six submission outcomes and `lastSubmission` is a fresh per-submit object, so the event source existed — pure `selectSoundCue(result)` plus one `useEffect` in `GameBoard` is the entire seam, reducer untouched. Cues named for **the moment, not the noise**, so swapping the rooster is a file replace. **Two claims would have entered as facts:** **Pixabay is not CC0** (it is the Pixabay Content License — still clears the bar since a bundled MP3 is not standalone distribution, but must be *recorded* as Pixabay), and ADR 0020's "behaviour enrols" appeared to make sound a `GameCapability` until its own criterion settled it — behaviour is what a Game does to the *shared database*, and a Cue writes nothing. CC-BY refused outright (a permanent How-to-Play credit line is why `topothesies/attribution.ts` exists). **The artifact asked for was a handoff; the correct one was an ADR** — handoffs hold open questions and none survived. Off by default; no test may assert audibility. Announced, not fixed: `ISSUE-02` is cited by `memory.md`/`goals.md` with no file on disk. |
 | 144 | 2026-08-10 | **Every emoji badge becomes a drawn mark in a tier frame** (TICKET-03, test-first in five slices). `glyph`, `TIER_MEDALS` (🥉🥈🥇💠), the 🔒 fallback, the `grayscale` class and the toast's fixed 🏆 all deleted for one `BadgeMark` + **five drawings**: a ring in the tier's strong colour, a soft disc, a mark always `currentColor` — so a tier is a *colour*, never a different picture, which is why five drawings cover four tiers across three surfaces (chip 14px / tile 32px / toast 34px). Eight `--tier-*` tokens **verified compiled out of the production CSS bundle** rather than assumed (a missing token renders no ring and every test still passes). **The ticket's flagged check paid out:** `EarnedToast` carries `id`, but TICKET-02 made every badge tiered so that id is always a *tier* id → `achievementById` returns undefined on every unlock; and `tierLabel` is Greek display copy that cannot map back to a colour, so without a new `tier: TierName` field the toast draws the **neutral** frame — an unlock rendering as *locked*, the kind of bug every gate passes. Two decisions moved from prose into tests: *changes only the frame between tiers* (same path `d` across two tiers) and *keeps the mark visible when locked*. `achievementToast.test.tsx` rewritten to build every fixture through `describeAchievement` — it had been carrying the retired `leksokipos-first-daily` id, the s140 pattern exactly. 13 files; 191/2430 green; **the 5 `rlsInvariantsLiveDb` failures are gone** (migration pushed between s142 and now, suite 30/30). Still owed: an operator eye-check of the Trophy Case in both themes. |
 | 143 | 2026-08-10 | **Badge visual system designed end-to-end; both badge handoffs retired** (docs only, zero source files). `badgeIdeas.md` was **discharged and should already have been deleted** at s140's Dream; `badgeVisualSystem.md` was live but **stale on three facts** (Τζιμάνι 80%, pangram tiers 10/20/50, citing the superseded 08-06 amendment). **The durable lesson is the operator's method:** two batches had been answered in prose when the instruction came — *no visual decision gets made in text, put every option in HTML and let me look*. Every agreed visual answer was reopened as a rendered comparison, and **one answer changed on sight** (locked: greyscale filter → neutral frame). **Prose grilling is the wrong instrument for anything whose failure mode is "looks wrong at 12px"**; `.claude/aiHelper/html/` is now the standing home for look-at-it artifacts. Reading the code settled two things the grill could not: `FlowerGrid` is six petals + a centre disc, so a *complete* flower literally is the seven-letter set = a pangram (a real fork, not a preference; honeycomb retired outright), and `TierChips` are text-only, so **four of nine catalogue emoji had never rendered anywhere**. One storage-shape catch before the ticket: `mark: {path, viewBox}` (topothesies precedent) cannot express six rotated ellipses → every mark **flattened to one path**, and the spec page renders the flattened version, so what was reviewed is what ships. Settled: circle frame, ring = size/10, mark 66% and always `currentColor` (**five drawings, not nineteen**), Palette A / eight tokens, Διαμάντι as hue only, `TIER_MEDALS` + every `glyph` deleted. Landed as `TICKET-03` + an ADR 0013 §7 amendment; both handoffs deleted, five references repointed. |

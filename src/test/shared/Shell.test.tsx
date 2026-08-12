@@ -142,7 +142,7 @@ describe("Hamburger drawer", () => {
 // ── drawer content ────────────────────────────────────────────────────────────
 
 describe("Drawer game links", () => {
-  it("lists all games in the drawer", async () => {
+  it("lists the launched games in the drawer", async () => {
     const { user } = setup();
     await user.click(getHamburger());
 
@@ -152,10 +152,14 @@ describe("Drawer game links", () => {
 
     expect(hrefs).toContain("/leksokipos");
     expect(hrefs).toContain("/leksiarxeio");
-    expect(hrefs).toContain("/leksindeseis");
     expect(hrefs).toContain("/leksodromia");
     expect(hrefs).toContain("/leksoplegma");
     expect(hrefs).toContain("/stavrolekso");
+
+    // Hidden since TICKET-06 (ADR 0022) — finished, deliberately not launching. The
+    // route stays live; the drawer just stops advertising it. The derivation itself
+    // is probe-tested in registryCoverage.test.tsx; this pins today's roster.
+    expect(hrefs).not.toContain("/leksindeseis");
   });
 
   it("closes the drawer when a game link is clicked", async () => {

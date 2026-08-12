@@ -69,7 +69,10 @@ afterEach(() => {
 // ── The offline game set ────────────────────────────────────────────────────
 
 describe("OFFLINE_GAME_IDS", () => {
-  it("excludes wip games — they get offline support when they flip to wip:false", () => {
+  it("excludes the wip and hidden games — all three are out of scope for launch", () => {
+    // Since TICKET-06 all three are BOTH wip and hidden, so this passes on either
+    // flag alone. The `hidden`-only case (a finished Game that is not shown) has no
+    // real row to exercise it and is probe-tested in registryCoverage.test.tsx.
     expect(OFFLINE_GAME_IDS).not.toContain("posokanei");
     expect(OFFLINE_GAME_IDS).not.toContain("logopaignio");
     expect(OFFLINE_GAME_IDS).not.toContain("leksindeseis");

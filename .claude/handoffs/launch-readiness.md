@@ -33,7 +33,7 @@ in exposure.
 
 | # | Item | Owner |
 |---|---|---|
-| `TICKET-06` | Hide the three unlaunched Games from picker, drawer and Offline Mode | agent |
+| ~~`TICKET-06`~~ | ~~Hide the three unlaunched Games from picker, drawer and Offline Mode~~ — **✅ shipped 2026-08-12**, ADR 0022 (`hidden` is a second presentation state, orthogonal to `wip`; hidden routes stay live) | agent |
 | `TICKET-07` | Privacy page in Greek, linked from the Shell | agent |
 | `TICKET-08` | Error monitoring — compare, choose, install **or** decline in writing | agent |
 | `TICKET-09` | Operational headroom — the two Supabase alerts + Free-plan limits read | operator |
