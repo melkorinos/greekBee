@@ -16,6 +16,9 @@
 //
 // Requires NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY and
 // SUPABASE_SERVICE_ROLE_KEY in .env.local. Auto-skips when absent (e.g. CI).
+// vitest.config.ts forwards them under LIVE_DB_* names so the mocked suites never
+// see real keys — see the comment there. This file builds its clients from the
+// values directly, so it needs no stubbing of the canonical names.
 //
 // Safety: all rows use a sentinel game_id that no real leaderboard query reads,
 // and an ancient puzzle_date that the retention cron prunes anyway. The service
@@ -26,9 +29,9 @@ import { table } from "@/lib/supabase";
 import { normalizeLetters } from "@/lib/normalize";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-const url        = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anonKey    = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const url        = process.env.LIVE_DB_URL;
+const anonKey    = process.env.LIVE_DB_ANON_KEY;
+const serviceKey = process.env.LIVE_DB_SERVICE_ROLE_KEY;
 const canRun     = Boolean(url && anonKey && serviceKey);
 
 // Sentinel values — invisible to real leaderboards, pruned by the retention cron.
