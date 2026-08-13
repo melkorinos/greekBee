@@ -19,9 +19,12 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 
+import { LEKSOKIPOS } from "@/config/gameRules";
 import { computeValidWords } from "@/games/leksokipos/lib/computeValidWords";
+import type { LeksokiposPuzzle as ShippedPuzzle } from "@/games/leksokipos/types";
 import { normalizeLetters } from "@/lib/normalize";
 
+import { realisticWordsToGenius } from "../leksokipos/puzzleQuality";
 import type { DictionaryEdits, ResyncAdapter, ResyncChange, ResyncReport } from "./types";
 
 interface LeksokiposPuzzle {
@@ -56,6 +59,23 @@ function hasPangram(puzzle: LeksokiposPuzzle, words: string[]): boolean {
     const n = normalizeLetters(w);
     return letters.every((l) => n.includes(l));
   });
+}
+
+/**
+ * The board's tedium index, measured with the real generation-time gate rather
+ * than a copy of it. The gate reads only the letter set and the word list, so
+ * the metadata this adapter's puzzle shape omits is filled with placeholders
+ * that cannot reach the number.
+ */
+function wordsToGenius(puzzle: LeksokiposPuzzle, words: string[]): number {
+  return realisticWordsToGenius({
+    id: puzzle.id ?? "",
+    language: "el",
+    date: "",
+    centerLetter: puzzle.centerLetter,
+    outerLetters: puzzle.outerLetters,
+    validWords: words,
+  } satisfies ShippedPuzzle);
 }
 
 function resync(
@@ -114,13 +134,31 @@ function resync(
       );
     }
 
+    // A dictionary edit can push a board past the tedium ceiling months after it
+    // was generated, and the corpus guard test only says so two steps later —
+    // after the write, in a run the operator did not connect to a word list.
+    // Report it at the moment it happens instead, which means --dry-run shows it
+    // before anything is written. Only a CROSSING is worth a line: a board that
+    // was already over stays the corpus's problem, not this run's.
+    const before = wordsToGenius(puzzle, current);
+    const after = wordsToGenius(puzzle, kept);
+    if (before < LEKSOKIPOS.MAX_WORDS_TO_GENIUS && after >= LEKSOKIPOS.MAX_WORDS_TO_GENIUS) {
+      warnings.push(
+        `${puzzle.id ?? "(unknown puzzle)"}: this edit took the board from ${before} to ${after} ` +
+          `words to the top rank, at or past the ceiling of ${LEKSOKIPOS.MAX_WORDS_TO_GENIUS} — ` +
+          `puzzleCorpusQuality.test.ts will fail on it. Fix it by re-rolling this one date's letter ` +
+          `set, not by pruning: a prune re-dates every later puzzle in the corpus.`,
+      );
+    }
+
     changed.push({ id: puzzle.id, added: addedHere, removed: removedHere });
     return { ...puzzle, validWords: kept };
   });
 
   // validWords is derived data with no curated geometry, so word-level edits are
-  // auto-fixed. The one thing that isn't: a removal stripping a board's last
-  // pangram (see warnings above) needs a human to re-roll the letter set.
+  // auto-fixed. What isn't: a removal stripping a board's last pangram, and an
+  // edit pushing a board past the tedium ceiling (see warnings above). Both need
+  // a human to re-roll that date's letter set.
   return { content: next, report: { changed, warnings } };
 }
 
