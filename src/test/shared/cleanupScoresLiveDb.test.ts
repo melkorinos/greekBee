@@ -1,6 +1,7 @@
 // cleanupScoresLiveDb.test.ts — integration test of the retention cron against the
 // real Supabase database. Requires NEXT_PUBLIC_SUPABASE_URL and
-// SUPABASE_SERVICE_ROLE_KEY (loaded from .env.local by vitest.config.ts).
+// SUPABASE_SERVICE_ROLE_KEY in .env.local, which vitest.config.ts forwards under
+// LIVE_DB_* names so the mocked suites never see real keys (see the comment there).
 // Auto-skips when those are absent (e.g. CI without production secrets).
 //
 // What this asserts, and why it changed shape (issue 03, 2026-07-17):
@@ -42,8 +43,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { SESSION_RETENTION_DAYS } from "@/config/retention";
 import { table } from "@/lib/supabase";
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const url = process.env.LIVE_DB_URL;
+const key = process.env.LIVE_DB_SERVICE_ROLE_KEY;
 const canRun = Boolean(url && key);
 
 // The cron authenticates on CRON_SECRET, which Vercel injects in production and
@@ -97,12 +98,21 @@ describe.skipIf(!canRun)("live DB — the retention cron's effect on seeded rows
   }
 
   beforeAll(async () => {
+    // runPrune invokes the real route, whose getServiceRoleClient() reads the
+    // canonical names — the ones vitest.config.ts deliberately does not forward.
+    // Present them here, scoped to this suite, so the mocked suites stay blind to
+    // them (issue 04). getServiceRoleClient is not memoized, so a stub set now is
+    // seen by the call inside runPrune.
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", url!);
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", key!);
+
     service = createClient(url!, key!, { auth: { persistSession: false } });
     await wipeSentinelRows();
   });
 
   afterAll(async () => {
     await wipeSentinelRows();
+    vi.unstubAllEnvs();
   });
 
   beforeEach(async () => {

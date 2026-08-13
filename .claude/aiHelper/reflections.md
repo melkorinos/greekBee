@@ -77,6 +77,12 @@ either put the number in or say explicitly that it was never counted.
 
 ### 🟡 Vercel Fluid Active CPU (primary cost constraint)
 After 5 active days, Fluid Active CPU was already at 21m 7s vs a 4h/day pro-rated cap.  
+*Measured 2026-08-13 (`vercel metrics`, whole 14 Jul – 13 Aug billing period): **1.19 CPU-hours**
+(4 285 734 ms) plus 18.97 GB-hrs provisioned memory. **The "4h cap" framing is obsolete** — the plan
+is Pro `planIteration: "plus"`, which has no per-metric free allotment; one **$20/month included
+allocation** covers all usage-based charges. At $0.128/CPU-hour and $0.0106/GB-hr that is **$0.15 +
+$0.20 ≈ 2% of the $20**. Fluid CPU is no longer the binding cost constraint at this traffic, and it
+is now readable from the CLI — recipe in `/project-mcp`, which had it recorded as dashboard-only.*  
 Known mitigations applied (Session 25):
 - Module-level `validWordsCache` in `buildCustomPuzzle` — warm instances skip the ~795 k word scan.
 - `export const revalidate = 3600` on `[center]/[outer]` — CDN caches full page HTML.
@@ -169,17 +175,28 @@ SELECT (SELECT count(*) FROM game_scores) AS scores, (SELECT count(*) FROM nomin
        pg_size_pretty(pg_database_size(current_database())) AS db_size;
 ```
 
-**Measured 2026-08-12** (`execute_sql`, live DB) against the Free ceilings read off supabase.com/pricing:
+**The substitution was ACCEPTED by the operator 2026-08-13**, and `TICKET-09` is closed and deleted.
+The SQL above is the standing control; there is no dashboard alert to look for and no future session
+should go hunting for one.
+
+**Measured 2026-08-12** (`execute_sql`, live DB) against the Free ceilings read off supabase.com/pricing,
+with the two dashboard cells filled in by the operator 2026-08-13:
 
 | | now | Free limit | at limit |
 |---|---|---|---|
-| Database size | **13 MB** (public tables 1.4 MB; the rest is catalog/auth overhead) | 500 MB | **2.6%** |
+| Database size | **27.37 MB** (dashboard figure — this is the billed one) | 500 MB | **5.5%** |
 | MAU | **8** auth users, lifetime | 50 000 | 0.02% |
 | File storage | **0 bytes, 0 buckets** | 1 GB | 0% |
 | Connections | **22 in use at idle** | 60 (`max_connections`, Nano) | 37% |
-| Egress | not readable via SQL or MCP — **operator read owed** | 5 GB/mo | — |
+| Egress | **~5 MB/day, peak 11 MB → ~150 MB/mo**; cached egress zero | 5 GB/mo | **3%** |
 | `game_scores` | **505** rows | (the 50 000 tripwire) | 1.0% |
 | `nominations` | **189** rows | (the 5 000 tripwire) | 3.8% |
+
+**Trust the dashboard's size number, not `pg_database_size`.** The SQL read said 13 MB and the usage
+page says 27.37 MB for the same database on the same day. The dashboard figure is what bills and
+what trips the read-only cliff, so the SQL row-count query is a *row* tripwire only — take size from
+the usage page. The measured egress landing on ~150 MB/month is the estimate below confirmed, not a
+coincidence worth re-deriving.
 
 **Traffic estimate, stated so it can be argued with:** 50 active days hold 505 scores from 51
 lifetime devices — a 30-day mean of **10.5 scores/day across 8.9 distinct devices**, so **≈1.2 score

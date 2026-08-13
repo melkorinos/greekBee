@@ -23,9 +23,11 @@ import { LEKSOKIPOS } from "../src/config/gameRules";
 import type { LeksokiposPuzzle } from "../src/games/leksokipos/types";
 import {
   countPangrams,
-  meetsDifficultyRules,
+  meetsAllGates,
+  meetsScoreFloor,
   realisticWordsToGenius,
 } from "./lib/leksokipos/puzzleQuality";
+import { maxScore } from "../src/games/leksokipos/lib/scoring";
 
 // ── CLI argument parsing ───────────────────────────────────────────────────────
 
@@ -168,7 +170,7 @@ const qualityCandidate: LeksokiposPuzzle = {
   validWords,
 };
 
-if (!meetsDifficultyRules(qualityCandidate)) {
+if (!meetsAllGates(qualityCandidate)) {
   const pangramCount = countPangrams(qualityCandidate);
   const wordsToGenius = realisticWordsToGenius(qualityCandidate);
   console.warn(
@@ -180,6 +182,11 @@ if (!meetsDifficultyRules(qualityCandidate)) {
   if (wordsToGenius >= LEKSOKIPOS.MAX_WORDS_TO_GENIUS) {
     console.warn(
       `      ${wordsToGenius} words to the top rank (max ${LEKSOKIPOS.MAX_WORDS_TO_GENIUS - 1}) — this board will feel tedious`,
+    );
+  }
+  if (!meetsScoreFloor(qualityCandidate)) {
+    console.warn(
+      `      max score ${maxScore(qualityCandidate)} (min ${LEKSOKIPOS.MIN_MAX_SCORE}) — this board is too thin for a full ladder`,
     );
   }
   console.warn(`    Writing it anyway; puzzleCorpusQuality.test.ts will fail on it.\n`);

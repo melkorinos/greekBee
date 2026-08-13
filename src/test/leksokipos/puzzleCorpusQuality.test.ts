@@ -23,8 +23,10 @@ import puzzles from "@/data/leksokipos/puzzles-el.json";
 import {
   countPangrams,
   meetsDifficultyRules,
+  meetsScoreFloor,
   realisticWordsToGenius,
 } from "../../../scripts/lib/leksokipos/puzzleQuality";
+import { maxScore } from "@/games/leksokipos/lib/scoring";
 
 const list = puzzles as LeksokiposPuzzle[];
 
@@ -54,6 +56,29 @@ describe("shipped puzzle corpus meets the quality gates", () => {
 
   it("passes the combined gate for every puzzle", () => {
     expect(list.filter((p) => !meetsDifficultyRules(p)).map((p) => p.date)).toEqual([]);
+  });
+});
+
+describe("shipped puzzle corpus meets the score floor from the boundary onward", () => {
+  // The floor is NOT retroactive. Puzzles before SCORE_FLOOR_FROM shipped and
+  // were played before the gate existed, and re-dating them to satisfy it would
+  // change which garden each past date served — stored rounds and leaderboard
+  // rows are keyed on the date, so that rewrites history under the players who
+  // lived it. History is frozen; only the boundary forward is guarded.
+  const boundary = LEKSOKIPOS.SCORE_FLOOR_FROM;
+
+  it("has no puzzle under the floor on or after the boundary", () => {
+    const offenders = list
+      .filter((p) => p.date >= boundary && !meetsScoreFloor(p))
+      .map((p) => `${p.date} (max score ${maxScore(p)})`);
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("still covers the boundary date itself", () => {
+    // A prune that reflowed from the wrong start would leave the boundary
+    // uncovered, and the date-miss fallback would hide it.
+    expect(list.some((p) => p.date === boundary)).toBe(true);
   });
 });
 

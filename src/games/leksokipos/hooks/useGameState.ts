@@ -19,6 +19,7 @@ import type { LeksokiposPuzzle, LeksokiposRoundSnapshot } from "../types";
 import { isDailyPuzzle } from "../lib/puzzle";
 import { normalizeLetters } from "../lib/normalize";
 import { computeScoreFromWords, maxScore } from "../lib/scoring";
+import { reconcileSnapshot } from "../lib/reconcile";
 import { calculateRank } from "../lib/ranking";
 import { pullSnapshot } from "../sync";
 import { getOrCreateDeviceId, isProfileLinked, readSlice } from "@/hooks/useGameStore";
@@ -53,7 +54,16 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     "leksokipos",
     initialPuzzle.id,
     snapshot,
-    useCallback((saved) => dispatch({ type: "RESTORE_STATE", saved }), []),
+    // Reconcile before restoring: the saved round is keyed on the puzzle id,
+    // which is just the date, so a corpus edit can hand this puzzle a round
+    // played on a different board. See lib/reconcile.ts.
+    useCallback(
+      (saved: LeksokiposRoundSnapshot) =>
+        dispatch({ type: "RESTORE_STATE", saved: reconcileSnapshot(saved, initialPuzzle) }),
+      // initialPuzzle is stable for the lifetime of this hook instance.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [],
+    ),
     // Only persist once there is meaningful progress — prevents the initial empty
     // state from being written to localStorage on mount, which would otherwise
     // block the cross-device server restore for puzzles not yet played locally.

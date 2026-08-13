@@ -18,7 +18,9 @@ import { LEKSOKIPOS } from "@/config/gameRules";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import {
   countPangrams,
+  meetsAllGates,
   meetsDifficultyRules,
+  meetsScoreFloor,
   realisticWordsToGenius,
   totalPointsAvailable,
 } from "../../../scripts/lib/leksokipos/puzzleQuality";
@@ -126,6 +128,52 @@ describe("meetsDifficultyRules", () => {
       LEKSOKIPOS.MAX_WORDS_TO_GENIUS,
     );
     expect(meetsDifficultyRules(tedious)).toBe(false);
+  });
+});
+
+/** `count` distinct 5-letter words over the puzzle's letters — 5 points each. */
+function fiveLetterWords(count: number): string[] {
+  return Array.from({ length: count }, (_, i) => {
+    const tail = i.toString(6).padStart(4, "0");
+    return "α" + Array.from(tail, (d) => "βγδεζη"[Number(d)]).join("");
+  });
+}
+
+describe("meetsScoreFloor", () => {
+  // Hand-worked target: the floor is on maxScore, which is ceil(raw × 0.75)
+  // below the soft-cap knee. 306 raw points → ceil(229.5) → exactly 230, the
+  // first allowed value. Each 5-letter word is worth 5, the 4-letter one is
+  // worth 1: 61 × 5 + 1 = 306.
+
+  it("accepts a puzzle sitting exactly on the floor", () => {
+    const onTheFloor = puzzleWith(["αβγδ", ...fiveLetterWords(61)]);
+
+    expect(totalPointsAvailable(onTheFloor)).toBe(306);
+    expect(meetsScoreFloor(onTheFloor)).toBe(true);
+  });
+
+  it("rejects a puzzle one word under the floor", () => {
+    const tooThin = puzzleWith(["αβγδ", ...fiveLetterWords(60)]);
+
+    expect(totalPointsAvailable(tooThin)).toBe(301);
+    expect(meetsScoreFloor(tooThin)).toBe(false);
+  });
+});
+
+describe("meetsAllGates", () => {
+  it("rejects a board that clears both ceilings but is too thin", () => {
+    const thin = puzzleWith(["αβγδ", "αβγδε", PANGRAM]);
+
+    expect(meetsDifficultyRules(thin)).toBe(true);
+    expect(meetsAllGates(thin)).toBe(false);
+  });
+
+  it("accepts a board that clears the ceilings and the floor", () => {
+    const healthy = puzzleWith([PANGRAM, ...fiveLetterWords(61)]);
+
+    expect(meetsDifficultyRules(healthy)).toBe(true);
+    expect(meetsScoreFloor(healthy)).toBe(true);
+    expect(meetsAllGates(healthy)).toBe(true);
   });
 });
 

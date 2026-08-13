@@ -30,7 +30,6 @@ Audited against the filesystem and git on 2026-08-12. Nothing else is open.
 | Ticket | What is left | Owner |
 |---|---|---|
 | `TICKET-05` | Three Sound Cue MP3s. **Blocks any deploy** — the 🔊 toggle is merged and plays silence today | operator |
-| `TICKET-09` | `in-progress`. Agent half done. Owed: read **Egress** (Supabase → Organization → Usage), read **Fluid Active CPU** (Vercel → Observability → Functions), and **accept or reject the substitution** — Supabase has no row-count alert on any plan, so the control the accept-and-monitor decision assumed cannot be built | operator |
 | `TICKET-10` | Open Graph card, `icon`, `apple-icon`, and deleting the stock `favicon.ico` that ships the **Next.js logo** in production today. Also fixes `PLATFORM_DESCRIPTION`, a fourth enumerating surface `TICKET-06` missed, which currently advertises all three hidden Games | agent |
 
 ### Owed, and not tickets

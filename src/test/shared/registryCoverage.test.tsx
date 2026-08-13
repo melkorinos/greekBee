@@ -84,6 +84,44 @@ vi.mock("@/components/shared/HowToPlayModal", () => ({
   HowToPlayModal: () => null,
 }));
 
+// Every picker card carrying a leaderboard renders HomeTrophyButton, which reads
+// usePlayerIdentity → useAuth → getSupabaseClient. That constructor THROWS when
+// NEXT_PUBLIC_SUPABASE_URL / _ANON_KEY are absent, and CI deliberately withholds
+// them (ci.yml), so the unmocked version passed on every laptop holding a
+// .env.local and failed only on the runner. Identity is not what this file
+// asserts — which cards exist is — so it is stubbed, exactly as the board suites
+// stub useAuth.
+vi.mock("@/hooks/usePlayerIdentity", () => ({
+  usePlayerIdentity: () => ({
+    deviceId:             "dev-probe",
+    displayName:          "Δοκιμή",
+    profileLinked:        false,
+    authLinked:           false,
+    authUserName:         null,
+    createProfile:        vi.fn(),
+    generateTransferCode: vi.fn(),
+    claimTransferCode:    vi.fn(),
+    disconnect:           vi.fn(),
+    signInWithGoogle:     vi.fn(),
+    signOut:              vi.fn(),
+    saveName:             vi.fn(),
+    leaderboardProps: {
+      deviceId:           "dev-probe",
+      displayName:        "Δοκιμή",
+      profileLinked:      false,
+      onSaveName:         vi.fn(),
+      onProfileCreate:    vi.fn(),
+      onTransferGenerate: vi.fn(),
+      onTransferClaim:    vi.fn(),
+      onDisconnect:       vi.fn(),
+      authLinked:         false,
+      authUserName:       null,
+      onSignIn:           vi.fn(),
+      onSignOut:          vi.fn(),
+    },
+  }),
+}));
+
 const { Shell }                                    = await import("@/components/shared/Shell");
 const { OfflineModeProvider, OFFLINE_GAME_IDS }    = await import("@/hooks/useOfflineMode");
 

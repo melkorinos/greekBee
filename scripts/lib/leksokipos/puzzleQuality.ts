@@ -21,7 +21,7 @@
 import { LEKSOKIPOS } from "@/config/gameRules";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { isPangram } from "@/games/leksokipos/lib/pangram";
-import { scoreWord, softCap } from "@/games/leksokipos/lib/scoring";
+import { maxScore, scoreWord, softCap } from "@/games/leksokipos/lib/scoring";
 import { RANKS } from "@/games/leksokipos/lib/ranking";
 
 /** The top rank's threshold — the "genius bar" every gate is measured against. */
@@ -79,4 +79,25 @@ export function meetsDifficultyRules(puzzle: LeksokiposPuzzle): boolean {
     countPangrams(puzzle) < LEKSOKIPOS.MAX_PANGRAMS &&
     realisticWordsToGenius(puzzle) < LEKSOKIPOS.MAX_WORDS_TO_GENIUS
   );
+}
+
+/**
+ * True when the puzzle's rank-defining max score clears MIN_MAX_SCORE.
+ *
+ * The floor is INCLUSIVE, unlike the two ceilings above, because it reads as
+ * "at least this rich" rather than "the first disallowed value". Deliberately
+ * separate from meetsDifficultyRules so the corpus guard can apply it to future
+ * dates only — see SCORE_FLOOR_FROM in gameRules.ts.
+ */
+export function meetsScoreFloor(puzzle: LeksokiposPuzzle): boolean {
+  return maxScore(puzzle) >= LEKSOKIPOS.MIN_MAX_SCORE;
+}
+
+/**
+ * Every gate a NEW puzzle must clear before it may be generated or shipped:
+ * both ceilings and the score floor. Generators use this; the corpus guard does
+ * not, because puzzles predating SCORE_FLOOR_FROM are exempt from the floor.
+ */
+export function meetsAllGates(puzzle: LeksokiposPuzzle): boolean {
+  return meetsDifficultyRules(puzzle) && meetsScoreFloor(puzzle);
 }
