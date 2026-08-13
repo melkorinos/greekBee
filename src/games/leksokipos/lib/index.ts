@@ -10,4 +10,5 @@ export type { EndgameInfo } from "./endgame";
 export { calculateRank, RANKS, getRankEmoji, TOP_RANK } from "./ranking";
 export { normalizeLetters } from "./normalize";
 export { isDailyPuzzle } from "./puzzle";
+export { reconcileSnapshot, buildSnapshotFromWords } from "./reconcile";
 export { pickRandom7, GREEK_VOWELS } from "./randomPuzzle";

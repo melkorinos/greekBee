@@ -45,6 +45,16 @@ export const LEKSOKIPOS = {
   // mean word score, while real players take cheap short words first. Never put
   // this number in player-facing copy.
   MAX_WORDS_TO_GENIUS: 107,
+  // Floor on a puzzle's rank-defining max score (the number maxScore() returns).
+  // The ceilings above stop a garden being a slog; this stops the opposite — a
+  // 48-word garden whose whole ladder fits in 146 points, so the top rank costs
+  // ~117 and the day is over before it starts. Inclusive: 230 is allowed.
+  MIN_MAX_SCORE:       230,
+  // The floor is enforced from this date forward ONLY. Earlier puzzles shipped
+  // and were played before the gate existed; re-dating them to satisfy it would
+  // change which garden every past date served, breaking the stored rounds and
+  // leaderboards that are keyed on the date. History is frozen on purpose.
+  SCORE_FLOOR_FROM:    "2026-08-13",
 } as const;
 
 export const LEKSIARXEIO = {

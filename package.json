@@ -15,6 +15,8 @@
     "batch-generate": "tsx scripts/batch-generate.ts",
     "prune-leksokipos": "tsx scripts/prune-leksokipos-puzzles.ts",
     "prune-leksokipos:dry": "tsx scripts/prune-leksokipos-puzzles.ts --dry-run",
+    "prune-leksokipos-thin": "tsx scripts/prune-leksokipos-thin.ts",
+    "prune-leksokipos-thin:dry": "tsx scripts/prune-leksokipos-thin.ts --dry-run",
     "generate-leksoplegma": "tsx scripts/generate-leksoplegma.ts",
     "generate-leksodromia-anagrams": "tsx scripts/generate-leksodromia-anagrams.ts",
     "apply-nominations": "tsx --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/apply-nominations.ts",

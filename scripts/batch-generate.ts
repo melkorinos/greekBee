@@ -22,7 +22,7 @@ import fs from "fs";
 import path from "path";
 
 import type { LeksokiposPuzzle } from "../src/games/leksokipos/types";
-import { meetsDifficultyRules } from "./lib/leksokipos/puzzleQuality";
+import { meetsAllGates } from "./lib/leksokipos/puzzleQuality";
 
 // ── CLI args ───────────────────────────────────────────────────────────────────
 
@@ -230,7 +230,7 @@ while (newPuzzles.length < TARGET) {
     outerLetters: outer,
     validWords,
   };
-  if (!meetsDifficultyRules(candidate)) {
+  if (!meetsAllGates(candidate)) {
     usedSets.delete(key);
     dayOffset--;
     continue;

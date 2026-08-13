@@ -12,8 +12,7 @@
 // rank are recomputed from the puzzle, startedAt is reset, givenUp is false.
 
 import type { LeksokiposPuzzle, LeksokiposRoundSnapshot } from "./types";
-import { calculateRank } from "./lib/ranking";
-import { maxScore, scoreWord } from "./lib/scoring";
+import { buildSnapshotFromWords } from "./lib/reconcile";
 
 const ENDPOINT = "/api/game-state";
 const ACHIEVEMENTS_ENDPOINT = "/api/achievements";
@@ -189,14 +188,14 @@ export async function pullSnapshot(params: {
     const foundWords = data.state?.foundWords;
     if (!Array.isArray(foundWords) || foundWords.length === 0) return null;
 
-    const score = foundWords.reduce((sum, w) => sum + scoreWord(w, puzzle), 0);
-    return {
-      foundWords,
-      score,
-      currentRank: calculateRank(score, maxScore(puzzle)),
-      startedAt:   Date.now(),
-      givenUp:     false,
-    };
+    // Words the puzzle no longer accepts are dropped here — a stored round is
+    // keyed on the date alone, so a corpus edit can hand back another board's
+    // words. See lib/reconcile.ts.
+    const snapshot = buildSnapshotFromWords(foundWords, puzzle, {
+      startedAt: Date.now(),
+      givenUp:   false,
+    });
+    return snapshot.foundWords.length === 0 ? null : snapshot;
   } catch {
     // Network/parse failure — leave local state as-is.
     return null;
