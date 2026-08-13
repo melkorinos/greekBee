@@ -204,7 +204,11 @@ function renderPage(entries) {
     })
     .join("");
 
+  // The viewport tag is not optional: the operator reads these on an iPhone, and
+  // without it iOS lays the page out at 980px and shrinks it to fit. There is no
+  // script on this page, so it survives Quick Look (which runs none) as-is.
   return `<!doctype html><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Λογοπαίγνιο — απομόνωση συμβόλου</title>
 <style>
   :root { color-scheme: light dark; }
@@ -242,6 +246,13 @@ function renderPage(entries) {
   .frame img, .frame svg { max-width: 100%; max-height: 100%; display: block; }
   .cap { font-size: 9px; color: #71717a; text-align: center; margin: 3px 0 0; }
   .dash { font-size: 10px; color: #a1a1aa; }
+  @media (max-width: 700px) {
+    body { padding: 14px; }
+    .grid { grid-template-columns: 1fr; }
+    .pair { grid-template-columns: 1fr 80px; }
+    .summary { line-height: 1.9; }
+    .summary span { display: inline-block; margin-right: 14px; }
+  }
   @media (prefers-color-scheme: dark) {
     body { background: #18181b; color: #f4f4f5; }
     .summary, .card { background: #27272a; border-color: #3f3f46; }

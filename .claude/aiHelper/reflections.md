@@ -2,6 +2,26 @@
 
 ## ⚠️ Active Tensions (watch these)
 
+### 🟠 An artifact built for the operator is only delivered if it renders on the operator's device (s151)
+
+s143 established the method that has been used for every visual decision since: put the options in
+`.claude/aiHelper/html/` and let the operator look. s151 found that **half those artifacts could not
+be read on the device the operator actually uses.** The badge grill and the first share-card page
+built themselves in JavaScript, and iOS previews HTML attachments through Quick Look, which draws
+HTML and CSS but **runs no scripts** — so those pages were blank on an iPhone while working perfectly
+on Android, which hands the same file to Chrome. Two of them had no `viewport` tag either, so iOS
+laid them out at 980px and shrank them.
+
+The tension is not the CSS, which is now fixed and recorded in `memory.md`. It is that **the method
+was judged by whether the file was produced, never by whether it was legible where it landed** —
+across roughly eight sessions of "the operator will look at this", nobody checked. The general shape:
+*an output whose whole purpose is a human decision has an acceptance test, and it is that the human
+can read it.* The same trap is waiting anywhere else an artifact is handed off rather than run —
+scripts assuming a shell the operator does not use, or copy assuming a screen width.
+
+Watch: anything new under `html/`, and the three generators in `scripts/` that emit such pages. The
+rule is written down now, but the rule was never the missing part — the check was.
+
 ### 🟠 A skill file is a cache, and a stale cache speaks with authority (s150)
 
 `project-mcp` exists so sessions stop re-deriving infrastructure facts. It worked — and **two of its

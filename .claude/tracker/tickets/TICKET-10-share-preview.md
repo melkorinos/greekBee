@@ -1,124 +1,121 @@
 # A share preview — the link has to look like something when it is posted
 
-**Status:** ready
+**Status:** in-progress
 **Spec:** [.claude/handoffs/launch-readiness.md](../../handoffs/launch-readiness.md) — the launch checklist, line "Share preview"
-**Claims re-verified against the code and against live production: 2026-08-12 (s150).** Two were
-wrong and are corrected below — see *Corrections* at the end for what changed and why, before
-trusting anything else in this file.
+**Blocked by:** an operator decision — one card number and one icon number from
+`.claude/aiHelper/html/share-card-candidates.html`. Nothing below the decision line can start
+without it. Everything above it has shipped.
+
+**Partly done on 2026-08-13 (s151), uncommitted on `dev` at the time of writing.** Read *What has
+shipped* before touching anything: three of the eight scope items are done, and the two claims this
+file was rewritten for in s150 are now fixed rather than pending.
 
 ## Why
 
 A soft launch is, concretely, a link posted somewhere. Today that link renders as bare underlined
-text with no image, no card, and no title beyond the tab name.
-
-`src/app/layout.tsx` sets `title` and `description` and nothing else — no `metadataBase`, no
-`openGraph` block, no `twitter` block (verified 2026-08-12). There is no `opengraph-image`, no
-`twitter-image`, no `icon.*` and no `apple-icon.*` in `src/app/`. Facebook, Messenger, WhatsApp,
-Viber, Reddit and Slack all fall back to the ugliest possible rendering.
-
-**There IS a favicon, and it is worse than none.** `src/app/favicon.ico` exists — 25,931 bytes,
-added by `8e7e5e8 "Initial commit from Create Next App"` and never touched since. It is served in
-production today (`200`, `<link rel="icon" … sizes="256x256">`), so tabs do not show a blank glyph:
-**they show the Next.js logo.** A stranger's first impression of a Greek word-game platform is
-another framework's branding.
-
-**`PLATFORM_DESCRIPTION` already advertises the three hidden Games, and it is live right now.** This
-is the defect that most affects the ticket, because the description is the string the scope below
-tells you to reuse. `src/config/platform.ts` derives it from `GAME_REGISTRY` filtering **only**
-`leksikastirio` — it never learned about `hidden`. Production is currently serving:
-
-```
-<meta name="description" content="Ελληνικά παιχνίδια λέξεων: Leksokipos, Leksiarxeio,
-Leksindeseis, Vres Tin Frasi, Leksodromia, Leksoplegma, Stavrolekso, Topothesies,
-Πόσο κάνει;, Λογοπαίγνιο"/>
-```
-
-Leksindeseis, Πόσο κάνει; and Λογοπαίγνιο are all `hidden: true` (ADR 0022) and appear on no
-surface a player can reach — except this one. **`platform.ts` is a fourth enumerating surface that
-`TICKET-06` missed**: the picker, the drawer, the Offline Mode set and `profile/page.tsx` all filter
-on `hidden`, and `platform.ts` is the only file that walks the whole registry without doing so
-(grepped 2026-08-12; every other `GAME_REGISTRY` reader indexes one game by id). This is the s148
-lesson recurring — *a ticket's file list is a hypothesis, grep is the map* — and it is exactly the
-hazard this ticket already warns about for the card image, sitting unnoticed in the text.
-
-This is the highest ratio of first impression to effort on the entire launch checklist. Everything
-else on that list prevents a bad outcome; this one is the only item that actively makes the launch
-work better. It is also small — a metadata block and two images.
+text with no image, no card, and no title beyond the tab name. This is the highest ratio of first
+impression to effort on the entire launch checklist: everything else on that list prevents a bad
+outcome, this is the only item that actively makes the launch work better.
 
 Greek-audience note: **Viber and Facebook Messenger matter more here than Twitter/X.** Test against
 what the audience actually uses.
 
-## Scope
+## What has shipped (s151)
 
-- [ ] **Filter `hidden` out of `PLATFORM_DESCRIPTION` first** (`src/config/platform.ts`). Everything
-      else here reuses that string, so fixing it afterwards means re-checking the card, the
-      `openGraph` block and the `twitter` block. One added predicate beside the existing
-      `leksikastirio` filter. **Check what depends on the exact text before changing it** — the
-      privacy page and the picker read the registry too, and `PLATFORM_DESCRIPTION` may be asserted
-      in the suite; grep, do not assume. Worth a guard test in the same breath: *the SEO description
-      names no `hidden` Game*, which is the check that would have caught this.
-- [ ] **`metadataBase`** in `layout.tsx`. Relative image paths in Next.js metadata resolve against
-      it, and without it Open Graph URLs come out relative and most scrapers reject them. The
-      production origin is `https://greek-bee.vercel.app` unless a custom domain has landed since —
-      check before hardcoding, and prefer an environment-derived value over a literal. **Still
-      `greek-bee.vercel.app` on 2026-08-12** (serving `200`; no custom domain configured).
-- [ ] **An `openGraph` block** — title, description, locale `el_GR`, type `website`, plus the image.
-      Reuse `PLATFORM_NAME` and `PLATFORM_DESCRIPTION` from `src/config/platform.ts` — the standing
-      rule is never to hardcode a value that lives in `src/config/`. Reuse is right **once the first
-      scope item has landed**: the derivation keeps it from going stale, but until `hidden` is
-      filtered it also puts three unreachable Games into every shared card.
-- [ ] **A `twitter` block** with `card: "summary_large_image"`. Cheap, and several non-Twitter
-      scrapers read the Twitter tags in preference to Open Graph.
-- [ ] **`src/app/opengraph-image`** — 1200×630. Either a static asset or Next's `ImageResponse`
-      generator. Whichever is chosen, it must survive the eight-Game picker: **do not put the game
-      emoji grid in it**. TICKET-06 shipped on 2026-08-12, so three Games are now `hidden` (ADR
-      0022) and an emoji grid would advertise Games no surface links to. Prefer the Platform name
-      and a single strong mark.
-- [ ] **`src/app/icon`** and **`apple-icon`** — and **delete or overwrite `src/app/favicon.ico`**,
-      which is the stock Create-Next-App file. Adding `icon.*` alongside it does not retire it:
-      `/favicon.ico` is still requested directly by browsers and by several scrapers, so leaving
-      the file means the Next.js logo keeps shipping from that path. Confirm by reading the rendered
-      `<head>` **and** by requesting `/favicon.ico` on the deployed preview — not by trusting that
-      the new file wins.
+- [x] **`hidden` is filtered out of `PLATFORM_DESCRIPTION`** (`src/config/platform.ts`). It walked the
+      whole registry filtering only `leksikastirio`, so from the day TICKET-06 hid three Games the
+      `<meta name="description">` advertised Leksindeseis, Πόσο κάνει; and Λογοπαίγνιο to every
+      scraper. Nothing in the suite asserted the description text (grepped) so no test needed
+      rewriting.
+- [x] **A guard test locks it** — `src/test/shared/registryCoverage.test.tsx`, **seam 1d**, using the
+      same probe-Game trick as the drawer/picker/offline seams. Verified to fail without the fix, not
+      just to pass with it. This is the fourth enumerating surface; the other three were already
+      guarded.
+- [x] **`metadataBase`, `openGraph` and `twitter` blocks** in `src/app/layout.tsx`, reusing
+      `PLATFORM_NAME`/`PLATFORM_DESCRIPTION`. `openGraph` carries locale `el_GR`, type `website`,
+      `url: "/"` and `siteName`; `twitter` carries `summary_large_image`. **The image files are
+      deliberately NOT named in the metadata object** — Next's file conventions inject those tags
+      from `src/app/`, and naming them twice is how they drift.
+- [x] **`PLATFORM_ORIGIN` in `src/config/platform.ts`** — the absolute origin `metadataBase` needs,
+      derived from Vercel's build environment (production domain → own preview URL → localhost), with
+      `https://greek-bee.vercel.app` as the last-resort literal. A custom domain is now a DNS change,
+      not a code change.
+- [x] **A candidates page for the visual decision** at
+      `.claude/aiHelper/html/share-card-candidates.html` — 25 cards at true 1200×630 and 12 icons at
+      180/64/32/16, palette restricted to **dark grey, green, teal, yellow** on operator instruction,
+      every card carrying the word-game signal in its shape (guess board, crossword, word-search,
+      letter tiles, scoring tile, block mosaics) rather than a letter on a background.
+
+`npm run test -- --run` (2469 passing), `npx eslint .` and `npm run build` were all clean after these.
+
+## The blocking decision
+
+The operator picks **one card number and one icon number** from the candidates page. Until then the
+remaining scope cannot be built, because every remaining item is that image in a different size.
+
+Two facts the picker needs, both already stated on the page itself:
+
+1. **The generator ships one font, and it covers six Greek letters: Λ Ω λ μ π ω.** No accents, no
+   final ς. A card with real Greek words therefore costs a font file committed to the repo (~350 KB)
+   and loaded in the generator — that is card 8's price and nobody else's. Latin text, those six
+   glyphs, and digits are free. The Greek description still reaches the reader regardless:
+   Messenger, Viber and Facebook print `og:description` as text beneath the image.
+2. **Λ is the mark** in most candidates — the platform's own initial and one of the six free glyphs.
+   Several icons (3, 4, 7, 8, 11) use no letter at all and escape the constraint entirely.
+
+## Remaining scope
+
+- [ ] **`src/app/opengraph-image.tsx`** — 1200×630 via `ImageResponse` from `next/og` (built into
+      Next 16, no new dependency). Rebuild the chosen card; the candidates are drawn in the same
+      flexbox subset satori understands, so the translation is mechanical. **Do not put the game
+      emoji grid in it** — three Games are `hidden` (ADR 0022) and a grid would advertise Games no
+      surface links to.
+- [ ] **`src/app/icon.tsx`** and **`src/app/apple-icon.tsx`** — the chosen icon at 32×32 and 180×180.
+- [ ] **Delete `src/app/favicon.ico`.** It is the stock Create-Next-App file (25,931 bytes, from
+      `8e7e5e8`, never touched) and it is **served in production today**, so tabs currently show the
+      Next.js logo. Adding `icon.*` alongside it does not retire it: `/favicon.ico` is still
+      requested directly by browsers and several scrapers. Confirm by requesting `/favicon.ico` on
+      the deploy, not by trusting that the new file wins.
+- [ ] **A test that the metadata block survives.** Seam 1d covers the description; nothing yet
+      asserts that `openGraph`/`twitter` exist and reuse the config values.
 - [ ] Consider a `manifest.ts` while in the neighbourhood. **Optional** — decide, do not drift into
       building a PWA. Offline Mode is parked (`.claude/handoffs/offlineFeature-handoff.md`) and a
-      manifest that implies installability it cannot deliver is worse than none.
-
-## Design note
-
-`.claude/aiHelper/html/` is the established place to render a visual decision and have the operator
-look at it (the method s143 set for the badge marks). An Open Graph card is exactly that shape of
-problem — **no test in this repo can tell a good card from a bad one.** Render the candidates there
-before committing to one.
-
-The UI redesign is being handled in separate sessions, so **do not treat this as licence to touch
-`globals.css`, `recipes.ts` or any shared chrome.** The card is a standalone image; keep it that way.
+      manifest implying installability it cannot deliver is worse than none.
 
 ## Done when
 
-- [ ] **No `hidden` Game appears in the SEO description, the `openGraph` block or the card**, and a
-      test locks it. Verify on the deployed preview's rendered HTML, not only in the unit suite.
-- [ ] **`/favicon.ico` no longer serves the Create-Next-App icon** on the deployed preview.
-- [ ] `opengraph-image`, `icon` and `apple-icon` exist and are referenced from the metadata.
-- [ ] **The card is verified in a real scraper against a deployed preview URL** — not against
-      localhost, and not by reading the HTML. Post the preview link into Messenger or Viber and look
-      at it. This repo's standing rule is measure the artifact, not the response; a correct `<meta>`
-      tag is the response, the rendered card is the artifact.
+- [ ] `opengraph-image`, `icon` and `apple-icon` exist and their tags appear in the rendered `<head>`.
+- [ ] **`/favicon.ico` no longer serves the Create-Next-App icon** on the deploy.
 - [ ] The favicon shows in a browser tab.
+- [ ] **The card is verified in a real scraper** — post the link into Messenger or Viber and look at
+      it. Measure the artifact, not the response: a correct `<meta>` tag is the response, the
+      rendered card is the artifact.
 - [ ] `npm run test -- --run`, `npx eslint .`, `npm run build` and `npm run test:e2e` clean (this
       touches `layout.tsx`, which every page renders through).
 
-## Corrections — what s150 re-verified, 2026-08-12
+## The verification trap — read before planning the deploy
 
-Recorded rather than silently edited, because this ticket was written on 2026-08-11 and read as
-verified for a day. Two claims were wrong:
+The original done-when said *verify against a deployed preview*. **That cannot work.** Vercel
+previews on this project are SSO-protected and answer 302 to anyone unauthenticated (recorded in
+memory.md's error-monitoring row, found in s150). Facebook's and Viber's scrapers carry no session,
+so they cannot fetch a preview's card at all — they will render the login page or nothing.
 
-| Claim as written | What is actually true |
-|---|---|
-| "there is no favicon at all today … browser tabs show a blank page glyph" | `src/app/favicon.ico` **exists and is served** — the stock Create-Next-App file from the initial commit. Tabs show the **Next.js logo**. The work is a replacement, not a first addition, and the old file must be removed rather than shadowed. |
-| `PLATFORM_DESCRIPTION` "is already derived from the registry so it never goes stale" | True about staleness, **false about visibility**. It filters only `leksikastirio`, so it names all three `hidden` Games, and has been doing so in production since they were hidden on 2026-08-12. |
+Two options, both the operator's call:
 
-Everything else was checked and holds: `layout.tsx` has no `metadataBase` / `openGraph` / `twitter`
-block; no `opengraph-image`, `twitter-image`, `icon.*`, `apple-icon.*`, `manifest`, `robots` or
-`sitemap` exists in `src/app/`; `PLATFORM_NAME` and `PLATFORM_DESCRIPTION` live in
-`src/config/platform.ts` as described; the production origin is unchanged.
+1. Verify on **production** after the deploy, accepting that a bad card is briefly live.
+2. Turn **deployment protection off** for one preview deploy, verify, turn it back on.
+
+`PLATFORM_ORIGIN` already handles either: a preview build points `metadataBase` at its own URL rather
+than at production, so an unprotected preview tests its own image rather than production's.
+
+## Notes for whoever picks this up
+
+- The candidates page is **static HTML with no JavaScript**, on purpose — the operator reads these on
+  an iPhone, where iOS Quick Look renders HTML and CSS but runs no scripts. Every page under
+  `.claude/aiHelper/html/` was converted to that shape in s151, and the three generators in
+  `scripts/` that emit such pages were patched to keep emitting it. If you regenerate the candidates
+  page, pre-render it — do not ship a page that builds itself.
+- The design note from the original ticket still stands: **no test in this repo can tell a good card
+  from a bad one**, which is why the decision is rendered and looked at rather than asserted.
+- The UI redesign is handled in separate sessions. **Do not treat this ticket as licence to touch
+  `globals.css`, `recipes.ts` or any shared chrome.** The card is a standalone image; keep it that way.

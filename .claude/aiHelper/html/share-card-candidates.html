@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Share card + icon candidates — TICKET-10</title>
 <style>
   /* Four colours, per the brief: dark grey, green, teal, yellow. Shades only —
@@ -39,6 +40,19 @@
   .isizes figure { margin:0; text-align:center; }
   .isizes figcaption { font-size:11px; color:var(--grey2); margin-top:7px; }
   .name { font-weight:700; letter-spacing:-2px; }
+
+  /* Phones. The cards are authored at 1200×630 and scaled down by transform, so
+     a narrower screen just needs a smaller scale and a shorter stage — the card
+     markup never changes. Without this the page scrolls sideways on an iPhone. */
+  @media (max-width: 700px) {
+    body { padding:20px 16px; }
+    .item, .lede, .note, .icard { width:100%; max-width:100%; }
+    .stage { width:100%; max-width:344px; height:181px; }
+    .card { transform:scale(.2866); }
+    .icons { gap:18px; }
+    .isizes { gap:12px; flex-wrap:wrap; }
+    h1 { font-size:22px; }
+  }
 </style>
 </head>
 <body>
@@ -62,363 +76,1318 @@
   generator understands, so what you see is what deploys.
 </div>
 
-<div id="out"></div>
-
-<script>
-const NAME = "Leksarxeia";
-const P = {
-  ink:"#1c1917", grey:"#292524", grey2:"#44403c", grey3:"#57534e", grey4:"#78716c",
-  green:"#16a34a", green2:"#22c55e", emerald:"#059669", greenDk:"#14532d",
-  teal:"#0d9488", teal2:"#14b8a6", teal3:"#2dd4bf", tealDk:"#134e4a",
-  yellow:"#facc15", yellow2:"#fde047", amber:"#fbbf24", amberDk:"#a16207",
-  white:"#ffffff", off:"#fafaf9",
-};
-const FREE = ["Λ","Ω","λ","π","ω","μ"];
-
-/* ── drawing helpers ─────────────────────────────────────────────────────── */
-function cell(px, bg, fg, text, radius, border) {
-  return `<div style="width:${px}px;height:${px}px;border-radius:${radius}px;background:${bg};
-    ${border ? `border:${Math.max(3, Math.round(px*.055))}px solid ${border};` : ""}
+<!-- Rendered statically on purpose: iOS Quick Look (Files, Mail, WhatsApp
+     attachments) previews HTML with JavaScript disabled, so a script-built
+     page shows up blank on a phone. Regenerate by editing the generator in
+     git history if these ever need changing. -->
+<h2>The guess board <span>— the six-row grid every daily word game trained the whole audience on</span></h2><div class="grid"><div class="item"><div class="stage"><div class="card" style="background:#292524;flex-direction:column;align-items:center;justify-content:center;gap:46px">
+    <div style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:14px"><div style="width:84px;height:84px;border-radius:15px;background:#57534e;
+    
     display:flex;align-items:center;justify-content:center;flex-shrink:0;
-    font-size:${Math.round(px*.6)}px;font-weight:700;color:${fg}">${text || ""}</div>`;
-}
-function row(cells, gap) { return `<div style="display:flex;gap:${gap}px">${cells}</div>`; }
-function stack(rows, gap) { return `<div style="display:flex;flex-direction:column;gap:${gap}px">${rows}</div>`; }
-function wordmark(size, color, extra) {
-  return `<div class="name" style="font-size:${size}px;color:${color};${extra || ""}">${NAME}</div>`;
-}
-
-/* A guess board: rows of five cells, each cell coloured by a status letter.
-   g = correct, y = present, x = absent, e = empty. Exactly the pattern every
-   player of a daily word game recognises without being told. */
-function guessBoard(pattern, px, gap, cols) {
-  const map = c => cols[c];
-  return stack(pattern.map(r => row([...r].map(c =>
-    cell(px, map(c), "#ffffff", "", Math.round(px * .18), c === "e" ? cols.border : null)).join(""), gap)).join(""), gap);
-}
-
-/* The Λ, drawn as blocks rather than as a glyph — a mark made of the same
-   squares the games are played on. */
-const LAMBDA = ["..X..","..X..",".X.X.",".X.X.","X...X","X...X"];
-function mosaic(px, gap, on, off, radius) {
-  return stack(LAMBDA.map(r => row([...r].map(c =>
-    cell(px, c === "X" ? (typeof on === "function" ? on() : on) : off, "", "", radius ?? Math.round(px*.2))).join(""), gap)).join(""), gap);
-}
-
-/* The platform name spelled out in letter tiles. Latin, so it costs nothing. */
-function nameTiles(px, gap, fills, fg, radius, letters) {
-  const ls = (letters || NAME.toUpperCase()).split("");
-  return row(ls.map((l, i) => cell(px, fills[i % fills.length], fg, l, radius ?? Math.round(px*.18))).join(""), gap);
-}
-
-/* A crossword corner: black cells, lit cells, one or two letters. */
-function crossword(spec, px, gap, dark, lit, light, fg) {
-  return stack(spec.map(r => row([...r].map(c => {
-    if (c === "#") return cell(px, dark, "", "", Math.round(px*.12));
-    if (c === "*") return cell(px, lit, P.ink, "", Math.round(px*.12));
-    if (c === ".") return cell(px, light, "", "", Math.round(px*.12));
-    return cell(px, lit, fg, c, Math.round(px*.12));
-  }).join(""), gap)).join(""), gap);
-}
-
-/* A word-search field: a block of letters with one lit run through it. */
-function search(rows, colsN, px, gap, bg, fg, litCells, litBg, litFg, letters) {
-  const out = [];
-  let n = 0;
-  for (let r = 0; r < rows; r++) {
-    const cs = [];
-    for (let c = 0; c < colsN; c++) {
-      const key = `${r},${c}`;
-      const on = litCells.includes(key);
-      cs.push(cell(px, on ? litBg : bg, on ? litFg : fg, letters[n % letters.length], Math.round(px*.16)));
-      n++;
-    }
-    out.push(row(cs.join(""), gap));
-  }
-  return stack(out.join(""), gap);
-}
-
-/* ── the cards ───────────────────────────────────────────────────────────── */
-const cards = [
-
-/* Family 1 — the guess board */
-{ g:"The guess board <span>— the six-row grid every daily word game trained the whole audience on</span>",
-  n:"Dark grey board, one lit row per colour. Reads as “daily word game” at thumbnail size, before the name is even legible.",
-  html:`<div class="card" style="background:${P.grey};flex-direction:column;align-items:center;justify-content:center;gap:46px">
-    ${guessBoard(["xygxx","gyxgy","ggggg"], 84, 14, {g:P.green,y:P.yellow,x:P.grey3,e:"transparent",border:P.grey3})}
-    ${wordmark(84, P.white)}</div>` },
-
-{ g:"The guess board <span>— the six-row grid every daily word game trained the whole audience on</span>",
-  n:"The same board pushed left with the name beside it — the layout that survives being cropped to a square by chat apps.",
-  html:`<div class="card" style="background:${P.grey};align-items:center;padding:0 90px;gap:80px">
-    ${guessBoard(["xyg","gyx","ggg"], 96, 16, {g:P.green,y:P.yellow,x:P.grey3,e:"transparent",border:P.grey3})}
-    <div>${wordmark(92, P.white)}<div style="font-size:36px;color:${P.teal3};margin-top:16px">Greek word games</div></div></div>` },
-
-{ g:"The guess board <span>— the six-row grid every daily word game trained the whole audience on</span>",
-  n:"Light version, teal standing in for the usual grey. Softer, and the only board here that would sit invisibly on a white chat background — the dark rule at the bottom stops that.",
-  html:`<div class="card" style="background:${P.white};flex-direction:column;align-items:center;justify-content:center;gap:46px;border-bottom:18px solid ${P.teal}">
-    ${guessBoard(["xygxx","gygxg","ggggg"], 84, 14, {g:P.green,y:P.yellow,x:P.s200 || "#e7e5e4",e:"transparent",border:"#e7e5e4"})}
-    ${wordmark(84, P.ink)}</div>` },
-
-{ g:"The guess board <span>— the six-row grid every daily word game trained the whole audience on</span>",
-  n:"Teal flood, board in white and yellow. The most branded of the four — nobody else's card looks like this.",
-  html:`<div class="card" style="background:${P.teal};flex-direction:column;align-items:center;justify-content:center;gap:44px">
-    ${guessBoard(["xyxgx","gxygg","ggggg"], 80, 13, {g:P.yellow,y:P.white,x:P.tealDk,e:"transparent",border:P.tealDk})}
-    ${wordmark(86, P.white)}</div>` },
-
-/* Family 2 — crossword */
-{ g:"Crossword <span>— black squares are a hundred years of “this is a word puzzle”</span>",
-  n:"A crossword corner with three lit squares, name alongside. The black cells do all the explaining.",
-  html:`<div class="card" style="background:${P.ink};align-items:center;padding:0 96px;gap:88px">
-    ${crossword(["#..*.","..*..",".*#..","*..#.",".....",], 74, 8, P.ink, P.yellow, P.grey3, P.ink)}
-    <div>${wordmark(88, P.white)}<div style="font-size:34px;color:${P.green2};margin-top:14px">Greek word games</div></div></div>` },
-
-{ g:"Crossword <span>— black squares are a hundred years of “this is a word puzzle”</span>",
-  n:"White grid, teal fills, dark cells. The most newspaper-like card here, which is either heritage or dusty depending on the friend you ask.",
-  html:`<div class="card" style="background:${P.white};flex-direction:column;align-items:center;justify-content:center;gap:40px">
-    ${crossword(["..#..","..*..",".***.","..*..","..#.."], 76, 8, P.ink, P.teal, "#e7e5e4", P.white)}
-    ${wordmark(84, P.ink)}</div>` },
-
-{ g:"Crossword <span>— black squares are a hundred years of “this is a word puzzle”</span>",
-  n:"One big cross of five squares carrying the free Greek letters, on dark grey. Greek and word-game in a single shape, at no font cost.",
-  html:`<div class="card" style="background:${P.grey};flex-direction:column;align-items:center;justify-content:center;gap:44px">
-    ${stack([
-      row(cell(112,"transparent","","",20)+cell(112,P.green,P.white,"Λ",20)+cell(112,"transparent","","",20), 12),
-      row(cell(112,P.teal,P.white,"Ω",20)+cell(112,P.yellow,P.ink,"λ",20)+cell(112,P.teal,P.white,"π",20), 12),
-      row(cell(112,"transparent","","",20)+cell(112,P.green,P.white,"ω",20)+cell(112,"transparent","","",20), 12),
-    ].join(""), 12)}
-    ${wordmark(80, P.white)}</div>` },
-
-{ g:"Crossword <span>— black squares are a hundred years of “this is a word puzzle”</span>",
-  n:"Two real Greek words crossing, the way the card would look if the font were paid for. This is the strongest single idea on the page and the only one that is unambiguously Greek.",
-  font:true,
-  html:`<div class="card" style="background:${P.ink};flex-direction:column;align-items:center;justify-content:center;gap:40px">
-    ${stack([
-      row(cell(84,P.grey3,P.white,"Λ",12)+cell(84,P.grey3,P.white,"Ε",12)+cell(84,P.yellow,P.ink,"Ξ",12)+cell(84,P.grey3,P.white,"Η",12), 8),
-      row(cell(84,"transparent","","",12)+cell(84,"transparent","","",12)+cell(84,P.green,P.white,"Ε",12), 8),
-      row(cell(84,"transparent","","",12)+cell(84,"transparent","","",12)+cell(84,P.green,P.white,"Ι",12), 8),
-      row(cell(84,"transparent","","",12)+cell(84,"transparent","","",12)+cell(84,P.green,P.white,"Σ",12), 8),
-    ].join(""), 8)}
-    ${wordmark(78, P.white)}</div>` },
-
-/* Family 3 — word search */
-{ g:"Word search <span>— a field of letters with one run lit</span>",
-  n:"A full field of the six free Greek letters with a diagonal lit in yellow. Busy on purpose: it looks like a puzzle in progress rather than a logo.",
-  html:`<div class="card" style="background:${P.grey};flex-direction:column;align-items:center;justify-content:center;gap:40px">
-    ${search(4, 9, 76, 10, "transparent", P.grey4, ["0,0","1,1","2,2","3,3"], P.yellow, P.ink, FREE)}
-    ${wordmark(80, P.white)}</div>` },
-
-{ g:"Word search <span>— a field of letters with one run lit</span>",
-  n:"The same field in teal on near-black, lit run in green, name overlaid on a bar. Deepest of the twenty-five.",
-  html:`<div class="card" style="background:${P.ink};flex-direction:column;align-items:center;justify-content:center;gap:38px">
-    ${search(4, 9, 76, 10, "transparent", P.tealDk, ["1,2","1,3","1,4","1,5"], P.green, P.white, FREE)}
-    <div style="background:${P.grey};padding:22px 56px;border-radius:24px">${wordmark(74, P.white)}</div></div>` },
-
-/* Family 4 — the name as tiles */
-{ g:"The name, spelled in tiles <span>— the wordmark IS the word game</span>",
-  n:"Ten tiles, one letter each, cycling through the four colours. The name and the “this is about letters” signal are the same object — nothing is added on.",
-  html:`<div class="card" style="background:${P.grey};flex-direction:column;align-items:center;justify-content:center;gap:40px">
-    ${nameTiles(104, 12, [P.green,P.teal,P.yellow,P.grey3], P.white, 20)}
-    <div style="font-size:38px;color:${P.grey4}">Greek word games</div></div>` },
-
-{ g:"The name, spelled in tiles <span>— the wordmark IS the word game</span>",
-  n:"The same row on white with dark tiles and one yellow. Quieter, and the letters read faster because the field is not competing.",
-  html:`<div class="card" style="background:${P.white};flex-direction:column;align-items:center;justify-content:center;gap:38px;border-bottom:18px solid ${P.yellow}">
-    ${nameTiles(104, 12, [P.grey,P.grey,P.grey,P.yellow,P.grey,P.grey,P.teal,P.grey,P.grey,P.green], P.white, 20)}
-    <div style="font-size:38px;color:${P.grey2}">Greek word games</div></div>` },
-
-{ g:"The name, spelled in tiles <span>— the wordmark IS the word game</span>",
-  n:"Broken over two rows so each tile can be enormous. Best of this family when the card is shown small — four big tiles beat ten little ones.",
-  html:`<div class="card" style="background:${P.ink};flex-direction:column;align-items:center;justify-content:center;gap:18px">
-    ${nameTiles(150, 16, [P.green,P.teal,P.yellow,P.green2], P.white, 28, "LEKS")}
-    ${nameTiles(150, 16, [P.teal,P.yellow,P.green,P.teal2,P.yellow2,P.green], P.white, 28, "ARXEIA")}</div>` },
-
-{ g:"The name, spelled in tiles <span>— the wordmark IS the word game</span>",
-  n:"Only the vowels lit. The unlit consonants make it look mid-puzzle, which is the closest a still image gets to showing the game being played.",
-  html:`<div class="card" style="background:${P.grey};flex-direction:column;align-items:center;justify-content:center;gap:42px">
-    ${row("LEKSARXEIA".split("").map((l,i) =>
-      cell(104, "AEIO".includes(l) ? P.yellow : "transparent", "AEIO".includes(l) ? P.ink : P.grey4, l, 20,
-        "AEIO".includes(l) ? null : P.grey3)).join(""), 12)}
-    ${wordmark(60, P.teal3, "letter-spacing:6px;font-weight:600")}</div>` },
-
-{ g:"The name, spelled in tiles <span>— the wordmark IS the word game</span>",
-  n:"Green flood, dark tiles. The most confident colour on the page; the one that would look least like a hobby project on a stranger's timeline.",
-  html:`<div class="card" style="background:${P.green};flex-direction:column;align-items:center;justify-content:center;gap:40px">
-    ${nameTiles(104, 12, [P.ink], P.white, 20)}
-    <div style="font-size:38px;color:${P.white};opacity:.85">Greek word games</div></div>` },
-
-/* Family 5 — the scrabble tile */
-{ g:"The scoring tile <span>— a letter with a number in the corner is a word game and nothing else</span>",
-  n:"One big scoring tile beside the name. The little 8 in the corner does more work than any amount of copy.",
-  html:`<div class="card" style="background:${P.grey};align-items:center;padding:0 100px;gap:72px">
-    <div style="width:260px;height:260px;border-radius:44px;background:${P.yellow};display:flex;align-items:center;justify-content:center;position:relative">
-      <div style="font-size:170px;font-weight:700;color:${P.ink};line-height:1">Λ</div>
-      <div style="position:absolute;right:26px;bottom:18px;font-size:52px;font-weight:700;color:${P.ink};opacity:.75">8</div>
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div></div><div style="display:flex;gap:14px"><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div></div><div style="display:flex;gap:14px"><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div></div></div>
+    <div class="name" style="font-size:84px;color:#ffffff;">Leksarxeia</div></div></div>
+    <p class="cap"><b>1.</b> Dark grey board, one lit row per colour. Reads as “daily word game” at thumbnail size, before the name is even legible.</p></div><div class="item"><div class="stage"><div class="card" style="background:#292524;align-items:center;padding:0 90px;gap:80px">
+    <div style="display:flex;flex-direction:column;gap:16px"><div style="display:flex;gap:16px"><div style="width:96px;height:96px;border-radius:17px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:58px;font-weight:700;color:#ffffff"></div><div style="width:96px;height:96px;border-radius:17px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:58px;font-weight:700;color:#ffffff"></div><div style="width:96px;height:96px;border-radius:17px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:58px;font-weight:700;color:#ffffff"></div></div><div style="display:flex;gap:16px"><div style="width:96px;height:96px;border-radius:17px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:58px;font-weight:700;color:#ffffff"></div><div style="width:96px;height:96px;border-radius:17px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:58px;font-weight:700;color:#ffffff"></div><div style="width:96px;height:96px;border-radius:17px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:58px;font-weight:700;color:#ffffff"></div></div><div style="display:flex;gap:16px"><div style="width:96px;height:96px;border-radius:17px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:58px;font-weight:700;color:#ffffff"></div><div style="width:96px;height:96px;border-radius:17px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:58px;font-weight:700;color:#ffffff"></div><div style="width:96px;height:96px;border-radius:17px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:58px;font-weight:700;color:#ffffff"></div></div></div>
+    <div><div class="name" style="font-size:92px;color:#ffffff;">Leksarxeia</div><div style="font-size:36px;color:#2dd4bf;margin-top:16px">Greek word games</div></div></div></div>
+    <p class="cap"><b>2.</b> The same board pushed left with the name beside it — the layout that survives being cropped to a square by chat apps.</p></div><div class="item"><div class="stage"><div class="card" style="background:#ffffff;flex-direction:column;align-items:center;justify-content:center;gap:46px;border-bottom:18px solid #0d9488">
+    <div style="display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:14px"><div style="width:84px;height:84px;border-radius:15px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div></div><div style="display:flex;gap:14px"><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div></div><div style="display:flex;gap:14px"><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div><div style="width:84px;height:84px;border-radius:15px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff"></div></div></div>
+    <div class="name" style="font-size:84px;color:#1c1917;">Leksarxeia</div></div></div>
+    <p class="cap"><b>3.</b> Light version, teal standing in for the usual grey. Softer, and the only board here that would sit invisibly on a white chat background — the dark rule at the bottom stops that.</p></div><div class="item"><div class="stage"><div class="card" style="background:#0d9488;flex-direction:column;align-items:center;justify-content:center;gap:44px">
+    <div style="display:flex;flex-direction:column;gap:13px"><div style="display:flex;gap:13px"><div style="width:80px;height:80px;border-radius:14px;background:#134e4a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:48px;font-weight:700;color:#ffffff"></div><div style="width:80px;height:80px;border-radius:14px;background:#ffffff;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:48px;font-weight:700;color:#ffffff"></div><div style="width:80px;height:80px;border-radius:14px;background:#134e4a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:48px;font-weight:700;color:#ffffff"></div><div style="width:80px;height:80px;border-radius:14px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:48px;font-weight:700;color:#ffffff"></div><div style="width:80px;height:80px;border-radius:14px;background:#134e4a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:48px;font-weight:700;color:#ffffff"></div></div><div style="display:flex;gap:13px"><div style="width:80px;height:80px;border-radius:14px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:48px;font-weight:700;color:#ffffff"></div><div style="width:80px;height:80px;border-radius:14px;background:#134e4a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:48px;font-weight:700;color:#ffffff"></div><div style="width:80px;height:80px;border-radius:14px;background:#ffffff;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:48px;font-weight:700;color:#ffffff"></div><div style="width:80px;height:80px;border-radius:14px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:48px;font-weight:700;color:#ffffff"></div><div style="width:80px;height:80px;border-radius:14px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:48px;font-weight:700;color:#ffffff"></div></div><div style="display:flex;gap:13px"><div style="width:80px;height:80px;border-radius:14px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:48px;font-weight:700;color:#ffffff"></div><div style="width:80px;height:80px;border-radius:14px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:48px;font-weight:700;color:#ffffff"></div><div style="width:80px;height:80px;border-radius:14px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:48px;font-weight:700;color:#ffffff"></div><div style="width:80px;height:80px;border-radius:14px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:48px;font-weight:700;color:#ffffff"></div><div style="width:80px;height:80px;border-radius:14px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:48px;font-weight:700;color:#ffffff"></div></div></div>
+    <div class="name" style="font-size:86px;color:#ffffff;">Leksarxeia</div></div></div>
+    <p class="cap"><b>4.</b> Teal flood, board in white and yellow. The most branded of the four — nobody else's card looks like this.</p></div></div><h2>Crossword <span>— black squares are a hundred years of “this is a word puzzle”</span></h2><div class="grid"><div class="item"><div class="stage"><div class="card" style="background:#1c1917;align-items:center;padding:0 96px;gap:88px">
+    <div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;gap:8px"><div style="width:74px;height:74px;border-radius:9px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:9px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:#1c1917"></div><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div></div><div style="display:flex;gap:8px"><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:9px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:#1c1917"></div><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div></div><div style="display:flex;gap:8px"><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:9px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:#1c1917"></div><div style="width:74px;height:74px;border-radius:9px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div></div><div style="display:flex;gap:8px"><div style="width:74px;height:74px;border-radius:9px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:#1c1917"></div><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:9px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div></div><div style="display:flex;gap:8px"><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:9px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div></div></div>
+    <div><div class="name" style="font-size:88px;color:#ffffff;">Leksarxeia</div><div style="font-size:34px;color:#22c55e;margin-top:14px">Greek word games</div></div></div></div>
+    <p class="cap"><b>5.</b> A crossword corner with three lit squares, name alongside. The black cells do all the explaining.</p></div><div class="item"><div class="stage"><div class="card" style="background:#ffffff;flex-direction:column;align-items:center;justify-content:center;gap:40px">
+    <div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;gap:8px"><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div><div style="width:76px;height:76px;border-radius:9px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div></div><div style="display:flex;gap:8px"><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div><div style="width:76px;height:76px;border-radius:9px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#1c1917"></div><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div></div><div style="display:flex;gap:8px"><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div><div style="width:76px;height:76px;border-radius:9px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#1c1917"></div><div style="width:76px;height:76px;border-radius:9px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#1c1917"></div><div style="width:76px;height:76px;border-radius:9px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#1c1917"></div><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div></div><div style="display:flex;gap:8px"><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div><div style="width:76px;height:76px;border-radius:9px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#1c1917"></div><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div></div><div style="display:flex;gap:8px"><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div><div style="width:76px;height:76px;border-radius:9px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div><div style="width:76px;height:76px;border-radius:9px;background:#e7e5e4;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:"></div></div></div>
+    <div class="name" style="font-size:84px;color:#1c1917;">Leksarxeia</div></div></div>
+    <p class="cap"><b>6.</b> White grid, teal fills, dark cells. The most newspaper-like card here, which is either heritage or dusty depending on the friend you ask.</p></div><div class="item"><div class="stage"><div class="card" style="background:#292524;flex-direction:column;align-items:center;justify-content:center;gap:44px">
+    <div style="display:flex;flex-direction:column;gap:12px"><div style="display:flex;gap:12px"><div style="width:112px;height:112px;border-radius:20px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:67px;font-weight:700;color:"></div><div style="width:112px;height:112px;border-radius:20px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:67px;font-weight:700;color:#ffffff">Λ</div><div style="width:112px;height:112px;border-radius:20px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:67px;font-weight:700;color:"></div></div><div style="display:flex;gap:12px"><div style="width:112px;height:112px;border-radius:20px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:67px;font-weight:700;color:#ffffff">Ω</div><div style="width:112px;height:112px;border-radius:20px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:67px;font-weight:700;color:#1c1917">λ</div><div style="width:112px;height:112px;border-radius:20px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:67px;font-weight:700;color:#ffffff">π</div></div><div style="display:flex;gap:12px"><div style="width:112px;height:112px;border-radius:20px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:67px;font-weight:700;color:"></div><div style="width:112px;height:112px;border-radius:20px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:67px;font-weight:700;color:#ffffff">ω</div><div style="width:112px;height:112px;border-radius:20px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:67px;font-weight:700;color:"></div></div></div>
+    <div class="name" style="font-size:80px;color:#ffffff;">Leksarxeia</div></div></div>
+    <p class="cap"><b>7.</b> One big cross of five squares carrying the free Greek letters, on dark grey. Greek and word-game in a single shape, at no font cost.</p></div><div class="item"><div class="stage"><div class="card" style="background:#1c1917;flex-direction:column;align-items:center;justify-content:center;gap:40px">
+    <div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;gap:8px"><div style="width:84px;height:84px;border-radius:12px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff">Λ</div><div style="width:84px;height:84px;border-radius:12px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff">Ε</div><div style="width:84px;height:84px;border-radius:12px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#1c1917">Ξ</div><div style="width:84px;height:84px;border-radius:12px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff">Η</div></div><div style="display:flex;gap:8px"><div style="width:84px;height:84px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:"></div><div style="width:84px;height:84px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:"></div><div style="width:84px;height:84px;border-radius:12px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff">Ε</div></div><div style="display:flex;gap:8px"><div style="width:84px;height:84px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:"></div><div style="width:84px;height:84px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:"></div><div style="width:84px;height:84px;border-radius:12px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff">Ι</div></div><div style="display:flex;gap:8px"><div style="width:84px;height:84px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:"></div><div style="width:84px;height:84px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:"></div><div style="width:84px;height:84px;border-radius:12px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:50px;font-weight:700;color:#ffffff">Σ</div></div></div>
+    <div class="name" style="font-size:78px;color:#ffffff;">Leksarxeia</div></div></div>
+    <p class="cap"><b>8.</b> Two real Greek words crossing, the way the card would look if the font were paid for. This is the strongest single idea on the page and the only one that is unambiguously Greek.<span class="flag">needs a font</span></p></div></div><h2>Word search <span>— a field of letters with one run lit</span></h2><div class="grid"><div class="item"><div class="stage"><div class="card" style="background:#292524;flex-direction:column;align-items:center;justify-content:center;gap:40px">
+    <div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;gap:10px"><div style="width:76px;height:76px;border-radius:12px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#1c1917">Λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">Ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">π</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">μ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">Λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">Ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">λ</div></div><div style="display:flex;gap:10px"><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">π</div><div style="width:76px;height:76px;border-radius:12px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#1c1917">ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">μ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">Λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">Ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">π</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">μ</div></div><div style="display:flex;gap:10px"><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">Λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">Ω</div><div style="width:76px;height:76px;border-radius:12px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#1c1917">λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">π</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">μ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">Λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">Ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">λ</div></div><div style="display:flex;gap:10px"><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">π</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">μ</div><div style="width:76px;height:76px;border-radius:12px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#1c1917">Λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">Ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">π</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#78716c">μ</div></div></div>
+    <div class="name" style="font-size:80px;color:#ffffff;">Leksarxeia</div></div></div>
+    <p class="cap"><b>9.</b> A full field of the six free Greek letters with a diagonal lit in yellow. Busy on purpose: it looks like a puzzle in progress rather than a logo.</p></div><div class="item"><div class="stage"><div class="card" style="background:#1c1917;flex-direction:column;align-items:center;justify-content:center;gap:38px">
+    <div style="display:flex;flex-direction:column;gap:10px"><div style="display:flex;gap:10px"><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">Λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">Ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">π</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">μ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">Λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">Ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">λ</div></div><div style="display:flex;gap:10px"><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">π</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">ω</div><div style="width:76px;height:76px;border-radius:12px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#ffffff">μ</div><div style="width:76px;height:76px;border-radius:12px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#ffffff">Λ</div><div style="width:76px;height:76px;border-radius:12px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#ffffff">Ω</div><div style="width:76px;height:76px;border-radius:12px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#ffffff">λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">π</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">μ</div></div><div style="display:flex;gap:10px"><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">Λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">Ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">π</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">μ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">Λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">Ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">λ</div></div><div style="display:flex;gap:10px"><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">π</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">μ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">Λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">Ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">λ</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">π</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">ω</div><div style="width:76px;height:76px;border-radius:12px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:46px;font-weight:700;color:#134e4a">μ</div></div></div>
+    <div style="background:#292524;padding:22px 56px;border-radius:24px"><div class="name" style="font-size:74px;color:#ffffff;">Leksarxeia</div></div></div></div>
+    <p class="cap"><b>10.</b> The same field in teal on near-black, lit run in green, name overlaid on a bar. Deepest of the twenty-five.</p></div></div><h2>The name, spelled in tiles <span>— the wordmark IS the word game</span></h2><div class="grid"><div class="item"><div class="stage"><div class="card" style="background:#292524;flex-direction:column;align-items:center;justify-content:center;gap:40px">
+    <div style="display:flex;gap:12px"><div style="width:104px;height:104px;border-radius:20px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">L</div><div style="width:104px;height:104px;border-radius:20px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">E</div><div style="width:104px;height:104px;border-radius:20px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">K</div><div style="width:104px;height:104px;border-radius:20px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">S</div><div style="width:104px;height:104px;border-radius:20px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">A</div><div style="width:104px;height:104px;border-radius:20px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">R</div><div style="width:104px;height:104px;border-radius:20px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">X</div><div style="width:104px;height:104px;border-radius:20px;background:#57534e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">E</div><div style="width:104px;height:104px;border-radius:20px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">I</div><div style="width:104px;height:104px;border-radius:20px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">A</div></div>
+    <div style="font-size:38px;color:#78716c">Greek word games</div></div></div>
+    <p class="cap"><b>11.</b> Ten tiles, one letter each, cycling through the four colours. The name and the “this is about letters” signal are the same object — nothing is added on.</p></div><div class="item"><div class="stage"><div class="card" style="background:#ffffff;flex-direction:column;align-items:center;justify-content:center;gap:38px;border-bottom:18px solid #facc15">
+    <div style="display:flex;gap:12px"><div style="width:104px;height:104px;border-radius:20px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">L</div><div style="width:104px;height:104px;border-radius:20px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">E</div><div style="width:104px;height:104px;border-radius:20px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">K</div><div style="width:104px;height:104px;border-radius:20px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">S</div><div style="width:104px;height:104px;border-radius:20px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">A</div><div style="width:104px;height:104px;border-radius:20px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">R</div><div style="width:104px;height:104px;border-radius:20px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">X</div><div style="width:104px;height:104px;border-radius:20px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">E</div><div style="width:104px;height:104px;border-radius:20px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">I</div><div style="width:104px;height:104px;border-radius:20px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">A</div></div>
+    <div style="font-size:38px;color:#44403c">Greek word games</div></div></div>
+    <p class="cap"><b>12.</b> The same row on white with dark tiles and one yellow. Quieter, and the letters read faster because the field is not competing.</p></div><div class="item"><div class="stage"><div class="card" style="background:#1c1917;flex-direction:column;align-items:center;justify-content:center;gap:18px">
+    <div style="display:flex;gap:16px"><div style="width:150px;height:150px;border-radius:28px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:90px;font-weight:700;color:#ffffff">L</div><div style="width:150px;height:150px;border-radius:28px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:90px;font-weight:700;color:#ffffff">E</div><div style="width:150px;height:150px;border-radius:28px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:90px;font-weight:700;color:#ffffff">K</div><div style="width:150px;height:150px;border-radius:28px;background:#22c55e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:90px;font-weight:700;color:#ffffff">S</div></div>
+    <div style="display:flex;gap:16px"><div style="width:150px;height:150px;border-radius:28px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:90px;font-weight:700;color:#ffffff">A</div><div style="width:150px;height:150px;border-radius:28px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:90px;font-weight:700;color:#ffffff">R</div><div style="width:150px;height:150px;border-radius:28px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:90px;font-weight:700;color:#ffffff">X</div><div style="width:150px;height:150px;border-radius:28px;background:#14b8a6;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:90px;font-weight:700;color:#ffffff">E</div><div style="width:150px;height:150px;border-radius:28px;background:#fde047;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:90px;font-weight:700;color:#ffffff">I</div><div style="width:150px;height:150px;border-radius:28px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:90px;font-weight:700;color:#ffffff">A</div></div></div></div>
+    <p class="cap"><b>13.</b> Broken over two rows so each tile can be enormous. Best of this family when the card is shown small — four big tiles beat ten little ones.</p></div><div class="item"><div class="stage"><div class="card" style="background:#292524;flex-direction:column;align-items:center;justify-content:center;gap:42px">
+    <div style="display:flex;gap:12px"><div style="width:104px;height:104px;border-radius:20px;background:transparent;
+    border:6px solid #57534e;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#78716c">L</div><div style="width:104px;height:104px;border-radius:20px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#1c1917">E</div><div style="width:104px;height:104px;border-radius:20px;background:transparent;
+    border:6px solid #57534e;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#78716c">K</div><div style="width:104px;height:104px;border-radius:20px;background:transparent;
+    border:6px solid #57534e;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#78716c">S</div><div style="width:104px;height:104px;border-radius:20px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#1c1917">A</div><div style="width:104px;height:104px;border-radius:20px;background:transparent;
+    border:6px solid #57534e;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#78716c">R</div><div style="width:104px;height:104px;border-radius:20px;background:transparent;
+    border:6px solid #57534e;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#78716c">X</div><div style="width:104px;height:104px;border-radius:20px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#1c1917">E</div><div style="width:104px;height:104px;border-radius:20px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#1c1917">I</div><div style="width:104px;height:104px;border-radius:20px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#1c1917">A</div></div>
+    <div class="name" style="font-size:60px;color:#2dd4bf;letter-spacing:6px;font-weight:600">Leksarxeia</div></div></div>
+    <p class="cap"><b>14.</b> Only the vowels lit. The unlit consonants make it look mid-puzzle, which is the closest a still image gets to showing the game being played.</p></div><div class="item"><div class="stage"><div class="card" style="background:#16a34a;flex-direction:column;align-items:center;justify-content:center;gap:40px">
+    <div style="display:flex;gap:12px"><div style="width:104px;height:104px;border-radius:20px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">L</div><div style="width:104px;height:104px;border-radius:20px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">E</div><div style="width:104px;height:104px;border-radius:20px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">K</div><div style="width:104px;height:104px;border-radius:20px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">S</div><div style="width:104px;height:104px;border-radius:20px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">A</div><div style="width:104px;height:104px;border-radius:20px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">R</div><div style="width:104px;height:104px;border-radius:20px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">X</div><div style="width:104px;height:104px;border-radius:20px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">E</div><div style="width:104px;height:104px;border-radius:20px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">I</div><div style="width:104px;height:104px;border-radius:20px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:62px;font-weight:700;color:#ffffff">A</div></div>
+    <div style="font-size:38px;color:#ffffff;opacity:.85">Greek word games</div></div></div>
+    <p class="cap"><b>15.</b> Green flood, dark tiles. The most confident colour on the page; the one that would look least like a hobby project on a stranger's timeline.</p></div></div><h2>The scoring tile <span>— a letter with a number in the corner is a word game and nothing else</span></h2><div class="grid"><div class="item"><div class="stage"><div class="card" style="background:#292524;align-items:center;padding:0 100px;gap:72px">
+    <div style="width:260px;height:260px;border-radius:44px;background:#facc15;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="font-size:170px;font-weight:700;color:#1c1917;line-height:1">Λ</div>
+      <div style="position:absolute;right:26px;bottom:18px;font-size:52px;font-weight:700;color:#1c1917;opacity:.75">8</div>
     </div>
-    <div>${wordmark(90, P.white)}<div style="font-size:36px;color:${P.green2};margin-top:14px">Greek word games</div></div></div>` },
-
-{ g:"The scoring tile <span>— a letter with a number in the corner is a word game and nothing else</span>",
-  n:"Teal tile on white, name below. The cleanest card here and the one that scales down to a square thumbnail best.",
-  html:`<div class="card" style="background:${P.white};flex-direction:column;align-items:center;justify-content:center;gap:42px">
-    <div style="width:240px;height:240px;border-radius:42px;background:${P.teal};display:flex;align-items:center;justify-content:center;position:relative">
-      <div style="font-size:158px;font-weight:700;color:${P.white};line-height:1">Λ</div>
-      <div style="position:absolute;right:24px;bottom:16px;font-size:48px;font-weight:700;color:${P.white};opacity:.8">8</div>
+    <div><div class="name" style="font-size:90px;color:#ffffff;">Leksarxeia</div><div style="font-size:36px;color:#22c55e;margin-top:14px">Greek word games</div></div></div></div>
+    <p class="cap"><b>16.</b> One big scoring tile beside the name. The little 8 in the corner does more work than any amount of copy.</p></div><div class="item"><div class="stage"><div class="card" style="background:#ffffff;flex-direction:column;align-items:center;justify-content:center;gap:42px">
+    <div style="width:240px;height:240px;border-radius:42px;background:#0d9488;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="font-size:158px;font-weight:700;color:#ffffff;line-height:1">Λ</div>
+      <div style="position:absolute;right:24px;bottom:16px;font-size:48px;font-weight:700;color:#ffffff;opacity:.8">8</div>
     </div>
-    ${wordmark(88, P.ink)}</div>` },
-
-{ g:"The scoring tile <span>— a letter with a number in the corner is a word game and nothing else</span>",
-  n:"Three tiles fanned out, each a different colour and letter. Movement, and it hints there is more than one game behind the link.",
-  html:`<div class="card" style="background:${P.ink};flex-direction:column;align-items:center;justify-content:center;gap:52px">
+    <div class="name" style="font-size:88px;color:#1c1917;">Leksarxeia</div></div></div>
+    <p class="cap"><b>17.</b> Teal tile on white, name below. The cleanest card here and the one that scales down to a square thumbnail best.</p></div><div class="item"><div class="stage"><div class="card" style="background:#1c1917;flex-direction:column;align-items:center;justify-content:center;gap:52px">
     <div style="display:flex;align-items:center">
-      <div style="transform:rotate(-9deg);margin-right:-18px">${cell(190,P.green,P.white,"Ω",34)}</div>
-      <div style="transform:rotate(3deg);z-index:2">${cell(200,P.yellow,P.ink,"Λ",36)}</div>
-      <div style="transform:rotate(11deg);margin-left:-18px">${cell(190,P.teal,P.white,"π",34)}</div>
+      <div style="transform:rotate(-9deg);margin-right:-18px"><div style="width:190px;height:190px;border-radius:34px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:114px;font-weight:700;color:#ffffff">Ω</div></div>
+      <div style="transform:rotate(3deg);z-index:2"><div style="width:200px;height:200px;border-radius:36px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:120px;font-weight:700;color:#1c1917">Λ</div></div>
+      <div style="transform:rotate(11deg);margin-left:-18px"><div style="width:190px;height:190px;border-radius:34px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:114px;font-weight:700;color:#ffffff">π</div></div>
     </div>
-    ${wordmark(86, P.white)}</div>` },
-
-{ g:"The scoring tile <span>— a letter with a number in the corner is a word game and nothing else</span>",
-  n:"A rack of five tiles resting on a bar, the way they sit in your hand. The most literal “board game” reading of the twenty-five.",
-  html:`<div class="card" style="background:${P.grey};flex-direction:column;align-items:center;justify-content:center;gap:0">
+    <div class="name" style="font-size:86px;color:#ffffff;">Leksarxeia</div></div></div>
+    <p class="cap"><b>18.</b> Three tiles fanned out, each a different colour and letter. Movement, and it hints there is more than one game behind the link.</p></div><div class="item"><div class="stage"><div class="card" style="background:#292524;flex-direction:column;align-items:center;justify-content:center;gap:0">
     <div style="display:flex;gap:14px;margin-bottom:-6px">
-      ${[["Λ",P.yellow,P.ink],["Ω",P.white,P.ink],["λ",P.green,P.white],["π",P.white,P.ink],["ω",P.teal,P.white]]
-        .map(([l,b,f]) => cell(128,b,f,l,22)).join("")}
+      <div style="width:128px;height:128px;border-radius:22px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:77px;font-weight:700;color:#1c1917">Λ</div><div style="width:128px;height:128px;border-radius:22px;background:#ffffff;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:77px;font-weight:700;color:#1c1917">Ω</div><div style="width:128px;height:128px;border-radius:22px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:77px;font-weight:700;color:#ffffff">λ</div><div style="width:128px;height:128px;border-radius:22px;background:#ffffff;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:77px;font-weight:700;color:#1c1917">π</div><div style="width:128px;height:128px;border-radius:22px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:77px;font-weight:700;color:#ffffff">ω</div>
     </div>
-    <div style="width:820px;height:34px;border-radius:12px;background:${P.grey3}"></div>
-    <div style="margin-top:52px">${wordmark(86, P.white)}</div></div>` },
-
-/* Family 6 — blocks and mosaics */
-{ g:"Blocks <span>— the wild ones, rebuilt in the new palette</span>",
-  n:"The Λ built out of playing squares in yellow. A letter made of the thing the games are made of; no glyph is used at all.",
-  html:`<div class="card" style="background:${P.grey};align-items:center;justify-content:center;gap:90px">
-    ${mosaic(56, 8, P.yellow, "transparent")}
-    <div>${wordmark(88, P.white)}<div style="font-size:36px;color:${P.teal3};margin-top:14px">Greek word games</div></div></div>` },
-
-{ g:"Blocks <span>— the wild ones, rebuilt in the new palette</span>",
-  n:"The same mosaic mark with every block a different shade, ghost blocks behind it. Reads as a puzzle assembling itself.",
-  html:`<div class="card" style="background:${P.ink};flex-direction:column;align-items:center;justify-content:center;gap:44px">
-    ${(() => { const c=[P.green,P.teal,P.yellow,P.green2,P.teal2,P.amber]; let i=0;
-        return mosaic(52, 7, () => c[i++ % c.length], P.grey); })()}
-    ${wordmark(80, P.white)}</div>` },
-
-{ g:"Blocks <span>— the wild ones, rebuilt in the new palette</span>",
-  n:"A full-bleed field of squares with the name on a slab across it. The wildest card here: it is all board, and the wordmark is a sticker on top.",
-  html:`<div class="card" style="background:${P.ink};align-items:center;justify-content:center;position:relative">
+    <div style="width:820px;height:34px;border-radius:12px;background:#57534e"></div>
+    <div style="margin-top:52px"><div class="name" style="font-size:86px;color:#ffffff;">Leksarxeia</div></div></div></div>
+    <p class="cap"><b>19.</b> A rack of five tiles resting on a bar, the way they sit in your hand. The most literal “board game” reading of the twenty-five.</p></div></div><h2>Blocks <span>— the wild ones, rebuilt in the new palette</span></h2><div class="grid"><div class="item"><div class="stage"><div class="card" style="background:#292524;align-items:center;justify-content:center;gap:90px">
+    <div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;gap:8px"><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div></div><div style="display:flex;gap:8px"><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div></div><div style="display:flex;gap:8px"><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div></div><div style="display:flex;gap:8px"><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div></div><div style="display:flex;gap:8px"><div style="width:56px;height:56px;border-radius:11px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div></div><div style="display:flex;gap:8px"><div style="width:56px;height:56px;border-radius:11px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div><div style="width:56px;height:56px;border-radius:11px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:34px;font-weight:700;color:"></div></div></div>
+    <div><div class="name" style="font-size:88px;color:#ffffff;">Leksarxeia</div><div style="font-size:36px;color:#2dd4bf;margin-top:14px">Greek word games</div></div></div></div>
+    <p class="cap"><b>20.</b> The Λ built out of playing squares in yellow. A letter made of the thing the games are made of; no glyph is used at all.</p></div><div class="item"><div class="stage"><div class="card" style="background:#1c1917;flex-direction:column;align-items:center;justify-content:center;gap:44px">
+    <div style="display:flex;flex-direction:column;gap:7px"><div style="display:flex;gap:7px"><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div></div><div style="display:flex;gap:7px"><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div></div><div style="display:flex;gap:7px"><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#22c55e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div></div><div style="display:flex;gap:7px"><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#14b8a6;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#fbbf24;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div></div><div style="display:flex;gap:7px"><div style="width:52px;height:52px;border-radius:10px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div></div><div style="display:flex;gap:7px"><div style="width:52px;height:52px;border-radius:10px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#292524;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div><div style="width:52px;height:52px;border-radius:10px;background:#22c55e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:31px;font-weight:700;color:"></div></div></div>
+    <div class="name" style="font-size:80px;color:#ffffff;">Leksarxeia</div></div></div>
+    <p class="cap"><b>21.</b> The same mosaic mark with every block a different shade, ghost blocks behind it. Reads as a puzzle assembling itself.</p></div><div class="item"><div class="stage"><div class="card" style="background:#1c1917;align-items:center;justify-content:center;position:relative">
     <div style="position:absolute;top:0;left:0;display:flex;flex-wrap:wrap;width:1200px;height:630px;gap:6px;padding:6px">
-      ${(() => { const c=[P.grey,P.grey,P.grey,P.grey2,P.green,P.grey,P.teal,P.grey,P.grey,P.yellow,P.grey2,P.grey];
-        return Array.from({length:120}, (_,i) => `<div style="width:93px;height:93px;border-radius:14px;background:${c[(i*7)%c.length]}"></div>`).join(""); })()}
+      <div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#facc15"></div><div style="width:93px;height:93px;border-radius:14px;background:#16a34a"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#0d9488"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#facc15"></div><div style="width:93px;height:93px;border-radius:14px;background:#16a34a"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#0d9488"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#facc15"></div><div style="width:93px;height:93px;border-radius:14px;background:#16a34a"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#0d9488"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#facc15"></div><div style="width:93px;height:93px;border-radius:14px;background:#16a34a"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#0d9488"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#facc15"></div><div style="width:93px;height:93px;border-radius:14px;background:#16a34a"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#0d9488"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#facc15"></div><div style="width:93px;height:93px;border-radius:14px;background:#16a34a"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#0d9488"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#facc15"></div><div style="width:93px;height:93px;border-radius:14px;background:#16a34a"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#0d9488"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#facc15"></div><div style="width:93px;height:93px;border-radius:14px;background:#16a34a"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#0d9488"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#facc15"></div><div style="width:93px;height:93px;border-radius:14px;background:#16a34a"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#0d9488"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#facc15"></div><div style="width:93px;height:93px;border-radius:14px;background:#16a34a"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#0d9488"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#44403c"></div><div style="width:93px;height:93px;border-radius:14px;background:#292524"></div>
     </div>
-    <div style="position:relative;background:${P.ink};padding:34px 74px;border-radius:28px;border:6px solid ${P.yellow}">
-      ${wordmark(88, P.white)}</div></div>` },
-
-{ g:"Blocks <span>— the wild ones, rebuilt in the new palette</span>",
-  n:"Ten tiles, one per Game, stepping green through teal to yellow. The card is literally the roster, and it stays true as the roster grows.",
-  html:`<div class="card" style="background:${P.grey};flex-direction:column;align-items:center;justify-content:center;gap:48px">
-    ${row(["#14532d","#16a34a","#22c55e","#0d9488","#14b8a6","#2dd4bf","#a16207","#facc15","#fde047","#78716c"]
-      .map(c => cell(92, c, "", "", 18)).join(""), 14)}
-    ${wordmark(86, P.white)}</div>` },
-
-{ g:"Blocks <span>— the wild ones, rebuilt in the new palette</span>",
-  n:"Split field: the mosaic Λ on yellow, the name on dark. Strongest at thumbnail size, where anything centred turns to mush.",
-  html:`<div class="card" style="background:${P.grey}">
-    <div style="width:470px;background:${P.yellow};display:flex;align-items:center;justify-content:center">
-      ${mosaic(48, 7, P.ink, "transparent")}</div>
+    <div style="position:relative;background:#1c1917;padding:34px 74px;border-radius:28px;border:6px solid #facc15">
+      <div class="name" style="font-size:88px;color:#ffffff;">Leksarxeia</div></div></div></div>
+    <p class="cap"><b>22.</b> A full-bleed field of squares with the name on a slab across it. The wildest card here: it is all board, and the wordmark is a sticker on top.</p></div><div class="item"><div class="stage"><div class="card" style="background:#292524;flex-direction:column;align-items:center;justify-content:center;gap:48px">
+    <div style="display:flex;gap:14px"><div style="width:92px;height:92px;border-radius:18px;background:#14532d;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:55px;font-weight:700;color:"></div><div style="width:92px;height:92px;border-radius:18px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:55px;font-weight:700;color:"></div><div style="width:92px;height:92px;border-radius:18px;background:#22c55e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:55px;font-weight:700;color:"></div><div style="width:92px;height:92px;border-radius:18px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:55px;font-weight:700;color:"></div><div style="width:92px;height:92px;border-radius:18px;background:#14b8a6;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:55px;font-weight:700;color:"></div><div style="width:92px;height:92px;border-radius:18px;background:#2dd4bf;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:55px;font-weight:700;color:"></div><div style="width:92px;height:92px;border-radius:18px;background:#a16207;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:55px;font-weight:700;color:"></div><div style="width:92px;height:92px;border-radius:18px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:55px;font-weight:700;color:"></div><div style="width:92px;height:92px;border-radius:18px;background:#fde047;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:55px;font-weight:700;color:"></div><div style="width:92px;height:92px;border-radius:18px;background:#78716c;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:55px;font-weight:700;color:"></div></div>
+    <div class="name" style="font-size:86px;color:#ffffff;">Leksarxeia</div></div></div>
+    <p class="cap"><b>23.</b> Ten tiles, one per Game, stepping green through teal to yellow. The card is literally the roster, and it stays true as the roster grows.</p></div><div class="item"><div class="stage"><div class="card" style="background:#292524">
+    <div style="width:470px;background:#facc15;display:flex;align-items:center;justify-content:center">
+      <div style="display:flex;flex-direction:column;gap:7px"><div style="display:flex;gap:7px"><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div></div><div style="display:flex;gap:7px"><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div></div><div style="display:flex;gap:7px"><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div></div><div style="display:flex;gap:7px"><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div></div><div style="display:flex;gap:7px"><div style="width:48px;height:48px;border-radius:10px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div></div><div style="display:flex;gap:7px"><div style="width:48px;height:48px;border-radius:10px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:transparent;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div><div style="width:48px;height:48px;border-radius:10px;background:#1c1917;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:29px;font-weight:700;color:"></div></div></div></div>
     <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding-left:80px">
-      ${wordmark(84, P.white)}
-      <div style="font-size:36px;color:${P.teal3};margin-top:16px">Greek word games</div></div></div>` },
-
-{ g:"Blocks <span>— the wild ones, rebuilt in the new palette</span>",
-  n:"Blocks falling into place down the left edge, name held right. The only card with a sense of motion.",
-  html:`<div class="card" style="background:${P.ink};align-items:center">
+      <div class="name" style="font-size:84px;color:#ffffff;">Leksarxeia</div>
+      <div style="font-size:36px;color:#2dd4bf;margin-top:16px">Greek word games</div></div></div></div>
+    <p class="cap"><b>24.</b> Split field: the mosaic Λ on yellow, the name on dark. Strongest at thumbnail size, where anything centred turns to mush.</p></div><div class="item"><div class="stage"><div class="card" style="background:#1c1917;align-items:center">
     <div style="display:flex;flex-direction:column;gap:10px;padding-left:70px">
-      ${[[P.green,5],[P.teal,4],[P.yellow,3],[P.green2,2],[P.teal3,1]]
-        .map(([c,n]) => row(Array.from({length:n}, () => cell(74,c,"","",14)).join(""), 10)).join("")}
+      <div style="display:flex;gap:10px"><div style="width:74px;height:74px;border-radius:14px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:14px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:14px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:14px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:14px;background:#16a34a;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div></div><div style="display:flex;gap:10px"><div style="width:74px;height:74px;border-radius:14px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:14px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:14px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:14px;background:#0d9488;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div></div><div style="display:flex;gap:10px"><div style="width:74px;height:74px;border-radius:14px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:14px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:14px;background:#facc15;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div></div><div style="display:flex;gap:10px"><div style="width:74px;height:74px;border-radius:14px;background:#22c55e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div><div style="width:74px;height:74px;border-radius:14px;background:#22c55e;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div></div><div style="display:flex;gap:10px"><div style="width:74px;height:74px;border-radius:14px;background:#2dd4bf;
+    
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-size:44px;font-weight:700;color:"></div></div>
     </div>
     <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding-left:90px">
-      ${wordmark(84, P.white)}
-      <div style="font-size:34px;color:${P.grey4};margin-top:14px">Greek word games</div></div></div>` },
-];
-
-/* ── the icons ───────────────────────────────────────────────────────────── */
-const icons = [
-  { l:"Scoring tile, yellow", n:"A letter with its score in the corner — word game in one square. The corner digit survives to 32 px and blurs out at 16, which is fine.",
-    draw:px => `<div style="width:${px}px;height:${px}px;border-radius:${px*.22}px;background:${P.yellow};display:flex;align-items:center;justify-content:center;position:relative">
-      <div style="font-size:${px*.62}px;font-weight:700;color:${P.ink};line-height:1">Λ</div>
-      ${px >= 32 ? `<div style="position:absolute;right:${px*.1}px;bottom:${px*.06}px;font-size:${px*.2}px;font-weight:700;color:${P.ink};opacity:.7">8</div>` : ""}</div>` },
-
-  { l:"Scoring tile, teal", n:"Same tile, cooler. Holds up better against a yellow-heavy browser theme and against the yellow card.",
-    draw:px => `<div style="width:${px}px;height:${px}px;border-radius:${px*.22}px;background:${P.teal};display:flex;align-items:center;justify-content:center;position:relative">
-      <div style="font-size:${px*.62}px;font-weight:700;color:${P.white};line-height:1">Λ</div>
-      ${px >= 32 ? `<div style="position:absolute;right:${px*.1}px;bottom:${px*.06}px;font-size:${px*.2}px;font-weight:700;color:${P.white};opacity:.75">8</div>` : ""}</div>` },
-
-  { l:"Mini guess board (2×2)", n:"Four cells: two green, one yellow, one grey. No letter at all, so no font decision ever — and it is still unmistakably a daily word game.",
-    draw:px => `<div style="display:flex;flex-wrap:wrap;width:${px}px;height:${px}px;border-radius:${px*.2}px;overflow:hidden">
-      ${[P.green,P.yellow,P.grey3,P.green].map(c => `<div style="width:${px/2}px;height:${px/2}px;background:${c}"></div>`).join("")}</div>` },
-
-  { l:"Guess row (3 cells)", n:"One row instead of a square: green, yellow, grey. The most legible of the letterless marks at 16 px because the shapes are big.",
-    draw:px => `<div style="display:flex;align-items:center;justify-content:center;width:${px}px;height:${px}px;gap:${px*.06}px;background:${P.grey};border-radius:${px*.2}px;padding:${px*.14}px">
-      ${[P.green,P.yellow,P.grey4].map(c => `<div style="flex:1;height:100%;background:${c};border-radius:${px*.07}px"></div>`).join("")}</div>` },
-
-  { l:"Crossword cross", n:"Five cells in a plus, the middle one yellow. A hundred years of crossword shorthand compressed into a favicon.",
-    draw:px => { const u = px/3;
-      return `<div style="width:${px}px;height:${px}px;border-radius:${px*.2}px;background:${P.grey};display:flex;flex-direction:column;align-items:center;justify-content:center">
-        <div style="display:flex"><div style="width:${u}px;height:${u}px"></div><div style="width:${u}px;height:${u}px;background:${P.teal3};border-radius:${u*.15}px"></div><div style="width:${u}px;height:${u}px"></div></div>
-        <div style="display:flex"><div style="width:${u}px;height:${u}px;background:${P.teal3};border-radius:${u*.15}px"></div><div style="width:${u}px;height:${u}px;background:${P.yellow};border-radius:${u*.15}px"></div><div style="width:${u}px;height:${u}px;background:${P.teal3};border-radius:${u*.15}px"></div></div>
-        <div style="display:flex"><div style="width:${u}px;height:${u}px"></div><div style="width:${u}px;height:${u}px;background:${P.teal3};border-radius:${u*.15}px"></div><div style="width:${u}px;height:${u}px"></div></div></div>`; } },
-
-  { l:"Λ built from blocks", n:"The mosaic mark from cards 20 and 21, shrunk. At 16 px it stops being a letter and becomes a texture — check it in the strip below before choosing it.",
-    draw:px => { const u = px/5;
-      return `<div style="width:${px}px;height:${px}px;border-radius:${px*.2}px;background:${P.grey};display:flex;flex-direction:column;align-items:center;justify-content:center">
-        ${["..X..",".X.X.",".X.X.","X...X"].map(r => `<div style="display:flex">${[...r].map(c =>
-          `<div style="width:${u}px;height:${u}px;background:${c === "X" ? P.yellow : "transparent"};border-radius:${u*.2}px"></div>`).join("")}</div>`).join("")}</div>`; } },
-
-  { l:"Two crossing tiles", n:"A vertical and a horizontal tile overlapping — a crossword intersection reduced to two rectangles. Abstract, and the most logo-like of the twelve.",
-    draw:px => `<div style="width:${px}px;height:${px}px;border-radius:${px*.2}px;background:${P.ink};display:flex;align-items:center;justify-content:center;position:relative">
-      <div style="position:absolute;width:${px*.62}px;height:${px*.2}px;background:${P.teal3};border-radius:${px*.05}px"></div>
-      <div style="position:absolute;width:${px*.2}px;height:${px*.62}px;background:${P.yellow};border-radius:${px*.05}px"></div></div>` },
-
-  { l:"Tile stack", n:"Three tiles behind one another, top one lit. Suggests a pile of daily puzzles waiting; softest edge of the set.",
-    draw:px => `<div style="width:${px}px;height:${px}px;position:relative;display:flex;align-items:center;justify-content:center">
-      <div style="position:absolute;left:0;top:${px*.16}px;width:${px*.72}px;height:${px*.72}px;border-radius:${px*.16}px;background:${P.grey3}"></div>
-      <div style="position:absolute;left:${px*.14}px;top:${px*.08}px;width:${px*.72}px;height:${px*.72}px;border-radius:${px*.16}px;background:${P.teal}"></div>
-      <div style="position:absolute;left:${px*.28}px;top:0;width:${px*.72}px;height:${px*.72}px;border-radius:${px*.16}px;background:${P.yellow};display:flex;align-items:center;justify-content:center;font-size:${px*.42}px;font-weight:700;color:${P.ink}">Λ</div></div>` },
-
-  { l:"Green tile, white Λ", n:"The plain one, in the strongest of the four colours. Nothing clever; the safest pick and the least distinguishable from any other app.",
-    draw:px => `<div style="width:${px}px;height:${px}px;border-radius:${px*.22}px;background:${P.green};display:flex;align-items:center;justify-content:center;font-size:${px*.64}px;font-weight:700;color:${P.white}">Λ</div>` },
-
-  { l:"Dark tile, yellow Λ", n:"Inverted. Vanishes into dark browser chrome, which is now most people's setting — worth seeing at 16 px before deciding.",
-    draw:px => `<div style="width:${px}px;height:${px}px;border-radius:${px*.22}px;background:${P.grey};display:flex;align-items:center;justify-content:center;font-size:${px*.64}px;font-weight:700;color:${P.yellow}">Λ</div>` },
-
-  { l:"Quarter board", n:"Four squares, one per colour family, with a gap grid — a board cropped to its corner. Letterless, and it matches the block cards.",
-    draw:px => `<div style="display:flex;flex-wrap:wrap;width:${px}px;height:${px}px;border-radius:${px*.2}px;background:${P.ink};padding:${px*.08}px;gap:${px*.06}px">
-      ${[P.green,P.teal,P.yellow,P.grey4].map(c => `<div style="width:${px*.37}px;height:${px*.37}px;background:${c};border-radius:${px*.07}px"></div>`).join("")}</div>` },
-
-  { l:"Tile with a base rule", n:"A letter tile sitting on a coloured rack line. Reads as a physical tile rather than a coloured square, even at small sizes.",
-    draw:px => `<div style="width:${px}px;height:${px}px;border-radius:${px*.2}px;background:${P.grey};display:flex;flex-direction:column;align-items:center;justify-content:center;padding-bottom:${px*.1}px;position:relative">
-      <div style="font-size:${px*.56}px;font-weight:700;color:${P.white};line-height:1">Λ</div>
-      <div style="position:absolute;bottom:${px*.14}px;width:${px*.56}px;height:${px*.1}px;border-radius:${px*.05}px;background:${P.yellow}"></div></div>` },
-];
-
-/* ── render ──────────────────────────────────────────────────────────────── */
-let html = "", group = null, num = 0;
-cards.forEach((c, i) => {
-  num++;
-  if (c.g !== group) { if (group !== null) html += `</div>`; group = c.g; html += `<h2>${group}</h2><div class="grid">`; }
-  html += `<div class="item"><div class="stage">${c.html}</div>
-    <p class="cap"><b>${num}.</b> ${c.n}${c.font ? '<span class="flag">needs a font</span>' : ""}</p></div>`;
-});
-html += `</div>`;
-
-html += `<h2>Icons <span>— 180 px home-screen tile, 64, 32 px tab, 16 px dense tab</span></h2><div class="icons">`;
-icons.forEach((ic, i) => {
-  const sizes = [[180,"180 — apple-icon"],[64,"64"],[32,"32 — tab"],[16,"16 — dense"]];
-  html += `<div class="icard"><p class="ilabel">${i+1}. ${ic.l}</p>
-    <div class="isizes">${sizes.map(([px,lab]) => `<figure>${ic.draw(px)}<figcaption>${lab}</figcaption></figure>`).join("")}</div>
-    <p class="inote">${ic.n}</p></div>`;
-});
-html += `</div>`;
-
-document.getElementById("out").innerHTML = html;
-</script>
+      <div class="name" style="font-size:84px;color:#ffffff;">Leksarxeia</div>
+      <div style="font-size:34px;color:#78716c;margin-top:14px">Greek word games</div></div></div></div>
+    <p class="cap"><b>25.</b> Blocks falling into place down the left edge, name held right. The only card with a sense of motion.</p></div></div><h2>Icons <span>— 180 px home-screen tile, 64, 32 px tab, 16 px dense tab</span></h2><div class="icons"><div class="icard"><p class="ilabel">1. Scoring tile, yellow</p>
+    <div class="isizes"><figure><div style="width:180px;height:180px;border-radius:39.6px;background:#facc15;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="font-size:111.6px;font-weight:700;color:#1c1917;line-height:1">Λ</div>
+      <div style="position:absolute;right:18px;bottom:10.799999999999999px;font-size:36px;font-weight:700;color:#1c1917;opacity:.7">8</div></div><figcaption>180 — apple-icon</figcaption></figure><figure><div style="width:64px;height:64px;border-radius:14.08px;background:#facc15;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="font-size:39.68px;font-weight:700;color:#1c1917;line-height:1">Λ</div>
+      <div style="position:absolute;right:6.4px;bottom:3.84px;font-size:12.8px;font-weight:700;color:#1c1917;opacity:.7">8</div></div><figcaption>64</figcaption></figure><figure><div style="width:32px;height:32px;border-radius:7.04px;background:#facc15;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="font-size:19.84px;font-weight:700;color:#1c1917;line-height:1">Λ</div>
+      <div style="position:absolute;right:3.2px;bottom:1.92px;font-size:6.4px;font-weight:700;color:#1c1917;opacity:.7">8</div></div><figcaption>32 — tab</figcaption></figure><figure><div style="width:16px;height:16px;border-radius:3.52px;background:#facc15;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="font-size:9.92px;font-weight:700;color:#1c1917;line-height:1">Λ</div>
+      </div><figcaption>16 — dense</figcaption></figure></div>
+    <p class="inote">A letter with its score in the corner — word game in one square. The corner digit survives to 32 px and blurs out at 16, which is fine.</p></div><div class="icard"><p class="ilabel">2. Scoring tile, teal</p>
+    <div class="isizes"><figure><div style="width:180px;height:180px;border-radius:39.6px;background:#0d9488;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="font-size:111.6px;font-weight:700;color:#ffffff;line-height:1">Λ</div>
+      <div style="position:absolute;right:18px;bottom:10.799999999999999px;font-size:36px;font-weight:700;color:#ffffff;opacity:.75">8</div></div><figcaption>180 — apple-icon</figcaption></figure><figure><div style="width:64px;height:64px;border-radius:14.08px;background:#0d9488;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="font-size:39.68px;font-weight:700;color:#ffffff;line-height:1">Λ</div>
+      <div style="position:absolute;right:6.4px;bottom:3.84px;font-size:12.8px;font-weight:700;color:#ffffff;opacity:.75">8</div></div><figcaption>64</figcaption></figure><figure><div style="width:32px;height:32px;border-radius:7.04px;background:#0d9488;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="font-size:19.84px;font-weight:700;color:#ffffff;line-height:1">Λ</div>
+      <div style="position:absolute;right:3.2px;bottom:1.92px;font-size:6.4px;font-weight:700;color:#ffffff;opacity:.75">8</div></div><figcaption>32 — tab</figcaption></figure><figure><div style="width:16px;height:16px;border-radius:3.52px;background:#0d9488;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="font-size:9.92px;font-weight:700;color:#ffffff;line-height:1">Λ</div>
+      </div><figcaption>16 — dense</figcaption></figure></div>
+    <p class="inote">Same tile, cooler. Holds up better against a yellow-heavy browser theme and against the yellow card.</p></div><div class="icard"><p class="ilabel">3. Mini guess board (2×2)</p>
+    <div class="isizes"><figure><div style="display:flex;flex-wrap:wrap;width:180px;height:180px;border-radius:36px;overflow:hidden">
+      <div style="width:90px;height:90px;background:#16a34a"></div><div style="width:90px;height:90px;background:#facc15"></div><div style="width:90px;height:90px;background:#57534e"></div><div style="width:90px;height:90px;background:#16a34a"></div></div><figcaption>180 — apple-icon</figcaption></figure><figure><div style="display:flex;flex-wrap:wrap;width:64px;height:64px;border-radius:12.8px;overflow:hidden">
+      <div style="width:32px;height:32px;background:#16a34a"></div><div style="width:32px;height:32px;background:#facc15"></div><div style="width:32px;height:32px;background:#57534e"></div><div style="width:32px;height:32px;background:#16a34a"></div></div><figcaption>64</figcaption></figure><figure><div style="display:flex;flex-wrap:wrap;width:32px;height:32px;border-radius:6.4px;overflow:hidden">
+      <div style="width:16px;height:16px;background:#16a34a"></div><div style="width:16px;height:16px;background:#facc15"></div><div style="width:16px;height:16px;background:#57534e"></div><div style="width:16px;height:16px;background:#16a34a"></div></div><figcaption>32 — tab</figcaption></figure><figure><div style="display:flex;flex-wrap:wrap;width:16px;height:16px;border-radius:3.2px;overflow:hidden">
+      <div style="width:8px;height:8px;background:#16a34a"></div><div style="width:8px;height:8px;background:#facc15"></div><div style="width:8px;height:8px;background:#57534e"></div><div style="width:8px;height:8px;background:#16a34a"></div></div><figcaption>16 — dense</figcaption></figure></div>
+    <p class="inote">Four cells: two green, one yellow, one grey. No letter at all, so no font decision ever — and it is still unmistakably a daily word game.</p></div><div class="icard"><p class="ilabel">4. Guess row (3 cells)</p>
+    <div class="isizes"><figure><div style="display:flex;align-items:center;justify-content:center;width:180px;height:180px;gap:10.799999999999999px;background:#292524;border-radius:36px;padding:25.200000000000003px">
+      <div style="flex:1;height:100%;background:#16a34a;border-radius:12.600000000000001px"></div><div style="flex:1;height:100%;background:#facc15;border-radius:12.600000000000001px"></div><div style="flex:1;height:100%;background:#78716c;border-radius:12.600000000000001px"></div></div><figcaption>180 — apple-icon</figcaption></figure><figure><div style="display:flex;align-items:center;justify-content:center;width:64px;height:64px;gap:3.84px;background:#292524;border-radius:12.8px;padding:8.96px">
+      <div style="flex:1;height:100%;background:#16a34a;border-radius:4.48px"></div><div style="flex:1;height:100%;background:#facc15;border-radius:4.48px"></div><div style="flex:1;height:100%;background:#78716c;border-radius:4.48px"></div></div><figcaption>64</figcaption></figure><figure><div style="display:flex;align-items:center;justify-content:center;width:32px;height:32px;gap:1.92px;background:#292524;border-radius:6.4px;padding:4.48px">
+      <div style="flex:1;height:100%;background:#16a34a;border-radius:2.24px"></div><div style="flex:1;height:100%;background:#facc15;border-radius:2.24px"></div><div style="flex:1;height:100%;background:#78716c;border-radius:2.24px"></div></div><figcaption>32 — tab</figcaption></figure><figure><div style="display:flex;align-items:center;justify-content:center;width:16px;height:16px;gap:0.96px;background:#292524;border-radius:3.2px;padding:2.24px">
+      <div style="flex:1;height:100%;background:#16a34a;border-radius:1.12px"></div><div style="flex:1;height:100%;background:#facc15;border-radius:1.12px"></div><div style="flex:1;height:100%;background:#78716c;border-radius:1.12px"></div></div><figcaption>16 — dense</figcaption></figure></div>
+    <p class="inote">One row instead of a square: green, yellow, grey. The most legible of the letterless marks at 16 px because the shapes are big.</p></div><div class="icard"><p class="ilabel">5. Crossword cross</p>
+    <div class="isizes"><figure><div style="width:180px;height:180px;border-radius:36px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="display:flex"><div style="width:60px;height:60px"></div><div style="width:60px;height:60px;background:#2dd4bf;border-radius:9px"></div><div style="width:60px;height:60px"></div></div>
+        <div style="display:flex"><div style="width:60px;height:60px;background:#2dd4bf;border-radius:9px"></div><div style="width:60px;height:60px;background:#facc15;border-radius:9px"></div><div style="width:60px;height:60px;background:#2dd4bf;border-radius:9px"></div></div>
+        <div style="display:flex"><div style="width:60px;height:60px"></div><div style="width:60px;height:60px;background:#2dd4bf;border-radius:9px"></div><div style="width:60px;height:60px"></div></div></div><figcaption>180 — apple-icon</figcaption></figure><figure><div style="width:64px;height:64px;border-radius:12.8px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="display:flex"><div style="width:21.333333333333332px;height:21.333333333333332px"></div><div style="width:21.333333333333332px;height:21.333333333333332px;background:#2dd4bf;border-radius:3.1999999999999997px"></div><div style="width:21.333333333333332px;height:21.333333333333332px"></div></div>
+        <div style="display:flex"><div style="width:21.333333333333332px;height:21.333333333333332px;background:#2dd4bf;border-radius:3.1999999999999997px"></div><div style="width:21.333333333333332px;height:21.333333333333332px;background:#facc15;border-radius:3.1999999999999997px"></div><div style="width:21.333333333333332px;height:21.333333333333332px;background:#2dd4bf;border-radius:3.1999999999999997px"></div></div>
+        <div style="display:flex"><div style="width:21.333333333333332px;height:21.333333333333332px"></div><div style="width:21.333333333333332px;height:21.333333333333332px;background:#2dd4bf;border-radius:3.1999999999999997px"></div><div style="width:21.333333333333332px;height:21.333333333333332px"></div></div></div><figcaption>64</figcaption></figure><figure><div style="width:32px;height:32px;border-radius:6.4px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="display:flex"><div style="width:10.666666666666666px;height:10.666666666666666px"></div><div style="width:10.666666666666666px;height:10.666666666666666px;background:#2dd4bf;border-radius:1.5999999999999999px"></div><div style="width:10.666666666666666px;height:10.666666666666666px"></div></div>
+        <div style="display:flex"><div style="width:10.666666666666666px;height:10.666666666666666px;background:#2dd4bf;border-radius:1.5999999999999999px"></div><div style="width:10.666666666666666px;height:10.666666666666666px;background:#facc15;border-radius:1.5999999999999999px"></div><div style="width:10.666666666666666px;height:10.666666666666666px;background:#2dd4bf;border-radius:1.5999999999999999px"></div></div>
+        <div style="display:flex"><div style="width:10.666666666666666px;height:10.666666666666666px"></div><div style="width:10.666666666666666px;height:10.666666666666666px;background:#2dd4bf;border-radius:1.5999999999999999px"></div><div style="width:10.666666666666666px;height:10.666666666666666px"></div></div></div><figcaption>32 — tab</figcaption></figure><figure><div style="width:16px;height:16px;border-radius:3.2px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="display:flex"><div style="width:5.333333333333333px;height:5.333333333333333px"></div><div style="width:5.333333333333333px;height:5.333333333333333px;background:#2dd4bf;border-radius:0.7999999999999999px"></div><div style="width:5.333333333333333px;height:5.333333333333333px"></div></div>
+        <div style="display:flex"><div style="width:5.333333333333333px;height:5.333333333333333px;background:#2dd4bf;border-radius:0.7999999999999999px"></div><div style="width:5.333333333333333px;height:5.333333333333333px;background:#facc15;border-radius:0.7999999999999999px"></div><div style="width:5.333333333333333px;height:5.333333333333333px;background:#2dd4bf;border-radius:0.7999999999999999px"></div></div>
+        <div style="display:flex"><div style="width:5.333333333333333px;height:5.333333333333333px"></div><div style="width:5.333333333333333px;height:5.333333333333333px;background:#2dd4bf;border-radius:0.7999999999999999px"></div><div style="width:5.333333333333333px;height:5.333333333333333px"></div></div></div><figcaption>16 — dense</figcaption></figure></div>
+    <p class="inote">Five cells in a plus, the middle one yellow. A hundred years of crossword shorthand compressed into a favicon.</p></div><div class="icard"><p class="ilabel">6. Λ built from blocks</p>
+    <div class="isizes"><figure><div style="width:180px;height:180px;border-radius:36px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="display:flex"><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div></div><div style="display:flex"><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div></div><div style="display:flex"><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div></div><div style="display:flex"><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div></div></div><figcaption>180 — apple-icon</figcaption></figure><figure><div style="width:64px;height:64px;border-radius:12.8px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="display:flex"><div style="width:12.8px;height:12.8px;background:transparent;border-radius:2.5600000000000005px"></div><div style="width:12.8px;height:12.8px;background:transparent;border-radius:2.5600000000000005px"></div><div style="width:12.8px;height:12.8px;background:#facc15;border-radius:2.5600000000000005px"></div><div style="width:12.8px;height:12.8px;background:transparent;border-radius:2.5600000000000005px"></div><div style="width:12.8px;height:12.8px;background:transparent;border-radius:2.5600000000000005px"></div></div><div style="display:flex"><div style="width:12.8px;height:12.8px;background:transparent;border-radius:2.5600000000000005px"></div><div style="width:12.8px;height:12.8px;background:#facc15;border-radius:2.5600000000000005px"></div><div style="width:12.8px;height:12.8px;background:transparent;border-radius:2.5600000000000005px"></div><div style="width:12.8px;height:12.8px;background:#facc15;border-radius:2.5600000000000005px"></div><div style="width:12.8px;height:12.8px;background:transparent;border-radius:2.5600000000000005px"></div></div><div style="display:flex"><div style="width:12.8px;height:12.8px;background:transparent;border-radius:2.5600000000000005px"></div><div style="width:12.8px;height:12.8px;background:#facc15;border-radius:2.5600000000000005px"></div><div style="width:12.8px;height:12.8px;background:transparent;border-radius:2.5600000000000005px"></div><div style="width:12.8px;height:12.8px;background:#facc15;border-radius:2.5600000000000005px"></div><div style="width:12.8px;height:12.8px;background:transparent;border-radius:2.5600000000000005px"></div></div><div style="display:flex"><div style="width:12.8px;height:12.8px;background:#facc15;border-radius:2.5600000000000005px"></div><div style="width:12.8px;height:12.8px;background:transparent;border-radius:2.5600000000000005px"></div><div style="width:12.8px;height:12.8px;background:transparent;border-radius:2.5600000000000005px"></div><div style="width:12.8px;height:12.8px;background:transparent;border-radius:2.5600000000000005px"></div><div style="width:12.8px;height:12.8px;background:#facc15;border-radius:2.5600000000000005px"></div></div></div><figcaption>64</figcaption></figure><figure><div style="width:32px;height:32px;border-radius:6.4px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="display:flex"><div style="width:6.4px;height:6.4px;background:transparent;border-radius:1.2800000000000002px"></div><div style="width:6.4px;height:6.4px;background:transparent;border-radius:1.2800000000000002px"></div><div style="width:6.4px;height:6.4px;background:#facc15;border-radius:1.2800000000000002px"></div><div style="width:6.4px;height:6.4px;background:transparent;border-radius:1.2800000000000002px"></div><div style="width:6.4px;height:6.4px;background:transparent;border-radius:1.2800000000000002px"></div></div><div style="display:flex"><div style="width:6.4px;height:6.4px;background:transparent;border-radius:1.2800000000000002px"></div><div style="width:6.4px;height:6.4px;background:#facc15;border-radius:1.2800000000000002px"></div><div style="width:6.4px;height:6.4px;background:transparent;border-radius:1.2800000000000002px"></div><div style="width:6.4px;height:6.4px;background:#facc15;border-radius:1.2800000000000002px"></div><div style="width:6.4px;height:6.4px;background:transparent;border-radius:1.2800000000000002px"></div></div><div style="display:flex"><div style="width:6.4px;height:6.4px;background:transparent;border-radius:1.2800000000000002px"></div><div style="width:6.4px;height:6.4px;background:#facc15;border-radius:1.2800000000000002px"></div><div style="width:6.4px;height:6.4px;background:transparent;border-radius:1.2800000000000002px"></div><div style="width:6.4px;height:6.4px;background:#facc15;border-radius:1.2800000000000002px"></div><div style="width:6.4px;height:6.4px;background:transparent;border-radius:1.2800000000000002px"></div></div><div style="display:flex"><div style="width:6.4px;height:6.4px;background:#facc15;border-radius:1.2800000000000002px"></div><div style="width:6.4px;height:6.4px;background:transparent;border-radius:1.2800000000000002px"></div><div style="width:6.4px;height:6.4px;background:transparent;border-radius:1.2800000000000002px"></div><div style="width:6.4px;height:6.4px;background:transparent;border-radius:1.2800000000000002px"></div><div style="width:6.4px;height:6.4px;background:#facc15;border-radius:1.2800000000000002px"></div></div></div><figcaption>32 — tab</figcaption></figure><figure><div style="width:16px;height:16px;border-radius:3.2px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="display:flex"><div style="width:3.2px;height:3.2px;background:transparent;border-radius:0.6400000000000001px"></div><div style="width:3.2px;height:3.2px;background:transparent;border-radius:0.6400000000000001px"></div><div style="width:3.2px;height:3.2px;background:#facc15;border-radius:0.6400000000000001px"></div><div style="width:3.2px;height:3.2px;background:transparent;border-radius:0.6400000000000001px"></div><div style="width:3.2px;height:3.2px;background:transparent;border-radius:0.6400000000000001px"></div></div><div style="display:flex"><div style="width:3.2px;height:3.2px;background:transparent;border-radius:0.6400000000000001px"></div><div style="width:3.2px;height:3.2px;background:#facc15;border-radius:0.6400000000000001px"></div><div style="width:3.2px;height:3.2px;background:transparent;border-radius:0.6400000000000001px"></div><div style="width:3.2px;height:3.2px;background:#facc15;border-radius:0.6400000000000001px"></div><div style="width:3.2px;height:3.2px;background:transparent;border-radius:0.6400000000000001px"></div></div><div style="display:flex"><div style="width:3.2px;height:3.2px;background:transparent;border-radius:0.6400000000000001px"></div><div style="width:3.2px;height:3.2px;background:#facc15;border-radius:0.6400000000000001px"></div><div style="width:3.2px;height:3.2px;background:transparent;border-radius:0.6400000000000001px"></div><div style="width:3.2px;height:3.2px;background:#facc15;border-radius:0.6400000000000001px"></div><div style="width:3.2px;height:3.2px;background:transparent;border-radius:0.6400000000000001px"></div></div><div style="display:flex"><div style="width:3.2px;height:3.2px;background:#facc15;border-radius:0.6400000000000001px"></div><div style="width:3.2px;height:3.2px;background:transparent;border-radius:0.6400000000000001px"></div><div style="width:3.2px;height:3.2px;background:transparent;border-radius:0.6400000000000001px"></div><div style="width:3.2px;height:3.2px;background:transparent;border-radius:0.6400000000000001px"></div><div style="width:3.2px;height:3.2px;background:#facc15;border-radius:0.6400000000000001px"></div></div></div><figcaption>16 — dense</figcaption></figure></div>
+    <p class="inote">The mosaic mark from cards 20 and 21, shrunk. At 16 px it stops being a letter and becomes a texture — check it in the strip below before choosing it.</p></div><div class="icard"><p class="ilabel">7. Two crossing tiles</p>
+    <div class="isizes"><figure><div style="width:180px;height:180px;border-radius:36px;background:#1c1917;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="position:absolute;width:111.6px;height:36px;background:#2dd4bf;border-radius:9px"></div>
+      <div style="position:absolute;width:36px;height:111.6px;background:#facc15;border-radius:9px"></div></div><figcaption>180 — apple-icon</figcaption></figure><figure><div style="width:64px;height:64px;border-radius:12.8px;background:#1c1917;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="position:absolute;width:39.68px;height:12.8px;background:#2dd4bf;border-radius:3.2px"></div>
+      <div style="position:absolute;width:12.8px;height:39.68px;background:#facc15;border-radius:3.2px"></div></div><figcaption>64</figcaption></figure><figure><div style="width:32px;height:32px;border-radius:6.4px;background:#1c1917;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="position:absolute;width:19.84px;height:6.4px;background:#2dd4bf;border-radius:1.6px"></div>
+      <div style="position:absolute;width:6.4px;height:19.84px;background:#facc15;border-radius:1.6px"></div></div><figcaption>32 — tab</figcaption></figure><figure><div style="width:16px;height:16px;border-radius:3.2px;background:#1c1917;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="position:absolute;width:9.92px;height:3.2px;background:#2dd4bf;border-radius:0.8px"></div>
+      <div style="position:absolute;width:3.2px;height:9.92px;background:#facc15;border-radius:0.8px"></div></div><figcaption>16 — dense</figcaption></figure></div>
+    <p class="inote">A vertical and a horizontal tile overlapping — a crossword intersection reduced to two rectangles. Abstract, and the most logo-like of the twelve.</p></div><div class="icard"><p class="ilabel">8. Tile stack</p>
+    <div class="isizes"><figure><div style="width:180px;height:180px;position:relative;display:flex;align-items:center;justify-content:center">
+      <div style="position:absolute;left:0;top:28.8px;width:129.6px;height:129.6px;border-radius:28.8px;background:#57534e"></div>
+      <div style="position:absolute;left:25.200000000000003px;top:14.4px;width:129.6px;height:129.6px;border-radius:28.8px;background:#0d9488"></div>
+      <div style="position:absolute;left:50.400000000000006px;top:0;width:129.6px;height:129.6px;border-radius:28.8px;background:#facc15;display:flex;align-items:center;justify-content:center;font-size:75.6px;font-weight:700;color:#1c1917">Λ</div></div><figcaption>180 — apple-icon</figcaption></figure><figure><div style="width:64px;height:64px;position:relative;display:flex;align-items:center;justify-content:center">
+      <div style="position:absolute;left:0;top:10.24px;width:46.08px;height:46.08px;border-radius:10.24px;background:#57534e"></div>
+      <div style="position:absolute;left:8.96px;top:5.12px;width:46.08px;height:46.08px;border-radius:10.24px;background:#0d9488"></div>
+      <div style="position:absolute;left:17.92px;top:0;width:46.08px;height:46.08px;border-radius:10.24px;background:#facc15;display:flex;align-items:center;justify-content:center;font-size:26.88px;font-weight:700;color:#1c1917">Λ</div></div><figcaption>64</figcaption></figure><figure><div style="width:32px;height:32px;position:relative;display:flex;align-items:center;justify-content:center">
+      <div style="position:absolute;left:0;top:5.12px;width:23.04px;height:23.04px;border-radius:5.12px;background:#57534e"></div>
+      <div style="position:absolute;left:4.48px;top:2.56px;width:23.04px;height:23.04px;border-radius:5.12px;background:#0d9488"></div>
+      <div style="position:absolute;left:8.96px;top:0;width:23.04px;height:23.04px;border-radius:5.12px;background:#facc15;display:flex;align-items:center;justify-content:center;font-size:13.44px;font-weight:700;color:#1c1917">Λ</div></div><figcaption>32 — tab</figcaption></figure><figure><div style="width:16px;height:16px;position:relative;display:flex;align-items:center;justify-content:center">
+      <div style="position:absolute;left:0;top:2.56px;width:11.52px;height:11.52px;border-radius:2.56px;background:#57534e"></div>
+      <div style="position:absolute;left:2.24px;top:1.28px;width:11.52px;height:11.52px;border-radius:2.56px;background:#0d9488"></div>
+      <div style="position:absolute;left:4.48px;top:0;width:11.52px;height:11.52px;border-radius:2.56px;background:#facc15;display:flex;align-items:center;justify-content:center;font-size:6.72px;font-weight:700;color:#1c1917">Λ</div></div><figcaption>16 — dense</figcaption></figure></div>
+    <p class="inote">Three tiles behind one another, top one lit. Suggests a pile of daily puzzles waiting; softest edge of the set.</p></div><div class="icard"><p class="ilabel">9. Green tile, white Λ</p>
+    <div class="isizes"><figure><div style="width:180px;height:180px;border-radius:39.6px;background:#16a34a;display:flex;align-items:center;justify-content:center;font-size:115.2px;font-weight:700;color:#ffffff">Λ</div><figcaption>180 — apple-icon</figcaption></figure><figure><div style="width:64px;height:64px;border-radius:14.08px;background:#16a34a;display:flex;align-items:center;justify-content:center;font-size:40.96px;font-weight:700;color:#ffffff">Λ</div><figcaption>64</figcaption></figure><figure><div style="width:32px;height:32px;border-radius:7.04px;background:#16a34a;display:flex;align-items:center;justify-content:center;font-size:20.48px;font-weight:700;color:#ffffff">Λ</div><figcaption>32 — tab</figcaption></figure><figure><div style="width:16px;height:16px;border-radius:3.52px;background:#16a34a;display:flex;align-items:center;justify-content:center;font-size:10.24px;font-weight:700;color:#ffffff">Λ</div><figcaption>16 — dense</figcaption></figure></div>
+    <p class="inote">The plain one, in the strongest of the four colours. Nothing clever; the safest pick and the least distinguishable from any other app.</p></div><div class="icard"><p class="ilabel">10. Dark tile, yellow Λ</p>
+    <div class="isizes"><figure><div style="width:180px;height:180px;border-radius:39.6px;background:#292524;display:flex;align-items:center;justify-content:center;font-size:115.2px;font-weight:700;color:#facc15">Λ</div><figcaption>180 — apple-icon</figcaption></figure><figure><div style="width:64px;height:64px;border-radius:14.08px;background:#292524;display:flex;align-items:center;justify-content:center;font-size:40.96px;font-weight:700;color:#facc15">Λ</div><figcaption>64</figcaption></figure><figure><div style="width:32px;height:32px;border-radius:7.04px;background:#292524;display:flex;align-items:center;justify-content:center;font-size:20.48px;font-weight:700;color:#facc15">Λ</div><figcaption>32 — tab</figcaption></figure><figure><div style="width:16px;height:16px;border-radius:3.52px;background:#292524;display:flex;align-items:center;justify-content:center;font-size:10.24px;font-weight:700;color:#facc15">Λ</div><figcaption>16 — dense</figcaption></figure></div>
+    <p class="inote">Inverted. Vanishes into dark browser chrome, which is now most people's setting — worth seeing at 16 px before deciding.</p></div><div class="icard"><p class="ilabel">11. Quarter board</p>
+    <div class="isizes"><figure><div style="display:flex;flex-wrap:wrap;width:180px;height:180px;border-radius:36px;background:#1c1917;padding:14.4px;gap:10.799999999999999px">
+      <div style="width:66.6px;height:66.6px;background:#16a34a;border-radius:12.600000000000001px"></div><div style="width:66.6px;height:66.6px;background:#0d9488;border-radius:12.600000000000001px"></div><div style="width:66.6px;height:66.6px;background:#facc15;border-radius:12.600000000000001px"></div><div style="width:66.6px;height:66.6px;background:#78716c;border-radius:12.600000000000001px"></div></div><figcaption>180 — apple-icon</figcaption></figure><figure><div style="display:flex;flex-wrap:wrap;width:64px;height:64px;border-radius:12.8px;background:#1c1917;padding:5.12px;gap:3.84px">
+      <div style="width:23.68px;height:23.68px;background:#16a34a;border-radius:4.48px"></div><div style="width:23.68px;height:23.68px;background:#0d9488;border-radius:4.48px"></div><div style="width:23.68px;height:23.68px;background:#facc15;border-radius:4.48px"></div><div style="width:23.68px;height:23.68px;background:#78716c;border-radius:4.48px"></div></div><figcaption>64</figcaption></figure><figure><div style="display:flex;flex-wrap:wrap;width:32px;height:32px;border-radius:6.4px;background:#1c1917;padding:2.56px;gap:1.92px">
+      <div style="width:11.84px;height:11.84px;background:#16a34a;border-radius:2.24px"></div><div style="width:11.84px;height:11.84px;background:#0d9488;border-radius:2.24px"></div><div style="width:11.84px;height:11.84px;background:#facc15;border-radius:2.24px"></div><div style="width:11.84px;height:11.84px;background:#78716c;border-radius:2.24px"></div></div><figcaption>32 — tab</figcaption></figure><figure><div style="display:flex;flex-wrap:wrap;width:16px;height:16px;border-radius:3.2px;background:#1c1917;padding:1.28px;gap:0.96px">
+      <div style="width:5.92px;height:5.92px;background:#16a34a;border-radius:1.12px"></div><div style="width:5.92px;height:5.92px;background:#0d9488;border-radius:1.12px"></div><div style="width:5.92px;height:5.92px;background:#facc15;border-radius:1.12px"></div><div style="width:5.92px;height:5.92px;background:#78716c;border-radius:1.12px"></div></div><figcaption>16 — dense</figcaption></figure></div>
+    <p class="inote">Four squares, one per colour family, with a gap grid — a board cropped to its corner. Letterless, and it matches the block cards.</p></div><div class="icard"><p class="ilabel">12. Tile with a base rule</p>
+    <div class="isizes"><figure><div style="width:180px;height:180px;border-radius:36px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-bottom:18px;position:relative">
+      <div style="font-size:100.80000000000001px;font-weight:700;color:#ffffff;line-height:1">Λ</div>
+      <div style="position:absolute;bottom:25.200000000000003px;width:100.80000000000001px;height:18px;border-radius:9px;background:#facc15"></div></div><figcaption>180 — apple-icon</figcaption></figure><figure><div style="width:64px;height:64px;border-radius:12.8px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-bottom:6.4px;position:relative">
+      <div style="font-size:35.84px;font-weight:700;color:#ffffff;line-height:1">Λ</div>
+      <div style="position:absolute;bottom:8.96px;width:35.84px;height:6.4px;border-radius:3.2px;background:#facc15"></div></div><figcaption>64</figcaption></figure><figure><div style="width:32px;height:32px;border-radius:6.4px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-bottom:3.2px;position:relative">
+      <div style="font-size:17.92px;font-weight:700;color:#ffffff;line-height:1">Λ</div>
+      <div style="position:absolute;bottom:4.48px;width:17.92px;height:3.2px;border-radius:1.6px;background:#facc15"></div></div><figcaption>32 — tab</figcaption></figure><figure><div style="width:16px;height:16px;border-radius:3.2px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-bottom:1.6px;position:relative">
+      <div style="font-size:8.96px;font-weight:700;color:#ffffff;line-height:1">Λ</div>
+      <div style="position:absolute;bottom:2.24px;width:8.96px;height:1.6px;border-radius:0.8px;background:#facc15"></div></div><figcaption>16 — dense</figcaption></figure></div>
+    <p class="inote">A letter tile sitting on a coloured rack line. Reads as a physical tile rather than a coloured square, even at small sizes.</p></div></div>
 
 </body>
 </html>

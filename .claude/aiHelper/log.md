@@ -5,6 +5,35 @@
 
 ---
 
+## Session 151 — 2026-08-13: the share preview, and the pages the operator could not read
+
+`TICKET-10` half-built, **blocked on an operator pick, not on work**. Shipped: `hidden` filtered out
+of `PLATFORM_DESCRIPTION` + **seam 1d** locking it, `metadataBase`/`openGraph`/`twitter` in
+`layout.tsx`, and `PLATFORM_ORIGIN` derived from Vercel's build env (production domain → own preview
+URL → localhost) so a custom domain is a DNS change. Image files are deliberately **not** named in
+the metadata object — Next's file conventions inject those tags, and naming them twice is how they
+drift. Gates 193/2469, eslint 0, build 0.
+
+**The generator ships one font and it covers six Greek letters: Λ Ω λ μ π ω** — measured by parsing
+Geist's cmap, which reduces the whole Greek block to five segments of maths symbols. So every design
+forks on cost: Latin, those six glyphs and digits are free, a real Greek word costs a committed font
+file. **Λ survives as the mark by coincidence of that table**, not by taste.
+
+**Two operator corrections reshaped the deliverable, and the second is the durable one.** First: a
+letter on a coloured square is not a logo for a *word game* — the twenty-five second-round cards each
+carry the signal in their shape (guess board, crossword, word search, letter tiles, scoring tile,
+block mosaic), palette cut to dark grey/green/teal/yellow. Second: **the candidates page did not
+render on the operator's iPhone at all.** iOS previews HTML attachments through Quick Look, which
+draws HTML and CSS but **runs no JavaScript** — a page that builds itself is blank there, while
+Android hands the same file to Chrome and it works, so the bug reads as "Apple being stupid". Every
+page under `.claude/aiHelper/html/` was converted (pre-rendered content, `<noscript>` hiding controls
+that cannot work, a phone breakpoint, and the viewport tag two of them never had), and the three
+generators in `scripts/` that emit such pages were patched so regeneration keeps it. **s143 made
+`html/` the standing home for visual decisions; this session found that half those artifacts were
+unreadable on the device the operator actually uses.**
+
+Found on the way out: an operator `git commit --amend` at 12:05 swept the three source files into `bbe27b3`, so this ticket's code sits inside an unrelated commit.
+
 ## Session 150 — 2026-08-12: the monitoring that was already there, and the tool that could not reach it
 
 `TICKET-08` shipped as **ADR 0023** — no third-party error SDK, Vercel only, because a monitor is a
@@ -35,35 +64,6 @@ rejected integer cast → retrieved as `[api] not_found: invalid input syntax fo
 **No route here can be made to crash from outside** — ADR 0016's envelope converts every fault into a
 coded 4xx — so a handled error is the strongest proof available, recorded so it does not read as
 laziness.
-
-## Session 149 — 2026-08-12: the privacy page, and the third party that was already there
-
-`/grill-with-docs` then build. `TICKET-07` shipped: `/privacy` in Greek, plain-voiced, one drawer
-link under Βοήθεια and nowhere else — no footer, no banner, no consent dialog. Controller details in
-`platform.ts`, retention imported from `retention.ts`, the address plain text so scrapers get nothing.
-
-**The ticket's headline warning was aimed at the wrong tense, and that is the session's lesson.** It
-argued that installing an error monitor *later* would falsify a "no third-party tracking" line with
-nothing in the suite to notice. Meanwhile `FeedbackModal.tsx` had been posting the message, the page
-URL, the **user agent** and the DeviceId to `formsubmit.co` in production since the Feedback surface
-was built. Both the ticket and `launch-readiness.md` had encoded the phantom hazard as a sequencing
-constraint (`08` before `07`) — **a missed fact became scheduling**. Full form in `reflections.md`.
-
-The fix was subtraction, not disclosure: `user_agent` and `page_url` deleted, so the page has less to
-admit to. `device_id` stays, with a new justification — an erasure request sent from that form
-arrives carrying the key needed to action it. **A privacy page is the one document where shrinking
-the truth beats describing it well.**
-
-It also **under-counted the data 5 tables to 14** — the publicly-displayed `nominations`, the four
-`community_*_puzzles`, and `identity_audit`, which is append-forever and built to survive account
-deletion. Operator ruled erasure beats Admin Restore, so no exception is left to disclose.
-
-Verified rather than trusted: `eu-central-1` + `fra1` (the ticket's one guess, and it was right),
-`next/font` self-hosting Google Fonts, and **no deletion tooling anywhere** — so the page says
-deletion is manual rather than implying a button. `privacyPage.test.tsx` **pins the four production
-dependencies**: the ticket feared "nothing in the suite will notice" an install; that test is the
-notice. `TICKET-08` was decided in the same breath (no third-party SDK) purely so this page stays
-true. Gates 193/2467, eslint 0, build 0 (`/privacy` static), e2e 13 passed / 2 skipped.
 
 ## Older Sessions
 
