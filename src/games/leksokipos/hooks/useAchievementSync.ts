@@ -15,8 +15,9 @@
 //     insert-if-absents, so a redundant post would be a harmless no-op anyway.
 //   - The toast fires ONLY for badges not already earned before this session — we
 //     fetch the earned-at-mount set and suppress anything already in it, so an old
-//     badge never re-toasts on every visit. Detections that land before that set
-//     loads are held pending and flushed once it arrives (race-safe).
+//     badge never re-toasts on every visit. What to toast is a SET DIFFERENCE
+//     (posted − earnedAtMount − toasted) recomputed whenever either side moves, so
+//     detections landing before that set loads need no holding queue (race-safe).
 //   - Fire-and-forget: earning never affects gameplay.
 //
 // Three of the lanes below write to ONE endpoint (POST /api/milestones), each with
@@ -85,7 +86,15 @@ export function useAchievementSync({
   rank,
   onAchievementEarned,
 }: UseAchievementSyncOptions): void {
-  // Ids posted this session — guards against re-posting on every word/rank change.
+  // Every lane is gated identically: daily puzzles only, never in god mode, only
+  // with a known device id, and only while the feature flag is on. Derived once so
+  // the six effects below share ONE definition of "earning is live" instead of
+  // re-typing a four-clause condition each — and so their dependency arrays shrink
+  // to what they actually read.
+  const active = enabled && isDaily && !isGodMode && Boolean(deviceId);
+
+  // Ids posted this session — guards against re-posting on every word/rank change,
+  // and doubles as the toast candidate set (see flushToasts).
   const postedRef = useRef<Set<string>>(new Set());
   // Pangram words already delta-posted this session — per-word, so each find posts once.
   const postedPangramWordsRef = useRef<Set<string>>(new Set());
@@ -96,22 +105,27 @@ export function useAchievementSync({
   const postedDayMilestonesRef = useRef<Set<string>>(new Set());
   // Ids earned before this session (server truth at mount). null = not loaded yet.
   const earnedAtMountRef = useRef<Set<string> | null>(null);
-  // Ids detected but not yet decidable for the toast (earned set still loading).
-  const pendingRef = useRef<Set<string>>(new Set());
   // Ids already handed to the toast — surface each at most once.
   const toastedRef = useRef<Set<string>>(new Set());
   // Latest callback without re-subscribing the detection effects.
   const onEarnedRef = useRef(onAchievementEarned);
   useEffect(() => { onEarnedRef.current = onAchievementEarned; }, [onAchievementEarned]);
 
-  // Decide pending ids against the earned-at-mount set: toast only the ones that
-  // are genuinely new. No-op until the set has loaded (ids stay pending). Stable
-  // (refs only) so the lanes can list it as a dependency without re-firing.
+  // Toast whatever this session posted that was NOT already earned at mount and has
+  // not been toasted yet — a set difference over the refs, not a queue to drain.
+  //
+  // That is what makes the mount race safe without a pending list: the two inputs
+  // (what we posted, what was already earned) arrive in either order, and whichever
+  // lands second re-runs the same difference. A detection that beat the earned-set
+  // read simply sits in postedRef until the read arrives and calls this again. Ids
+  // that get suppressed stay in postedRef and are re-suppressed on every later pass,
+  // which costs nothing — the sets hold at most one badge id per rung.
+  //
+  // Stable (refs only) so the lanes can list it as a dependency without re-firing.
   const flushToasts = useCallback(() => {
     const earned = earnedAtMountRef.current;
     if (!earned) return;
-    for (const id of [...pendingRef.current]) {
-      pendingRef.current.delete(id);
+    for (const id of postedRef.current) {
       if (earned.has(id) || toastedRef.current.has(id)) continue;
       const display = describeAchievement(id);
       if (!display) continue;
@@ -121,23 +135,20 @@ export function useAchievementSync({
   }, []);
 
   // Commit freshly-earned ids: skip anything already posted this session, mark the
-  // rest, post them (insert-if-absent server-side), and queue them for the toast.
+  // rest, post them (insert-if-absent server-side), then re-decide the toast.
   // The single funnel every lane routes through — keeps the post/toast rules in one
   // place. deviceUuid is passed in (not closed over); stable so the lanes list it.
   const commitEarned = useCallback((deviceUuid: string, ids: string[]) => {
     const fresh = ids.filter((id) => !postedRef.current.has(id));
     if (fresh.length === 0) return;
-    for (const id of fresh) {
-      postedRef.current.add(id);
-      pendingRef.current.add(id);
-    }
+    for (const id of fresh) postedRef.current.add(id);
     postAchievements({ deviceUuid, achievementIds: fresh });
     flushToasts();
   }, [flushToasts]);
 
   // Load the earned-at-mount set once, then flush anything already pending.
   useEffect(() => {
-    if (!enabled || !isDaily || isGodMode || !deviceId) return;
+    if (!active) return;
     let cancelled = false;
     fetchEarnedAchievementIds(deviceId).then((ids) => {
       if (cancelled) return;
@@ -145,14 +156,14 @@ export function useAchievementSync({
       flushToasts();
     });
     return () => { cancelled = true; };
-  }, [enabled, isDaily, isGodMode, deviceId, flushToasts]);
+  }, [active, deviceId, flushToasts]);
 
-  // One-shot lane — detect on every foundWords/rank change, post fresh, queue for toast.
+  // One-shot lane — detect on every foundWords/rank change, post fresh, toast the new.
   useEffect(() => {
-    if (!enabled || !isDaily || isGodMode || !deviceId) return;
+    if (!active) return;
     commitEarned(deviceId, detectEarnedAchievements({ isDaily, foundWords, validWordCount, rank }));
   // foundWords (array ref) changes on each valid submit; rank on each threshold cross.
-  }, [enabled, foundWords, rank, isDaily, isGodMode, deviceId, validWordCount, commitEarned]);
+  }, [active, foundWords, rank, isDaily, deviceId, validWordCount, commitEarned]);
 
   // Lifetime-stats lane (mount) — the crossings for both tiered badges depend on
   // LIFETIME values the client doesn't hold at end-of-game. One /api/profile/stats
@@ -161,7 +172,7 @@ export function useAchievementSync({
   // (posts any owed tier the pangram count already justifies, covering a crash/offline
   // gap between a pangram write and its tier POST). Both idempotent (ADR 0013).
   useEffect(() => {
-    if (!enabled || !isDaily || isGodMode || !deviceId) return;
+    if (!active) return;
     let cancelled = false;
     fetchLifetimeStats(deviceId).then((stats) => {
       if (cancelled || !stats) return;
@@ -171,7 +182,7 @@ export function useAchievementSync({
       if (stats.tzimani_count !== null) commitEarned(deviceId, detectEarnedTzimaniTiers(stats.tzimani_count));
     });
     return () => { cancelled = true; };
-  }, [enabled, isDaily, isGodMode, deviceId, commitEarned]);
+  }, [active, deviceId, commitEarned]);
 
   // Pangram lane (Κυνηγός Πανγκράμ) — delta-post the pangrams found this session
   // that we haven't posted yet, and read the crossing off the returned lifetime count
@@ -183,7 +194,7 @@ export function useAchievementSync({
   // find was already on record), so no total moved and there is no crossing to
   // check — the mount self-heal covers that case.
   useEffect(() => {
-    if (!enabled || !isDaily || isGodMode || !deviceId) return;
+    if (!active) return;
     const unposted = foundPangrams.filter((w) => !postedPangramWordsRef.current.has(w));
     if (unposted.length === 0) return;
     for (const w of unposted) postedPangramWordsRef.current.add(w);
@@ -200,7 +211,7 @@ export function useAchievementSync({
       commitEarned(deviceId, detectEarnedPangramTiers(count));
     });
     return () => { cancelled = true; };
-  }, [enabled, foundPangrams, puzzleDate, isDaily, isGodMode, deviceId, commitEarned]);
+  }, [active, foundPangrams, puzzleDate, deviceId, commitEarned]);
 
   // Word lane (Λέξεις ανά μήκος) — delta-post the long words found this session that
   // we haven't posted yet, so the milestone set accrues one row per qualifying find.
@@ -218,7 +229,7 @@ export function useAchievementSync({
   // qualifying set re-posts and insert-if-absent makes the overlap a no-op (the
   // mount self-heal). foundWords is the store's referentially-stable found list.
   useEffect(() => {
-    if (!enabled || !isDaily || isGodMode || !deviceId) return;
+    if (!active) return;
     const unposted = foundWords.filter(
       (w) => w.length >= WORDS_MIN_TRACKED && !postedWordsRef.current.has(w),
     );
@@ -230,7 +241,7 @@ export function useAchievementSync({
       puzzleDate,
       milestones: unposted.map((detail) => ({ kind: "word" as const, detail })),
     });
-  }, [enabled, foundWords, puzzleDate, isDaily, isGodMode, deviceId]);
+  }, [active, foundWords, puzzleDate, deviceId]);
 
   // Day-milestone lane (Στην Κορυφή / Τζιμάνι) — record the day this player reached
   // the top rank and the day they crossed the found-word ratio. Both conditions are
@@ -247,7 +258,7 @@ export function useAchievementSync({
   // — the day was already on record — so no total moved and there is no crossing to
   // check; the mount self-heal covers that case.
   useEffect(() => {
-    if (!enabled || !isDaily || isGodMode || !deviceId) return;
+    if (!active) return;
 
     const unposted = detectDayMilestones({ isDaily, foundWords, validWordCount, rank })
       .filter((m) => !postedDayMilestonesRef.current.has(`${puzzleDate}::${m.kind}`));
@@ -265,5 +276,5 @@ export function useAchievementSync({
       }
     });
     return () => { cancelled = true; };
-  }, [enabled, foundWords, rank, validWordCount, puzzleDate, isDaily, isGodMode, deviceId, commitEarned]);
+  }, [active, foundWords, rank, validWordCount, puzzleDate, isDaily, deviceId, commitEarned]);
 }
