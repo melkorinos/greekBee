@@ -60,7 +60,7 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
     shuffleLetters,
     handleKeyboardLetter,
     giveUp,
-    restoreFromServer,
+    restoreRound,
     godModeInject,
     resetGame,
   } = useGameState(puzzle);
@@ -166,8 +166,9 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
 
   const handleTransferClaim = useCallback(async (code: string): Promise<void> => {
     await claimTransferCode(code);
-    await restoreFromServer();
-  }, [claimTransferCode, restoreFromServer]);
+    // force: the local round for this puzzle belongs to the pre-claim identity.
+    await restoreRound({ force: true });
+  }, [claimTransferCode, restoreRound]);
 
   useProfileVerification({
     profileLinked,

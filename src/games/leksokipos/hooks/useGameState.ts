@@ -3,12 +3,13 @@
 // useGameState — the main React hook for the Leksokipos game.
 // Wires up the pure reducer with useReducer and exposes a clean API to components.
 //
-// Cross-device restore — two paths:
-//   Mount-time: fetches found words when the player has a linked profile and no
-//   local progress exists. Also fires when "leksokipos-needs-restore" is set in
-//   localStorage (transfer code claimed in another game while this was unmounted).
-//   Explicit: restoreFromServer() is called by GameBoard immediately after a
-//   transfer code claim while the game is already mounted.
+// Cross-device restore — one function, two call sites. restoreRound() runs the
+// same gate and fetch for both; only the local-progress check differs:
+//   Mount-time: skipped when localStorage already holds progress for this puzzle,
+//   unless "leksokipos-needs-restore" is set (a transfer code was claimed in
+//   another game while this component was unmounted).
+//   Explicit: GameBoard calls restoreRound({ force: true }) immediately after a
+//   transfer code claim while the game is already mounted — always fetches.
 
 const NEEDS_RESTORE_KEY = "leksokipos-needs-restore";
 
@@ -70,24 +71,24 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     useCallback((snap: LeksokiposRoundSnapshot) => snap.foundWords.length > 0 || snap.givenUp, []),
   );
 
-  // Mount-time restore. Skipped when local session already exists, unless
-  // "leksokipos-needs-restore" is set — which means a transfer code was claimed
-  // from another game while this component was unmounted.
-  useEffect(() => {
-    if (!isDailyPuzzle(initialPuzzle) || !isProfileLinked()) return;
+  // The one restore path. Daily puzzles with a linked profile only; resolves
+  // without touching state whenever there is nothing to pull.
+  const restoreRound = useCallback((opts?: { force?: boolean }): Promise<void> => {
+    if (!isDailyPuzzle(initialPuzzle) || !isProfileLinked()) return Promise.resolve();
 
-    const needsRestore = localStorage.getItem(NEEDS_RESTORE_KEY) === "true";
-    // Skip when localStorage already holds progress for this puzzle, unless a
-    // transfer code claim explicitly requests an overwrite.
-    const localStore = readSlice<Record<string, unknown>>("leksokipos");
-    if (!needsRestore && localStore?.[initialPuzzle.id]) return;
+    // A transfer code claimed while this component was unmounted leaves the key
+    // behind, and it forces the fetch through exactly like an explicit call does.
+    const force = opts?.force === true || localStorage.getItem(NEEDS_RESTORE_KEY) === "true";
+    if (!force && readSlice<Record<string, unknown>>("leksokipos")?.[initialPuzzle.id]) {
+      return Promise.resolve();
+    }
 
     localStorage.removeItem(NEEDS_RESTORE_KEY);
 
     const deviceId = getOrCreateDeviceId();
-    if (!deviceId) return;
+    if (!deviceId) return Promise.resolve();
 
-    void pullSnapshot({
+    return pullSnapshot({
       deviceUuid: deviceId,
       puzzleDate: normalizePuzzleDate(initialPuzzle.id),
       puzzle:     initialPuzzle,
@@ -98,22 +99,7 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Explicit restore — called by GameBoard immediately after a transfer code is
-  // claimed while the game is already mounted. Always fetches; no local-state guard.
-  const restoreFromServer = useCallback((): Promise<void> => {
-    if (!isDailyPuzzle(initialPuzzle) || !isProfileLinked()) return Promise.resolve();
-    localStorage.removeItem(NEEDS_RESTORE_KEY);
-    const deviceId = getOrCreateDeviceId();
-    if (!deviceId) return Promise.resolve();
-    return pullSnapshot({
-      deviceUuid: deviceId,
-      puzzleDate: normalizePuzzleDate(initialPuzzle.id),
-      puzzle:     initialPuzzle,
-    }).then((saved) => {
-      if (saved) dispatch({ type: "RESTORE_STATE", saved });
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => { void restoreRound(); }, [restoreRound]);
 
   // Pre-compute the allowed letter set once per puzzle.
   const allowedLetters = useMemo(
@@ -183,14 +169,6 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     [clearRound]
   );
 
-  const newGame = useCallback(
-    (puzzle: LeksokiposPuzzle) => {
-      clearRound();
-      dispatch({ type: "NEW_GAME", puzzle });
-    },
-    [clearRound]
-  );
-
   return {
     puzzle:          state.puzzle,
     currentInput:    state.currentInput,
@@ -207,9 +185,8 @@ export function useGameState(initialPuzzle: LeksokiposPuzzle) {
     submitWord,
     shuffleLetters,
     handleKeyboardLetter,
-    newGame,
     giveUp,
-    restoreFromServer,
+    restoreRound,
     godModeInject,
     resetGame,
   };
