@@ -1,23 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { GamePageShell } from "@/components/shared/GamePageShell";
-import { StavroleksoGrid, computeHighlightedCells } from "@/games/stavrolekso/StavroleksoGrid";
+import { StavroleksoGrid } from "@/games/stavrolekso/StavroleksoGrid";
 import {
   autoNumberSlots,
   isConnected,
   makeBlackSet,
   getSlotCells,
   getSlotLength,
+  computeHighlightedCells,
+  assembleSlots,
+  clueKey,
+  makerReducer,
+  makeInitialMakerState,
+  isLetterKey,
   EDIT_PIN_PATTERN,
   EDIT_PIN_ERROR,
   validateStavroleksoData,
 } from "@/games/stavrolekso/lib";
-import type { Direction, SlotDef } from "@/games/stavrolekso/types";
+import { STAVROLEKSO } from "@/config/gameRules";
+import type { SlotDef, StavroleksoPuzzleData } from "@/games/stavrolekso/types";
 import { btnModalSubmit, btnPrimaryCompact } from "@/styles/recipes";
-
-type Phase = 1 | 2 | 3;
-type GridSize = 9 | 13 | 15;
 
 interface Confirmation {
   id: number;
@@ -33,12 +37,14 @@ function randomPin(): string {
 
 // ── Resume form ───────────────────────────────────────────────────────────────
 
+interface StoredPuzzle {
+  title: string | null;
+  submitter_name: string;
+  data: StavroleksoPuzzleData;
+}
+
 function ResumeForm({ onLoaded }: {
-  onLoaded: (id: number, pin: string, data: {
-    title: string | null;
-    submitter_name: string;
-    data: { width: number; height: number; blackSquares: [number, number][]; slots: SlotDef[] };
-  }) => void;
+  onLoaded: (id: number, pin: string, puzzle: StoredPuzzle) => void;
 }) {
   const [puzzleId, setPuzzleId] = useState("");
   const [pin, setPin]           = useState("");
@@ -51,7 +57,7 @@ function ResumeForm({ onLoaded }: {
     try {
       const res  = await fetch(`/api/community-puzzles/stavrolekso/${puzzleId.trim()}`);
       if (!res.ok) { setError("Το παζλ δεν βρέθηκε."); return; }
-      const json = await res.json() as { puzzle: { title: string | null; submitter_name: string; status: string; data: { width: number; height: number; blackSquares: [number, number][]; slots: SlotDef[] } } };
+      const json = await res.json() as { puzzle: StoredPuzzle & { status: string } };
       const puzzle = json.puzzle;
       if (puzzle.status !== "pending") { setError("Το παζλ δεν είναι πλέον επεξεργάσιμο."); return; }
       onLoaded(Number(puzzleId.trim()), pin, puzzle);
@@ -155,17 +161,15 @@ function ConfirmationScreen({ info, onNew }: { info: Confirmation; onNew: () => 
 // ── Main maker ────────────────────────────────────────────────────────────────
 
 export default function StavroleksoMakerPage() {
-  const [phase, setPhase]               = useState<Phase>(1);
-  const [size, setSize]                 = useState<GridSize>(9);
+  // Everything the grid editor decides lives in one pure reducer; the page
+  // keeps only the puzzle's metadata and the submit lifecycle.
+  const [grid, dispatch] = useReducer(makerReducer, undefined, makeInitialMakerState);
+  const { phase, size, blackSquares, cells, clues, selectedSlot, activeCellKey } = grid;
+
   const [title, setTitle]               = useState("");
   const [submitterName, setSubmitterName] = useState("");
   const [editPin, setEditPin]           = useState(() => randomPin());
   const [copiedPin, setCopiedPin]       = useState(false);
-  const [blackSquares, setBlackSquares] = useState<[number, number][]>([]);
-  const [cells, setCells]               = useState<Record<string, string>>({});
-  const [clues, setClues]               = useState<Record<string, string>>({});
-  const [selectedSlot, setSelectedSlot] = useState<{ number: number; direction: Direction } | null>(null);
-  const [activeCellKey, setActiveCellKey] = useState<string | null>(null);
   const [submitError, setSubmitError]   = useState("");
   const [submitting, setSubmitting]     = useState(false);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
@@ -180,11 +184,7 @@ export default function StavroleksoMakerPage() {
     });
   }
 
-
-  const slots = useMemo(
-    () => autoNumberSlots(size, size, blackSquares),
-    [size, blackSquares],
-  );
+  const slots = useMemo(() => autoNumberSlots(size, size, blackSquares), [size, blackSquares]);
 
   const blackSet = useMemo(() => makeBlackSet(blackSquares), [blackSquares]);
 
@@ -250,103 +250,22 @@ export default function StavroleksoMakerPage() {
     return warned;
   }, [filledWords, invalidWords]);
 
-  // ── Phase 2: toggle black squares ─────────────────────────────────────────
+  // ── Keyboard ──────────────────────────────────────────────────────────────
 
-  function handlePhase2CellClick(row: number, col: number) {
-    const key = `${row}_${col}`;
-    setBlackSquares((prev) => {
-      const exists = prev.some(([r, c]) => r === row && c === col);
-      return exists ? prev.filter(([r, c]) => !(r === row && c === col)) : [...prev, [row, col]];
-    });
-    // If a black square was toggled, re-compute auto-numbering — slots derived reactively
-    setCells({});
-    setClues({});
-    setSelectedSlot(null);
-    setActiveCellKey(null);
-    // Remove any cell values for this cell
-    setCells((prev) => { const next = { ...prev }; delete next[key]; return next; });
-  }
-
-  // ── Phase 3: slot selection and letter input ───────────────────────────────
-
-  function handlePhase3CellClick(row: number, col: number) {
-    const key = `${row}_${col}`;
-    if (blackSet.has(key)) return;
-    clueInputRef.current?.blur();
-
-    // Find slots that contain this cell
-    const cellSlots = slots.filter((s) => {
-      const slotCells = getSlotCells(s.direction, s.startRow, s.startCol, size, size, blackSet);
-      return slotCells.includes(key);
-    });
-    if (cellSlots.length === 0) return;
-
-    if (selectedSlot) {
-      const currentSlotIndex = cellSlots.findIndex(
-        (s) => s.number === selectedSlot.number && s.direction === selectedSlot.direction,
-      );
-      if (currentSlotIndex !== -1) {
-        // Cycle to next slot for this cell
-        const nextSlot = cellSlots[(currentSlotIndex + 1) % cellSlots.length];
-        setSelectedSlot({ number: nextSlot.number, direction: nextSlot.direction });
-        setActiveCellKey(key);
-        return;
-      }
-    }
-
-    // Select first slot for this cell (prefer across)
-    const preferred = cellSlots.find((s) => s.direction === "across") ?? cellSlots[0];
-    setSelectedSlot({ number: preferred.number, direction: preferred.direction });
-    setActiveCellKey(key);
-  }
-
-  // Keyboard handler for Phase 3
+  // The reducer owns what a keystroke means; the page owns only the two things
+  // it cannot see — whether the clue input has focus, and swallowing the key.
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (phase !== 3 || !selectedSlot || !activeCellKey) return;
-    // Let the clue input handle its own keystrokes
+    if (phase !== 3) return;
     if (document.activeElement === clueInputRef.current) return;
-
-    const slot = slots.find((s) => s.number === selectedSlot.number && s.direction === selectedSlot.direction);
-    if (!slot) return;
-
-    const slotCells = getSlotCells(slot.direction, slot.startRow, slot.startCol, size, size, blackSet);
-    const cellIdx   = slotCells.indexOf(activeCellKey);
 
     if (e.key === "Backspace") {
       e.preventDefault();
-      if (cells[activeCellKey]) {
-        setCells((prev) => { const next = { ...prev }; delete next[activeCellKey]; return next; });
-      } else if (cellIdx > 0) {
-        const prevKey = slotCells[cellIdx - 1];
-        setActiveCellKey(prevKey);
-        setCells((prev) => { const next = { ...prev }; delete next[prevKey]; return next; });
-      }
-      return;
-    }
-
-    // Greek or Latin letter
-    const letter = e.key.toUpperCase();
-    if (letter.length === 1 && /[Α-ΩA-Z]/u.test(letter)) {
+      dispatch({ type: "BACKSPACE" });
+    } else if (isLetterKey(e.key)) {
       e.preventDefault();
-      setCells((prev) => ({ ...prev, [activeCellKey]: letter }));
-      if (cellIdx < slotCells.length - 1) {
-        setActiveCellKey(slotCells[cellIdx + 1]);
-      } else {
-        // Advance to next numbered slot
-        const slotNumbers = [...new Set(slots.map((s) => s.number))];
-        const currentNumIdx = slotNumbers.indexOf(selectedSlot.number);
-        if (currentNumIdx < slotNumbers.length - 1) {
-          const nextNum  = slotNumbers[currentNumIdx + 1];
-          const nextSlot = slots.find((s) => s.number === nextNum);
-          if (nextSlot) {
-            setSelectedSlot({ number: nextSlot.number, direction: nextSlot.direction });
-            const nextCells = getSlotCells(nextSlot.direction, nextSlot.startRow, nextSlot.startCol, size, size, blackSet);
-            setActiveCellKey(nextCells[0] ?? null);
-          }
-        }
-      }
+      dispatch({ type: "TYPE_LETTER", key: e.key });
     }
-  }, [phase, selectedSlot, activeCellKey, slots, cells, size, blackSet]);
+  }, [phase]);
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
@@ -355,20 +274,15 @@ export default function StavroleksoMakerPage() {
 
   // ── Validation helpers ────────────────────────────────────────────────────
 
-  function assembleSlots(): SlotDef[] {
-    return slots.map((slot) => {
-      const slotCells = getSlotCells(slot.direction, slot.startRow, slot.startCol, size, size, blackSet);
-      const answer    = slotCells.map((k) => cells[k] ?? "").join("");
-      const clueKey   = `${slot.number}-${slot.direction}`;
-      return { ...slot, answer, clue: clues[clueKey] ?? "" };
-    });
+  function currentSlots(): SlotDef[] {
+    return assembleSlots(size, blackSquares, cells, clues);
   }
 
   function validateSubmit(): string | null {
     if (!EDIT_PIN_PATTERN.test(editPin)) return EDIT_PIN_ERROR;
     // Authoring-only quality gates: connectivity + every slot filled.
     if (!connected) return "Τα λευκά κελιά δεν είναι συνεκτικά.";
-    const assembled = assembleSlots();
+    const assembled = currentSlots();
     for (const s of assembled) {
       const len = getSlotLength(s.direction, s.startRow, s.startCol, size, size, blackSet);
       if (s.answer.length < len) return `Slot ${s.number} ${s.direction === "across" ? "Οριζόντια" : "Κάθετα"}: δεν έχει συμπληρωθεί.`;
@@ -384,7 +298,7 @@ export default function StavroleksoMakerPage() {
     setSubmitError("");
     setSubmitting(true);
     try {
-      const assembled = assembleSlots();
+      const assembled = currentSlots();
       const payload = {
         title: title.trim() || undefined,
         submitter_name: submitterName.trim() || undefined,
@@ -422,41 +336,23 @@ export default function StavroleksoMakerPage() {
   }
 
   function resetAll() {
-    setPhase(1); setSize(9); setTitle(""); setSubmitterName(""); setEditPin("");
-    setBlackSquares([]); setCells({}); setClues({}); setSelectedSlot(null);
-    setActiveCellKey(null); setSubmitError(""); setConfirmation(null);
+    dispatch({ type: "RESTART" });
+    dispatch({ type: "SET_SIZE", size: STAVROLEKSO.VALID_GRID_SIZES[0] });
+    setTitle(""); setSubmitterName("");
+    // A fresh PIN, not an empty one: the next puzzle is submitted under its own
+    // PIN, and a blank one fails the submit gate with no way to refill it.
+    setEditPin(randomPin());
+    setSubmitError(""); setConfirmation(null);
     setResumeId(null); setResumePin("");
   }
 
-  function handleResumeLoaded(id: number, pin: string, puzzle: {
-    title: string | null; submitter_name: string;
-    data: { width: number; height: number; blackSquares: [number, number][]; slots: SlotDef[] };
-  }) {
+  function handleResumeLoaded(id: number, pin: string, puzzle: StoredPuzzle) {
     setResumeId(id);
     setResumePin(pin);
     setTitle(puzzle.title ?? "");
     setSubmitterName(puzzle.submitter_name);
     setEditPin(pin);
-    const s = puzzle.data.width as GridSize;
-    setSize(s);
-    setBlackSquares(puzzle.data.blackSquares);
-    // Restore cells from slot answers
-    const restoredCells: Record<string, string> = {};
-    const restoredClues: Record<string, string> = {};
-    const bs = makeBlackSet(puzzle.data.blackSquares);
-    for (const slot of puzzle.data.slots) {
-      const slotCells = getSlotCells(slot.direction, slot.startRow, slot.startCol, s, s, bs);
-      slot.answer.split("").forEach((letter, i) => {
-        if (slotCells[i]) restoredCells[slotCells[i]] = letter;
-      });
-      if (slot.clue) restoredClues[`${slot.number}-${slot.direction}`] = slot.clue;
-    }
-    setCells(restoredCells);
-    setClues(restoredClues);
-    setPhase(3);
-    // Pre-select first slot so the clue bar is immediately populated
-    const firstSlot = puzzle.data.slots[0];
-    if (firstSlot) setSelectedSlot({ number: firstSlot.number, direction: firstSlot.direction });
+    dispatch({ type: "HYDRATE", data: puzzle.data });
   }
 
   if (confirmation) return <ConfirmationScreen info={confirmation} onNew={resetAll} />;
@@ -464,7 +360,7 @@ export default function StavroleksoMakerPage() {
   const selectedSlotDef = selectedSlot
     ? slots.find((s) => s.number === selectedSlot.number && s.direction === selectedSlot.direction)
     : null;
-  const selectedClueKey = selectedSlotDef ? `${selectedSlotDef.number}-${selectedSlotDef.direction}` : null;
+  const selectedClueKey = selectedSlotDef ? clueKey(selectedSlotDef.number, selectedSlotDef.direction) : null;
 
   // ── Phase 1 ───────────────────────────────────────────────────────────────
 
@@ -481,8 +377,8 @@ export default function StavroleksoMakerPage() {
           <div className="space-y-2">
             <p className="text-sm font-semibold text-foreground">Μέγεθος πλέγματος</p>
             <div className="flex gap-2">
-              {([9, 13, 15] as const).map((s) => (
-                <button key={s} onClick={() => setSize(s)}
+              {STAVROLEKSO.VALID_GRID_SIZES.map((s) => (
+                <button key={s} onClick={() => dispatch({ type: "SET_SIZE", size: s })}
                   className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors ${
                     size === s
                       ? "bg-inverted text-inverted-foreground border-inverted"
@@ -508,7 +404,7 @@ export default function StavroleksoMakerPage() {
           </div>
 
           <button
-            onClick={() => setPhase(2)}
+            onClick={() => dispatch({ type: "START_GRID" })}
             className={`w-full ${btnModalSubmit}`}
           >
             Δημιούργησε πλέγμα →
@@ -531,22 +427,18 @@ export default function StavroleksoMakerPage() {
             {phase === 2 ? "Σχεδίασε πλέγμα" : "Συμπλήρωσε λέξεις"}
           </h1>
           <div className="flex gap-2">
-            <button onClick={() => { setPhase(1); setBlackSquares([]); setCells({}); setClues({}); setSelectedSlot(null); setActiveCellKey(null); }}
+            <button onClick={() => dispatch({ type: "RESTART" })}
               className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted hover:bg-surface-raised transition-colors">
               ← Αρχή
             </button>
             {phase === 2 && (
-              <button onClick={() => {
-                setPhase(3);
-                const first = slots[0];
-                if (first) setSelectedSlot({ number: first.number, direction: first.direction });
-              }}
+              <button onClick={() => dispatch({ type: "ENTER_FILL" })}
                 className={btnPrimaryCompact}>
                 Λέξεις →
               </button>
             )}
             {phase === 3 && (
-              <button onClick={() => setPhase(2)}
+              <button onClick={() => dispatch({ type: "BACK_TO_GRID" })}
                 className="text-xs px-3 py-1.5 rounded-lg border border-border text-muted hover:bg-surface-raised transition-colors">
                 ← Πλέγμα
               </button>
@@ -584,7 +476,12 @@ export default function StavroleksoMakerPage() {
             highlightedCells={phase === 3 ? highlightedCells : undefined}
             activeCellKey={phase === 3 ? activeCellKey : undefined}
             warnedCells={phase === 3 ? warnedCells : undefined}
-            onCellClick={phase === 2 ? handlePhase2CellClick : handlePhase3CellClick}
+            onCellClick={(row, col) => {
+              if (phase === 2) { dispatch({ type: "TOGGLE_BLACK", row, col }); return; }
+              // Typing goes to the grid from here on, so release the clue input.
+              clueInputRef.current?.blur();
+              dispatch({ type: "SELECT_CELL", row, col });
+            }}
           />
         </div>
 
@@ -602,9 +499,7 @@ export default function StavroleksoMakerPage() {
               placeholder="Γράψε ερώτηση…"
               disabled={!selectedSlotDef}
               value={selectedClueKey ? (clues[selectedClueKey] ?? "") : ""}
-              onChange={(e) => {
-                if (selectedClueKey) setClues((prev) => ({ ...prev, [selectedClueKey]: e.target.value }));
-              }}
+              onChange={(e) => dispatch({ type: "SET_CLUE", text: e.target.value })}
               className="flex-1 min-w-0 border border-border rounded-lg px-2 py-1.5 text-sm bg-surface-raised text-foreground disabled:opacity-40"
             />
           </div>
@@ -623,17 +518,13 @@ export default function StavroleksoMakerPage() {
                   </p>
                   <ul className="space-y-0.5">
                     {dirSlots.map((s) => {
-                      const clueKey = `${s.number}-${s.direction}`;
-                      const clueText = clues[clueKey] ?? "";
+                      const key = clueKey(s.number, s.direction);
+                      const clueText = clues[key] ?? "";
                       const isSelected = selectedSlot?.number === s.number && selectedSlot?.direction === s.direction;
                       return (
-                        <li key={clueKey}>
+                        <li key={key}>
                           <button
-                            onClick={() => {
-                              setSelectedSlot({ number: s.number, direction: s.direction });
-                              const sc = getSlotCells(s.direction, s.startRow, s.startCol, size, size, blackSet);
-                              setActiveCellKey(sc[0] ?? null);
-                            }}
+                            onClick={() => dispatch({ type: "SELECT_SLOT", number: s.number, direction: s.direction })}
                             className={`w-full text-left px-2 py-1.5 rounded-lg text-sm flex items-baseline gap-2 transition-colors ${
                               isSelected
                                 ? "bg-blue-100 dark:bg-blue-900 text-foreground"

@@ -2,6 +2,41 @@
 
 ## ⚠️ Active Tensions (watch these)
 
+### 🟠 A test harness that cannot express the product's own alphabet (s152)
+
+Playwright fires **no keydown events at all** for Greek characters — `keyboard.type("ΑΒΓ")` produces
+nothing, while Latin letters in the same call arrive normally. On a platform whose every game is
+played in Greek, that is a hole in the one tool used to prove a page works, and its failure mode is
+the worst kind: the feature under test looks broken, so the reflex is to go debug working code. An
+hour went that way before a `window` listener settled it.
+
+The tension is not the workaround, which is easy (type Latin where both alphabets are accepted, or
+dispatch the events by hand). It is that **the e2e suite is structurally unable to exercise the
+product's real input path**, and every future "the maker works" or "the keyboard works" claim rests
+on that substitution being harmless. It is harmless *here* only because `isLetterKey` accepts both
+alphabets by design — a game that accepted Greek alone could not be e2e-tested at all with this tool.
+Related: this is the second consecutive session where a **tool's assumed capability**, not the code,
+was the thing that was false (s150's Vercel MCP was the first).
+
+Watch: any new e2e that types letters, and any change narrowing accepted input to Greek only.
+
+### 🟡 The Maker is the last page whose rendering nothing checks (s152)
+
+The editing rules are now pure and covered 44 tests deep, and the page dropped to 515 lines — but the
+**wiring between them is still unobserved.** Nothing renders `/stavrolekso/maker` in the suite. The
+throwaway browser smoke written this session found nothing wrong, and was deleted with the agreed
+seams; two of its three failures were the *test* being wrong about behaviour that was correct, which
+is itself the argument for keeping one — those wrong assumptions would otherwise have been mine to
+carry into the next change.
+
+Two specific things sit uncovered: that a keystroke reaches the reducer at all (a dropped `useEffect`
+listener would pass every unit test), and that the clue input keeps its own keystrokes. Both are one
+Playwright spec. Related to `ISSUE-03` but not the same thing — that issue is about depth across
+launched games; this is a page with a genuine editor on it and zero coverage of any kind.
+
+Watch: the next change to the maker page, and whether `ISSUE-03` gets picked up in a way that could
+absorb this.
+
 ### 🟠 An artifact built for the operator is only delivered if it renders on the operator's device (s151)
 
 s143 established the method that has been used for every visual decision since: put the options in
@@ -133,16 +168,17 @@ survive only as prose in an ADR, which is precisely the thing s139 showed rots.
 
 ### 🟠 The deploy window's acceptance test only proves half of it (s142 — step 1 has now run, see below)
 
-**Update (s144):** the 5 `rlsInvariantsLiveDb` failures are gone and that suite is 30/30, so
-`player_milestones` exists in the live DB and the migration was pushed sometime after s142. Everything below
-still stands, and now matters *more*, not less: those green tests say the schema changed and nothing else.
-Whether the Vercel deploy that must accompany it has happened is still unverified by any gate here.
+**Update (s144, re-confirmed 2026-08-14):** the 5 `rlsInvariantsLiveDb` failures are gone and that suite is
+30/30 — the whole suite is green at 196 files / 2499 tests — so `player_milestones` exists in the live DB and
+the migration was pushed sometime after s142. Everything below still stands, and now matters *more*, not
+less: those green tests say the schema changed and nothing else. Whether the Vercel deploy that must
+accompany it has happened is still unverified by any gate here.
 
 The plan for the `player_milestones` window is: `npx supabase db push`, then the Vercel deploy, then re-run the tests and confirm all 5 `rlsInvariantsLiveDb` failures turn green. **Those 5 tests, and the whole e2e suite, validate step 1 and are blind to step 2.** They open a Supabase client and talk to Postgres directly; no deployed app code is exercised. So they go green the moment the migration lands — whether the deploy succeeded, failed, or was never started.
 
 That matters because the failure mode being guarded against lives precisely in the gap: the migration drops `player_pangrams` and `player_words`, and production serves code that writes to them until the deploy lands. A green suite would actively reassure the operator while every pangram find is 500ing. **The window needs one check that hits the deployed route** — a POST to `/api/milestones` on production, or Vercel runtime errors read for the minutes after the deploy. Until that is added, "all 5 green" should be read as "the schema changed", nothing more.
 
-Second-order, and the reason this is worth a tension rather than a note: `dev` is currently **22 commits ahead of `origin/dev`**, so step 2 is not a button press — it is a push of a large backlog plus a build. The gap is measured in minutes at best, and whoever runs the window should size it before starting, not discover it midway.
+Second-order, and the reason this is worth a tension rather than a note: at the time of writing `dev` was **22 commits ahead of `origin/dev`**, so step 2 was not a button press but a push of a large backlog plus a build. **That number is stale by design — never trust a committed commit count.** Measured 2026-08-14: `dev` is **1 ahead of `origin/dev`, `main` and `origin/main`**, so the backlog has since been pushed and the gap is now one commit. The standing point is unchanged: whoever runs the window should re-measure with `git rev-list --count` before starting, not read it here.
 
 ### 🟠 TICKET-03's marks were approved in a mock, not in the app (s143, live until the ticket ships)
 Every badge decision was made against `.claude/aiHelper/html/badge-visual-grill.html`, which is a **standalone page with its own CSS**. It reproduces the leaderboard row, the Trophy Case tile and the toast closely enough to choose between options — but it is not the app. It does not use `lbBadgeChip`'s real padding and divider, the real font stack, the real row density, or the actual `globals.css` tokens; its eight tier colours are hard-coded copies. **A mark that reads at 12px in the mock is not thereby proven to read at 12px in the real chip.**
@@ -393,8 +429,19 @@ tests that a game's documented status matches its registry row, and nothing prom
 when a game finishes — Topothesies needed an explicit session (s121) to remember it, and the same
 session had to add the game to `Shell.tsx GAME_IDS` by hand because the flag alone would not have
 shown it. Two lessons: **read the registry, never the prose, when you need a game's real status**,
-and when a game does graduate, the flip is a checklist (registry flag + `GAME_IDS` + HomeTrophy
-branch + docs), not a one-line edit.
+and when a game does graduate, the flip is a checklist, not a one-line edit.
+
+**The checklist has since shrunk, and the shrinking is the interesting part (updated 2026-08-14).**
+It was *registry flag + `Shell.tsx GAME_IDS` + HomeTrophy branch + docs*. Two of those four are now
+closed **by construction** rather than by discipline: `GAME_IDS` no longer exists — `Shell.tsx`
+derives `MAIN_GAME_IDS` from the registry and filters on `hidden`, and `page.tsx` does the same, both
+probe-tested in `registryCoverage.test.tsx` (s148). The HomeTrophy branch derives from the `scores`
+/ `leaderboard` capabilities (ADR 0020). What remains genuinely manual is **both** registry flags
+(`wip` *and* `hidden` — ADR 0022 made them orthogonal, so a flip is now two decisions, not one), the
+accent row in `globals.css`, the capability grant, content supply, and the docs. The general shape
+worth keeping: *a checklist item that a guard test can hold should become one, and the checklist
+should then be rewritten* — a stale checklist teaches a future session to hand-edit something the
+compiler already owns.
 
 ### 🟡 A spec's stated *reason* can be false while its *decision* is right (s139)
 

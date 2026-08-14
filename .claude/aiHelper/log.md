@@ -5,6 +5,32 @@
 
 ---
 
+## Session 152 — 2026-08-14: the Maker's rules leave the page
+
+Operator proposal, evaluated then built with `/tdd` at three seams agreed up front. Three new pure
+modules — `computeCells.ts` (the two projections moved out of `StavroleksoGrid.tsx`, **the last game
+file that mixed React with pure logic**), `makerSlots.ts` (`assembleSlots`/`restoreCellsFromSlots`/
+`clueKey`), `makerReducer.ts` (12 actions). Page **682→515 lines, 24→17 `useState`**, four handlers
+replaced by dispatch. Slot numbering is **derived inside the reducer** from `size`+`blackSquares`, so
+the signature really is two arguments and no caller can pass a numbering that disagrees with the grid.
+
+**The proposal's action list was a third of the real surface** — it named four, the editor needs
+twelve (clue entry, slot-list selection, size, three phase moves, restart, resume). Its evidence was
+sound: the dead second `setCells` was real and is gone.
+
+**The round trip is not an inverse, and the submit gate is what hides that.** `assembleSlots`
+collapses a hole, so restoring a gappy grid left-packs the letters and **invents one the author never
+typed**; only the "slot not filled" check keeps anything gappy from ever being stored. Pinned as a
+test that asserts the corruption, so the gate cannot be relaxed quietly. Second live bug fixed:
+`resetAll` set `editPin` to `""`, so "new puzzle" could never submit again.
+
+**Playwright cannot emit a Greek keydown at all** — `keyboard.type("ΑΒΓ")` fires *no events*, verified
+by listening on `window` (Latin in the same call arrives fine). Cost an hour reading a green feature
+as broken. Second self-inflicted one: `ENTER_FILL` pre-selects 1 Across, so the first click on that
+same square **cycles to 1 Down** — faithful to the old handler, and it fooled my own smoke test before
+it fooled anyone else. That smoke test was thrown away with the agreed seams; the maker still has no
+rendering test. Gates 199/2559, eslint 0, build 0, **e2e 13 passed / 2 skipped**.
+
 ## Session 151 — 2026-08-13: the share preview, and the pages the operator could not read
 
 `TICKET-10` half-built, **blocked on an operator pick, not on work**. Shipped: `hidden` filtered out
@@ -34,41 +60,11 @@ unreadable on the device the operator actually uses.**
 
 Found on the way out: an operator `git commit --amend` at 12:05 swept the three source files into `bbe27b3`, so this ticket's code sits inside an unrelated commit.
 
-## Session 150 — 2026-08-12: the monitoring that was already there, and the tool that could not reach it
-
-`TICKET-08` shipped as **ADR 0023** — no third-party error SDK, Vercel only, because a monitor is a
-processor and `/privacy` says there are none. Docs only, no source changed. Gates 193/2467, 0, 0.
-
-**The ticket's own mechanism was false, and it was the third reason the decision rested on.** It
-stated `get_runtime_errors` and `get_runtime_logs` "are reachable from an agent session via MCP".
-They are not: `list_teams` works, so the connector looks authenticated, but **every project-scoped
-call fails** — `get_project` 404 on both the slug and the `prj_…` id, both log tools **403**,
-`list_projects` `[]`. Re-authorizing changed nothing. This is the s146 shape again — **a citation to
-a named artifact reads as verified and almost never is** — except the artifact was a *tool the ticket
-assumed it could call*.
-
-**The working surface is the CLI, and `project-mcp` was wrong about it in the opposite direction:**
-the skill said `vercel logs` "live-streams from now (no lookback)". It queries history (`--since`,
-`--until`, `--level`, `--status-code`, `--json`), which is the only reason a manual check is writable
-at all. Both corrections are now in the skill, with three traps measured on the way: the human output
-prints **time-of-day with no date** (parse `timestampInMs`), `--limit` truncates newest-first rather
-than windowing (`--since 7d --limit 1000` returned 1000 rows from one day), and **`No logs found`
-reads identically to a broken query** — an absence of errors must be re-run unfiltered to be believed.
-
-Verified rather than trusted: retention reaches **7 days** (walked back to 2026-08-06 by ISO
-timestamp), previews return **302 to SSO** so an agent cannot exercise one, and the production
-baseline is ~1000 rows/day of `200`/`304` with **zero errors across the window** — which is what
-makes a single error row real signal. Operator approved a read-only production probe in place of the
-ticket's preview: `GET /api/community-puzzles/stavrolekso/abc-not-a-number` → `Number(id)` → `NaN` →
-rejected integer cast → retrieved as `[api] not_found: invalid input syntax for type integer: "NaN"`.
-**No route here can be made to crash from outside** — ADR 0016's envelope converts every fault into a
-coded 4xx — so a handled error is the strongest proof available, recorded so it does not read as
-laziness.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 150 | 2026-08-12 | **`TICKET-08` shipped as ADR 0023** — no third-party error SDK, Vercel only, because a monitor is a processor and `/privacy` says there are none. Docs only. **The ticket's own mechanism was false and it was the third reason the decision rested on:** `get_runtime_errors`/`get_runtime_logs` are NOT reachable — `list_teams` works so the connector looks authenticated, but **every project-scoped call fails** (`get_project` 404 on slug and `prj_…`, both log tools 403, `list_projects` `[]`); re-authorizing changed nothing. The s146 shape again — **a citation to a named artifact reads as verified and almost never is** — except the artifact was a *tool the ticket assumed it could call*. **The working surface is the CLI**, and `project-mcp` was wrong the opposite way: `vercel logs` queries history (`--since`/`--until`/`--level`/`--status-code`/`--json`), not a live stream, which is the only reason a manual check is writable. Three traps now in the skill: human output prints **time-of-day with no date** (parse `timestampInMs`), `--limit` truncates newest-first rather than windowing (`--since 7d --limit 1000` returned 1000 rows from one day), and **`No logs found` reads identically to a broken query** — an absence of errors must be re-run unfiltered to be believed. Verified not trusted: retention reaches **7 days**, previews 302 to SSO so an agent cannot exercise one, baseline ~1000 rows/day with **zero errors**. Operator approved a read-only production probe: `…/stavrolekso/abc-not-a-number` → `NaN` → rejected integer cast → `[api] not_found`. **No route can be made to crash from outside** (ADR 0016's envelope), so a handled error is the strongest proof available. |
 | 148 | 2026-08-12 | **Three Games leave the shelf — `TICKET-06` built** (`/tdd`, three slices: drawer, picker, Offline Mode). New **required** `hidden: boolean` on `GameRegistryRow` — `GAME_REGISTRY` is `as const satisfies`, so omitting it is a type error on the union, which forces every new Game to state its intent. `wip` and `hidden` are **orthogonal** (**ADR 0022**): Leksindeseis is `wip:true` **and** finished **and** not launching, three facts one flag would flatten. **Hidden means unlisted, not disabled** — routes stay live by direct URL everywhere; revealing them off-production was offered and declined, because the preview picker must match production. **Two ticket claims were wrong, each one file to check:** `e2e/games.spec.ts` has **no picker assertions at all** (nothing to update, passed untouched), and the test that actually broke — `Shell.test.tsx`'s drawer assertion on `/leksindeseis` — appeared in no list; the s146 pattern exactly. The `registryCoverage.test.tsx` probe trick extended to a **second** probe (`wip:false, hidden:true`) across all three surfaces, each with a positive control so a surface cannot pass by rendering nothing. Two finds: `app/page.tsx` **does** render in jsdom, and a probe crashes the real `HowToPlayModal` (rules copy keyed `Record<keyof typeof GAME_REGISTRY, …>` — a compile-time guarantee with no runtime guard), so it is stubbed. The Offline Mode fix is for **parked** code (ADR 0010) — its `!wip` filter would have let a finished-but-hidden Game join the prefetch set. «Υπό κατασκευή» and the 🚧 chip **deleted, not dormant**. 192 files / 2455 tests, eslint 0, build 0, **e2e 10 passed / 2 skipped (baseline moved from 7 on purpose)**. |
 | 147 | 2026-08-11 | **Launch question 1 resolved — five tickets, one issue, no code** (`/grill-with-docs`). **Soft launch** — a wider circle, no broadcast — because the site is *already publicly deployed*, so launch is promotion rather than a change in exposure, and that framing is what makes the checklist finite. Output: a blocking/accepted-as-is split, `TICKET-06`–`10`, `ISSUE-03`, and a release-day runbook whose **order is load-bearing** (deploy → verify prod serves the merge commit → `db:backup` off-machine → `launch-reset.sql` → announce). **Two of the repo's own descriptions were euphemisms, both one command to check**: the Leksindeseis fallback pool called "thin" for weeks is **one puzzle** rotating over a single-item array, and the legal/monitoring surface was **nothing at all** — the s147 reflections tension. Third measured fact, which set the runbook order: **`BadgeMark` is absent from `main`**, so a reset run before the launch deploy would re-earn every badge against retired emoji art. Operator calls: all three `wip:true` Games **hidden** (retiring the content-supply, wip-flip and Leksindeseis-pool threads at once), terms of service and E2E depth accepted as-is, the **UI question struck from the handoff**. |
 | 146 | 2026-08-11 | **The Platform makes a noise — TICKET-04 built** (`/tdd`, five slices). ADR 0021's design held up unchanged: `selectSoundCue` is three lines, the reducer was never touched, `lastSubmission` was already the event source. New: `config/sound.ts` (Cue registry + fixed per-Cue volumes + the provenance block `TICKET-05` fills), pure `leksokipos/lib/soundCue.ts`, `useSoundEnabled` (a `useTheme` clone on key `sound-preference`, third standalone localStorage carve-out), `useSoundCue` (one lazy `Audio` per Cue, restart not stack). Toggle 🔊/🔇 inline in `Shell.tsx` beside ☀️/🌙 — the header is four buttons wide on mobile and **nothing guards that**: ADR 0021 named `mobileLayout.test.tsx`, which renders `HowToPlayModal` and has never touched the Shell, and jsdom has no layout engine so no test could. Moved to `TICKET-05`'s done-when. **The ticket's own jsdom instruction was wrong — the s132 trap in a new hat:** it said to stub `HTMLMediaElement.play` "guarded the same way the `scrollIntoView` stub is", but jsdom **does define `play()`** (logs "Not implemented", returns **`undefined`**), so the copied guard never fires and a void dressed as a Promise is exactly what killed Offline Mode. Stub became unconditional; `useSoundCue.test.ts` **subclasses the real `Audio`** rather than faking one. 192 files / 2450 tests, e2e 7/2-skipped after clearing `.next`. `TICKET-04` deleted; **the 🔊 button renders on every page playing silence** until `TICKET-05` lands. |
