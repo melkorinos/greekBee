@@ -90,7 +90,7 @@ This project is managed with a dedicated AI coding agent using **Claude Code**. 
 | `.claude/aiHelper/coverageMap.md` | Per-file test coverage map — loaded on demand, never at session start |
 | `.claude/aiHelper/skillsNotes.md` | Skill install/fork/junction traps — read before any skill maintenance |
 
-Longer-lived working documents live outside `aiHelper/`: `.claude/handoffs/` holds parked feature briefs (monetization, offline mode, the Λογοπαίγνιο content pool, badge ideas, the engagement epic), and `.claude/tracker/` holds deferred issues and agent-ready tickets.
+Longer-lived working documents live outside `aiHelper/`: `.claude/handoffs/` holds open questions and parked feature briefs (launch readiness, monetization, offline mode, the Λογοπαίγνιο content pool, the game-icon system, the engagement epic), and `.claude/tracker/` holds deferred issues and agent-ready tickets.
 
 ### Claude Code workflow
 
@@ -222,6 +222,7 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
    - `<FlowerGrid>` — SVG letter grid with two visual variants: **Pie Slice** (annular sectors) and **Flower** (elliptical petals). Configured via `FlowerGridConfig`. The player's variant preference is toggled from the page header and stored in `localStorage`.
    - `<FoundWordsList>` — sorted found words, pangrams highlighted.
    - `<HowToPlayModal>` — rules modal (? button, Greek only).
+   - **Sound Cues** (ADR 0021) — a pure `selectSoundCue` maps each submission to at most one of three Cues (pangram / word found / missing centre letter). Off by default, toggled 🔊/🔇 in the Shell header. **The three MP3s are not committed yet (`TICKET-05`), so the toggle currently plays silence — do not deploy until they land.**
 
 ---
 
@@ -238,11 +239,14 @@ src/
     leksodromia/    Daily anagram sprint (decay-to-floor scoring)
     leksoplegma/    Daily word-web (trace words across a 4×4 grid, no timer)
     topothesies/    Daily Greek geography (silhouette → regional unit → capital)
-    posokanei/      Daily guess-the-price (wip)
-    logopaignio/    Daily guess-the-logo (wip)
+    posokanei/      Daily guess-the-price (wip + hidden)
+    logopaignio/    Daily guess-the-logo (wip + hidden)
     profile/        Player identity, Lifetime Stats, Trophy Case
     leksikastirio/  Community word-court (public voting + admin review)
-    api/            Edge routes: game-scores, game-state, profile, transfer, nominations, community-puzzles, pangrams, words, auth
+    privacy/        The Platform's only legal surface (Greek, static, linked only from the drawer)
+    auth/           OAuth PKCE callback
+    api/            Edge routes: game-scores, game-state, profile, transfer, nominations, community-puzzles,
+                    milestones, achievements, validate-words, cleanup-scores (cron), auth
   components/
     shared/         Cross-game UI primitives (Shell, GamePageShell, GameHeader, Modal, FeedbackBanner, FramedMedia, GameLeaderboardModal, LetterPickerModal)
     leksokipos/     Leksokipos components (LeksokiposLayout, GameBoard, FlowerGrid, FlowerGridPlayground, ScoreBar, LeaderboardModal, …)
@@ -306,12 +310,16 @@ src/
     useGameStateSync.ts    Cross-device sync hook — pushes Leksokipos state on valid word submit
     useGuessRound.ts       Round spine for the guess family (leksiarxeio, vrestifrasi) — ADR 0019
     useSlotFillRound.ts    Round spine for the slot-fill family (topothesies, posokanei, logopaignio, leksoplegma) — ADR 0019
+    useTheme.ts            Light/dark preference — localStorage["theme-preference"], .dark on <html> (ADR 0002)
+    useSoundEnabled.ts     Sound Cue preference — localStorage["sound-preference"], off by default (ADR 0021)
+    useSoundCue.ts         One lazy Audio per Cue; restarts rather than stacking (ADR 0021)
     useOfflineMode.tsx     Offline Mode context — PARKED (ADR 0010), wired but unreachable
   data/
     leksokipos/     puzzles-el.json (daily puzzles), index.ts
     leksiarxeio/    words-2..8.json (per-length guess lists), answers-4..8.json (curated answer pools), answerPools.ts (same-day-answer seam), index.ts
     leksindeseis/   puzzles-connections.json (hand-curated), index.ts
-    vrestifrasi/    phrases-el.json (static phrase fallback), index.ts
+    vrestifrasi/    phrases-el.json (static phrase fallback), words-1.json (AUTHORED — must NOT move
+                    into leksiarxeio/, which the re-sync adapter regenerates), index.ts
     leksoplegma/    puzzles-el.json (committed generator batch, npm run generate-leksoplegma), index.ts
     leksodromia/    anagramAlternates.json (anagram credit for curated answers), index.ts (words derived from the leksiarxeio answer pools)
     topothesies/    answers.json + shapes.json (precomputed SVG silhouette paths, ADR 0018), index.ts
@@ -325,10 +333,12 @@ src/
     postScore.ts    Fire-and-forget POST utility (+ postScoreAwaitable for the offline flush)
     supabase.ts     Typed Supabase clients (anon / token-scoped / service-role, ADR 0017)
     communityPuzzleLifecycle.ts  Submit → approve/reject → serve, shared by all community-puzzle games
-    puzzleDate.ts   todayISO(), nextFreeScheduledDate() — the platform's single clock
-    placement.ts    Podium/first-place counts derived from full game_scores history
-    scoreMerge.ts / achievementMerge.ts / pangramMerge.ts / wordsMerge.ts  Sign-in Restore merge planners (ADR 0012/0013)
+    puzzleDate.ts   todayISO(), isISODate(), nextFreeScheduledDate() — the platform's single clock
+    lifetimeStats.ts / wordsByLength.ts  Profile Page aggregation over game_scores + player_milestones
+    nominationDecision.ts / nominationBlocklist.ts  Nomination submit rules + the proper-noun blocklist
+    scoreMerge.ts / achievementMerge.ts / milestoneMerge.ts / identityMerge.ts  Sign-in Restore merge planners (ADR 0012/0013)
     offlineOutbox.ts             Pending offline scores (PARKED with Offline Mode, ADR 0010)
+    database.types.ts            Generated Supabase schema types, wired into the compiler (ADR 0017)
   types/            Shared types: Language, SliceId, PersistenceEnvelope
 scripts/            Puzzle generation & curation CLIs (batch-generate, curate-answers, generate-topothesies, logopaignio fetchers, …)
 ```
@@ -365,22 +375,26 @@ scripts/            Puzzle generation & curation CLIs (batch-generate, curate-an
 
 Everything lives under [`.claude/tracker/`](.claude/tracker/) — conventions and both file templates in [its README](.claude/tracker/README.md). Two folders, and the split is the point: **issues** are problems we have decided not to fix yet; **tickets** are work an agent can pick up cold and execute. There are no triage labels — the folder is the state — and resolved files are **deleted**, not marked done.
 
+Numbers are **never reused** — read `log.md` before picking one, not the folder. Both tables below are a
+snapshot; the folders are the truth.
+
 ### Deferred problems ([`issues/`](.claude/tracker/issues/))
 
 | # | Issue | Revisit when |
 |---|-------|--------------|
 | ISSUE-01 | [No disaster-recovery backups](.claude/tracker/issues/ISSUE-01-no-disaster-recovery-backups.md) | Before public launch, or the next risky migration |
+| ISSUE-03 | [Thin E2E coverage](.claude/tracker/issues/ISSUE-03-thin-e2e-coverage.md) | The first production bug a happy-path browser test would have caught |
 
 ### Ready for pickup ([`tickets/`](.claude/tracker/tickets/))
 
 | # | Ticket | Status |
 |---|--------|--------|
-| TICKET-01 | [`player_milestones` table](.claude/tracker/tickets/TICKET-01-player-milestones-table.md) | ready |
-| TICKET-02 | [Catalog rebuild + launch reset](.claude/tracker/tickets/TICKET-02-catalog-rebuild-launch-reset.md) | ready — blocked by TICKET-01 |
+| TICKET-05 | [Sound Cue audio files](.claude/tracker/tickets/TICKET-05-sound-cue-assets.md) | ready — **operator work**; blocks any deploy while the 🔊 toggle plays silence |
+| TICKET-10 | [Share preview (OG card + favicon)](.claude/tracker/tickets/TICKET-10-share-preview.md) | in-progress — blocked on one operator pick from the candidates page |
 
 ### Open questions
 
-Questions that must be answered before work can be ticketed are **not** tracker items — they live in [`.claude/handoffs/launch-readiness.md`](.claude/handoffs/launch-readiness.md): the launch checklist, the UI redesign scope, and the launch sequencing. Resolving one produces an ADR or a `CONTEXT.md` entry plus, usually, tickets.
+Questions that must be answered before work can be ticketed are **not** tracker items — they live in [`.claude/handoffs/launch-readiness.md`](.claude/handoffs/launch-readiness.md), which now holds exactly one: sequencing the launch run. Resolving one produces an ADR or a `CONTEXT.md` entry plus, usually, tickets. The **UI redesign** is deliberately not tracked there — the operator drives it in separate sessions.
 
 ---
 

@@ -1,6 +1,6 @@
 # Launch readiness — what is left between here and a go/no-go
 
-**Created:** 2026-07-31 · **Question 1 resolved:** 2026-08-11 · **Last audit:** 2026-08-12
+**Created:** 2026-07-31 · **Question 1 resolved:** 2026-08-11 · **Last audit:** 2026-08-14
 **Driver:** Dimitrios
 
 One question is left. Everything else on this document has either shipped, been consciously
@@ -23,23 +23,20 @@ the operator's.
 
 ## Everything still pending, in one place
 
-Audited against the filesystem and git on 2026-08-12. Nothing else is open.
+Audited against the filesystem and git on 2026-08-14. Nothing else is open.
 
 ### Open tickets — `.claude/tracker/tickets/`
 
 | Ticket | What is left | Owner |
 |---|---|---|
 | `TICKET-05` | Three Sound Cue MP3s. **Blocks any deploy** — the 🔊 toggle is merged and plays silence today | operator |
-| `TICKET-10` | Open Graph card, `icon`, `apple-icon`, and deleting the stock `favicon.ico` that ships the **Next.js logo** in production today. Also fixes `PLATFORM_DESCRIPTION`, a fourth enumerating surface `TICKET-06` missed, which currently advertises all three hidden Games | agent |
+| `TICKET-10` | **In-progress.** The metadata half shipped in s151 (`PLATFORM_DESCRIPTION` now filters `hidden`, guarded by seam 1d; `metadataBase`/`openGraph`/`twitter` in `layout.tsx`; `PLATFORM_ORIGIN`). What is left: `opengraph-image`, `icon`, `apple-icon`, deleting the stock `favicon.ico` that ships the **Next.js logo** in production today, and a test that the metadata block survives. **Blocked on one operator pick** — a card number and an icon number from `html/share-card-candidates.html` | operator pick, then agent |
 
 ### Owed, and not tickets
 
 - **The play-through of `dev` on preview** — Leksodromia and Leksoplegma, the sessions 102–104
   visual shifts, and the badge art eye-check in **both themes** owed since `TICKET-03`. One session.
 - **The release-day runbook** below.
-- **`ISSUE-02` bookkeeping** — cited in `memory.md` and `goals.md`, **no file on disk**. Its
-  `rlsInvariantsLiveDb` failures were reported gone in s144. Resolve or re-file; the number stays
-  spent either way.
 
 ### Deferred, correctly, and not launch work
 
@@ -118,9 +115,11 @@ list and the go/no-go is a scheduling call.
 
 ### Inputs
 
-- The pending inventory at the top of this document — three tickets, three owed items
-- `dev` is **15 commits ahead** of both `origin/dev` and `main` (measured 2026-08-12), so the merge
-  is a real push and build, not a button press
+- The pending inventory at the top of this document — two tickets, two owed items
+- `dev` is **1 commit ahead** of `origin/dev`, `main` and `origin/main` (measured 2026-08-14; it was
+  15 on 2026-08-12 and the backlog has since been pushed). **Re-measure before planning the window
+  rather than reading this line** — `git rev-list --count origin/dev..dev`. The merge is still a real
+  build, but it is no longer a large backlog
 - **No ordering constraints survive between the tickets.** The `TICKET-08`-before-`TICKET-07`
   coupling was withdrawn once the no-SDK ruling made it moot; both shipped. The one live dependency
   is **platform logo → `TICKET-10`**

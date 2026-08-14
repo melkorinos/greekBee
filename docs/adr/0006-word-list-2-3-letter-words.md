@@ -22,7 +22,7 @@ Sourced 551 normalized 2–3 letter Greek words from the LibreOffice Hunspell `e
 
 - Players can guess any real Greek phrase including short function words without hitting "word not found" errors
 - Data root has two word-list files: `words-el.json` (4+ letters, 812k words) and `words-el-short.json` (2–3 letters, 551 words)
-- `words-el-short.json` is on a disconnected pipeline from `words-el.raw.json` — it was derived from a separate Hunspell source. See issue `10-word-list-pipeline-gaps.md` for the full set of pipeline gaps that still need resolution.
+- `words-el-short.json` is on a disconnected pipeline from `words-el.raw.json` — it was derived from a separate Hunspell source. (Issue `10-word-list-pipeline-gaps.md` tracked the remaining pipeline gaps; that numbering scheme was retired with the 2026-08-06 tracker redesign and the file is gone. The pipeline itself was settled by **ADR 0015**’s re-sync adapter registry.)
 
 ## Revision — 2026-05-29: merged short words into unified word list
 

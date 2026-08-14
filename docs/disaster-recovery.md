@@ -37,23 +37,44 @@ scores + achievements + stats all come back:
 
 | Table | Why it's load-bearing |
 |---|---|
-| `game_scores` | **The crown jewel.** Append-forever. Leaderboards, Lifetime Stats, Streaks, and all derived-on-read Achievements read full history off this. Lose it → lose everyone's record. |
-| `player_profiles` | Identity: `device_uuid` → `display_name` → `auth_user_id`. The device→account map. Lose it → players can't be re-linked to their history. |
+| `game_scores` | **The crown jewel.** Append-forever. Leaderboards, Lifetime Stats and Streaks read full history off this. Lose it → lose everyone's record. |
+| `player_achievements` | **Immutable earned-Achievement facts** — one row per Achievement a device earned, never revoked (ADR 0013). **Not derivable from anything else**: it is the only record that a Badge was ever earned. |
+| `player_milestones` | **Append-only fact rows for every countable Badge input** — the `pangram` / `word` / `top_rank` / `tzimani` days behind all five tiered Badges (migration `20260807120000`, absorbing the former `player_pangrams` + `player_words`). Also not derivable: pangram and long-word finds are recorded as they happen and exist nowhere else. |
+| `player_profiles` | Identity: `device_uuid` → `display_name` → `auth_user_id`, plus `selected_badge_id`. The device→account map. Lose it → players can't be re-linked to their history. |
 | `identity_audit` | Append-only mapping history. Backs [admin-restore](admin-restore.md). Reconstructs every device↔account pair that ever existed. |
-| `community_stavrolekso_puzzles` | Never deleted after approval — the only community content that's permanent, not consumed. |
+| `nominations` + `nomination_votes` | Community review work. Rejected rows are retained forever on purpose (ADR 0011) — `NominationModal` warns re-submitters off them. |
+| `community_stavrolekso_puzzles` | Never deleted after approval — permanent, not consumed. |
+| The other three `community_*_puzzles` | Approved rows carry a `scheduled_date` and are served non-destructively, so a live queue of future Daily Puzzles sits in them. |
 | `transfer_codes` | 24h TTL — ephemeral, but cheap to include in a full dump. |
 
-Achievements are (today) **derived on read from `game_scores`**, not a separate
-stored table — so protecting `game_scores` protects achievements for free. If an
-`achievements` facts table is added later (ADR 0012 anticipates
-`(device_uuid, achievement_id)` rows), add it to this list.
+> **Achievements are stored facts, not derived state.** An older version of this doc
+> said they were "derived on read from `game_scores`, so protecting `game_scores`
+> protects achievements for free." That has been false since ADR 0013 shipped
+> `player_achievements`, and doubly so since `player_milestones` absorbed the
+> pangram and word capture. A dump that covers `game_scores` alone loses every
+> earned Badge permanently — **earned means earned forever**, and there is nothing
+> to recompute them from.
+
+Everything above is included by `npm run db:backup` (it dumps roles + schema +
+data for the whole database), so the practical rule is simply: take a full dump.
+The table exists to say what a *partial* restore must not skip.
 
 ---
 
 ## Taking a backup
 
-Full logical backup — schema + data — via the `supabase` CLI (already an approved
-devDependency; needs no Docker):
+**The committed way — use this one:**
+
+```bash
+npm run db:backup      # → db-backups/<timestamp>/{roles,schema,data}.sql
+```
+
+`scripts/backup-db.ps1` runs `pg_dumpall --roles-only` plus two `pg_dump` passes
+(schema, then data). It needs the PostgreSQL client tools on the machine
+(`pg_dump` / `pg_dumpall`) — Docker is not required.
+
+Fallback if the client tools are unavailable — the `supabase` CLI (already an
+approved devDependency, also no Docker):
 
 ```bash
 supabase db dump --db-url "$SUPABASE_DB_URL" -f "backup-$(date +%Y%m%d).sql"

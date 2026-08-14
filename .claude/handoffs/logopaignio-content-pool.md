@@ -22,7 +22,10 @@
 
 **Nothing has been approved yet.** Every asset is in gitignored staging (`public/logopaignio/_raw/`); `puzzles-el.json` still holds only the fake «Δείγμα» placeholder. The eye check is the next human step.
 
-**Review surface:** `.claude/aiHelper/html/logopaignio-preview.html` — 209 cards grouped by sector, with filter buttons (Όλα / Καθαρά / Με προειδοποίηση / Προβληματικά / Χωρίς αρχείο / **Θέλουν εικόνα από εσένα**). Regenerate with `npm run logopaignio:preview`.
+**Two review surfaces, and only one of them is on disk today** (checked 2026-08-14):
+
+- `.claude/aiHelper/html/logopaignio-marks.html` — **present**, 5.4 MB, every staged asset on one page with its measurements, plus `logopaignio-marks.json` for the cropper. Regenerate with `node scripts/analyze-logopaignio-marks.mjs` (no npm alias).
+- `.claude/aiHelper/html/logopaignio-preview.html` — **absent**, and expected to be: it is generated output over the gitignored `public/logopaignio/_raw/` staging tree, so it does not survive a fresh clone. 209 cards grouped by sector, with filter buttons (Όλα / Καθαρά / Με προειδοποίηση / Προβληματικά / Χωρίς αρχείο / **Θέλουν εικόνα από εσένα**). Regenerate with `npm run logopaignio:preview` — the raw assets must be staged first or it has nothing to draw.
 
 ---
 

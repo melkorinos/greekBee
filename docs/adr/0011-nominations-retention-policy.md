@@ -6,7 +6,7 @@
 
 The `nominations` table accumulates rows over time. Three statuses exist: `pending`, `accepted`, `rejected`. The question is which rows to clean up and when.
 
-`reviewed_at` already has a dual meaning established by `apply-nominations.mjs` (ADR 0001): when an admin approves a Nomination the column stays `null`; the CLI script sets `reviewed_at = now()` after patching the word-list files. So `reviewed_at IS NULL` on an accepted row means "applied pending" and `IS NOT NULL` means "applied".
+`reviewed_at` already has a dual meaning established by the apply CLI (`scripts/apply-nominations.ts`; it was `apply-nominations.mjs` when this was written — ADR 0015 converted it to TypeScript): when an admin approves a Nomination the column stays `null`; the CLI script sets `reviewed_at = now()` after patching the word-list files. So `reviewed_at IS NULL` on an accepted row means "applied pending" and `IS NOT NULL` means "applied".
 
 ## Decision
 

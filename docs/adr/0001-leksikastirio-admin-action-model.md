@@ -28,7 +28,7 @@ Option C. Admin approval is purely a DB status change. A CLI script (to be writt
 
 ## Revision — 2026-05-29: expanded CLI scope, length-based routing
 
-The CLI script (`apply-nominations.mjs`) now patches all applicable files, not just `words-el.json`:
+The CLI script (`scripts/apply-nominations.ts`, run via `npm run apply-nominations`) now patches all applicable files, not just `words-el.json`:
 
 - Words of length ≤ 3 → `words-el.json` only
 - Words of length 4–8 → `words-el.json` **and** `src/data/leksiarxeio/words-{N}.json`

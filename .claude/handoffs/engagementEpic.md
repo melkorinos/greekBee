@@ -4,6 +4,26 @@
 **Status:** Epic tracker — pillars spawn their own handoffs as they mature
 **Goal:** player engagement + competition across the platform
 
+> **Audited 2026-08-14. Read this box before believing anything below it.** The shipped pillars kept
+> moving after this file stopped being edited, so the *backlog* here is still good and the *status
+> notes* were not. Corrected in place, but the shape of the drift is worth naming:
+>
+> - **`player_pangrams` and `player_words` no longer exist.** Both were absorbed into one
+>   append-only `player_milestones` table on 2026-08-07 (migration `20260807120000`, ADR 0013's
+>   2026-08-07 amendment), which also added the `top_rank` and `tzimani` day counters.
+> - **Badge emoji `glyph`s are gone.** Drawn `BadgeMark` SVGs replaced them on 2026-08-10
+>   (ADR 0013 §7) — a tier is a colour, never a different drawing.
+> - **The catalog was rebuilt** on 2026-08-07 to **five badges, every one tiered**. Πρώτα Βήματα was
+>   deleted and Θεριστής retired; **Τζιμάνι was revived as a different thing** — a tiered count of
+>   days at 70% found words, *not* the retired perfect round.
+> - **The Βάθρο podium cell and its cross-device query were deleted** on 2026-08-06 when tiered
+>   podium badges were rejected: podium slots are fixed at three while the audience grows, so the
+>   metric gets strictly harder over time. Do not re-propose it — that is a closed question.
+> - **`FEATURE_FLAGS.achievements` has been `true` since session 112.** Nothing here is "dark".
+> - **Three referenced files never existed or are long deleted**: `achievementsLeksokipos.md`,
+>   `11-pangram-tier-prod-smoke-check.md` and `12-badge-ideas-parked.md` (the old numbered-issue
+>   scheme died with the 2026-08-06 tracker redesign). Their surviving content is in ADR 0013.
+
 ---
 
 ## Structure
@@ -13,7 +33,8 @@ This epic has one **prerequisite** and several **pillars**. Each pillar graduate
 ```
 Durable identity  (PREREQUISITE — ✅ DONE 2026-07-03, ADR 0012; handoff deleted)
         │
-        ├── achievementsLeksokipos.md   (pillar #1, user's favourite — own handoff)
+        ├── Achievements               (pillar #1 — ✅ DONE; ADR 0013 is the record,
+        │                               its handoff achievementsLeksokipos.md is deleted)
         ├── Nemesis / taunts            (parked below)
         ├── Weekly leaderboard          (parked below)
         ├── Records / Hall of Fame      (parked below)
@@ -23,7 +44,7 @@ Durable identity  (PREREQUISITE — ✅ DONE 2026-07-03, ADR 0012; handoff delet
 
 **Decided:** identity comes first (achievements are worthless if losable). **✅ Satisfied 2026-07-03:** Sign-in Restore / Disconnect / `identity_audit` all shipped; merge semantics live in **ADR 0012** (auth account = anchor, device adopts canonical `device_uuid`, best score per puzzle wins). The identity handoff is deleted — cite ADR 0012.
 
-**Display surface — ✅ SHIPPED 2026-07-03 (Profile Page epic; its handoff `profilePageAndAchievements.md` is retired):** `/profile` is live — identity header, three entry points, a **v1 lifetime-stats strip**, and the **Trophy Case**. The Trophy Case renders the frozen Leksokipos catalog (`src/games/leksokipos/lib/achievements.ts`) and lights earned badges (earned-state wiring shipped with Epics A/B1/B2). The B1/B2 manual prod smoke-check is still pending — see issue `11-pangram-tier-prod-smoke-check.md`.
+**Display surface — ✅ SHIPPED 2026-07-03 (Profile Page epic; its handoff `profilePageAndAchievements.md` is retired):** `/profile` is live — identity header, three entry points, a **v1 lifetime-stats strip**, and the **Trophy Case**. The Trophy Case renders the Leksokipos catalog (`src/games/leksokipos/lib/achievements.ts`) and lights earned badges. *(The B1/B2 manual prod smoke-check this line used to point at was tracked as `11-pangram-tier-prod-smoke-check.md`, an issue file deleted with the 2026-08-06 tracker redesign. What is still owed is the broader operator play-through in `.claude/handoffs/launch-readiness.md`, which subsumes it.)*
 
 ---
 
@@ -31,11 +52,11 @@ Durable identity  (PREREQUISITE — ✅ DONE 2026-07-03, ADR 0012; handoff delet
 
 | Pillar | What it is | Data exists today? | Handoff |
 |---|---|---|---|
-| Achievements | One-shot + tiered badges (Leksokipos v1) | **✅ SHIPPED** — Epic A one-shots + B1 points tier + B2 pangram tier (`player_achievements`/`player_pangrams`, ADR 0013); toasts + lit Trophy Case live; badge glyphs + player-selected Display Badge on leaderboards (2026-07-18 amendment) | done — remaining badge ideas in issue `12-badge-ideas-parked.md` (Τζιμάνι removed s108, re-award parked there) |
+| Achievements | Five tiered badges (Leksokipos-only) | **✅ SHIPPED and since rebuilt** — `player_achievements` + `player_milestones` (ADR 0013); toasts + lit Trophy Case live; drawn `BadgeMark` art + player-selected Display Badge on leaderboards | done — ADR 0013 is the whole story, including the 2026-08-07 catalog rebuild. Nothing parked |
 | Nemesis / taunts | Notification when overtaken on a Leaderboard | No — needs `notifications` table | parked (details below) |
 | Weekly leaderboard | Sum of daily scores per week per player | **Yes** — aggregate `game_scores` by `puzzle_date` range | parked |
 | Records / Hall of Fame | Highest score ever, most words in a day, etc. | Partially — per-day rows exist, no all-time views | parked |
-| Lifetime stats | Pangrams found, totals, podium, words-by-length per player | **SHIPPED** — `/profile` strip: total points, puzzles played, pangram count, 🥇🥈🥉 Βάθρο (podium counts, s109); `WordsByLengthCard` (s110, dark behind `FEATURE_FLAGS.achievements`). Τζιμάνι cell removed s108. **Still parked:** streak display | done (words migration pushed s111) |
+| Lifetime stats | Pangrams found, totals, words-by-length per player | **SHIPPED** — `/profile` strip: total points, puzzles played, pangram count; `WordsByLengthCard` (10/11/12 + a 13+ tail). The 🥇🥈🥉 Βάθρο podium cell was **removed 2026-08-06** with the podium lane, and the Τζιμάνι cell in s108. **Still parked:** streak display | done |
 | Streaks | Consecutive days played — strongest retention mechanic in daily games | Derivable from `game_scores` dates | parked |
 | Live head-to-head sessions | Two players agree to start together, race to find most words in a fixed window (e.g. 10 min) | No — needs realtime session/matchmaking state | parked (details below) |
 | Friends / private leagues leaderboard | Scope the leaderboard to people you know, not the whole global top 20 | No — needs a friendship/league membership model | parked (details below) |
@@ -68,11 +89,11 @@ Pure aggregation — `SUM(score) GROUP BY player, week` over `game_scores`. Open
 
 ### Records / Hall of Fame
 
-All-time bests: highest daily score, most words found, fastest Τζιμάνι, longest streak. Caution from the achievements grill prep: raw "highest score ever" is distorted — Leksokipos `maxScore` varies per puzzle (soft-capped since session 84, no hard ceiling), so consider records as % of that day's max, or per-game framing. Retention is settled: `game_scores` is append-forever.
+All-time bests: highest daily score, most words found, longest streak. *(This list used to say "fastest Τζιμάνι", written when Τζιμάνι meant the retired perfect round. It now means a day at 70% found words and is not a timed feat — pick a different record.)* Caution from the achievements grill prep: raw "highest score ever" is distorted — Leksokipos `maxScore` varies per puzzle (soft-capped since session 84, no hard ceiling), so consider records as % of that day's max, or per-game framing. Retention is settled: `game_scores` is append-forever.
 
 ### Lifetime stats
 
-Per-player counters: pangrams, words, points, Τζιμάνι count. Heavy overlap with the achievements data model (`player_stats` counters idea in `achievementsLeksokipos.md` question 5) — likely the SAME table; design them together, ship display separately.
+Per-player counters: pangrams, words, points, Τζιμάνι days. **Settled since this was written:** they are the SAME table, and it is `player_milestones` — one append-only fact row per `(device_uuid, puzzle_date, kind, detail)`, read with `COUNT(*)`, never a mutable counter column. The `player_stats` counter-blob idea was rejected in ADR 0013. Only the streak display is still parked.
 
 ### Streaks
 
@@ -91,7 +112,7 @@ At scale, global top-20 stops being meaningful to most players — want to see r
 ## Sequencing recommendation
 
 1. ~~Durable identity~~ — ✅ DONE 2026-07-03 (ADR 0012)
-2. ~~Achievements (Leksokipos v1)~~ — ✅ DONE (Epic A + B1 + B2 + Display Badge; leftovers in issue `12-badge-ideas-parked.md`)
+2. ~~Achievements (Leksokipos v1)~~ — ✅ DONE, and rebuilt 2026-08-07 into five tiered badges with drawn art. No leftovers: `badgeIdeas.md` was discharged and deleted 2026-08-10
 3. Weekly leaderboard — cheap, visible, competitive
 4. Streaks → Records → Nemesis (nemesis last: most moving parts, benefits from all prior data existing)
 

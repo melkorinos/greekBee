@@ -176,7 +176,7 @@ amendment. Two more are granted here, both licensed by the pre-launch wipe and b
 - **`leksokipos-tzimani` is revived** for the tiered 80% badge, in preference to keeping
   `leksokipos-theristis` with new display copy. Reviving it costs nothing while the data is wiped, and it
   avoids an id and a name that disagree forever. Tier ids are `leksokipos-tzimani-chalkino/-asimenio/-chryso`.
-  **This resolves parked item 1 of `.claude/handoffs/badgeIdeas.md`** — that item asked for exactly this, Τζιμάνι
+  **This resolves parked item 1 of `badgeIdeas.md`** (that handoff was fully discharged and deleted on 2026-08-10 — this ADR is what survives of it) — that item asked for exactly this, Τζιμάνι
   re-awarded under less demanding conditions than "found all the words".
 
 **After launch this window shuts.** Post-release, the rule is absolute again: an id may be added, never renamed,
