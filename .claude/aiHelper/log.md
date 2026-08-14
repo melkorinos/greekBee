@@ -5,6 +5,37 @@
 
 ---
 
+## Session 153 — 2026-08-14: one miss rule, and the module that was not needed
+
+Operator proposal: eight Games re-answer "which Puzzle is date D?", so extract a Daily Puzzle
+selection module `pickForDate(date, pool, {key, eligible, onMiss})`. **Evaluated and rejected, with
+the problem it named accepted.** Three counts against it. The **eight is really three families** and
+one of them already shares its rule — Λεξιαρχείο/Λεξινδέσεις/Βρες τη Φράση all miss through
+`consumeApprovedPuzzle`, and Λεξόπλεγμα's hop loop is a cross-game answer-leak guard, not a miss
+policy. The **interface was as wide as the bodies**: three injection points for sort-filter-index.
+And its own staged first step — unify Πόσο κάνει; + Λογοπαίγνιο — writes that same interface with
+*less* evidence, not a smaller one; Λογοπαίγνιο's predicate is a strict superset of Πόσο κάνει;'s,
+so eligibility collapses and only the **sort key** differs, which is a content decision (it changes
+which board a gap day serves), not a refactor.
+
+**What was real, and it is one line.** `getPuzzleForDate` fell back to `puzzles[length - 1]`. The
+gap scenario the proposal cited **cannot fire** — 733 consecutive days, zero gaps, guarded since
+s131 — but nothing guarded the **ends**: every date past 2028-03-26 served that one board, forever.
+The fallback was wrong twice, spoiling the furthest-future board and then freezing on it.
+
+Shipped instead: **`pickByDateOrRotate`** in `puzzleRotation.ts` — no options, exact match else
+rotation over rows already **due** — with three real callers (both Λεξόκηπος loaders, which carried
+a "behaviour must stay identical" comment and two copies of the rule, plus Πόσο κάνει;, unchanged
+behaviour). The invariant is written down as **Miss Rule** in `CONTEXT.md`, and
+`dailyPuzzleSelection.test.ts` asserts its three parts against **all nine Games**: answers every
+date, never freezes, never runs ahead. Proved non-vacuous by restoring the old fallback — exactly one
+test fails, the right one. Plus a **180-day corpus horizon** check, the early warning that was the
+actual missing thing. 200 files / 2608 tests, eslint 0, build 0. No e2e (no page/route/chrome).
+
+**Lesson worth keeping: a duplicated *rule* is not the same finding as a duplicated *shape*.** The
+eight loaders share arithmetic and a shape; only two shared a rule, and the fix for the other six was
+a test, not an interface.
+
 ## Session 152 — 2026-08-14: the Maker's rules leave the page
 
 Operator proposal, evaluated then built with `/tdd` at three seams agreed up front. Three new pure
@@ -30,35 +61,6 @@ as broken. Second self-inflicted one: `ENTER_FILL` pre-selects 1 Across, so the 
 same square **cycles to 1 Down** — faithful to the old handler, and it fooled my own smoke test before
 it fooled anyone else. That smoke test was thrown away with the agreed seams; the maker still has no
 rendering test. Gates 199/2559, eslint 0, build 0, **e2e 13 passed / 2 skipped**.
-
-## Session 151 — 2026-08-13: the share preview, and the pages the operator could not read
-
-`TICKET-10` half-built, **blocked on an operator pick, not on work**. Shipped: `hidden` filtered out
-of `PLATFORM_DESCRIPTION` + **seam 1d** locking it, `metadataBase`/`openGraph`/`twitter` in
-`layout.tsx`, and `PLATFORM_ORIGIN` derived from Vercel's build env (production domain → own preview
-URL → localhost) so a custom domain is a DNS change. Image files are deliberately **not** named in
-the metadata object — Next's file conventions inject those tags, and naming them twice is how they
-drift. Gates 193/2469, eslint 0, build 0.
-
-**The generator ships one font and it covers six Greek letters: Λ Ω λ μ π ω** — measured by parsing
-Geist's cmap, which reduces the whole Greek block to five segments of maths symbols. So every design
-forks on cost: Latin, those six glyphs and digits are free, a real Greek word costs a committed font
-file. **Λ survives as the mark by coincidence of that table**, not by taste.
-
-**Two operator corrections reshaped the deliverable, and the second is the durable one.** First: a
-letter on a coloured square is not a logo for a *word game* — the twenty-five second-round cards each
-carry the signal in their shape (guess board, crossword, word search, letter tiles, scoring tile,
-block mosaic), palette cut to dark grey/green/teal/yellow. Second: **the candidates page did not
-render on the operator's iPhone at all.** iOS previews HTML attachments through Quick Look, which
-draws HTML and CSS but **runs no JavaScript** — a page that builds itself is blank there, while
-Android hands the same file to Chrome and it works, so the bug reads as "Apple being stupid". Every
-page under `.claude/aiHelper/html/` was converted (pre-rendered content, `<noscript>` hiding controls
-that cannot work, a phone breakpoint, and the viewport tag two of them never had), and the three
-generators in `scripts/` that emit such pages were patched so regeneration keeps it. **s143 made
-`html/` the standing home for visual decisions; this session found that half those artifacts were
-unreadable on the device the operator actually uses.**
-
-Found on the way out: an operator `git commit --amend` at 12:05 swept the three source files into `bbe27b3`, so this ticket's code sits inside an unrelated commit.
 
 ## Older Sessions
 

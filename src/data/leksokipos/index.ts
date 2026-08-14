@@ -8,6 +8,7 @@ import { computeValidWords } from "@/games/leksokipos/lib/computeValidWords";
 import greekPuzzles from "./puzzles-el.json";
 import { normalizeLetters } from "@/lib/normalize";
 import { todayISO } from "@/lib/puzzleDate";
+import { pickByDateOrRotate } from "@/lib/puzzleRotation";
 
 // Cast the imported JSON to the typed Puzzle array.
 // TypeScript will warn us if the JSON shape ever drifts from the Puzzle interface.
@@ -17,7 +18,9 @@ const PUZZLES: Record<Language, LeksokiposPuzzle[]> = {
 
 /**
  * Returns the puzzle for a given date and language.
- * Falls back to the most recent available puzzle if no match is found.
+ * A date the calendar does not cover gets a deterministic rotation over the
+ * boards already due — never the last board, which is the furthest-future one
+ * (see pickByDateOrRotate for why that fallback was wrong).
  */
 export function getPuzzleForDate(date: string, language: Language = "el"): LeksokiposPuzzle {
   const puzzles = PUZZLES[language];
@@ -26,10 +29,7 @@ export function getPuzzleForDate(date: string, language: Language = "el"): Lekso
     throw new Error(`No puzzles available for language: ${language}`);
   }
 
-  const match = puzzles.find((p) => p.date === date);
-
-  // Fall back to the last puzzle in the list (most recent)
-  return match ?? puzzles[puzzles.length - 1];
+  return pickByDateOrRotate(date, puzzles);
 }
 
 /**

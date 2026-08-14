@@ -2,6 +2,33 @@
 
 ## ⚠️ Active Tensions (watch these)
 
+### 🟡 Λεξόκηπος now degrades quietly where it used to degrade loudly (s153)
+
+The old miss rule froze the game on one board past 2028-03-26 — catastrophic, but *visible* the day
+anyone looked. The rotation that replaced it is strictly better and also strictly quieter: past the
+calendar's end, players simply replay old boards and nothing about the page says so. The only thing
+standing between that and an unnoticed year of reruns is the **180-day horizon test** in
+`dailyPuzzleSelection.test.ts`, which is a red suite and nothing else — no banner, no log line, no
+operator-facing signal.
+
+That is the right trade for now (the corpus reaches 2028, the warning fires ~Sept 2027) but it rests
+on the suite still being run and read at that point, by whoever is here then. The same shape as the
+Sound Cues deploy gate: a correct decision whose enforcement is one test's failure message.
+
+Watch: the horizon test going red, and any prune that shortens the corpus — a prune moves the warning
+closer without moving the date anyone has in mind. Note the memory's "799 puzzles" figure was already
+stale (**733**), which is exactly how a horizon quietly shrinks.
+
+### 🟢 The rejected module was rejected on evidence the proposal itself supplied (s153)
+
+Worth recording because it went well. The extraction proposal was wrong about its own headline
+scenario (a corpus gap — there are none, and a test has guarded that since s131) and about its count
+(eight implementations, but three already share a miss rule through `consumeApprovedPuzzle`). Both
+were one command to check, and checking them changed the deliverable from an interface to an
+invariant plus a test. The tension to keep alive is the general one: **"N places do X" is a claim
+about rules, and it is usually measured in shapes.** Shapes duplicate far more often than rules do,
+and only duplicated rules justify an interface.
+
 ### 🟠 A test harness that cannot express the product's own alphabet (s152)
 
 Playwright fires **no keydown events at all** for Greek characters — `keyboard.type("ΑΒΓ")` produces
