@@ -2,6 +2,56 @@
 
 ## ⚠️ Active Tensions (watch these)
 
+### 🔴 Two sessions can share one working tree, and git is the only thing that will tell you (s156)
+
+**A second agent session was editing this repo while s156 ran, and nothing in the harness announced
+it.** What announced it was `git log` disagreeing with the session-start snapshot: `HEAD` had moved
+twice, `ISSUE-05` had been split into a new `ISSUE-09`, and `game-state/route.ts` was modified by
+nobody in this session. The session-start `git status` is a **photograph, not a feed** — every later
+decision made from it is made from a stale picture.
+
+Three hazards, all hit or narrowly missed. **Parallel tool calls race the other session's writes** —
+an `ls` and a `git stash` in one block returned a listing that existed at no single moment, reading
+as a missing file rather than a race. **`git stash` is not read-only** — it was used to answer "did
+this fail before my changes?", a fair question with a destructive instrument; it reverted the other
+session's uncommitted work, and `stash pop` restoring cleanly was luck. Use `git stash create`, which
+writes no working tree, or read the diff. **A test can fail for a reason that is true for seconds** —
+`trackerReferences.test.ts` failed on an `ISSUE-09` reference written before its file existed, and
+re-running is only the right check once you know *why*, or a real failure gets re-run until it passes
+for an unrelated reason.
+
+The practical rule: **re-run `git log --oneline -3` and `git status` immediately before staging**, and
+stage explicit paths, never `-A`. s156's commit deliberately swept in one file it did not author
+(`trackerReferences.test.ts`, which held its own `SPENT` entry) and said so in the message; the
+dishonest version quietly carries another session's half-finished work. **Still open:** nothing
+prevents a recurrence — no lock, no branch-per-session convention, and the Dream itself writes four
+shared files, exactly where two sessions finishing near each other collide hardest.
+
+### 🟢 An alarming ratio that is not a problem, and the reasoning that says so (s155)
+
+`game_state` carries **29,025 updates against 83 live rows** — 350:1 — and `game_scores` 31,562
+against 536. Those numbers look like a fire, and the correct response was **leave it alone**. This
+entry exists so the next session that runs the same query does not spend a day optimising.
+
+The cause is real and confirmed in code: Leksokipos writes **twice per word found**
+(`useGameStateSync` on every `foundWords` growth, `useScoreSubmission` on every score increase), and
+`pushFoundWords` sends the **entire array** each time, so a 40-word round ships ~820 word-slots to
+persist 40. The reason it does not matter is arithmetic nobody had done: at 1,000 daily players that
+is ~80,000 upserts/day — **under one write per second averaged** — and autovacuum is currently
+same-day on both tables with 23 and 96 dead tuples. Postgres is not the constrained resource;
+Vercel invocations are, and they are ~2% of the included allocation (see the Fluid CPU entry).
+
+**The general shape: a ratio is not a verdict.** 350:1 is frightening only until it is multiplied by
+the actual traffic. The dangerous version is the reverse of this repo's usual failure — not
+believing a claim without checking, but *reacting to a measurement without finishing it*. A number
+extracted from `pg_stat_user_tables` is an input to a capacity question, and the capacity question
+needs the projected load, the per-row cost and the ceiling before it means anything.
+
+`TICKET-12` holds the fix with its threshold **in the title** so the gate is read before the work.
+Watch: any session that opens that ticket without first re-running the measurement it asks for, and
+any proposal to send deltas instead of the full array — that one is blocked by ADR 0003's
+server-wins restore, not by effort.
+
 ### 🟠 The backup is now encrypted, and still nothing makes it leave the machine (s154)
 
 `TICKET-11` automated the half a script can do — the dump is packed into an AES-256 `.7z`, the
@@ -144,65 +194,91 @@ skill's job is to tell you *what to check and with which id*, not to excuse the 
 were corrected this session and the corrections are dated in the file; date the next ones too, so a
 future session can see which claims have been touched since anyone last looked.
 
-### 🔴 A ticket that names a future risk is often blind to the present instance of it (s149)
+### 🔴 Measure the artifact, don't trust the response — the standing rule and its ledger
 
-`TICKET-07` carried a prominent warning block: install error monitoring after the privacy page ships
-and the "no third-party tracking" line becomes false with nothing in the suite to notice. The
-warning was sound, well-argued, and **aimed at the wrong time**. `FeedbackModal.tsx` had been
-posting the message, the page URL, the **user agent** and the DeviceId to `formsubmit.co` since the
-Feedback surface was built. The line was already false. The ticket even described the Feedback flow
-elsewhere in the repo — nobody had joined the two thoughts.
+**This repo's most expensive recurring failure, in eleven recorded instances across s130–s156.** The
+shape is always the same: a claim that is **plausible, load-bearing, and cheap to check** is
+believed instead of checked. What varies is only *who is narrating* — and the point of keeping the
+ledger rather than nine separate entries is that the list of narrators is now long enough to stop
+treating any of them as reliable.
 
-The shape is worth naming because it will recur. A ticket that says *"careful, X might happen"* has
-already done the hard part: it identified X as the thing that matters. The failure is that having
-named X as a **hazard**, the author stops treating it as a **question** — nobody greps for X in the
-present tense. Both the ticket and the launch handoff then encoded the phantom dependency as a
-sequencing constraint (`08` before `07`), which is how a missed fact becomes scheduling.
+| Session | The narrator | What it claimed | What was true | The check |
+|---|---|---|---|---|
+| s130 | An external API | Commons search returns the entity you searched for | ΔΕΗ → *Namibia Power*, ΣΤΑΣΥ → *a Lithuanian choir*; declared image sizes lie; an HTML error page saved as `.svg` | measure the bytes |
+| s130 | **My own tool** | the duplicate detector's 48 duplicates | 43 of them grouped under `undefined` | read its output |
+| s132 | A type signature | `router.prefetch` returns a Promise | returns **`void`** — the awaited `undefined` shipped, and **the unit test mocked it as promise-returning, so it could only ever confirm my assumption** | one grep of the `.d.ts` |
+| s139 | **The repo's own spec** | "the word capture is dark behind `FEATURE_FLAGS.achievements`" | that flag had been `true` since s112; the capture was live | one grep of the config |
+| s145 | **Every secondary source** | Pixabay is CC0 | it is the *Pixabay Content License* — still clears our bar, but "CC0" would have been written into `sound.ts` as a fact | one fetch of the licence page |
+| s146 | A spec's **trap list** | "jsdom does not implement `HTMLMediaElement.play`, guard the stub like `scrollIntoView`" | jsdom **defines** `play()` and returns **`undefined`** — the copied guard never fires and `.catch()` is a TypeError. *Second* void-dressed-as-Promise. | a ten-second probe test |
+| s146 | A **named test file** | `mobileLayout.test.tsx` guards the header at four buttons | it renders `HowToPlayModal` and has never touched the Shell — and **no test here could**, jsdom has no layout engine | one `Read` |
+| s148 | A ticket's **file list** | "update `e2e/games.spec.ts` for the new picker" | that spec has no picker assertions at all; the test that actually broke appeared in no list | grep |
+| s150 | **A tool** | `get_runtime_errors`/`get_runtime_logs` are reachable via MCP | both 403, `get_project` 404s on every id form | **call the tool** |
+| s155 | **My own persisted memory** | "the 10-day `game_scores` prune is a bug, tracked as issue 03" | the prune was fixed long ago (`retention.ts` exempts scores explicitly) **and** `ISSUE-03` is now an unrelated file about e2e coverage — *both halves stale* | one `Read` of `retention.ts`, one `ls` of `issues/` |
+| s156 | **The repo's own issue file** | ISSUE-08: adding `display_name` to the badge `in()` "makes the stored copy redundant" | **19 of 52 scoring devices have no `player_profiles` row at all** — a device only gets one once it sets a name or picks a badge, so dropping the copy would have blanked a third of the leaderboard | one `SELECT count(*)` |
 
-Practical form: **when a ticket warns that some future change would make a claim false, first check
-whether the claim is true today.** The grep costs one command and it is the same grep either way.
-The correcting question is not "which order?" but "is it already happening?"
+Four things the ledger makes visible that no single entry did:
 
-Second-order note, because it changed the design: once found, the honest fix was **not** a longer
-disclosure. Two of the four fields were dropped, so the page had less to admit to. A privacy page
-is the one document where shrinking the truth beats describing it well.
+- **A mock is a claim about someone else's contract.** If the claim is wrong the test is worse than
+  absent, because it manufactures confidence (s132, s140). **Any feature whose value depends on
+  browser or runtime behaviour needs one real-browser test before it is called done.**
+- **A citation to a named artifact in this repo reads as verified and almost never is** (s146 twice,
+  s148). A ticket's file list is a hypothesis; grep is the map.
+- **A spec's stated reason can be false while its decision is right** (s139, s150, s156) — which is
+  the dangerous version, because the decision surviving review is taken as the reason surviving it.
+  s156 is the sharpest form yet: ISSUE-08's *decision* (resolve names at read time) was correct and
+  shipped unchanged, while the sentence justifying it — that the stored column becomes redundant —
+  was false, and implementing the issue as written would have caused a worse bug than the one it
+  fixed. **An issue file is a hypothesis with a number on it, not a design review that already
+  happened.** The check that saved it took one query and was prompted only by asking "what does this
+  read return for a row that has no match?" — the question every read-time resolution owes.
+- **A stale artifact can be wrong in both halves at once** (s155). The memory named a defect *and*
+  the tracker file supposedly holding it; the defect was fixed and the number had been reused for
+  something else. A citation that carries its own reference number reads as *more* verified than a
+  bare claim, and the number is exactly the part that rots — tracker numbers are never reused, but
+  they are freely reassigned to new files after a deletion. **Check the file, not the number.**
+- **Escalating cost of the check.** Seven instances were one `Read` or one `grep`. s150 was not:
+  a tool-reachability claim can only be checked by *calling the tool*, and nothing about reading a
+  ticket prompts that. **A spec that names a tool as its mechanism should have that tool invoked
+  before the spec is believed.**
 
-### 🟠 A qualitative word in our own docs is an unmeasured claim (s147)
+**Two narrators are ours and deserve their own line.** First, **our own hedging adjectives**: the
+Leksindeseis fallback pool was called "thin" for weeks across three docs, in the tone of something
+surveyed — it is **one puzzle** rotating over a single-item array, so every unscheduled day serves
+the identical board (one `require()` settled it). The same session, "the legal surface" and "error
+monitoring" turned out to mean *nothing exists at all*. "Thin", "minimal", "sparse", "a few" read as
+the output of a count and almost never are; they are worse than a wrong number, because a wrong
+number invites checking and a vague word invites agreement. **Replace the word with the number
+before deciding**, and when writing one, either put the number in or say it was never counted.
 
-The launch grill needed to know how bad the Leksindeseis fallback pool was. Three docs — this file,
-`goals.md` and the launch handoff — had called it **"thin"** for weeks, in the tone of something
-surveyed. It is **one puzzle**, dated 2026-05-12, with placeholder categories (Χρώματα, Ζώα,
-Φρούτα, Μαθηματικές πράξεις), rotating over a single-item array — so every day without a scheduled
-community puzzle serves the identical board. One `require()` of the JSON settled it. The same
-session, "the legal and privacy surface" and "error monitoring" turned out to mean **nothing exists
-at all**: no `/privacy`, no `/terms`, no `robots.ts`, no `sitemap.ts`, no `opengraph-image`, no
-favicon, and exactly four production dependencies. (`/privacy` exists as of s149; the rest stand.)
+Second, **a hazard we named ourselves and then stopped querying**. `TICKET-07` warned that installing
+error monitoring *later* would falsify `/privacy`'s "no third-party tracking" line — sound,
+well-argued, and aimed at the wrong time: `FeedbackModal.tsx` had been posting the URL and user agent
+to `formsubmit.co` since it was built. The line was already false, and both the ticket and the launch
+handoff had encoded the phantom dependency as a sequencing constraint, which is how a missed fact
+becomes scheduling. **When a ticket warns that some future change would make a claim false, first
+check whether the claim is true today** — the correcting question is not "which order?" but "is it
+already happening?" *(Second-order, because it changed the design: the honest fix was not a longer
+disclosure but dropping two of the four fields. A privacy page is the one document where shrinking
+the truth beats describing it well.)*
 
-This is the standing **measure the artifact, don't trust the response** rule (s130, s132, s139,
-s145, s146) meeting a new unreliable narrator — not an external API, not a spec, not the consensus
-of secondary sources, but **our own hedging adjectives**. "Thin", "minimal", "sparse", "some
-coverage", "a few" all read as the output of a count and almost never are. They are worse than a
-wrong number, because a wrong number invites checking and a vague word invites agreement.
+**Live consequences still open.** For the Sound Cue files: record each file's **actual** licence, not
+the licence of the site it came from — Freesound hosts CC0, CC-BY and CC-BY-NC side by side and its
+most famous rooster is CC-BY. For the Shell header at four buttons: no test can cover it, so the
+guard is an operator on a phone. For the Leksindeseis pool: **parked, not fixed** — the Game is
+`hidden` (ADR 0022), so nothing ships until unhiding is considered, and unhiding is a checklist.
 
-The tell is unchanged and the check is still cheap. Practical form: **when a decision turns on a
-qualitative word in a doc, replace it with the number before deciding** — and when writing one,
-either put the number in or say explicitly that it was never counted.
+### 🟢 Vercel Fluid Active CPU — no longer the binding cost constraint
 
-### 🟡 Vercel Fluid Active CPU (primary cost constraint)
-After 5 active days, Fluid Active CPU was already at 21m 7s vs a 4h/day pro-rated cap.  
-*Measured 2026-08-13 (`vercel metrics`, whole 14 Jul – 13 Aug billing period): **1.19 CPU-hours**
-(4 285 734 ms) plus 18.97 GB-hrs provisioned memory. **The "4h cap" framing is obsolete** — the plan
-is Pro `planIteration: "plus"`, which has no per-metric free allotment; one **$20/month included
-allocation** covers all usage-based charges. At $0.128/CPU-hour and $0.0106/GB-hr that is **$0.15 +
-$0.20 ≈ 2% of the $20**. Fluid CPU is no longer the binding cost constraint at this traffic, and it
-is now readable from the CLI — recipe in `/project-mcp`, which had it recorded as dashboard-only.*  
-Known mitigations applied (Session 25):
-- Module-level `validWordsCache` in `buildCustomPuzzle` — warm instances skip the ~795 k word scan.
-- `export const revalidate = 3600` on `[center]/[outer]` — CDN caches full page HTML.
-- All API routes moved to Edge runtime (`export const runtime = "edge"`).
+Measured 2026-08-13 over a whole billing period: **1.19 CPU-hours** + 18.97 GB-hrs ≈ **$0.35, about
+2% of the $20 Pro included allocation**. The old "4h/day cap" framing is obsolete (Pro
+`planIteration: "plus"` has no per-metric free allotment). Readable from the CLI — recipe in
+`/project-mcp`, which had recorded it as dashboard-only.
 
-Stripping `validWords` from `puzzles-el.json` was evaluated and rejected: saving ~4–10 ms of JSON
-parse time is outweighed by adding ~50–200 ms of dictionary computation on first request per puzzle.
+Mitigations that got it there, and should not be undone: the module-level `validWordsCache` in
+`buildCustomPuzzle` (warm instances skip the ~795k scan), `revalidate = 3600` on the custom route,
+and Edge runtime on all API routes. **Rejected and settled:** stripping `validWords` from
+`puzzles-el.json` — it saves 4–10 ms of parse and costs 50–200 ms of dictionary computation on the
+first request per puzzle.
 
 ### 🟡 A component with no visual gate is verified by compiling it, not by rendering it (s144)
 
@@ -224,24 +300,18 @@ the decisions, not to prove the result.** Two decisions are locked that way here
 frame (same path `d` across two tiers) and a locked badge keeps its mark visible. Both would otherwise
 survive only as prose in an ADR, which is precisely the thing s139 showed rots.
 
-### 🟠 The deploy window's acceptance test only proves half of it (s142 — step 1 has now run, see below)
+### 🟠 A DB test validates the migration and is blind to the deploy (s142, generalised)
 
-**Update (s144, re-confirmed 2026-08-14):** the 5 `rlsInvariantsLiveDb` failures are gone and that suite is
-30/30 — the whole suite is green at 196 files / 2499 tests — so `player_milestones` exists in the live DB and
-the migration was pushed sometime after s142. Everything below still stands, and now matters *more*, not
-less: those green tests say the schema changed and nothing else. Whether the Vercel deploy that must
-accompany it has happened is still unverified by any gate here.
+Recorded as a standing rule for the **next** migration window, since the `player_milestones` one is
+closed (suite green, migration confirmed pushed). The plan for such a window is: `db push`, then the
+Vercel deploy, then re-run the live-DB tests. **Those tests validate step 1 only.** They open a
+Supabase client and talk to Postgres directly — no deployed app code is exercised — so they go green
+the moment the migration lands, whether the deploy succeeded, failed, or was never started.
 
-The plan for the `player_milestones` window is: `npx supabase db push`, then the Vercel deploy, then re-run the tests and confirm all 5 `rlsInvariantsLiveDb` failures turn green. **Those 5 tests, and the whole e2e suite, validate step 1 and are blind to step 2.** They open a Supabase client and talk to Postgres directly; no deployed app code is exercised. So they go green the moment the migration lands — whether the deploy succeeded, failed, or was never started.
-
-That matters because the failure mode being guarded against lives precisely in the gap: the migration drops `player_pangrams` and `player_words`, and production serves code that writes to them until the deploy lands. A green suite would actively reassure the operator while every pangram find is 500ing. **The window needs one check that hits the deployed route** — a POST to `/api/milestones` on production, or Vercel runtime errors read for the minutes after the deploy. Until that is added, "all 5 green" should be read as "the schema changed", nothing more.
-
-Second-order, and the reason this is worth a tension rather than a note: at the time of writing `dev` was **22 commits ahead of `origin/dev`**, so step 2 was not a button press but a push of a large backlog plus a build. **That number is stale by design — never trust a committed commit count.** Measured 2026-08-14: `dev` is **1 ahead of `origin/dev`, `main` and `origin/main`**, so the backlog has since been pushed and the gap is now one commit. The standing point is unchanged: whoever runs the window should re-measure with `git rev-list --count` before starting, not read it here.
-
-### 🟠 TICKET-03's marks were approved in a mock, not in the app (s143, live until the ticket ships)
-Every badge decision was made against `.claude/aiHelper/html/badge-visual-grill.html`, which is a **standalone page with its own CSS**. It reproduces the leaderboard row, the Trophy Case tile and the toast closely enough to choose between options — but it is not the app. It does not use `lbBadgeChip`'s real padding and divider, the real font stack, the real row density, or the actual `globals.css` tokens; its eight tier colours are hard-coded copies. **A mark that reads at 12px in the mock is not thereby proven to read at 12px in the real chip.**
-
-So the ticket's "done when" cannot be satisfied by the mock. Whoever builds it should render the real components early and look at them before finishing the drawings — and should expect **γραμμές to be the one that breaks first**, since it is the busiest of the five (four parts, thin tapering rails) and was already refined once from three crossbars to two for exactly this reason. Reverting to a simpler mark is a display-copy change with no id, schema or earned-row consequence, so it is cheap — but only if it happens before the ticket closes, not after players have seen it.
+The failure mode lives precisely in that gap: a migration that drops a table while production still
+serves code writing to it means **a green suite actively reassuring the operator while every write
+500s**. A window needs one check that hits the **deployed route**. Related: never read a commit count
+out of a doc — re-measure with `git rev-list --count` before starting.
 
 ### 🟡 A discharged handoff is a second source of truth until it is deleted (s143)
 `badgeIdeas.md` was fully discharged on 2026-08-07 — every build item shipped, every decision landed in ADR 0012/0013, `goals.md` and `launch-readiness.md` — and then **sat in `handoffs/` for three days**, because s140's Dream promoted its lessons but never removed the file. In the same window its sibling `badgeVisualSystem.md` went **stale on three facts** (a threshold, a tier ladder, and a citation to a superseded ADR amendment) with nothing flagging it, because a handoff has no mechanism that notices the world moved.
@@ -255,9 +325,6 @@ Vres Tin Frasi shipped with 29% of its phrase corpus unsolvable — the game rej
 
 Related trap, same session: a derived file can be **regenerated empty**. `words-1.json` had to be authored and deliberately placed outside `src/data/leksiarxeio/`, because the re-sync adapter rebuilds those from `words-el.json`, which has no single-letter entries. Any future "just add a list" instinct should first ask whether a re-sync owns that directory.
 
-### Leksindeseis puzzle supply (`puzzles-connections.json`) — measured s147, and parked
-Community-submitted Leksindeseis puzzles are the primary source, with `puzzles-connections.json` as the static fallback. **The fallback is ONE puzzle** (dated 2026-05-12, placeholder categories) rotating over a single-item array, so every unscheduled day serves the same board — not "thin", a placeholder. No reminder system exists. **Parked, not fixed:** the Game is `hidden: true` since 2026-08-12 (`TICKET-06`, ADR 0022), so nothing ships. This becomes live work again the moment unhiding is considered — and unhiding is a checklist (both registry flags + accent row + capabilities + content supply + docs), never a one-line edit. The drawer and picker now derive from `hidden` and are probe-tested, so the s121 "forgot `GAME_IDS`" half of that checklist is closed by construction; the content half is not.
-
 ### Leksindeseis "one away" UX gap
 The reducer detects "one away" and sets feedback text, but `GroupGrid` has no visual highlight indicating _which_ group the player is close to. NYT shows colour intensity. Consider adding in Phase 4 polish.
 
@@ -268,30 +335,27 @@ The `/leksokipos/[center]/[outer]` route shows a banner if `validWords.length < 
 Modern messaging apps (WhatsApp, Telegram, iMessage) and all mainstream browsers handle Greek path segments correctly via IRI/percent-encoding. Edge risk: some old email clients or corporate proxies may mangle `%CE%B1`-style sequences. Acceptable for the current use case; document if a user reports it.
 
 ### 🟡 API rate limiting (accepted risk)
-All INSERT-capable API routes write to Supabase with no per-device throttle. RLS policies allow unlimited anon inserts. At current scale this is acceptable — the most likely abuse vector is an accidental client bug, not coordinated attack. Decision: **accept risk and monitor** (Option C). Set a Supabase row-count alert on `game_scores` at 50 000 rows and `nominations` at 5 000 rows; revisit with Redis sliding-window rate limiting when DAU exceeds ~500. Alert must be configured in the Supabase dashboard by the operator.
-*s147: **no evidence those alerts were ever configured**, which means the mitigation half of this decision may never have happened and the risk is simply unmitigated. `TICKET-09` closes exactly that gap — the alerts plus a first read of the Supabase Free-plan limits against a soft-launch estimate. The rate-limiting trigger above is unchanged and stays out of scope.*
-*Scope sharpened 2026-07-16: this accepted risk is now **INSERT spam only**. The adjacent-but-different exposure — anon UPDATE/DELETE table-wide via the old `ALL (true)` policies (erasable trophies/pangrams/state, the `transfer_codes` device_uuid oracle) — was never part of this decision and is closed (migrations `20260716120000`/`120100`). Dedup spam via double-submit is also DB-bounded now (`120200`).*
 
-#### s150 / `TICKET-09` — the alert this decision was conditioned on cannot be built, on any plan
+All INSERT-capable API routes write to Supabase with no per-device throttle; RLS allows unlimited
+anon inserts. At current scale that is accepted — the likely abuse vector is a client bug, not an
+attack. **Accept and monitor**; revisit with Redis sliding-window rate limiting above ~500 DAU.
+Scope is **INSERT spam only** (sharpened 2026-07-16): the adjacent anon UPDATE/DELETE exposure was
+never part of this decision and is closed by migrations `20260716120000`/`120100`/`120200`.
 
-**Supabase has no row-count alert, and not because the plan is Free.** Row count is not a metric it
-tracks anywhere: the usage page bills database size, egress, MAU, storage and compute, and none of
-its per-metric docs mention rows. Free additionally has **no user-configurable threshold alert of
-any kind** — what exists is an automatic quota-exceeded email to the billing address (fires at 100%,
-not at a number you choose) and the Metrics API behind Prometheus/Grafana Cloud, which is an
-external collector plus a secret key, i.e. engineering this ticket excluded. So the 2026 decision
-above was conditioned on a control that never existed to configure. **Recorded substitution:** one
-SQL row-count read folded into the existing ADR 0023 monitoring habit, same cadence, same operator,
-no new machinery:
+**The monitoring half took three tries to state correctly, so read only this paragraph.** The
+original mitigation was "set a Supabase row-count alert at 50 000 `game_scores` / 5 000
+`nominations`". **That alert cannot be built on any plan** — Supabase tracks no row-count metric
+anywhere, and Free has no user-configurable threshold alert at all (only an automatic
+quota-exceeded email at 100%, and the Metrics API behind Prometheus/Grafana). So the decision was
+conditioned on a control that never existed to configure, and for months nobody noticed because
+"the operator will set it up" reads like a completed step. The **operator-accepted substitution
+(2026-08-13)** is one SQL read folded into the existing ADR 0023 habit — same cadence, same
+operator, no new machinery. `TICKET-09` is closed. Do not go hunting for a dashboard alert:
 
 ```sql
 SELECT (SELECT count(*) FROM game_scores) AS scores, (SELECT count(*) FROM nominations) AS noms,
        pg_size_pretty(pg_database_size(current_database())) AS db_size;
 ```
-
-**The substitution was ACCEPTED by the operator 2026-08-13**, and `TICKET-09` is closed and deleted.
-The SQL above is the standing control; there is no dashboard alert to look for and no future session
-should go hunting for one.
 
 **Measured 2026-08-12** (`execute_sql`, live DB) against the Free ceilings read off supabase.com/pricing,
 with the two dashboard cells filled in by the operator 2026-08-13:
@@ -341,29 +405,19 @@ read-only cliff), *or* the first sustained slowness report (constraint 1, which 
 warn about), *or* wanting PITR, which is `ISSUE-01`'s real fix rather than a capacity decision.
 The Redis rate-limiting trigger (~500 DAU) is untouched and still out of scope.
 
-### 🟡 Topothesies — the answer set is DONE; the gate that guards it is weaker than it looks (s136)
+### 🟡 Topothesies — the gate that guards the geo pipeline is weaker than it looks (s136)
 
-109 answers, live, `wip:false`. Every backlog list is empty (`DEFERRED_ANSWER_IDS`,
-`DEFERRED_ISLANDS`, `CANT_PEEL_PLACEHOLDERS`) and the «Νομοί και Νησιά της Ελλάδας»
-reconciliation is finished. What stays worth watching is not the content but the machinery:
+The content is done (see the memory row + ADR 0018). What stays watchable is the machinery:
+**`validateEmitted` checks that the data is well-formed, not that it is right.** Two different wrong
+polygon-selection rules shipped through it clean — one gave Κουφονήσια a bare rock, the other gave it
+the island of Νάξος and silently stripped the parent — and both produced the right counts, valid ids,
+in-bbox centroids, no accents. **No gate in this repo can tell a correct silhouette from a plausible
+one.** What caught both was reading the generator's own diagnostic numbers. Any geometry change needs
+those numbers read and the shapes eyeballed in the preview; green output means nothing here.
 
-- **`validateEmitted` checks that the data is well-formed, not that it is right.** Two
-  different wrong polygon-selection rules shipped through it clean this session — one gave
-  Κουφονήσια a bare rock, the other gave it the island of Νάξος and quietly stripped the
-  parent. Both produced 109 answers, 109 shapes, valid ids, in-bbox centroids, no accents.
-  The gate cannot tell a correct silhouette from a plausible one, and **no gate in this repo
-  can**. What caught both was reading the generator's own diagnostic numbers — a path length
-  that made no sense for a 5.7 km² island, a simplify bucket count off by one. Any future
-  change to the geometry pipeline needs those numbers read, and the shapes eyeballed in the
-  preview; green output means nothing here.
-- **The peel is the only place a child can silently steal from its parent.** `POLYGON_PEELS`
-  removes polygons from a parent answer, so a bad selection damages *two* shapes at once and
-  the parent's damage is the invisible one (its own centroid and outline change with no error
-  anywhere). `selectPeelPolygons` returns null rather than guess, and the generator throws —
-  keep it that way. A "helpful" fallback here reintroduces exactly the failure it exists to
-  stop.
-- Do NOT "fix": the **share card keeps its Worldle emoji grid on purpose** (renders when
-  players paste results into messaging apps); only the on-screen surface is de-emoji'd (s118).
+The peel is the only place a child can silently steal from its parent, and **the parent's damage is
+the invisible half** — its centroid and outline change with no error anywhere. Do NOT "fix" the share
+card's Worldle emoji grid: it is deliberate, and only the on-screen surface was de-emoji'd.
 
 ### 🟡 Πόσο κάνει; — engine built, awaiting real content (s124)
 
@@ -377,44 +431,16 @@ Tickets 01 (foundation) + 02 (playable UI, s127) shipped `wip:true` on one place
 - **Pool reachability — eased, and the bottleneck MOVED (s130).** 144 assets are staged against a 150 floor, helped by dropping the Greek-origin rule. Sourcing is no longer the risk; **curation is**: 0 of 144 are approved, and many are still full logos with the name attached. The remaining work is the eye check + wordmark stripping, which no script can do. Watch for the temptation to bank "144" as progress toward 150 — the honest number is 0 until marks are cropped and approved. If the pool still stalls, relax "recognizable" before "icon-only" (relaxing icon-only breaks the game outright). Blur difficulty stays a `BLUR_STEP_RADII_PX` knob.
 - **Automated sourcing is confidently wrong, and only verification catches it (s130).** Commons search matched ΔΕΗ to "Namibia Power Corporation" and ΣΤΑΣΥ to a Lithuanian choir — plausible-looking files, downloaded and presented as correct. Two of my *own* checks were also wrong until measured: the duplicate detector reported 48 false duplicates, and an HTML error page was saved as `logo.svg`. Nothing here is covered by the test suite (it is all `scripts/`), so the only defence is measuring the artifact rather than trusting the response. Any future expansion of this pipeline should assume its own output is wrong until checked.
 
-### 🟡 `coverageMap.md` had MOVED, and a missing file is not the same as a lost one (s132)
+### 🟡 `coverageMap.md` is stale by roughly 31 files
 
-The Dream gate broke because the map sat at `.claude/aiHelper/test-audit/coverageMap.md` — one
-directory below where `CLAUDE.md` and `soul.md` point. **Moved back to
-`.claude/aiHelper/coverageMap.md` on 2026-08-03**; the rules were always right and stay.
+It covered 153 of 184 test files when it was moved back to `.claude/aiHelper/coverageMap.md` on
+2026-08-03, and no Dream since has reconciled the remainder. Grep it before writing a test, but do
+not read a miss as proof no test exists.
 
-The process lesson is mine, not the repo's. I grepped the mandated path, got nothing, ran
-`git log` on **that same missing path** (which reports commits for the containing directory, not
-the file), and concluded "deleted, never committed" — then wrote a reflection recommending the rules
-be deleted. A one-line `git ls-files`/`find` on the basename would have found it immediately.
-**When a mandated artifact is missing, search for it by name before concluding it does not exist**,
-and never propose deleting a rule on the strength of a single unresolved path.
-
-Residual gap: the map is ~31 files stale (it covered 153 of 184 test files at the move). s132's own
-rows are logged; the remainder is for a future Dream to reconcile.
-
-### 🔴 I mocked the API instead of checking it, and shipped a no-op (s132)
-
-Offline Mode passed 2276 tests, eslint, build and Playwright — and failed on the operator's first
-real use. `router.prefetch` returns **`void`**; I wrote `await Promise.allSettled(...)` around six
-`undefined`s and called the result "ready". **My unit test mocked prefetch as promise-returning, so
-it could only ever confirm my assumption.** A mock is a claim about someone else's contract; if the
-claim is wrong the test is worse than absent, because it manufactures confidence. One
-`grep` of the `.d.ts` — which took ten seconds once I finally did it — would have caught it.
-
-This is the third time this pattern has bitten this project (s130's Commons metadata, s130's own
-duplicate detector, now this). The rule that keeps being re-learned: **measure the artifact, don't
-trust the response.** For an external API that means reading its type signature before mocking it,
-and it means at least one test that touches the real thing.
-
-**What made it recoverable was the e2e loop** — a real browser with `context.setOffline(true)`. It
-found a second, worse problem the unit tests structurally could not: `force-dynamic` payloads are
-not cached, so cross-game offline play is impossible by prefetch at all. Note the loop needed three
-harness fixes before its verdict meant anything; a red test proving the wrong thing is its own trap.
-
-**Standing consequence:** any feature whose value depends on browser/runtime behaviour (caching,
-storage eviction, lifecycle events) needs one real-browser test before it is called done. Unit tests
-with mocks cannot speak to it, and green gates will actively mislead.
+*(The move itself is resolved. The process lesson survives it: **when a mandated artifact is
+missing, search for it by name before concluding it does not exist** — `git log` on a missing path
+reports the containing directory's commits, which reads exactly like "deleted, never committed",
+and I nearly recommended deleting a rule on that basis.)*
 
 ### 🟡 ADR 0010's premise is dead; the ADR is not (s132)
 
@@ -474,59 +500,31 @@ become frequent.
 - **The page above the spine is a different axis, and s141 proved it.** A proposal arrived to collapse "the Slot-Fill page shell", scoped to the slot-fill family and careful to say it did not contradict ADR 0019. Its own file list already contained Λεξοδρομία — the one game the ADR names as a permanent non-member. The duplication was real but it was **page chrome**, which has no relationship to the round spine: `GamePageChrome` ended up with six members spanning *both* families and excluding Leksiarxeio for a reason (a server-rendered self-triggering modal) that has nothing to do with rounds at all. The lesson is not "the proposal was wrong" — it is that **an existing seam's vocabulary will be reached for to describe a new seam**, and the borrowed name then smuggles in the old boundary. Check the member list against the name before believing either.
 - **The snapshot memo is load-bearing.** Keying it on the projected *values* (not the state object) is what keeps localStorage writes tied to real progress; memoizing on `state` writes on every keystroke. The regression test in `useSlotFillRound.test.ts` is the only thing standing between a future "simplification" and a per-keystroke write. The ref-based alternative is a dead end — `react-hooks/refs` rejects it.
 
-### 🟡 Leksindeseis is `wip:true` in code and was "Live" in every doc (found 2026-08-06)
+### 🟡 A checklist item a guard test can hold should become one — then the checklist gets rewritten
 
-A full documentation service found that `leksindeseis` has carried `wip: true` in
-`src/config/games.ts` since the registry was first written, and has never been flipped — so
-the picker and the Shell drawer file a finished, community-backed game under
-«Υπό κατασκευή», while README, `memory.md`, `goals.md` and `CONTEXT.md` all called it Live.
-Operator's call on 2026-08-06: **the code is right, the docs were wrong**; all four now say wip.
+Found via `leksindeseis`, which carried `wip: true` since the registry was written while README,
+`memory.md`, `goals.md` and `CONTEXT.md` all called it Live. Operator's call: the code was right.
+The durable half is **read the registry, never the prose, for a Game's real status** — and that
+graduating a Game is a checklist, not a one-line edit.
 
-What this is really an instance of: **`wip` is a one-word flag with no gate behind it.** Nothing
-tests that a game's documented status matches its registry row, and nothing prompts for the flip
-when a game finishes — Topothesies needed an explicit session (s121) to remember it, and the same
-session had to add the game to `Shell.tsx GAME_IDS` by hand because the flag alone would not have
-shown it. Two lessons: **read the registry, never the prose, when you need a game's real status**,
-and when a game does graduate, the flip is a checklist, not a one-line edit.
+**The checklist has since shrunk, and the shrinking is the interesting part.** It was *registry flag
++ `Shell.tsx GAME_IDS` + HomeTrophy branch + docs*. Two are now closed **by construction** rather
+than by discipline: `GAME_IDS` no longer exists (both surfaces derive from the registry and filter on
+`hidden`, probe-tested in `registryCoverage.test.tsx`), and the HomeTrophy branch derives from
+capabilities (ADR 0020). Genuinely manual still: **both** flags (ADR 0022 made them orthogonal, so a
+flip is two decisions), the accent row, the capability grant, content supply, docs. **A stale
+checklist teaches a future session to hand-edit something the compiler already owns.**
 
-**The checklist has since shrunk, and the shrinking is the interesting part (updated 2026-08-14).**
-It was *registry flag + `Shell.tsx GAME_IDS` + HomeTrophy branch + docs*. Two of those four are now
-closed **by construction** rather than by discipline: `GAME_IDS` no longer exists — `Shell.tsx`
-derives `MAIN_GAME_IDS` from the registry and filters on `hidden`, and `page.tsx` does the same, both
-probe-tested in `registryCoverage.test.tsx` (s148). The HomeTrophy branch derives from the `scores`
-/ `leaderboard` capabilities (ADR 0020). What remains genuinely manual is **both** registry flags
-(`wip` *and* `hidden` — ADR 0022 made them orthogonal, so a flip is now two decisions, not one), the
-accent row in `globals.css`, the capability grant, content supply, and the docs. The general shape
-worth keeping: *a checklist item that a guard test can hold should become one, and the checklist
-should then be rewritten* — a stale checklist teaches a future session to hand-edit something the
-compiler already owns.
+### 🟡 Deferring a threshold on a live-capture counter destroys data (s139)
 
-### 🟡 A spec's stated *reason* can be false while its *decision* is right (s139)
+The immutability rule everyone has internalised — *lower is safe, raise is impossible* — is about
+**earned rows**. It says nothing about **unwritten** ones. `theristisFoundRatio` had to move
+0.8 → 0.7 in the ticket that built `player_milestones`, not the later one that read it, because
+milestone rows are written only as days are played: every qualifying day in the gap would have been
+lost permanently. The spec had the change correctly scoped to the later ticket and never noticed.
 
-TICKET-01 justified dropping the beta capture rows with "the beta word capture is dark behind
-`FEATURE_FLAGS.achievements`." That flag has been `true` since **s112**. The capture was live, had
-been for weeks, and the sentence had survived a grill, an architecture review and a documentation
-service that all read the file.
-
-The decision it defended was still correct — no `player_achievements` row depends on those rows, so
-dropping them un-earns nothing — but the operator was about to approve it on a premise that was not
-true. **A one-line grep of the config was the whole check**, and the reason it never happened is that
-the claim was plausible and load-bearing-sounding, which is exactly the profile of a claim worth
-checking. Related to the standing "measure the artifact, don't trust the response" rule, with a twist:
-here the unreliable narrator was *the repo's own spec*, not an external API.
-
-Two things worth carrying:
-- **Feature-flag claims in prose rot silently.** Nothing tests that a doc's description of a flag
-  matches the flag. This is the same shape as the s138 `leksindeseis wip:true` find — **read the
-  config, never the prose, for a flag's real value.**
-- **The timing question the spec never asked.** The genuinely important find of this session was not
-  the flag: it was that `theristisFoundRatio` had to move to 0.7 *now* rather than in TICKET-02,
-  because milestone rows are only written as days are played. The spec had the threshold change
-  correctly scoped to the later ticket and never noticed that **deferring a threshold on a
-  live-capture counter destroys data**. The immutability rule everyone had internalised ("lower is
-  safe, raise is not") is about *earned rows*; it says nothing about *unwritten* ones. Any future
-  counter added ahead of the badge that reads it needs the same question asked: what is not being
-  recorded in the gap?
+Any counter added ahead of the badge that reads it needs the same question asked: **what is not
+being recorded in the gap?**
 
 ### 🟡 A retired id is not gone — it is still sitting in your fixtures (s140)
 
@@ -553,97 +551,19 @@ map, and each hit needs a judgement call rather than a substitution.
 
 ### 🔴 A loose API stub does not fail the test — it empties the page (s140)
 
-The new `profilePage.test.tsx` reported `Unable to find "Λέξεις ανά μήκος"` with a **body
-containing one empty `<div>`**, which reads exactly like "the section was never added" — the
-failure I was actually trying to rule out. It was neither. `WordsByLengthCard` maps over
-`data.buckets` and `LifetimeStatsStrip` calls `.toLocaleString()` on `stats.total_points`,
-**neither guarded**, so a stub missing those fields threw during render and React unmounted the
-whole tree. Two rounds of chasing the wrong symptom before reading the *uncaught exception* below
-the assertion rather than the assertion itself.
-
-Two things to carry:
-- **A page-composition test needs REAL response shapes, not `{}` or a plausible-looking object.**
-  This is the same family as s132's mocked `router.prefetch`: a stub is a claim about a contract,
-  and a wrong claim here is worse than no test because the failure mimics the bug under test.
-- **When a component test shows an empty container, read the exception trace before the
-  assertion.** The assertion message describes the symptom; the trace names the component that
-  actually died, and jsdom reports the crash *after* the query timeout, so it is easy to miss.
+An unguarded `.map` over `data.buckets` and a `.toLocaleString()` on `stats.total_points` both
+threw mid-render when a stub omitted those fields, so React unmounted the whole tree and the
+assertion reported an **empty body** — which reads exactly like "the section was never added", the
+failure the test existed to rule out. Two rules: **a page-composition test needs REAL response
+shapes**, never `{}` or a plausible-looking object; and **when a component test shows an empty
+container, read the exception trace before the assertion** — jsdom reports the crash *after* the
+query timeout, so it is easy to miss.
 
 ### 🟡 Word-length ladder may be near-unearnable + a thin card (s125)
 
 The word-length badges are **exact length** (operator's choice): a word of exactly 12 or 13 letters is genuinely rare on a Leksokipos board, so the 12/13 rungs may almost never earn, and a 14+ monster earns nothing at all. Same reason the "Λέξεις ανά μήκος" card (now 10/11/12/13+ only) will read near-empty for most players — most of a round's finds are short. Both are acceptable given the change's real goal (cap `player_words` growth, resolved issue 14), but if the badges feel dead or the card feels barren post-launch, the lever is `achievementTuning.wordLengthBadges` (drop to `[10,11,12]`, or make the top rung "13+") — everything (buckets, floor, detection, catalog) re-derives from that one array.
 
 ---
-
-### 🟡 A licence label everyone repeats is still an unverified claim (s145)
-
-The Sound Cues grill set the bar at "CC0 only" and went looking. Pixabay is described as CC0 in
-search results, in blog posts, and in most developers' heads. **It is not** — it is the Pixabay
-Content License: no attribution, commercial use fine, but redistribution "on a standalone basis"
-forbidden. Reading the licence page took one fetch. The outcome barely changed (it still clears our
-bar, because a bundled MP3 is not standalone distribution) but **what would have been written into
-`src/config/sound.ts` was the word "CC0", which is false**, and provenance comments exist precisely
-so a future session can trust them.
-
-This is the standing "measure the artifact, don't trust the response" rule (s130, s132, s139) in a
-new costume: the unreliable narrator here is neither an API nor the repo's own spec, but **the
-consensus of every secondary source**. The tell is the same each time — a claim that is plausible,
-load-bearing, and cheap to check.
-
-Live consequence for `TICKET-05`: each of the three files needs its **actual** licence recorded, not
-the licence of the site it came from. Freesound in particular hosts CC0, CC-BY and CC-BY-NC side by
-side, and its most famous rooster is CC-BY.
-
-### 🟠 A spec's *trap list* is as unreliable as its reasons, and it fails at the same place (s146)
-
-ADR 0021 and `TICKET-04` both carried the line "jsdom does not implement `HTMLMediaElement.play` — it
-needs a global stub, alongside the `scrollIntoView` stub added in s123 for the same reason." Every
-clause is wrong in a way that would have shipped silently: **jsdom defines `play()`**, so the copied
-`if (!Element.prototype.scrollIntoView)` guard never fires and the stub would have been dead code; and
-what jsdom actually returns is **`undefined`, not a Promise**, so `audio.play().catch(…)` is a
-TypeError rather than a swallowed rejection. A ten-second probe test found both.
-
-This is the s139 lesson — *a spec's stated reason can be false while its decision is right* — one
-level deeper. Here the decision (stub it) was right, the reason was right, and the **mechanism**
-was wrong, which is worse: mechanisms get pasted verbatim because they name a real precedent in the
-repo. The precedent was real and the analogy was false.
-
-**The same ADR did it twice, and the second one is still open.** Its consequences named
-`mobileLayout.test.tsx` as the existing guard for the header growing from three buttons to four.
-That file renders `HowToPlayModal` and has never touched the Shell — and no test here *could*,
-because jsdom has no layout engine. So a header that wraps at 320 px is green everywhere. Both
-false claims share a shape worth naming: **a citation to a named artifact in this repo reads as
-verified and almost never is.** Checking one costs a single `Read`. The mitigation is an operator
-eye-check on `TICKET-05`, not a test, per the s144 rule. The tell is unchanged and the check is
-still cheap: **a claim about someone else's runtime is a claim to measure, not to inherit** — this
-is the fourth time (s130 Commons, s132 `router.prefetch`, s139 the feature flag, now this), and the
-second time specifically that a **void return dressed as a Promise** was the thing that got through.
-`useSoundCue.test.ts` therefore subclasses the real `Audio` rather than substituting a fake one, and
-pins the `undefined` return in its own test.
-
-**Fifth instance, s148, and this time the artifact was a test file.** `TICKET-06` instructed "update
-`e2e/games.spec.ts` for the eight-Game picker" and separately listed the files that enumerate Games.
-That spec **has no picker assertions at all** — it visits three game pages directly — so there was
-nothing to update and it passed untouched; meanwhile the test that genuinely broke,
-`Shell.test.tsx`'s drawer assertion on `/leksindeseis`, appeared in no list. Note the asymmetry that
-makes this shape dangerous: the false instruction was *harmless* (an edit that turns out to be
-unnecessary), while the missing one would have shown up as a red suite blamed on the change rather
-than on the spec. **A ticket's file list is a hypothesis; grep is the map.** The ticket's own
-"verify, do not assume, that nothing else enumerates Games" line was the right instinct, and it was
-right about `page.tsx`, `Shell.tsx` and `useOfflineMode.tsx` — it simply never ran the same check
-over the *tests*.
-
-**Sixth instance, s150, and the artifact was a tool.** `TICKET-08` justified "Vercel's built-in
-observability is enough" partly with *"`get_runtime_errors` and `get_runtime_logs` are reachable from
-an agent session via MCP"* — a capability claim about someone else's service, stated in the same
-confident register as a claim about a file in this repo. Both tools return **403** and `get_project`
-404s on every id form. The decision survived (the CLI covers it, and the privacy argument was always
-the load-bearing one), which makes this the **s139 shape as well**: *a spec's stated reason can be
-false while its decision is right.* Note what is new — the previous five instances were all checkable
-with one `Read` or one `grep`, but a tool-reachability claim can only be checked by **calling the
-tool**, and nothing about reading the ticket prompts that. Practical form: **a spec that names a tool
-as its mechanism should have that tool invoked before the spec is believed**, not after the plan is
-built on it.
 
 ### 🟡 Sound Cues are built and mute — the deploy gate is now the only guard (s145, updated s146)
 
