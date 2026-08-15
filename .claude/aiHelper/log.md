@@ -5,6 +5,32 @@
 
 ---
 
+## Session 156 — 2026-08-15: names stop being photocopies
+
+Operator asked whether `ISSUE-06` and `ISSUE-08` were agreed and could share a session. **08 yes, 06
+no** — 06 records no defect (the planner is right at 47 rows) and its "blocked on a scratch database"
+is overstated: a planner-crossover test needs a schema and 50k synthetic rows, not production data.
+It stayed deferred, edited only where this session invalidated its references.
+
+`game_scores` carries a denormalised `display_name` per row; keeping it fresh was a fan-out `UPDATE`
+over every score row of the device, living in **one of the four routes that can set a name**, so 118
+of 536 rows (22%) across 8 of 47 profiles disagreed with the profile. Fix = resolve at read time: the
+leaderboard GET already batched a `player_profiles` `in()` for display badges, so `resolveBadges`
+became **`resolveProfiles`** returning name *and* badge. **No migration, no extra round-trip.**
+
+**The measurement that changed the design.** `ISSUE-08` said adding the name to that query "makes the
+stored copy redundant" — it does not. **19 of 52 scoring devices have no `player_profiles` row at
+all**, because a device only gets one once it sets a name or picks a badge; dropping the copy would
+have blanked a third of the leaderboard. The column stays as the **fallback**, profile wins whenever
+there is one. One `SELECT count(*)` separated a fix from a worse bug — eleventh entry in the
+reflections ledger. Removing the fan-out also retires **`TICKET-12`'s third write-amplification
+lane**; `profileRoute.test.ts` asserts the *absence* of the update, so reinstating it fails. Gates
+201 files / **2618 tests**, eslint 0, build 0, **e2e 13/2 skipped**.
+
+**A second session was editing this tree throughout** — it moved `HEAD` twice, split `ISSUE-05` into
+`ISSUE-09`, and changed `game-state/route.ts`. Found by `git log`, not by any announcement; a
+`git stash` used as a diagnostic reverted its work and popped back by luck. New red tension filed.
+
 ## Session 155 — 2026-08-15: the database is fine, and that was the finding
 
 Operator asked for table sizes, growth risk, and whether we store data we don't need. **Docs only —
@@ -35,37 +61,11 @@ vs 13 MB) — I'd have reported the SQL figure as *the* number. And the memory c
 scores prune is a bug (issue 03)" was **stale in both halves**: the prune is long fixed, and
 `ISSUE-03` is now an unrelated file about e2e coverage.
 
-## Session 154 — 2026-08-15: the launch list loses its last dependency
-
-Operator triage of `launch-readiness.md`, then two builds. **Four rulings, each removing an item rather
-than scheduling it.** The platform logo folded *into* `TICKET-10` — the icon picked from the candidates
-page **is** the mark, dissolving the last cross-item dependency on the document. The preview
-play-through left the file (it recorded a habit, not a task). Sound Cues became **post-launch and
-optional**, splitting `TICKET-05`: Part A shipped here, Part B has no date. Calendar ~3–4 weeks, go/no-go 4–11 September, not hard.
-
-**Part A** is `FEATURE_FLAGS.soundCues`, off, hiding only the 🔊 button — hook, preference and Cues
-stay wired and inert as Offline Mode is, so flipping it on restores the player's stored choice rather
-than resetting it. `Shell.test.tsx` mocks the flags as a **mutable `vi.hoisted` object**: the old
-sound block turns the flag on itself, a new block owns the shipped default.
-
-**The backup question was the one with a real answer.** The operator proposed committing the
-release-day dump to a private repo; **this repo is public** and `pg_dump` with no schema filter
-carries `auth.users`, so a commit would publish every signed-in player's email **permanently** — git
-history survives the delete, and `.gitignore` line 46 had already anticipated it. Destination is an
-encrypted archive in private Drive → **`TICKET-11`**, closing half of `ISSUE-01`. Agent half built:
-7-Zip preflighted **before** the first dump (failing after would leave three plaintext `.sql` files
-and call it an error), `BACKUP_ARCHIVE_PASSWORD` required with **no unencrypted fallback**, `-mhe=on`
-so filenames are not readable either, archives pruned on the keep-2 rule, restore order documented.
-
-**Stripping the emails was the wrong instinct and worth keeping.** `--schema=public` yields an archive
-with no personal data *and no usable restore*: every `auth_user_id` would point at an account that no
-longer exists, so each signed-in player returns a stranger to their own history. Encryption protects
-them; deletion would break them. 200 files / 2611 tests, eslint 0, build 0, **e2e 13/2 skipped**.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 154 | 2026-08-15 | **The launch list loses its last dependency.** Operator triage of `launch-readiness.md`, then two builds; **four rulings, each removing an item rather than scheduling it.** The platform logo folded *into* `TICKET-10` (the icon picked from the candidates page **is** the mark), dissolving the last cross-item dependency; the preview play-through left the file as a habit not a task; Sound Cues became **post-launch and optional**, splitting `TICKET-05` (Part A shipped, Part B undated). Part A = `FEATURE_FLAGS.soundCues`, off, hiding only the 🔊 button — hook, preference and Cues stay wired and inert as Offline Mode is, so flipping it on **restores** the player's stored choice rather than resetting it; `Shell.test.tsx` mocks the flags as a mutable `vi.hoisted` object. **The backup question had the real answer:** the operator proposed committing the release-day dump to a private repo, but **this repo is public** and `pg_dump` with no schema filter carries `auth.users`, so a commit would publish every signed-in player's email **permanently** — git history survives the delete, and `.gitignore` line 46 had already anticipated it. Destination = encrypted archive in private Drive → **`TICKET-11`**, closing half of `ISSUE-01`; agent half built with 7-Zip preflighted **before** the first dump (failing after would leave three plaintext `.sql` files), `BACKUP_ARCHIVE_PASSWORD` required with no unencrypted fallback, `-mhe=on` so filenames are unreadable, keep-2 pruning, restore order documented. **Stripping the emails was the wrong instinct:** `--schema=public` yields an archive with no personal data *and no usable restore* — every `auth_user_id` would point at an account that no longer exists, so each signed-in player returns a stranger to their own history. 200 files / 2611 tests, e2e 13/2-skipped. |
 | 153 | 2026-08-14 | **One miss rule, and the module that was not needed.** Proposal: eight Games re-answer "which Puzzle is date D?", so extract `pickForDate(date, pool, {key, eligible, onMiss})`. **Rejected, problem accepted.** The **eight is really three families** and one already shares its rule (Λεξιαρχείο/Λεξινδέσεις/Βρες τη Φράση all miss through `consumeApprovedPuzzle`; Λεξόπλεγμα's hop loop is an answer-leak guard, not a miss policy); the **interface was as wide as the bodies** (three injection points for sort-filter-index); and its staged first step writes that interface with *less* evidence — Λογοπαίγνιο's predicate is a strict superset of Πόσο κάνει;'s, so eligibility collapses and only the **sort key** differs, a content decision (which board a gap day serves), not a refactor. **What was real is one line:** `getPuzzleForDate` fell back to `puzzles[length - 1]`. The cited gap scenario **cannot fire** (733 consecutive days, guarded since s131) but nothing guarded the **ends** — every date past 2028-03-26 served that one board forever, spoiling the furthest-future board and then freezing on it. Shipped **`pickByDateOrRotate`** in `puzzleRotation.ts` (no options; exact match else rotation over rows already **due**) with three real callers — both Λεξόκηπος loaders, which carried a "behaviour must stay identical" comment over two copies of the rule, plus Πόσο κάνει;. Invariant written down as **Miss Rule** in `CONTEXT.md`; `dailyPuzzleSelection.test.ts` asserts its three parts against **all nine Games** (answers every date, never freezes, never runs ahead), proved non-vacuous by restoring the old fallback — exactly one test fails, the right one. Plus a **180-day corpus horizon** check, the actual missing thing. 200 files / 2608 tests, eslint 0, build 0. **Lesson: a duplicated *rule* is not the same finding as a duplicated *shape*** — the eight share arithmetic and a shape, only two shared a rule, and the fix for the other six was a test, not an interface. |
 | 152 | 2026-08-14 | **The Stavrolekso Maker's rules leave the page** (`/tdd`, three seams agreed up front). `computeCells.ts` took the two projections out of `StavroleksoGrid.tsx` — **the last game file mixing React with pure logic** — plus `makerSlots.ts` and `makerReducer.ts` (12 actions); page **682→515 lines, 24→17 `useState`**. Slot numbering is **derived inside the reducer** from `size`+`blackSquares`, so no caller can pass a numbering that disagrees with the grid. **The proposal's action list was a third of the real surface** (four named, twelve needed). **The round trip is not an inverse and the submit gate hides it:** `assembleSlots` collapses a hole, so restoring a gappy grid left-packs letters and **invents one the author never typed** — pinned as a test that asserts the corruption so the gate cannot be relaxed quietly. Second live bug: `resetAll` set `editPin` to `""`, so "new puzzle" could never submit again. **Playwright cannot emit a Greek keydown at all** — `keyboard.type("ΑΒΓ")` fires *no events* (Latin in the same call arrives fine); cost an hour reading a green feature as broken. Gates 199/2559, eslint 0, build 0, e2e 13/2-skipped. |
 | 150 | 2026-08-12 | **`TICKET-08` shipped as ADR 0023** — no third-party error SDK, Vercel only, because a monitor is a processor and `/privacy` says there are none. Docs only. **The ticket's own mechanism was false and it was the third reason the decision rested on:** `get_runtime_errors`/`get_runtime_logs` are NOT reachable — `list_teams` works so the connector looks authenticated, but **every project-scoped call fails** (`get_project` 404 on slug and `prj_…`, both log tools 403, `list_projects` `[]`); re-authorizing changed nothing. The s146 shape again — **a citation to a named artifact reads as verified and almost never is** — except the artifact was a *tool the ticket assumed it could call*. **The working surface is the CLI**, and `project-mcp` was wrong the opposite way: `vercel logs` queries history (`--since`/`--until`/`--level`/`--status-code`/`--json`), not a live stream, which is the only reason a manual check is writable. Three traps now in the skill: human output prints **time-of-day with no date** (parse `timestampInMs`), `--limit` truncates newest-first rather than windowing (`--since 7d --limit 1000` returned 1000 rows from one day), and **`No logs found` reads identically to a broken query** — an absence of errors must be re-run unfiltered to be believed. Verified not trusted: retention reaches **7 days**, previews 302 to SSO so an agent cannot exercise one, baseline ~1000 rows/day with **zero errors**. Operator approved a read-only production probe: `…/stavrolekso/abc-not-a-number` → `NaN` → rejected integer cast → `[api] not_found`. **No route can be made to crash from outside** (ADR 0016's envelope), so a handled error is the strongest proof available. |
