@@ -5,6 +5,36 @@
 
 ---
 
+## Session 155 — 2026-08-15: the database is fine, and that was the finding
+
+Operator asked for table sizes, growth risk, and whether we store data we don't need. **Docs only —
+no source file touched, so no gates were owed.** Answer to the headline question is *nothing is
+close*: `pg_database_size` reads 13 MB against a 500 MB ceiling, ~1.5 MB of it the 13 public tables,
+growth ~1.2 kB per active player per day. **The schema had drifted from `project-mcp`'s note**:
+`player_pangrams`/`player_words` are gone, consolidated into `player_milestones` (ADR 0013) — and
+milestones grow at **3.4 rows/player/day against game_scores' 1.2**, so the fastest-growing table is
+the small one.
+
+**The interesting numbers were writes, not bytes.** `game_state` has taken **29,025 updates to hold
+83 live rows** (350:1), `game_scores` 31,562 against 536. Cause confirmed in code, not guessed:
+Leksokipos writes **twice per word** — `useGameStateSync` on every `foundWords` growth plus
+`useScoreSubmission` on every score increase — and `pushFoundWords` posts the **whole array** each
+time, so a 40-word round sends ~820 word-slots to persist 40. Judged **not a problem**: ~80k
+upserts/day at 1000 players is under 1 write/sec and autovacuum is same-day on both tables. Promoted
+to `TICKET-12` with the threshold **in the title** at the operator's request, so a future session
+reads "don't build this yet" before reading anything else.
+
+Four issues filed: **ISSUE-04** stale `display_name` (118 rows / 8 devices — the rename fan-out
+exists in `profile/route.ts` alone, so renames via `auth/link` never propagate), **05** dead
+`is_perfect` (0 true, three hits and all in generated types) plus `data` empty on 55% of rows, **06**
+`player_profiles` served by 9,047 seq scans reading 363k tuples with its `auth_user_id` index at
+**zero** lifetime uses, **07** nominations pruned only when `accepted`.
+
+**Two corrections worth keeping.** `reflections.md` already knew the billed DB size is ~2× the SQL
+one (27.37 MB vs 13 MB) — I'd have reported the SQL figure as *the* number. And the memory claiming
+"the 10-day scores prune is a bug (issue 03)" was **stale in both halves**: the prune is long fixed
+and `ISSUE-03` is now an unrelated file about e2e coverage.
+
 ## Session 154 — 2026-08-15: the launch list loses its last dependency
 
 Operator triage of `launch-readiness.md`, then two builds. **Four rulings, each removing an item rather
@@ -32,41 +62,11 @@ with no personal data *and no usable restore*: every `auth_user_id` would point 
 longer exists, so each signed-in player returns a stranger to their own history. Encryption protects
 them; deletion would break them. 200 files / 2611 tests, eslint 0, build 0, **e2e 13/2 skipped**.
 
-## Session 153 — 2026-08-14: one miss rule, and the module that was not needed
-
-Operator proposal: eight Games re-answer "which Puzzle is date D?", so extract a Daily Puzzle
-selection module `pickForDate(date, pool, {key, eligible, onMiss})`. **Evaluated and rejected, with
-the problem it named accepted.** Three counts against it. The **eight is really three families** and
-one of them already shares its rule — Λεξιαρχείο/Λεξινδέσεις/Βρες τη Φράση all miss through
-`consumeApprovedPuzzle`, and Λεξόπλεγμα's hop loop is a cross-game answer-leak guard, not a miss
-policy. The **interface was as wide as the bodies**: three injection points for sort-filter-index.
-And its own staged first step — unify Πόσο κάνει; + Λογοπαίγνιο — writes that same interface with
-*less* evidence, not a smaller one; Λογοπαίγνιο's predicate is a strict superset of Πόσο κάνει;'s,
-so eligibility collapses and only the **sort key** differs, which is a content decision (it changes
-which board a gap day serves), not a refactor.
-
-**What was real, and it is one line.** `getPuzzleForDate` fell back to `puzzles[length - 1]`. The
-gap scenario the proposal cited **cannot fire** — 733 consecutive days, zero gaps, guarded since
-s131 — but nothing guarded the **ends**: every date past 2028-03-26 served that one board, forever.
-The fallback was wrong twice, spoiling the furthest-future board and then freezing on it.
-
-Shipped instead: **`pickByDateOrRotate`** in `puzzleRotation.ts` — no options, exact match else
-rotation over rows already **due** — with three real callers (both Λεξόκηπος loaders, which carried
-a "behaviour must stay identical" comment and two copies of the rule, plus Πόσο κάνει;, unchanged
-behaviour). The invariant is written down as **Miss Rule** in `CONTEXT.md`, and
-`dailyPuzzleSelection.test.ts` asserts its three parts against **all nine Games**: answers every
-date, never freezes, never runs ahead. Proved non-vacuous by restoring the old fallback — exactly one
-test fails, the right one. Plus a **180-day corpus horizon** check, the early warning that was the
-actual missing thing. 200 files / 2608 tests, eslint 0, build 0. No e2e (no page/route/chrome).
-
-**Lesson worth keeping: a duplicated *rule* is not the same finding as a duplicated *shape*.** The
-eight loaders share arithmetic and a shape; only two shared a rule, and the fix for the other six was
-a test, not an interface.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 153 | 2026-08-14 | **One miss rule, and the module that was not needed.** Proposal: eight Games re-answer "which Puzzle is date D?", so extract `pickForDate(date, pool, {key, eligible, onMiss})`. **Rejected, problem accepted.** The **eight is really three families** and one already shares its rule (Λεξιαρχείο/Λεξινδέσεις/Βρες τη Φράση all miss through `consumeApprovedPuzzle`; Λεξόπλεγμα's hop loop is an answer-leak guard, not a miss policy); the **interface was as wide as the bodies** (three injection points for sort-filter-index); and its staged first step writes that interface with *less* evidence — Λογοπαίγνιο's predicate is a strict superset of Πόσο κάνει;'s, so eligibility collapses and only the **sort key** differs, a content decision (which board a gap day serves), not a refactor. **What was real is one line:** `getPuzzleForDate` fell back to `puzzles[length - 1]`. The cited gap scenario **cannot fire** (733 consecutive days, guarded since s131) but nothing guarded the **ends** — every date past 2028-03-26 served that one board forever, spoiling the furthest-future board and then freezing on it. Shipped **`pickByDateOrRotate`** in `puzzleRotation.ts` (no options; exact match else rotation over rows already **due**) with three real callers — both Λεξόκηπος loaders, which carried a "behaviour must stay identical" comment over two copies of the rule, plus Πόσο κάνει;. Invariant written down as **Miss Rule** in `CONTEXT.md`; `dailyPuzzleSelection.test.ts` asserts its three parts against **all nine Games** (answers every date, never freezes, never runs ahead), proved non-vacuous by restoring the old fallback — exactly one test fails, the right one. Plus a **180-day corpus horizon** check, the actual missing thing. 200 files / 2608 tests, eslint 0, build 0. **Lesson: a duplicated *rule* is not the same finding as a duplicated *shape*** — the eight share arithmetic and a shape, only two shared a rule, and the fix for the other six was a test, not an interface. |
 | 152 | 2026-08-14 | **The Stavrolekso Maker's rules leave the page** (`/tdd`, three seams agreed up front). `computeCells.ts` took the two projections out of `StavroleksoGrid.tsx` — **the last game file mixing React with pure logic** — plus `makerSlots.ts` and `makerReducer.ts` (12 actions); page **682→515 lines, 24→17 `useState`**. Slot numbering is **derived inside the reducer** from `size`+`blackSquares`, so no caller can pass a numbering that disagrees with the grid. **The proposal's action list was a third of the real surface** (four named, twelve needed). **The round trip is not an inverse and the submit gate hides it:** `assembleSlots` collapses a hole, so restoring a gappy grid left-packs letters and **invents one the author never typed** — pinned as a test that asserts the corruption so the gate cannot be relaxed quietly. Second live bug: `resetAll` set `editPin` to `""`, so "new puzzle" could never submit again. **Playwright cannot emit a Greek keydown at all** — `keyboard.type("ΑΒΓ")` fires *no events* (Latin in the same call arrives fine); cost an hour reading a green feature as broken. Gates 199/2559, eslint 0, build 0, e2e 13/2-skipped. |
 | 150 | 2026-08-12 | **`TICKET-08` shipped as ADR 0023** — no third-party error SDK, Vercel only, because a monitor is a processor and `/privacy` says there are none. Docs only. **The ticket's own mechanism was false and it was the third reason the decision rested on:** `get_runtime_errors`/`get_runtime_logs` are NOT reachable — `list_teams` works so the connector looks authenticated, but **every project-scoped call fails** (`get_project` 404 on slug and `prj_…`, both log tools 403, `list_projects` `[]`); re-authorizing changed nothing. The s146 shape again — **a citation to a named artifact reads as verified and almost never is** — except the artifact was a *tool the ticket assumed it could call*. **The working surface is the CLI**, and `project-mcp` was wrong the opposite way: `vercel logs` queries history (`--since`/`--until`/`--level`/`--status-code`/`--json`), not a live stream, which is the only reason a manual check is writable. Three traps now in the skill: human output prints **time-of-day with no date** (parse `timestampInMs`), `--limit` truncates newest-first rather than windowing (`--since 7d --limit 1000` returned 1000 rows from one day), and **`No logs found` reads identically to a broken query** — an absence of errors must be re-run unfiltered to be believed. Verified not trusted: retention reaches **7 days**, previews 302 to SSO so an agent cannot exercise one, baseline ~1000 rows/day with **zero errors**. Operator approved a read-only production probe: `…/stavrolekso/abc-not-a-number` → `NaN` → rejected integer cast → `[api] not_found`. **No route can be made to crash from outside** (ADR 0016's envelope), so a handled error is the strongest proof available. |
 | 148 | 2026-08-12 | **Three Games leave the shelf — `TICKET-06` built** (`/tdd`, three slices: drawer, picker, Offline Mode). New **required** `hidden: boolean` on `GameRegistryRow` — `GAME_REGISTRY` is `as const satisfies`, so omitting it is a type error on the union, which forces every new Game to state its intent. `wip` and `hidden` are **orthogonal** (**ADR 0022**): Leksindeseis is `wip:true` **and** finished **and** not launching, three facts one flag would flatten. **Hidden means unlisted, not disabled** — routes stay live by direct URL everywhere; revealing them off-production was offered and declined, because the preview picker must match production. **Two ticket claims were wrong, each one file to check:** `e2e/games.spec.ts` has **no picker assertions at all** (nothing to update, passed untouched), and the test that actually broke — `Shell.test.tsx`'s drawer assertion on `/leksindeseis` — appeared in no list; the s146 pattern exactly. The `registryCoverage.test.tsx` probe trick extended to a **second** probe (`wip:false, hidden:true`) across all three surfaces, each with a positive control so a surface cannot pass by rendering nothing. Two finds: `app/page.tsx` **does** render in jsdom, and a probe crashes the real `HowToPlayModal` (rules copy keyed `Record<keyof typeof GAME_REGISTRY, …>` — a compile-time guarantee with no runtime guard), so it is stubbed. The Offline Mode fix is for **parked** code (ADR 0010) — its `!wip` filter would have let a finished-but-hidden Game join the prefetch set. «Υπό κατασκευή» and the 🚧 chip **deleted, not dormant**. 192 files / 2455 tests, eslint 0, build 0, **e2e 10 passed / 2 skipped (baseline moved from 7 on purpose)**. |
