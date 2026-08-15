@@ -15,8 +15,23 @@ export interface FeatureFlags {
    * ADR 0013 the beta trophy data resets at official release anyway.
    */
   achievements: boolean;
+
+  /**
+   * Sound Cues (ADR 0021): the 🔊 / 🔇 toggle in the Shell header. Off = the button
+   * does not render at all. The hook (`useSoundCue`), the preference
+   * (`useSoundEnabled`) and the three Leksokipos Cues stay wired and inert behind
+   * it, exactly as Offline Mode is parked — this flag hides one control, it does
+   * not dismantle the machine.
+   *
+   * Off because `public/sounds/` is empty (TICKET-05 Part B): every Cue resolves to
+   * a missing file, so the toggle would switch between silence and silence. Do NOT
+   * flip this on until the three MP3s are committed — a visible control that does
+   * nothing is worse than an absent one.
+   */
+  soundCues: boolean;
 }
 
 export const FEATURE_FLAGS: FeatureFlags = {
   achievements: true,
+  soundCues:    false,
 };

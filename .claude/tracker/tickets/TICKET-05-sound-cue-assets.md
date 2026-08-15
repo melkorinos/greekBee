@@ -1,7 +1,55 @@
-# Source and commit the three Sound Cue audio files
+# Gate the sound toggle, then source the three Sound Cue audio files
 
 **Status:** ready
 **Spec:** [docs/adr/0021-sound-cues.md](../../../docs/adr/0021-sound-cues.md)
+
+**Retargeted 2026-08-15 — this ticket no longer blocks the deploy.** The operator ruled the three
+MP3s **post-launch and optional**: the calendar for launch does not wait on someone listening to
+roosters. That splits the ticket in two, and the halves have different owners and different dates.
+
+- **Part A — pre-launch, agent, one small change.** Hide the 🔊 toggle behind a feature flag so the
+  Platform does not ship a visible control that does nothing. This is the only launch-blocking half.
+- **Part B — post-launch, operator, no date.** Source the files, then flip the flag. Everything
+  below *Why* is Part B and is unchanged apart from the removed deploy block at the end.
+
+## Part A — gate the toggle behind a feature flag (pre-launch) — ✅ DONE 2026-08-15
+
+Shipped: `soundCues: false` in `src/config/featureFlags.ts`, the button wrapped in
+`{FEATURE_FLAGS.soundCues && …}` in `src/components/shared/Shell.tsx`, and two blocks in
+`src/test/shared/Shell.test.tsx` — the existing sound tests now turn the flag on themselves, and a
+new block owns the shipped default (no button, hamburger closes the gap, stored preference
+untouched). The flag is mocked as a mutable `vi.hoisted` object; reuse it rather than adding a
+second mock. 2611 tests, eslint, build and the Playwright suite all green.
+
+**The scope below is kept for the record. Part B is the live half.**
+
+`TICKET-04` merged the whole Sound Cue machine into `dev`, and `src/components/shared/Shell.tsx`
+renders the 🔊 / 🔇 button on **every page** (around line 129, the sibling of the theme toggle).
+With `public/sounds/` empty, that button toggles a preference that produces silence either way. A
+control that visibly does nothing is worse than an absent one, and a soft launch is exactly the
+audience that will press it.
+
+### Scope
+
+- [ ] Add `soundCues: boolean` to `FeatureFlags` in `src/config/featureFlags.ts`, set to `false`,
+      documented in the same style as the `achievements` flag — including the note that flipping it
+      on requires the three MP3s to exist first.
+- [ ] Gate the toggle button in `Shell.tsx` on that flag. Gate the **button only** — `useSoundCue`,
+      `useSoundEnabled` and the stored preference stay wired and inert, exactly as Offline Mode was
+      parked. Nothing else in the machine is touched.
+- [ ] A test asserting the button is absent while the flag is off. Follow whatever the achievements
+      flag already does; check `coverageMap.md` before creating a new file.
+- [ ] Header width note: gating this button takes the Shell header from four buttons to three, which
+      **relieves** the 320 px crowding flagged in Part B's done-when. The eye-check moves to Part B.
+
+### Done when
+
+- [ ] The 🔊 button does not render anywhere with the flag off; flipping the flag to `true` brings it
+      back with no other edit.
+- [ ] `npm run test -- --run`, `npx eslint .`, `npm run build` clean, plus `npm run test:e2e` —
+      this touches shared chrome, which is precisely the case the standing rule names.
+
+## Part B — the three audio files (post-launch, operator)
 
 ## Current state (checked 2026-08-12)
 
@@ -83,8 +131,12 @@ Neither ticket blocks the other's implementation. Neither ships without the othe
       which only renders `HowToPlayModal`, and jsdom has no layout engine, so a header that wraps
       or overflows at 320 px passes every gate. This eye-check is the only cover.
 - [ ] `npm run build` clean.
-- [ ] **This ticket is now the only thing between Sound Cues and a deploy.** `TICKET-04` shipped
-      on 2026-08-11 (built, gated, merged into `dev`, **not deployed**) and its file is deleted per
-      the tracker rule. The toggle, the hook and the three Leksokipos Cues are all live in code and
-      currently play silence: the 🔊 button renders on every page today. Until these files land,
-      the correct state is **merged and undeployed** — do not push `dev` to production.
+- [ ] **`FEATURE_FLAGS.soundCues` flipped to `true`** in the same branch as the files. Part A's flag
+      is what makes Part B shippable on its own schedule, and the flip is the last step, not the
+      first — flipping before the files exist restores the silent button.
+
+**This no longer blocks a deploy.** `TICKET-04` shipped on 2026-08-11 (built, gated, merged into
+`dev`, **not deployed**) and its file is deleted per the tracker rule. With Part A done, `dev` is
+free to go to production carrying the whole Sound Cue machine dark. The old instruction here — *do
+not push `dev` to production until these files land* — was withdrawn by the operator on 2026-08-15
+and is recorded in `launch-readiness.md`.

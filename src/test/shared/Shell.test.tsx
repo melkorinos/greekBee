@@ -18,6 +18,14 @@ vi.mock("next/navigation", () => ({
   useRouter:   () => ({ push, back, prefetch }),
 }));
 
+// Feature flags are a plain frozen-by-convention const, so the Shell reads them at
+// render time. Mocking the module with a MUTABLE object lets a test flip a flag
+// between renders — `vi.hoisted` because vi.mock's factory is hoisted above any
+// normal const and would otherwise hit the temporal dead zone. Mirror the real
+// defaults here; each block that needs a different value sets it explicitly.
+const flags = vi.hoisted(() => ({ achievements: true, soundCues: false }));
+vi.mock("@/config/featureFlags", () => ({ FEATURE_FLAGS: flags }));
+
 const { Shell }               = await import("@/components/shared/Shell");
 const { OfflineModeProvider } = await import("@/hooks/useOfflineMode");
 
@@ -260,8 +268,15 @@ describe("Theme toggle", () => {
 // though only Leksokipos has Cues — hiding it per-route would force the Shell to
 // know which Games make noise. Off by default: unexpected audio is the most
 // complained-about behaviour on the web, and mobile blocks the first play anyway.
+//
+// TICKET-05 Part A put the whole button behind FEATURE_FLAGS.soundCues, which ships
+// FALSE while `public/sounds/` is empty. These tests describe the flag-on world and
+// therefore turn it on themselves; the block below them owns the shipped default.
 
-describe("Sound toggle", () => {
+describe("Sound toggle — flag on", () => {
+  beforeEach(() => { flags.soundCues = true;  });
+  afterEach(()  => { flags.soundCues = false; });
+
   it("renders muted by default (sound is opt-in)", () => {
     setup();
     expect(screen.getByRole("button", { name: /turn sound on/i })).toBeInTheDocument();
@@ -293,6 +308,31 @@ describe("Sound toggle", () => {
     const soundBtn = screen.getByRole("button", { name: /turn sound on/i });
     expect(themeBtn.parentElement).toBe(soundBtn.parentElement);
     expect(themeBtn.nextElementSibling).toBe(soundBtn);
+  });
+});
+
+// The shipped state until the three MP3s land (TICKET-05 Part B). Asserting the
+// absence is the whole point: with `public/sounds/` empty, a rendered toggle would
+// switch between silence and silence, and nothing else in the suite would notice —
+// no test in this stack can hear anything.
+
+describe("Sound toggle — flag off (the shipped default)", () => {
+  it("renders no sound button at all", () => {
+    setup();
+    expect(screen.queryByRole("button", { name: /turn sound on/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /turn sound off/i })).toBeNull();
+  });
+
+  it("closes the gap — the hamburger takes the slot after the theme toggle", () => {
+    setup();
+    const themeBtn = screen.getByRole("button", { name: /switch to dark mode/i });
+    expect(themeBtn.nextElementSibling).toBe(getHamburger());
+  });
+
+  it("leaves the stored preference untouched, so flipping the flag back restores it", () => {
+    localStorage.setItem("sound-preference", "on");
+    setup();
+    expect(localStorage.getItem("sound-preference")).toBe("on");
   });
 });
 

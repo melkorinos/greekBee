@@ -6,6 +6,16 @@
 `.claude/aiHelper/html/share-card-candidates.html`. Nothing below the decision line can start
 without it. Everything above it has shipped.
 
+**This ticket now owns the platform logo (operator ruling, 2026-08-15).** The logo was the last
+untracked launch item and it sat outside every file, blocking this ticket from a distance. It is not
+a separate design project: the icon the operator picks here **is** the platform mark, and there is
+no second surface waiting on a different one. The operator makes that pick personally, inside this
+ticket, at the same moment as the card. Consequences:
+
+- There is no "placeholder logo, revisit later" branch any more. One pick settles both.
+- If a richer mark is ever wanted, that is new work against a shipped icon, not a launch blocker.
+- `launch-readiness.md` no longer lists the logo. Do not re-file it there.
+
 **Partly done on 2026-08-13 (s151), uncommitted on `dev` at the time of writing.** Read *What has
 shipped* before touching anything: three of the eight scope items are done, and the two claims this
 file was rewritten for in s150 are now fixed rather than pending.

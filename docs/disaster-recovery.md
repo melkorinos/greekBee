@@ -67,11 +67,18 @@ The table exists to say what a *partial* restore must not skip.
 
 ```bash
 npm run db:backup      # → db-backups/<timestamp>/{roles,schema,data}.sql
+                       #   + db-backups/<timestamp>.7z   ← this is the one you keep
 ```
 
 `scripts/backup-db.ps1` runs `pg_dumpall --roles-only` plus two `pg_dump` passes
-(schema, then data). It needs the PostgreSQL client tools on the machine
-(`pg_dump` / `pg_dumpall`) — Docker is not required.
+(schema, then data), then packs the folder into an **AES-256 encrypted 7-Zip
+archive**. It needs the PostgreSQL client tools on the machine (`pg_dump` /
+`pg_dumpall`) and `7z.exe` — Docker is not required. Both are preflighted before
+the first dump runs, and `BACKUP_ARCHIVE_PASSWORD` must be set in `.env.local` or
+the script refuses to start. There is deliberately **no unencrypted fallback**: a
+backup that quietly loses its protection is worse than one that failed loudly.
+
+**The archive is the artifact. The folder is scaffolding.** Upload the `.7z`.
 
 Fallback if the client tools are unavailable — the `supabase` CLI (already an
 approved devDependency, also no Docker):
@@ -80,9 +87,25 @@ approved devDependency, also no Docker):
 supabase db dump --db-url "$SUPABASE_DB_URL" -f "backup-$(date +%Y%m%d).sql"
 ```
 
-- Store the dump **off-site** — not in this repo (it contains player data) and not
-  only in Supabase (the thing that might die). A private object store or an
-  encrypted file the maintainer holds is enough at this scale.
+### Where it goes
+
+**A private Google Drive folder.** Decided 2026-08-15; `TICKET-11` built the
+encryption half.
+
+- **Never a git repository — not even a private one.** This repo is public,
+  `db-backups/` is in `.gitignore` (line 46, *"local DB backups — never commit"*),
+  and that rule is load-bearing. A full dump carries `auth.users`, so committing one
+  publishes every signed-in player's email address **permanently**: deleting the
+  file next commit leaves it in history for anyone who clones. Do not weaken the
+  ignore rule and do not `git add -f` around it.
+- **Not only in Supabase** either — that is the thing that might die.
+- **Two copies beat one.** A cloud account you can lose access to is a single point
+  of failure wearing a different hat; an external disk is a good second home.
+- **The emails stay in the dump, on purpose.** Stripping the `auth` schema
+  (`pg_dump --schema=public`) would produce an archive with no personal data and no
+  usable restore: every gameplay row's `auth_user_id` would point at an account that
+  no longer exists, so each signed-in player would come back a stranger to their own
+  history. Encryption protects them; deletion would break them.
 - **Cadence:** `game_scores` is append-forever, so a missed day only loses that
   day's *new* rows, never rewrites history. A daily-to-weekly schedule is
   proportionate at current DAU. Always take a fresh dump immediately before any
@@ -90,13 +113,39 @@ supabase db dump --db-url "$SUPABASE_DB_URL" -f "backup-$(date +%Y%m%d).sql"
 
 ## Restoring from a backup
 
+**1. Extract the archive.** You need `BACKUP_ARCHIVE_PASSWORD` — from the password
+manager, because the machine that held `.env.local` is the machine you just lost.
+
+```bash
+7z x 20260815-104500.7z          # prompts for the password
+```
+
+**2. Replay the three files, in this order.** The order is not cosmetic: roles must
+exist before objects that are owned by them, and the schema must exist before rows
+can land in it.
+
+```bash
+psql "$TARGET_DB_URL" -f roles.sql     # roles first
+psql "$TARGET_DB_URL" -f schema.sql    # then the empty structure
+psql "$TARGET_DB_URL" -f data.sql      # then the rows
+```
+
+A single-file `supabase db dump` fallback is one command instead of three:
+
 ```bash
 psql "$TARGET_DB_URL" -f backup-YYYYMMDD.sql
 ```
 
-Restore into a fresh project, then repoint `NEXT_PUBLIC_SUPABASE_URL` + keys in
-Vercel and `.env.local`. Custom-role passwords are *not* included in dumps — we
-have no custom roles, so this doesn't bite us.
+**3. Repoint the app.** Restore into a fresh project, then update
+`NEXT_PUBLIC_SUPABASE_URL` + keys in Vercel and `.env.local`. Custom-role passwords
+are *not* included in dumps — we have no custom roles, so this doesn't bite us.
+Google OAuth is per-project configuration and does **not** travel in the dump; see
+[google-oauth-setup.md](google-oauth-setup.md) and expect to redo it.
+
+> **Test the extraction, not the existence.** An archive that is present is a
+> response; an archive that opens **on a different machine** with the password from
+> your password manager is the artifact. Do that once now, not on the day the
+> database is gone.
 
 ## See also
 - [admin-restore.md](admin-restore.md) — single-player identity recovery (DB alive).

@@ -24,16 +24,17 @@ five tickets it produced (`TICKET-06`–`10`) and the release-day runbook. **Onl
 - **Error monitoring SHIPPED s150, `TICKET-08` deleted — ADR 0023 is the whole story.** No third-party
   SDK, Vercel only; it keeps `/privacy`'s "no tracking tools" line true, so reversing it means revising
   that page in the SAME branch. Check = `npx vercel logs --environment production --level error --since
-  24h`, daily then weekly, window under the ~7-day retention. **Vercel MCP is 403 on every
-  project-scoped call → the CLI is the only surface**; **previews are SSO-protected (302)**, so only the
-  operator can exercise one. Baseline is ~1000 rows/day and **zero errors** — any error row is signal.
+  24h`, daily then weekly, inside the ~7-day retention. **Vercel MCP 403s on every project-scoped call
+  → the CLI is the only surface**; **previews are SSO-protected (302)**, so only the operator can
+  exercise one. Baseline ~1000 rows/day, **zero errors** — any error row is signal.
 - **Runbook order is load-bearing**: deploy → **verify prod serves the merge commit** → `db:backup`
   off-machine → `launch-reset.sql` → announce. The reset must follow the deploy (`BadgeMark` is on
-  `dev` only, so running it early re-earns every badge against the retired emoji glyphs), and the
-  dump is the only undo that exists on a Free-plan project with no PITR.
-- **Accepted as-is:** terms of service (not written), E2E depth (gate = existing suites green,
-  `ISSUE-03`), backups automation (`ISSUE-01`), API rate limiting, Λογοπαίγνιο's trademark note.
-- **The UI question is NOT tracked here** — the operator drives it in separate sessions.
+  `dev` only, so running it early re-earns every badge against the retired emoji glyphs), and the dump
+  is the only undo on a Free-plan project with no PITR. **It never enters a git repo — this one is
+  PUBLIC and `pg_dump` carries `auth.users`, so committing one publishes every signed-in player's email
+  permanently**; `db:backup` emits an encrypted `.7z` for private Drive (`TICKET-11`). Stripping `auth` is not the fix — it restores rows pointing at accounts that no longer exist.
+- **Accepted as-is:** terms of service, E2E depth (`ISSUE-03`), backups automation (`ISSUE-01`), API
+  rate limiting, Λογοπαίγνιο's trademark. **The UI question is not tracked here** — operator-driven.
 
 ## ⚡ Current State (2026-08-12)
 Seven live games + the Leksikastirio word-court + custom puzzle URLs = **the eight rows a player sees**, and **three HIDDEN builds** (s148, ADR 0022): Leksindeseis (finished, never flipped), **Πόσο κάνει;** (`posokanei` 🛒, s124) and **Λογοπαίγνιο** (`logopaignio` 🔎, s126–127). `wip` + `hidden` in `src/config/games.ts` are the source of truth for this table; a hidden game is on no list but its route still plays. Run `npm run test -- --run` for the current test count.
@@ -110,7 +111,7 @@ supabase/       config.toml + migrations/ — version-controlled DB schema (auth
 ```
 
 ## 🛠 Known Tech Debt
-Everything lives in `.claude/tracker/` (redesigned 2026-08-06, conventions in its README). **`issues/`**: `ISSUE-01` (no disaster-recovery backups), `ISSUE-03` (thin E2E coverage — **10 passed / 2 skipped** across 8 launching Games, deferred s147; the 7 figure predates s148's three visibility tests). Issue numbers **`02` and `04` are spent** — both were the intermittent `rlsInvariantsLiveDb` `game_state` DELETE flake, **deleted as an issue 2026-08-14**: unreproduced since s140, and a tracker file whose whole content was a diagnosis belongs next to the code, so the mechanism (a fixed-prefix `wipeSentinelRows` racing an *overlapping run* on the one shared project — not an RLS regression) now lives in a comment in the suite. Do not re-file it. **`tickets/`**: `TICKET-05` (three Sound Cue MP3s — **operator work**, the sole thing blocking a Sound Cues deploy) and `TICKET-10`, the last launch ticket, **in-progress since s151 and blocked on one operator pick** (a card + icon from `html/share-card-candidates.html`); its metadata half has shipped. **No ordering constraints remain** — the 08-before-07 one was withdrawn in s149, not satisfied. Numbers are **never reused**: 01 shipped s139, 02 s140, 03 s144, 04 s146, 06 s148, **07 s149**, **08 s150**, **09 s150**, all deleted per the rule — read the log before picking a number, not the folder. No triage labels — the folder is the state; resolved files are deleted, never marked done. Open *questions* are neither, and live in `.claude/handoffs/launch-readiness.md`; read it before assuming something is untracked. Wayfinder is retired.
+Everything lives in `.claude/tracker/` (redesigned 2026-08-06, conventions in its README). **`issues/`**: `ISSUE-01` (no disaster-recovery backups), `ISSUE-03` (thin E2E coverage — **10 passed / 2 skipped** across 8 launching Games, deferred s147; the 7 figure predates s148's three visibility tests). Issue numbers **`02` and `04` are spent** — both were the intermittent `rlsInvariantsLiveDb` `game_state` DELETE flake, **deleted as an issue 2026-08-14**: unreproduced since s140, and a tracker file whose whole content was a diagnosis belongs next to the code, so the mechanism (a fixed-prefix `wipeSentinelRows` racing an *overlapping run* on the one shared project — not an RLS regression) now lives in a comment in the suite. Do not re-file it. **`tickets/`**: `TICKET-05` (Sound Cues — **split s154**, Part A's `FEATURE_FLAGS.soundCues` gate shipped so the MP3s are now **post-launch and optional**, blocking nothing), `TICKET-10`, **in-progress since s151 and blocked on one operator pick** (a card + icon from `html/share-card-candidates.html` — that icon **is** the platform logo, folded in s154; metadata half shipped), and `TICKET-11` (encrypted off-machine backup, agent half shipped s154, operator half open). **No ordering constraints remain at all** — the 08-before-07 one was withdrawn in s149, and the logo→10 one dissolved in s154. Numbers are **never reused**: 01 shipped s139, 02 s140, 03 s144, 04 s146, 06 s148, **07 s149**, **08 s150**, **09 s150**, all deleted per the rule — read the log before picking a number, not the folder. No triage labels — the folder is the state; resolved files are deleted, never marked done. Open *questions* are neither, and live in `.claude/handoffs/launch-readiness.md`; read it before assuming something is untracked. Wayfinder is retired.
 
 ## 🧪 Test Coverage Map
 Moved to **`.claude/aiHelper/coverageMap.md`** (2026-07-18). Not loaded at session start — grep it before writing any new test (if the function already appears, read that test file first); update it in the Dream.

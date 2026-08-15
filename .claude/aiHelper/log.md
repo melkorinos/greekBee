@@ -5,6 +5,33 @@
 
 ---
 
+## Session 154 — 2026-08-15: the launch list loses its last dependency
+
+Operator triage of `launch-readiness.md`, then two builds. **Four rulings, each removing an item rather
+than scheduling it.** The platform logo folded *into* `TICKET-10` — the icon picked from the candidates
+page **is** the mark, dissolving the last cross-item dependency on the document. The preview
+play-through left the file (it recorded a habit, not a task). Sound Cues became **post-launch and
+optional**, splitting `TICKET-05`: Part A shipped here, Part B has no date. Calendar ~3–4 weeks, go/no-go 4–11 September, not hard.
+
+**Part A** is `FEATURE_FLAGS.soundCues`, off, hiding only the 🔊 button — hook, preference and Cues
+stay wired and inert as Offline Mode is, so flipping it on restores the player's stored choice rather
+than resetting it. `Shell.test.tsx` mocks the flags as a **mutable `vi.hoisted` object**: the old
+sound block turns the flag on itself, a new block owns the shipped default.
+
+**The backup question was the one with a real answer.** The operator proposed committing the
+release-day dump to a private repo; **this repo is public** and `pg_dump` with no schema filter
+carries `auth.users`, so a commit would publish every signed-in player's email **permanently** — git
+history survives the delete, and `.gitignore` line 46 had already anticipated it. Destination is an
+encrypted archive in private Drive → **`TICKET-11`**, closing half of `ISSUE-01`. Agent half built:
+7-Zip preflighted **before** the first dump (failing after would leave three plaintext `.sql` files
+and call it an error), `BACKUP_ARCHIVE_PASSWORD` required with **no unencrypted fallback**, `-mhe=on`
+so filenames are not readable either, archives pruned on the keep-2 rule, restore order documented.
+
+**Stripping the emails was the wrong instinct and worth keeping.** `--schema=public` yields an archive
+with no personal data *and no usable restore*: every `auth_user_id` would point at an account that no
+longer exists, so each signed-in player returns a stranger to their own history. Encryption protects
+them; deletion would break them. 200 files / 2611 tests, eslint 0, build 0, **e2e 13/2 skipped**.
+
 ## Session 153 — 2026-08-14: one miss rule, and the module that was not needed
 
 Operator proposal: eight Games re-answer "which Puzzle is date D?", so extract a Daily Puzzle
@@ -36,36 +63,11 @@ actual missing thing. 200 files / 2608 tests, eslint 0, build 0. No e2e (no page
 eight loaders share arithmetic and a shape; only two shared a rule, and the fix for the other six was
 a test, not an interface.
 
-## Session 152 — 2026-08-14: the Maker's rules leave the page
-
-Operator proposal, evaluated then built with `/tdd` at three seams agreed up front. Three new pure
-modules — `computeCells.ts` (the two projections moved out of `StavroleksoGrid.tsx`, **the last game
-file that mixed React with pure logic**), `makerSlots.ts` (`assembleSlots`/`restoreCellsFromSlots`/
-`clueKey`), `makerReducer.ts` (12 actions). Page **682→515 lines, 24→17 `useState`**, four handlers
-replaced by dispatch. Slot numbering is **derived inside the reducer** from `size`+`blackSquares`, so
-the signature really is two arguments and no caller can pass a numbering that disagrees with the grid.
-
-**The proposal's action list was a third of the real surface** — it named four, the editor needs
-twelve (clue entry, slot-list selection, size, three phase moves, restart, resume). Its evidence was
-sound: the dead second `setCells` was real and is gone.
-
-**The round trip is not an inverse, and the submit gate is what hides that.** `assembleSlots`
-collapses a hole, so restoring a gappy grid left-packs the letters and **invents one the author never
-typed**; only the "slot not filled" check keeps anything gappy from ever being stored. Pinned as a
-test that asserts the corruption, so the gate cannot be relaxed quietly. Second live bug fixed:
-`resetAll` set `editPin` to `""`, so "new puzzle" could never submit again.
-
-**Playwright cannot emit a Greek keydown at all** — `keyboard.type("ΑΒΓ")` fires *no events*, verified
-by listening on `window` (Latin in the same call arrives fine). Cost an hour reading a green feature
-as broken. Second self-inflicted one: `ENTER_FILL` pre-selects 1 Across, so the first click on that
-same square **cycles to 1 Down** — faithful to the old handler, and it fooled my own smoke test before
-it fooled anyone else. That smoke test was thrown away with the agreed seams; the maker still has no
-rendering test. Gates 199/2559, eslint 0, build 0, **e2e 13 passed / 2 skipped**.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 152 | 2026-08-14 | **The Stavrolekso Maker's rules leave the page** (`/tdd`, three seams agreed up front). `computeCells.ts` took the two projections out of `StavroleksoGrid.tsx` — **the last game file mixing React with pure logic** — plus `makerSlots.ts` and `makerReducer.ts` (12 actions); page **682→515 lines, 24→17 `useState`**. Slot numbering is **derived inside the reducer** from `size`+`blackSquares`, so no caller can pass a numbering that disagrees with the grid. **The proposal's action list was a third of the real surface** (four named, twelve needed). **The round trip is not an inverse and the submit gate hides it:** `assembleSlots` collapses a hole, so restoring a gappy grid left-packs letters and **invents one the author never typed** — pinned as a test that asserts the corruption so the gate cannot be relaxed quietly. Second live bug: `resetAll` set `editPin` to `""`, so "new puzzle" could never submit again. **Playwright cannot emit a Greek keydown at all** — `keyboard.type("ΑΒΓ")` fires *no events* (Latin in the same call arrives fine); cost an hour reading a green feature as broken. Gates 199/2559, eslint 0, build 0, e2e 13/2-skipped. |
 | 150 | 2026-08-12 | **`TICKET-08` shipped as ADR 0023** — no third-party error SDK, Vercel only, because a monitor is a processor and `/privacy` says there are none. Docs only. **The ticket's own mechanism was false and it was the third reason the decision rested on:** `get_runtime_errors`/`get_runtime_logs` are NOT reachable — `list_teams` works so the connector looks authenticated, but **every project-scoped call fails** (`get_project` 404 on slug and `prj_…`, both log tools 403, `list_projects` `[]`); re-authorizing changed nothing. The s146 shape again — **a citation to a named artifact reads as verified and almost never is** — except the artifact was a *tool the ticket assumed it could call*. **The working surface is the CLI**, and `project-mcp` was wrong the opposite way: `vercel logs` queries history (`--since`/`--until`/`--level`/`--status-code`/`--json`), not a live stream, which is the only reason a manual check is writable. Three traps now in the skill: human output prints **time-of-day with no date** (parse `timestampInMs`), `--limit` truncates newest-first rather than windowing (`--since 7d --limit 1000` returned 1000 rows from one day), and **`No logs found` reads identically to a broken query** — an absence of errors must be re-run unfiltered to be believed. Verified not trusted: retention reaches **7 days**, previews 302 to SSO so an agent cannot exercise one, baseline ~1000 rows/day with **zero errors**. Operator approved a read-only production probe: `…/stavrolekso/abc-not-a-number` → `NaN` → rejected integer cast → `[api] not_found`. **No route can be made to crash from outside** (ADR 0016's envelope), so a handled error is the strongest proof available. |
 | 148 | 2026-08-12 | **Three Games leave the shelf — `TICKET-06` built** (`/tdd`, three slices: drawer, picker, Offline Mode). New **required** `hidden: boolean` on `GameRegistryRow` — `GAME_REGISTRY` is `as const satisfies`, so omitting it is a type error on the union, which forces every new Game to state its intent. `wip` and `hidden` are **orthogonal** (**ADR 0022**): Leksindeseis is `wip:true` **and** finished **and** not launching, three facts one flag would flatten. **Hidden means unlisted, not disabled** — routes stay live by direct URL everywhere; revealing them off-production was offered and declined, because the preview picker must match production. **Two ticket claims were wrong, each one file to check:** `e2e/games.spec.ts` has **no picker assertions at all** (nothing to update, passed untouched), and the test that actually broke — `Shell.test.tsx`'s drawer assertion on `/leksindeseis` — appeared in no list; the s146 pattern exactly. The `registryCoverage.test.tsx` probe trick extended to a **second** probe (`wip:false, hidden:true`) across all three surfaces, each with a positive control so a surface cannot pass by rendering nothing. Two finds: `app/page.tsx` **does** render in jsdom, and a probe crashes the real `HowToPlayModal` (rules copy keyed `Record<keyof typeof GAME_REGISTRY, …>` — a compile-time guarantee with no runtime guard), so it is stubbed. The Offline Mode fix is for **parked** code (ADR 0010) — its `!wip` filter would have let a finished-but-hidden Game join the prefetch set. «Υπό κατασκευή» and the 🚧 chip **deleted, not dormant**. 192 files / 2455 tests, eslint 0, build 0, **e2e 10 passed / 2 skipped (baseline moved from 7 on purpose)**. |
 | 147 | 2026-08-11 | **Launch question 1 resolved — five tickets, one issue, no code** (`/grill-with-docs`). **Soft launch** — a wider circle, no broadcast — because the site is *already publicly deployed*, so launch is promotion rather than a change in exposure, and that framing is what makes the checklist finite. Output: a blocking/accepted-as-is split, `TICKET-06`–`10`, `ISSUE-03`, and a release-day runbook whose **order is load-bearing** (deploy → verify prod serves the merge commit → `db:backup` off-machine → `launch-reset.sql` → announce). **Two of the repo's own descriptions were euphemisms, both one command to check**: the Leksindeseis fallback pool called "thin" for weeks is **one puzzle** rotating over a single-item array, and the legal/monitoring surface was **nothing at all** — the s147 reflections tension. Third measured fact, which set the runbook order: **`BadgeMark` is absent from `main`**, so a reset run before the launch deploy would re-earn every badge against retired emoji art. Operator calls: all three `wip:true` Games **hidden** (retiring the content-supply, wip-flip and Leksindeseis-pool threads at once), terms of service and E2E depth accepted as-is, the **UI question struck from the handoff**. |

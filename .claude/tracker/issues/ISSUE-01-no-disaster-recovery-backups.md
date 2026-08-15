@@ -12,12 +12,21 @@ Amplified by the **single shared dev/prod project** (one DB backs both dev and p
 
 Full context, the "what must survive" table, and restore procedure live in [`docs/disaster-recovery.md`](../../../docs/disaster-recovery.md).
 
+## Half of this moved to TICKET-11 on 2026-08-15
+
+The "somewhere to put the dumps" question is **answered**: an encrypted 7-Zip archive in a private
+Google Drive folder, never a git repository (the repo is public and the dump carries `auth.users`).
+[`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup.md) builds the encryption half of
+`scripts/backup-db.ps1` and documents the restore. **What is still deferred here is the automation
+and the dev/prod split** — the scheduler question stays open because it depends on the split, and
+the split needs a grill.
+
 ## Why deferred
 
 Neither half is a small fix, and both are cheaper to do once the launch shape is settled:
 
 - **Automating an off-site `supabase db dump`** needs a scheduler and somewhere to put the dumps — a real
-  decision, not a script.
+  decision, not a script. *(The destination half is now settled — see above.)*
 - **The dev/main split** — two separate free Supabase projects (free orgs allow two) versus staying single —
   is structural and needs a grill; isolation has to be weighed against double-maintaining migrations,
   secrets, and OAuth config.

@@ -2,6 +2,37 @@
 
 ## ⚠️ Active Tensions (watch these)
 
+### 🟠 The backup is now encrypted, and still nothing makes it leave the machine (s154)
+
+`TICKET-11` automated the half a script can do — the dump is packed into an AES-256 `.7z`, the
+password is mandatory, there is no unencrypted fallback. The half that actually constitutes a backup
+is a human carrying that file to Drive, and **nothing checks it happened.** The runbook's step 3 and
+step 4 sit next to each other: take the dump, then run the wipe that the dump is the only undo for.
+An archive still sitting in `db-backups/` when `launch-reset.sql` runs is indistinguishable, from
+inside the process, from a completed backup.
+
+The uploading was deliberately left manual — automating it means a Google credential in `.env.local`
+for a step performed a handful of times a year — so this is an accepted risk, not an oversight. But
+it is the same shape as the Sound Cues deploy gate and the s153 horizon test: **a correct decision
+whose entire enforcement is a human reading a line at the right moment.** Three of those now.
+
+Watch: any release-day run where step 3 and step 4 happen close together, and the moment the archive
+becomes scheduled rather than occasional — a weekly cadence nobody uploads is worse than no cadence,
+because it produces a folder full of evidence that backups are being taken.
+
+### 🟢 The wrong instinct about the emails was cheap to catch, and would not have been later (s154)
+
+Stripping `auth.users` from the dump to avoid holding personal data is a good reflex pointed at the
+wrong artifact: it produces an archive that satisfies a privacy intuition and **fails at the one job
+it exists for** — restored rows point at accounts that no longer exist, so every signed-in player
+comes back a stranger to their own history. The failure would have surfaced only during a restore,
+which is the single worst moment to learn what your backup does not contain.
+
+The general shape worth keeping: **a data-minimisation instinct and a recovery requirement can point
+in opposite directions, and minimisation feels more responsible while being wrong.** The test is not
+"how little can this file hold" but "what does this file have to contain for the restore to be a
+restore". Encryption is what reconciles them, and it is the answer more often than deletion is.
+
 ### 🟡 Λεξόκηπος now degrades quietly where it used to degrade loudly (s153)
 
 The old miss rule froze the game on one board past 2028-03-26 — catastrophic, but *visible* the day

@@ -1,6 +1,6 @@
 # Launch readiness — what is left between here and a go/no-go
 
-**Created:** 2026-07-31 · **Question 1 resolved:** 2026-08-11 · **Last audit:** 2026-08-14
+**Created:** 2026-07-31 · **Question 1 resolved:** 2026-08-11 · **Last audit:** 2026-08-15
 **Driver:** Dimitrios
 
 One question is left. Everything else on this document has either shipped, been consciously
@@ -23,20 +23,24 @@ the operator's.
 
 ## Everything still pending, in one place
 
-Audited against the filesystem and git on 2026-08-14. Nothing else is open.
+Audited against the filesystem and git on 2026-08-14, re-cut against the operator's rulings of
+2026-08-15. Nothing else is open.
 
 ### Open tickets — `.claude/tracker/tickets/`
 
 | Ticket | What is left | Owner |
 |---|---|---|
-| `TICKET-05` | Three Sound Cue MP3s. **Blocks any deploy** — the 🔊 toggle is merged and plays silence today | operator |
-| `TICKET-10` | **In-progress.** The metadata half shipped in s151 (`PLATFORM_DESCRIPTION` now filters `hidden`, guarded by seam 1d; `metadataBase`/`openGraph`/`twitter` in `layout.tsx`; `PLATFORM_ORIGIN`). What is left: `opengraph-image`, `icon`, `apple-icon`, deleting the stock `favicon.ico` that ships the **Next.js logo** in production today, and a test that the metadata block survives. **Blocked on one operator pick** — a card number and an icon number from `html/share-card-candidates.html` | operator pick, then agent |
+| `TICKET-05` | **Split, and no longer a deploy blocker. Part A shipped 2026-08-15** — the 🔊 toggle is behind `FEATURE_FLAGS.soundCues`, off, with the machine wired and inert beneath it. What is left is Part B: the three MP3s, **post-launch and optional**, ending in the flag flip | operator, no date |
+| `TICKET-11` | **New 2026-08-15, agent half shipped the same day.** `npm run db:backup` now emits an AES-256 `.7z` and refuses to run unprotected; `docs/disaster-recovery.md` carries the restore order. What is left is **operator-only**: create the private Drive folder, set and safely store `BACKUP_ARCHIVE_PASSWORD`, and prove one archive extracts on another machine. Must be done **before** runbook step 3 is executed | operator |
+| `TICKET-10` | **In-progress, and now owns the platform logo.** The metadata half shipped in s151 (`PLATFORM_DESCRIPTION` now filters `hidden`, guarded by seam 1d; `metadataBase`/`openGraph`/`twitter` in `layout.tsx`; `PLATFORM_ORIGIN`). What is left: `opengraph-image`, `icon`, `apple-icon`, deleting the stock `favicon.ico` that ships the **Next.js logo** in production today, and a test that the metadata block survives. **Blocked on one operator pick** — a card number and an icon number from `html/share-card-candidates.html`, the icon being the mark itself | operator pick, then agent |
 
 ### Owed, and not tickets
 
-- **The play-through of `dev` on preview** — Leksodromia and Leksoplegma, the sessions 102–104
-  visual shifts, and the badge art eye-check in **both themes** owed since `TICKET-03`. One session.
-- **The release-day runbook** below.
+- **The release-day runbook** below. It is the only owed item left.
+
+The preview play-through is **no longer tracked here** (operator ruling, 2026-08-15): the operator
+tests every branch on preview as a matter of course, so writing it down was bookkeeping of a habit
+rather than a piece of pending work. The `TICKET-03` visual eye-checks ride along with that habit.
 
 ### Deferred, correctly, and not launch work
 
@@ -49,9 +53,10 @@ content supply.
 - **UI redesign** — operator-driven in separate sessions. Untracked by design.
 - **Game icons** — `.claude/handoffs/game-icon-system.md` + `goals.md` item 5. Nothing designed;
   that handoff exists to make a grill productive and is expected to produce a ticket.
-- **Platform logo** — the only genuinely untracked item. **`TICKET-10` depends on it**: the Open
-  Graph card and the favicon both need a mark, so either the logo lands first or `TICKET-10` ships
-  a deliberate placeholder and is revisited.
+- **Platform logo** — **folded into `TICKET-10` on 2026-08-15** and owned there. The icon the
+  operator picks from the candidates page *is* the mark; there is no separate logo project and no
+  placeholder branch. This was the last untracked item, and the last live dependency between two
+  pieces of launch work. Do not re-file it here.
 
 ---
 
@@ -61,7 +66,11 @@ content supply.
 2. **Verify production is serving the merge commit.** Not the migration, the deploy —
    `reflections.md` records that live-DB tests go green on a migration alone and are blind to
    whether the deploy happened.
-3. `npm run db:backup`, dump moved **off the machine**.
+3. `npm run db:backup`, then upload `db-backups/<timestamp>.7z` — the **encrypted archive**, not the
+   folder — to the private Google Drive backup folder. The script builds the archive as of
+   2026-08-15 (`TICKET-11`) and refuses to run without `BACKUP_ARCHIVE_PASSWORD`, so the remaining
+   risk is human: **the upload is manual and nothing enforces it.** A dump still sitting on the
+   machine at step 4 means the wipe has no undo.
 4. `supabase/scripts/launch-reset.sql`, by hand in the dashboard.
 5. Announce.
 
@@ -69,6 +78,15 @@ Steps 3 and 4 are why the order matters. The reset empties `game_scores`, `game_
 `player_achievements` and `player_milestones` on a **Free-plan project with no PITR** — that dump is
 the only undo that will exist. And it must follow the deploy: run it while the old code is live and
 badges re-earn against the retired emoji glyphs, because `BadgeMark` is on `dev` only.
+
+**Where the dump goes — settled 2026-08-15, and the answer is not the repo.** Committing it to a
+second private repository was considered and rejected: **this repository is public**, `scripts/backup-db.ps1`
+already writes to `db-backups/`, and `.gitignore` line 46 already reads *"local DB backups — never
+commit"*. `pg_dump` without a schema filter carries `auth.users` alongside gameplay, so a committed
+dump would publish account identifiers, device UUIDs and display names permanently — git history
+keeps them after a delete. The destination is any private store that is not GitHub: cloud drive,
+external disk, encrypted archive. Two copies beat one. **The `db-backups/` ignore rule is
+load-bearing — never remove it**, and never override it with `git add -f`.
 
 ---
 
@@ -115,14 +133,20 @@ list and the go/no-go is a scheduling call.
 
 ### Inputs
 
-- The pending inventory at the top of this document — two tickets, two owed items
+- The pending inventory at the top of this document — three tickets, one owed item
+- **The calendar estimate is the operator's: roughly 3–4 weeks from 2026-08-15**, putting the
+  go/no-go around **4–11 September 2026**. The date is explicitly **not hard** — it is a shape for
+  planning, not a commitment, and slipping it costs nothing. What the estimate does settle is that
+  no item on this document is allowed to grow into a multi-month project without a new decision
 - `dev` is **1 commit ahead** of `origin/dev`, `main` and `origin/main` (measured 2026-08-14; it was
   15 on 2026-08-12 and the backlog has since been pushed). **Re-measure before planning the window
   rather than reading this line** — `git rev-list --count origin/dev..dev`. The merge is still a real
   build, but it is no longer a large backlog
-- **No ordering constraints survive between the tickets.** The `TICKET-08`-before-`TICKET-07`
-  coupling was withdrawn once the no-SDK ruling made it moot; both shipped. The one live dependency
-  is **platform logo → `TICKET-10`**
+- **No ordering constraints survive between the tickets at all**, as of 2026-08-15. The
+  `TICKET-08`-before-`TICKET-07` coupling was withdrawn once the no-SDK ruling made it moot; both
+  shipped. The last one, **platform logo → `TICKET-10`**, dissolved when the logo moved *inside*
+  `TICKET-10`. Both remaining tickets can be worked in any order, or at the same time — what gates
+  them is two operator acts (one pick, one flag decision already made), not each other
 - The UI redesign runs in parallel on operator sessions and is deliberately **not an input** — it
   cannot block this, and if it turns out to, that is a new decision rather than a known one
 
@@ -157,6 +181,20 @@ Launch-relevant only. Everything else this document once carried has landed in a
 removed on 2026-08-12 — the achievement-catalog rebuild is **ADR 0013**, the Topothesies answer-set
 work is **ADR 0018's Amendments**, and Offline Mode's park is **ADR 0010** plus its own handoff.
 
+- **2026-08-15 — Sound Cues are post-launch and optional; the toggle is flag-gated instead.**
+  `TICKET-05` no longer blocks a deploy. The agent hides the 🔊 button behind
+  `FEATURE_FLAGS.soundCues`; the MP3s land whenever they land and flip it on. Reversing this means
+  the launch waits on three audio files again.
+- **2026-08-15 — The platform logo is `TICKET-10`'s icon pick, not a project.** Removes the last
+  cross-item dependency on this document.
+- **2026-08-15 — The preview play-through leaves this document.** The operator tests every branch on
+  preview by habit; tracking it here recorded a routine rather than a task.
+- **2026-08-15 — The release-day dump never enters a git repository.** The repo is public and
+  `db-backups/` is already ignored; the dump carries `auth.users`. The destination is an encrypted
+  7-Zip archive in a **private Google Drive folder** — `TICKET-11`, which also closes half of
+  `ISSUE-01`. The dump keeps the email addresses rather than stripping the `auth` schema: a
+  public-schema-only dump restores rows whose `auth_user_id` points at accounts that no longer
+  exist, which is not a restore. Encryption protects them, deletion would break them.
 - **2026-08-12 — Error monitoring is Vercel-only, no SDK** (`ADR 0023`). Dissolved the privacy-page
   coupling rather than reordering around it. Reversing the ruling means revising `/privacy` in the
   same branch.
