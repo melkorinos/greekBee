@@ -4,7 +4,8 @@
 **Blocked by:** `TICKET-11` — see "Why deferred" for how much that block is really worth here.
 **Revisit when:** TICKET-11 has produced a restorable encrypted dump, or the next `game_scores`
 migration is written for any reason — fold this in rather than paying for a separate migration.
-ISSUE-08's read-time name resolution is the likely trigger.
+No such migration is queued: the read-time display-name fix that was expected to trigger one shipped
+on 2026-08-15 without touching the schema, so this now waits on TICKET-11 alone.
 
 *(Split from the original ISSUE-05 on 2026-08-15. The `data` jsonb half needs no schema change and
 is therefore not blocked by anything — it moved to [`ISSUE-09`](ISSUE-09-leksokipos-writes-unread-score-metadata.md).)*
@@ -51,4 +52,3 @@ exists, and ADR 0017's whole point is that the generated types are trusted.
 - ISSUE-01 — no backups; the reason DDL on `game_scores` waits.
 - [`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup.md) — the encrypted dump that unblocks this.
 - [`ISSUE-09`](ISSUE-09-leksokipos-writes-unread-score-metadata.md) — the unblocked half of the original ISSUE-05.
-- ISSUE-08 — the other `game_scores` schema cleanup; do both in one migration.

@@ -29,9 +29,11 @@ numbers are essentially one game's traffic. Two independent per-word lanes produ
    posts whenever the score strictly increases. Every accepted Leksokipos word increases the score,
    so this is also one POST per word. The `lastPostedRef` guard suppresses duplicates, not frequency.
 
-A third, smaller contributor: the display-name fan-out at
-[`src/app/api/profile/route.ts:61`](../../../src/app/api/profile/route.ts#L61) rewrites every
-historical score row for a device on each rename (see ISSUE-08).
+A third contributor is **already gone**: the display-name fan-out in
+[`src/app/api/profile/route.ts`](../../../src/app/api/profile/route.ts) rewrote every historical
+score row for a device on each rename. Removed 2026-08-15 — the leaderboard now resolves names from
+`player_profiles` at read time, so a rename is one row written instead of all of them. It was the
+small contributor of the three; the two per-word lanes below are untouched.
 
 **This is deliberately not urgent.** Projected at 1,000 daily players averaging 40 words: ~80,000
 upserts/day, under 1 write/second averaged, perhaps 10–20/second if play clusters at the daily
@@ -81,4 +83,3 @@ currently paying for** — worth collecting when the volume is real, worth ignor
 - [`src/games/leksokipos/sync.ts`](../../../src/games/leksokipos/sync.ts) — `pushFoundWords`, the full-array body, and `pullSnapshot`.
 - [`src/hooks/useScoreSubmission.ts`](../../../src/hooks/useScoreSubmission.ts) — lane 2, deliberately untouched.
 - ADR 0003 — server-wins restore; why the full array is currently the safe shape.
-- ISSUE-08 — the rename fan-out, a third source of `game_scores` updates.

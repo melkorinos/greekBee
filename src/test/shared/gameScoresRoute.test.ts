@@ -334,3 +334,60 @@ describe("GET /api/game-scores — display badges", () => {
     expect(json.top20[0].badge).toBeNull();
   });
 });
+
+// ── GET — display names resolved at read time ─────────────────────────────────
+//
+// game_scores carries a denormalized display_name per row, written at score time.
+// It is NOT the source of truth: the same player_profiles fan-out that resolves
+// badges also returns the current name, and the profile wins whenever there is
+// one. The stored copy survives only as the fallback for a device that has never
+// written a profile row (19 of 52 scoring devices, measured 2026-08-15).
+
+describe("GET /api/game-scores — display names", () => {
+  it("shows the profile's current name, not the stale copy stored on the score row", async () => {
+    enqueue(
+      { data: [{ device_id: "a", display_name: "Παλιό Όνομα", score: 100 }], error: null },
+      { data: [{ device_uuid: "a", display_name: "Νέο Όνομα", selected_badge_id: null }], error: null },
+    );
+    const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22", deviceId: "a" }));
+    const json = await res.json() as { top20: BadgedRow[] };
+    expect(json.top20[0].display_name).toBe("Νέο Όνομα");
+  });
+
+  it("falls back to the score row's stored name when the device has no profile row", async () => {
+    enqueue(
+      { data: [
+        { device_id: "a", display_name: "Άννα",  score: 100 },
+        { device_id: "b", display_name: "Βάσω",  score: 80  },
+      ], error: null },
+      // only "a" has ever written a profile; "b" is profile-less
+      { data: [{ device_uuid: "a", display_name: "Άννα Β.", selected_badge_id: null }], error: null },
+    );
+    const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22", deviceId: "a" }));
+    const json = await res.json() as { top20: BadgedRow[] };
+    expect(json.top20[0].display_name).toBe("Άννα Β.");
+    expect(json.top20[1].display_name).toBe("Βάσω");
+  });
+
+  it("falls back when the profile row carries a blank name", async () => {
+    enqueue(
+      { data: [{ device_id: "a", display_name: "Άννα", score: 100 }], error: null },
+      { data: [{ device_uuid: "a", display_name: "   ", selected_badge_id: null }], error: null },
+    );
+    const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22", deviceId: "a" }));
+    const json = await res.json() as { top20: BadgedRow[] };
+    expect(json.top20[0].display_name).toBe("Άννα");
+  });
+
+  it("resolves the pinned playerRow's name from the profile too", async () => {
+    enqueue(
+      { data: [{ device_id: "a", display_name: "Άννα", score: 100 }], error: null },
+      { data: { display_name: "Παλιό Όνομα", score: 5 }, error: null }, // the player's own row
+      { data: null, error: null, count: 1 },                            // rank count
+      { data: [{ device_uuid: "outsider", display_name: "Νέο Όνομα", selected_badge_id: null }], error: null },
+    );
+    const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22", deviceId: "outsider" }));
+    const json = await res.json() as { playerRow: { display_name: string } | null };
+    expect(json.playerRow!.display_name).toBe("Νέο Όνομα");
+  });
+});

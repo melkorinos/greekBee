@@ -192,56 +192,75 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // ── Display badges (Handoff B) ──────────────────────────────────────────────
-  // Resolve each returned device's chosen badge: its selected_badge_id from
-  // player_profiles, and — for a tiered selection — its highest earned tier from
-  // player_achievements. Read-time resolution self-heals across tier upgrades.
-  const badgeByDevice = await resolveBadges(
+  // ── Display name + badge, both resolved at read time ────────────────────────
+  // One batched player_profiles lookup answers both: the current display name
+  // (see resolveProfiles on why the row's own copy is only a fallback) and the
+  // chosen badge — its selected_badge_id, plus for a tiered selection the
+  // highest earned tier from player_achievements. Read-time resolution
+  // self-heals across renames and tier upgrades alike.
+  const profileByDevice = await resolveProfiles(
     supabase,
     playerData ? [...rawRows.map((r) => r.device_id), deviceId] : rawRows.map((r) => r.device_id),
   );
 
   const top20 = rawRows.map((r, i) => ({
     rank:         i + 1,
-    display_name: r.display_name,
+    display_name: profileByDevice.get(r.device_id)?.name ?? r.display_name,
     score:        r.score,
     isPlayer:     r.device_id === deviceId,
-    badge:        badgeByDevice.get(r.device_id) ?? null,
+    badge:        profileByDevice.get(r.device_id)?.badge ?? null,
   }));
 
   const playerRow = playerData
     ? {
         rank:         playerRank,
-        display_name: playerData.display_name,
+        display_name: profileByDevice.get(deviceId)?.name ?? playerData.display_name,
         score:        playerData.score,
         isPlayer:     true as const,
-        badge:        badgeByDevice.get(deviceId) ?? null,
+        badge:        profileByDevice.get(deviceId)?.badge ?? null,
       }
     : null;
 
   return NextResponse.json({ top20, playerRow });
 }
 
-// Fetch and resolve the display badge for each of `deviceIds` (deduped). Two
-// index-backed `in()` queries at most — profiles for every device, then
-// player_achievements only for the devices whose selection is a tiered badge.
-async function resolveBadges(
+interface ResolvedProfile {
+  /** Current name from player_profiles, or null when the device has no profile row. */
+  name:  string | null;
+  badge: DisplayBadge | null;
+}
+
+// Fetch the display name and resolve the display badge for each of `deviceIds`
+// (deduped). Two index-backed `in()` queries at most — profiles for every device,
+// then player_achievements only for the devices whose selection is a tiered badge.
+//
+// `name` is null for a device with no profile row, and the caller falls back to
+// the game_scores row's own display_name copy. That fallback is load-bearing, not
+// defensive: measured 2026-08-15, 19 of 52 scoring devices had never written a
+// player_profiles row (a device only gets one once it sets a name or picks a
+// badge), so resolving names *only* from profiles would blank those leaderboard
+// entries. The stored copy is a name-at-score-time snapshot; the profile always
+// wins when there is one, which is what keeps renames from going stale.
+async function resolveProfiles(
   supabase: ReturnType<typeof getSupabaseClient>,
   deviceIds: string[],
-): Promise<Map<string, DisplayBadge>> {
-  const badges = new Map<string, DisplayBadge>();
+): Promise<Map<string, ResolvedProfile>> {
+  const resolved = new Map<string, ResolvedProfile>();
   const ids = [...new Set(deviceIds.filter(Boolean))];
-  if (ids.length === 0) return badges;
+  if (ids.length === 0) return resolved;
 
   const { data: profiles } = await table(supabase, "player_profiles")
-    .select("device_uuid, selected_badge_id")
+    .select("device_uuid, display_name, selected_badge_id")
     .in("device_uuid", ids);
 
   const selectedByDevice = new Map<string, string>();
-  for (const p of (profiles as { device_uuid: string; selected_badge_id: string | null }[] | null) ?? []) {
+  type ProfileRow = { device_uuid: string; display_name: string | null; selected_badge_id: string | null };
+  for (const p of (profiles as ProfileRow[] | null) ?? []) {
+    const name = (p.display_name ?? "").trim();
+    resolved.set(p.device_uuid, { name: name || null, badge: null });
     if (p.selected_badge_id) selectedByDevice.set(p.device_uuid, p.selected_badge_id);
   }
-  if (selectedByDevice.size === 0) return badges;
+  if (selectedByDevice.size === 0) return resolved;
 
   // Which selections are tiered? Those need the earned tier rows to resolve.
   const tieredDevices: string[] = [];
@@ -268,7 +287,7 @@ async function resolveBadges(
 
   for (const [device, badgeId] of selectedByDevice) {
     const badge = resolveDisplayBadge(badgeId, earnedByDevice.get(device) ?? []);
-    if (badge) badges.set(device, badge);
+    if (badge) resolved.get(device)!.badge = badge;
   }
-  return badges;
+  return resolved;
 }

@@ -34,11 +34,12 @@ index has never been *proven*, and the scan-vs-index crossover has never been ex
 
 The cost is zero today: 363,185 tuples read across 47 rows is nothing, and 9,047 scans of a
 single-page table never leave shared buffers. It stops being nothing when the table grows. Every
-leaderboard GET calls `resolveBadges()`
-([`src/app/api/game-scores/route.ts:236`](../../../src/app/api/game-scores/route.ts#L236)), which
-does an `in()` over up to 21 device UUIDs. If that resolves as a sequential scan at 50,000 profiles,
-each leaderboard open reads 50,000 rows — and ISSUE-08's proposed fix routes *display names* through
-that same query, making it hotter still.
+leaderboard GET calls `resolveProfiles()`
+([`src/app/api/game-scores/route.ts`](../../../src/app/api/game-scores/route.ts)), which does an
+`in()` over up to 21 device UUIDs. If that resolves as a sequential scan at 50,000 profiles, each
+leaderboard open reads 50,000 rows. As of 2026-08-15 that query also resolves every *display name*
+on the leaderboard, so it is the single hottest read against this table — the stale-name fix that
+added it shipped the same day.
 
 `last_autovacuum` being `null` with 20 dead tuples against 47 live is also worth a glance: the table
 has never crossed the autovacuum threshold, so its statistics are whatever the last manual
@@ -63,7 +64,6 @@ deprioritised.
 
 ## References
 
-- [`src/app/api/game-scores/route.ts`](../../../src/app/api/game-scores/route.ts) — `resolveBadges()`, the hot path.
+- [`src/app/api/game-scores/route.ts`](../../../src/app/api/game-scores/route.ts) — `resolveProfiles()`, the hot path.
 - [`src/app/api/auth/link/route.ts`](../../../src/app/api/auth/link/route.ts) — the `auth_user_id` lookup.
 - ISSUE-01 — the dev/prod split this verification is blocked on.
-- ISSUE-08 — its proposed fix increases traffic through the same query.
