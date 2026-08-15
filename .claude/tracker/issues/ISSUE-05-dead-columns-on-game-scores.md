@@ -2,7 +2,7 @@
 
 **Deferred:** 2026-08-15
 **Revisit when:** the next `game_scores` migration is written for any reason — fold this in rather
-than paying for a separate migration. ISSUE-04's read-time name resolution is the likely trigger.
+than paying for a separate migration. ISSUE-08's read-time name resolution is the likely trigger.
 
 ## Problem
 
@@ -45,7 +45,7 @@ one table where a mistake is unrecoverable (ISSUE-01: no backups yet). Sequencin
   [`useScoreSubmission`](../../../src/hooks/useScoreSubmission.ts) call site), or keep writing it and
   document it as deliberate analytics. Decide which; do not silently half-remove it.
 
-Both wait for the same migration as ISSUE-04, and ideally until TICKET-11 has produced a working
+Both wait for the same migration as ISSUE-08, and ideally until TICKET-11 has produced a working
 encrypted dump so there is something to restore from.
 
 ## References
@@ -54,4 +54,4 @@ encrypted dump so there is something to restore from.
 - [`src/app/api/game-scores/route.ts`](../../../src/app/api/game-scores/route.ts) — the only reader of `data`.
 - [`src/lib/scoreMerge.ts`](../../../src/lib/scoreMerge.ts) — `mergeLengthScore`, why Leksiarxeio needs `data`.
 - ISSUE-01 — no backups; a reason to not rush DDL on `game_scores`.
-- ISSUE-04 — the other `game_scores` cleanup; same migration.
+- ISSUE-08 — the other `game_scores` cleanup; same migration.

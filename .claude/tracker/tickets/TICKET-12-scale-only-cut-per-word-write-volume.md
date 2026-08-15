@@ -31,7 +31,7 @@ numbers are essentially one game's traffic. Two independent per-word lanes produ
 
 A third, smaller contributor: the display-name fan-out at
 [`src/app/api/profile/route.ts:61`](../../../src/app/api/profile/route.ts#L61) rewrites every
-historical score row for a device on each rename (see ISSUE-04).
+historical score row for a device on each rename (see ISSUE-08).
 
 **This is deliberately not urgent.** Projected at 1,000 daily players averaging 40 words: ~80,000
 upserts/day, under 1 write/second averaged, perhaps 10–20/second if play clusters at the daily
@@ -81,4 +81,4 @@ currently paying for** — worth collecting when the volume is real, worth ignor
 - [`src/games/leksokipos/sync.ts`](../../../src/games/leksokipos/sync.ts) — `pushFoundWords`, the full-array body, and `pullSnapshot`.
 - [`src/hooks/useScoreSubmission.ts`](../../../src/hooks/useScoreSubmission.ts) — lane 2, deliberately untouched.
 - ADR 0003 — server-wins restore; why the full array is currently the safe shape.
-- ISSUE-04 — the rename fan-out, a third source of `game_scores` updates.
+- ISSUE-08 — the rename fan-out, a third source of `game_scores` updates.

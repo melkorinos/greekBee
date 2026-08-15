@@ -8,32 +8,32 @@
 ## Session 155 — 2026-08-15: the database is fine, and that was the finding
 
 Operator asked for table sizes, growth risk, and whether we store data we don't need. **Docs only —
-no source file touched, so no gates were owed.** Answer to the headline question is *nothing is
-close*: `pg_database_size` reads 13 MB against a 500 MB ceiling, ~1.5 MB of it the 13 public tables,
-growth ~1.2 kB per active player per day. **The schema had drifted from `project-mcp`'s note**:
-`player_pangrams`/`player_words` are gone, consolidated into `player_milestones` (ADR 0013) — and
-milestones grow at **3.4 rows/player/day against game_scores' 1.2**, so the fastest-growing table is
-the small one.
+no source file touched, so no gates were owed.** Headline: *nothing is close*. `pg_database_size`
+reads 13 MB against a 500 MB ceiling, ~1.5 MB of it the 13 public tables, growth ~1.2 kB per active
+player per day. **The schema had drifted from `project-mcp`'s note** — `player_pangrams`/`player_words`
+are gone into `player_milestones` (ADR 0013), which grows at **3.4 rows/player/day against
+game_scores' 1.2**, so the fastest-growing table is the small one.
 
 **The interesting numbers were writes, not bytes.** `game_state` has taken **29,025 updates to hold
-83 live rows** (350:1), `game_scores` 31,562 against 536. Cause confirmed in code, not guessed:
-Leksokipos writes **twice per word** — `useGameStateSync` on every `foundWords` growth plus
-`useScoreSubmission` on every score increase — and `pushFoundWords` posts the **whole array** each
-time, so a 40-word round sends ~820 word-slots to persist 40. Judged **not a problem**: ~80k
-upserts/day at 1000 players is under 1 write/sec and autovacuum is same-day on both tables. Promoted
-to `TICKET-12` with the threshold **in the title** at the operator's request, so a future session
-reads "don't build this yet" before reading anything else.
+83 live rows** (350:1), `game_scores` 31,562 against 536. Cause confirmed in code: Leksokipos writes
+**twice per word** — `useGameStateSync` on every `foundWords` growth plus `useScoreSubmission` on
+every score increase — and `pushFoundWords` posts the **whole array** each time, so a 40-word round
+sends ~820 word-slots to persist 40. Judged **not a problem**: ~80k upserts/day at 1000 players is
+under 1 write/sec, autovacuum same-day on both. Promoted to `TICKET-12` with the threshold **in the
+title** at the operator's request, so a future session reads "don't build this yet" first.
 
-Four issues filed: **ISSUE-04** stale `display_name` (118 rows / 8 devices — the rename fan-out
-exists in `profile/route.ts` alone, so renames via `auth/link` never propagate), **05** dead
-`is_perfect` (0 true, three hits and all in generated types) plus `data` empty on 55% of rows, **06**
-`player_profiles` served by 9,047 seq scans reading 363k tuples with its `auth_user_id` index at
-**zero** lifetime uses, **07** nominations pruned only when `accepted`.
+Four issues filed: **ISSUE-08** stale `display_name` (118 rows / 8 devices — the rename fan-out is in
+`profile/route.ts` alone, so renames via `auth/link` never propagate), **05** dead `is_perfect` (0
+true, three hits, all generated types) plus `data` empty on 55% of rows, **06** `player_profiles` on
+9,047 seq scans reading 363k tuples with `auth_user_id` at **zero** lifetime uses, **07** nominations
+pruned only when `accepted`. **08 was filed as `ISSUE-04` and renamed the same day — a number spent
+twice already** — because I read the folder to pick it, and a spent number cannot appear there:
+shipped files are deleted, so the folder always looks free. `trackerReferences.test.ts` caught it.
 
-**Two corrections worth keeping.** `reflections.md` already knew the billed DB size is ~2× the SQL
-one (27.37 MB vs 13 MB) — I'd have reported the SQL figure as *the* number. And the memory claiming
-"the 10-day scores prune is a bug (issue 03)" was **stale in both halves**: the prune is long fixed
-and `ISSUE-03` is now an unrelated file about e2e coverage.
+**Two corrections.** `reflections.md` already knew the billed DB size is ~2× the SQL one (27.37 MB
+vs 13 MB) — I'd have reported the SQL figure as *the* number. And the memory claiming "the 10-day
+scores prune is a bug (issue 03)" was **stale in both halves**: the prune is long fixed, and
+`ISSUE-03` is now an unrelated file about e2e coverage.
 
 ## Session 154 — 2026-08-15: the launch list loses its last dependency
 

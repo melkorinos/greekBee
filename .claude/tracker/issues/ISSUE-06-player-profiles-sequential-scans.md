@@ -37,7 +37,7 @@ single-page table never leave shared buffers. It stops being nothing when the ta
 leaderboard GET calls `resolveBadges()`
 ([`src/app/api/game-scores/route.ts:236`](../../../src/app/api/game-scores/route.ts#L236)), which
 does an `in()` over up to 21 device UUIDs. If that resolves as a sequential scan at 50,000 profiles,
-each leaderboard open reads 50,000 rows — and ISSUE-04's proposed fix routes *display names* through
+each leaderboard open reads 50,000 rows — and ISSUE-08's proposed fix routes *display names* through
 that same query, making it hotter still.
 
 `last_autovacuum` being `null` with 20 dead tuples against 47 live is also worth a glance: the table
@@ -66,4 +66,4 @@ deprioritised.
 - [`src/app/api/game-scores/route.ts`](../../../src/app/api/game-scores/route.ts) — `resolveBadges()`, the hot path.
 - [`src/app/api/auth/link/route.ts`](../../../src/app/api/auth/link/route.ts) — the `auth_user_id` lookup.
 - ISSUE-01 — the dev/prod split this verification is blocked on.
-- ISSUE-04 — its proposed fix increases traffic through the same query.
+- ISSUE-08 — its proposed fix increases traffic through the same query.
