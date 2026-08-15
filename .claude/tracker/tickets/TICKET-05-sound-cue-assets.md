@@ -31,36 +31,38 @@ audience that will press it.
 
 ### Scope
 
-- [ ] Add `soundCues: boolean` to `FeatureFlags` in `src/config/featureFlags.ts`, set to `false`,
+- [x] Add `soundCues: boolean` to `FeatureFlags` in `src/config/featureFlags.ts`, set to `false`,
       documented in the same style as the `achievements` flag — including the note that flipping it
       on requires the three MP3s to exist first.
-- [ ] Gate the toggle button in `Shell.tsx` on that flag. Gate the **button only** — `useSoundCue`,
+- [x] Gate the toggle button in `Shell.tsx` on that flag. Gate the **button only** — `useSoundCue`,
       `useSoundEnabled` and the stored preference stay wired and inert, exactly as Offline Mode was
       parked. Nothing else in the machine is touched.
-- [ ] A test asserting the button is absent while the flag is off. Follow whatever the achievements
+- [x] A test asserting the button is absent while the flag is off. Follow whatever the achievements
       flag already does; check `coverageMap.md` before creating a new file.
-- [ ] Header width note: gating this button takes the Shell header from four buttons to three, which
+- [x] Header width note: gating this button takes the Shell header from four buttons to three, which
       **relieves** the 320 px crowding flagged in Part B's done-when. The eye-check moves to Part B.
 
 ### Done when
 
-- [ ] The 🔊 button does not render anywhere with the flag off; flipping the flag to `true` brings it
+- [x] The 🔊 button does not render anywhere with the flag off; flipping the flag to `true` brings it
       back with no other edit.
-- [ ] `npm run test -- --run`, `npx eslint .`, `npm run build` clean, plus `npm run test:e2e` —
+- [x] `npm run test -- --run`, `npx eslint .`, `npm run build` clean, plus `npm run test:e2e` —
       this touches shared chrome, which is precisely the case the standing rule names.
 
 ## Part B — the three audio files (post-launch, operator)
 
-## Current state (checked 2026-08-12)
+## Current state (re-checked 2026-08-15, after Part A)
 
 - `public/sounds/` exists and holds **only `.gitkeep`** — zero audio files. Committed empty by
   `cade542` alongside the `TICKET-04` machine.
-- `src/config/sound.ts` has the three `SOUND_CUES` rows wired to `/sounds/pangram.mp3`,
+- `src/config/sound.ts` is untouched: the three `SOUND_CUES` rows wired to `/sounds/pangram.mp3`,
   `/sounds/word-found.mp3`, `/sounds/missing-center.mp3` with volumes 0.7 / 0.2 / 0.5, plus the
-  provenance comment block with three `<url>` placeholders waiting to be filled.
+  provenance comment block with all three `<url>` placeholders still waiting.
+- `FEATURE_FLAGS.soundCues` is `false` (`a88aa4c`), so the 🔊 button renders nowhere and the header
+  is three buttons wide today. The hook and the stored preference are still wired and inert.
 - **`/tdd` is the wrong command for this ticket.** There is no logic left to drive test-first —
-  `TICKET-04` already built and gated the whole machine, and no test in this stack can assert that
-  a sound is audible. The remaining work is sourcing, listening, and one comment block.
+  `TICKET-04` already built the machine and Part A gated it, and no test in this stack can assert
+  that a sound is audible. The remaining work is sourcing, listening, and two comment blocks.
 
 ## Why
 
@@ -94,6 +96,10 @@ Neither ticket blocks the other's implementation. Neither ships without the othe
       file without its credit is a breach, not a shortcut.
 - [ ] **Record source URL + licence for each file** in the provenance comment block in
       `src/config/sound.ts`. Same discipline as the Λογοπαίγνιο manifest.
+- [ ] **Widen that block's stated licence bar while you are in there.** It currently reads
+      `<CC0 | Pixabay Content License>` on all three lines and predates the own-recording option
+      below; add the operator's own recording as a third accepted value so the file and this ticket
+      stop disagreeing.
 - [ ] Listen to all three **in the running game**, on a phone as well as desktop, before closing.
 
 ## Sourcing notes
@@ -126,10 +132,11 @@ Neither ticket blocks the other's implementation. Neither ships without the othe
       of a URL.
 - [ ] `public/sounds/.gitkeep` deleted — the real files now hold the folder open.
 - [ ] All three heard in the running game, on a phone and on desktop, and judged not annoying.
-- [ ] **While on the phone, look at the Shell header.** `TICKET-04` made it four buttons wide
-      (👤 / ☀️🌙 / 🔊 / ☰) and **nothing guards that** — ADR 0021 named `mobileLayout.test.tsx`,
-      which only renders `HowToPlayModal`, and jsdom has no layout engine, so a header that wraps
-      or overflows at 320 px passes every gate. This eye-check is the only cover.
+- [ ] **While on the phone, look at the Shell header** — *after* flipping the flag, since that is
+      the moment it goes back to four buttons wide (👤 / ☀️🌙 / 🔊 / ☰). **Nothing guards that
+      width** — ADR 0021 named `mobileLayout.test.tsx`, which only renders `HowToPlayModal`, and
+      jsdom has no layout engine, so a header that wraps or overflows at 320 px passes every gate.
+      This eye-check is the only cover, and Part A is what deferred it to here.
 - [ ] `npm run build` clean.
 - [ ] **`FEATURE_FLAGS.soundCues` flipped to `true`** in the same branch as the files. Part A's flag
       is what makes Part B shippable on its own schedule, and the flip is the last step, not the

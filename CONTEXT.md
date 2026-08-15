@@ -244,16 +244,7 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 ## Persistence decisions
 
 **API rate limiting — accepted risk (2026-06-30; guardrail corrected 2026-08-13)**
-No per-device rate limiting is implemented on INSERT-capable API routes. RLS policies allow unlimited anon inserts. Decision: accept the risk at current scale. Revisit with a Redis sliding-window approach (Upstash) when DAU exceeds ~500.
-
-The original guardrail was "a Supabase row-count alert at 50 000 rows on `game_scores` and 5 000 on `nominations`". **That alert cannot be built on any plan** — Supabase tracks no row-count metric anywhere, and Free has no user-configurable threshold alert at all (measured 2026-08-13, `TICKET-09`). The accepted **substitution**, approved by the operator, is one SQL read folded into the existing ADR 0023 monitoring habit — same cadence, same operator, no new machinery:
-
-```sql
-SELECT (SELECT count(*) FROM game_scores) AS scores, (SELECT count(*) FROM nominations) AS noms,
-       pg_size_pretty(pg_database_size(current_database())) AS db_size;
-```
-
-Treat that as a **row tripwire only**: `pg_database_size` disagrees with the usage page, and the dashboard figure is the one that bills and that trips the 500 MB read-only cliff. The binding constraint is database size, not row count — full measurement and the Pro-migration trigger live in the `reflections.md` rate-limiting entry.
+No per-device rate limiting is implemented on INSERT-capable API routes; RLS allows unlimited anon inserts. Decision: accept the risk at current scale, revisit with a Redis sliding-window approach (Upstash) above ~500 DAU. The guardrail is **not** a dashboard alert — no such alert can be built on any Supabase plan — but a periodic SQL row read folded into the ADR 0023 monitoring habit. **The query, the measured headroom, and the Pro-migration trigger live in one place: the rate-limiting entry in `reflections.md`.** The binding constraint is database size, not row count.
 
 **Nominations retention policy (2026-07-01)**
 `pending` and `rejected` Nominations are never deleted. Rejected rows are retained permanently because `NominationModal` uses them to warn players on re-submission (by word + direction). `accepted` Nominations are deleted 30 days after `reviewed_at` is set by `apply-nominations.ts` — at that point the word is in the JSON and deployed, and the row is pure audit trail. The `reviewed_at` column serves dual purpose: `null` = accepted but not yet applied to the word list; non-null = applied. See ADR 0011.

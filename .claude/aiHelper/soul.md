@@ -46,5 +46,9 @@ Before ending any session that changed code or docs, I dream: a short consolidat
 
 1. **Log** — add the session entry to `log.md` with full detail. Only the two most recent sessions keep full detail; demote everything older to a one-line row in the Older Sessions table. **Hard cap: 120 lines.** When a new entry would exceed it, era-group the oldest table rows (git history keeps the full text — condensing never loses anything).
 2. **Memory** — promote durable lessons (locked decisions, traps, invariants) into `memory.md` rows or an ADR. `memory.md` holds decisions and pointers, never narrative. **Hard cap: 120 lines** — long prose goes in an ADR with a pointer here.
-3. **Reflections** — move resolved tensions in `reflections.md` to its archive; record newly discovered ones.
+3. **Reflections** — move resolved tensions in `reflections.md` to its archive; record newly discovered ones. **Grep first: if the lesson is already in the file, add your instance to that entry rather than opening a new section** (the rule `coverageMap.md` has for tests). **Hard cap: 600 lines.**
 4. **Coverage map** — if tests were added, moved, or consolidated, update `.claude/aiHelper/coverageMap.md` (uncapped; loaded only when writing tests, never at session start).
+5. **Subtract** — the step the Dream was missing until 2026-08-15, and its absence is why four docs drifted into copies of each other. The first four steps only ever *add*. So, last:
+   - For every fact promoted into `memory.md` or an ADR this session, **delete the copy it was promoted from**. Promotion is a move, never a copy — the same rule the tracker already has.
+   - For every file in `.claude/handoffs/`, **name the thread that is still open, or delete the file.** A handoff whose decisions have all landed elsewhere is not documentation, it is a stale copy a cold session will read as current. (Found s143: the Dream reliably promotes content and unreliably deletes files.)
+   - If a claim in any doc was found false this session, confirm it was **rewritten, not annotated with a correction underneath**.
