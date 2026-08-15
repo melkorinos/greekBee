@@ -55,6 +55,11 @@ what the audience actually uses.
       180/64/32/16, palette restricted to **dark grey, green, teal, yellow** on operator instruction,
       every card carrying the word-game signal in its shape (guess board, crossword, word-search,
       letter tiles, scoring tile, block mosaics) rather than a letter on a background.
+- [x] **A Lockups section on the same page (2026-08-15)** — each of the 12 marks at 44 px beside the
+      wordmark `Leksarxeia`, on a light bar and a dark one, which is the shape a header or footer
+      needs and the one thing the icon grid could not show. **It adds no third pick:** the lockup
+      follows whichever icon is chosen. The 180 px icon markup is reused verbatim and scaled by
+      transform rather than redrawn, so a lockup cannot drift from its icon.
 
 `npm run test -- --run` (2469 passing), `npx eslint .` and `npm run build` were all clean after these.
 

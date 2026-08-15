@@ -41,12 +41,27 @@
   .isizes figcaption { font-size:11px; color:var(--grey2); margin-top:7px; }
   .name { font-weight:700; letter-spacing:-2px; }
 
+  /* Lockups. The mark is not redrawn at 44 px — the 180 px icon markup is reused
+     verbatim and scaled by transform, exactly as the cards are, so a lockup can
+     never drift from the icon it is built from. */
+  .locks { display:flex; flex-wrap:wrap; gap:28px; margin-top:20px; }
+  .lcard { background:#fff; border:1px solid var(--s200); border-radius:12px; padding:20px 22px; width:300px; }
+  .strip { display:flex; align-items:center; gap:13px; padding:12px 16px; border-radius:10px; }
+  .strip + .strip { margin-top:10px; }
+  .strip.light { background:var(--s50); border:1px solid var(--s200); }
+  .strip.dark { background:var(--ink); }
+  .mark { width:44px; height:44px; flex:none; overflow:hidden; }
+  .m180 { width:180px; height:180px; transform-origin:top left; }
+  .wm { font-size:21px; font-weight:700; letter-spacing:-.6px; }
+  .strip.light .wm { color:var(--ink); }
+  .strip.dark .wm { color:var(--s50); }
+
   /* Phones. The cards are authored at 1200×630 and scaled down by transform, so
      a narrower screen just needs a smaller scale and a shorter stage — the card
      markup never changes. Without this the page scrolls sideways on an iPhone. */
   @media (max-width: 700px) {
     body { padding:20px 16px; }
-    .item, .lede, .note, .icard { width:100%; max-width:100%; }
+    .item, .lede, .note, .icard, .lcard { width:100%; max-width:100%; }
     .stage { width:100%; max-width:344px; height:181px; }
     .card { transform:scale(.2866); }
     .icons { gap:18px; }
@@ -1388,6 +1403,165 @@
       <div style="font-size:8.96px;font-weight:700;color:#ffffff;line-height:1">Λ</div>
       <div style="position:absolute;bottom:2.24px;width:8.96px;height:1.6px;border-radius:0.8px;background:#facc15"></div></div><figcaption>16 — dense</figcaption></figure></div>
     <p class="inote">A letter tile sitting on a coloured rack line. Reads as a physical tile rather than a coloured square, even at small sizes.</p></div></div>
+
+<h2>Lockups <span>— the same mark beside the name, as the app header would carry it</span></h2>
+<p class="lede">
+  A favicon is the mark alone at 16&ndash;180&nbsp;px. A <b>lockup</b> is that mark glued to the word
+  <b>Leksarxeia</b>, which is the shape a page header, a footer or a poster needs. Each row below is the
+  icon of the same number, scaled to 44&nbsp;px and set against the name, on a light bar and a dark one.
+  <b>There is no third number to pick</b> &mdash; the lockup follows whichever icon you choose, so this
+  section only exists to show you how that choice reads next to text before you commit to it.
+</p>
+<div class="note">
+  <b>No font constraint here.</b> The six-Greek-letter limit binds only the generated card, and the
+  Platform's name is <code>Leksarxeia</code> &mdash; Latin letters. The lockup is a React component in the
+  ordinary page font, so it is free in a way the card is not.
+</div>
+<div class="locks"><div class="lcard"><p class="ilabel">1. Scoring tile, yellow</p>
+      <div class="strip light">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;border-radius:39.6px;background:#facc15;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="font-size:111.6px;font-weight:700;color:#1c1917;line-height:1">Λ</div>
+      <div style="position:absolute;right:18px;bottom:10.799999999999999px;font-size:36px;font-weight:700;color:#1c1917;opacity:.7">8</div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <div class="strip dark">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;border-radius:39.6px;background:#facc15;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="font-size:111.6px;font-weight:700;color:#1c1917;line-height:1">Λ</div>
+      <div style="position:absolute;right:18px;bottom:10.799999999999999px;font-size:36px;font-weight:700;color:#1c1917;opacity:.7">8</div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <p class="inote">A letter with its score in the corner — word game in one square. The corner digit survives to 32 px and blurs out at 16, which is fine.</p></div><div class="lcard"><p class="ilabel">2. Scoring tile, teal</p>
+      <div class="strip light">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;border-radius:39.6px;background:#0d9488;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="font-size:111.6px;font-weight:700;color:#ffffff;line-height:1">Λ</div>
+      <div style="position:absolute;right:18px;bottom:10.799999999999999px;font-size:36px;font-weight:700;color:#ffffff;opacity:.75">8</div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <div class="strip dark">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;border-radius:39.6px;background:#0d9488;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="font-size:111.6px;font-weight:700;color:#ffffff;line-height:1">Λ</div>
+      <div style="position:absolute;right:18px;bottom:10.799999999999999px;font-size:36px;font-weight:700;color:#ffffff;opacity:.75">8</div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <p class="inote">Same tile, cooler. Holds up better against a yellow-heavy browser theme and against the yellow card.</p></div><div class="lcard"><p class="ilabel">3. Mini guess board (2×2)</p>
+      <div class="strip light">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="display:flex;flex-wrap:wrap;width:180px;height:180px;border-radius:36px;overflow:hidden">
+      <div style="width:90px;height:90px;background:#16a34a"></div><div style="width:90px;height:90px;background:#facc15"></div><div style="width:90px;height:90px;background:#57534e"></div><div style="width:90px;height:90px;background:#16a34a"></div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <div class="strip dark">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="display:flex;flex-wrap:wrap;width:180px;height:180px;border-radius:36px;overflow:hidden">
+      <div style="width:90px;height:90px;background:#16a34a"></div><div style="width:90px;height:90px;background:#facc15"></div><div style="width:90px;height:90px;background:#57534e"></div><div style="width:90px;height:90px;background:#16a34a"></div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <p class="inote">Four cells: two green, one yellow, one grey. No letter at all, so no font decision ever — and it is still unmistakably a daily word game.</p></div><div class="lcard"><p class="ilabel">4. Guess row (3 cells)</p>
+      <div class="strip light">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="display:flex;align-items:center;justify-content:center;width:180px;height:180px;gap:10.799999999999999px;background:#292524;border-radius:36px;padding:25.200000000000003px">
+      <div style="flex:1;height:100%;background:#16a34a;border-radius:12.600000000000001px"></div><div style="flex:1;height:100%;background:#facc15;border-radius:12.600000000000001px"></div><div style="flex:1;height:100%;background:#78716c;border-radius:12.600000000000001px"></div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <div class="strip dark">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="display:flex;align-items:center;justify-content:center;width:180px;height:180px;gap:10.799999999999999px;background:#292524;border-radius:36px;padding:25.200000000000003px">
+      <div style="flex:1;height:100%;background:#16a34a;border-radius:12.600000000000001px"></div><div style="flex:1;height:100%;background:#facc15;border-radius:12.600000000000001px"></div><div style="flex:1;height:100%;background:#78716c;border-radius:12.600000000000001px"></div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <p class="inote">One row instead of a square: green, yellow, grey. The most legible of the letterless marks at 16 px because the shapes are big.</p></div><div class="lcard"><p class="ilabel">5. Crossword cross</p>
+      <div class="strip light">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;border-radius:36px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="display:flex"><div style="width:60px;height:60px"></div><div style="width:60px;height:60px;background:#2dd4bf;border-radius:9px"></div><div style="width:60px;height:60px"></div></div>
+        <div style="display:flex"><div style="width:60px;height:60px;background:#2dd4bf;border-radius:9px"></div><div style="width:60px;height:60px;background:#facc15;border-radius:9px"></div><div style="width:60px;height:60px;background:#2dd4bf;border-radius:9px"></div></div>
+        <div style="display:flex"><div style="width:60px;height:60px"></div><div style="width:60px;height:60px;background:#2dd4bf;border-radius:9px"></div><div style="width:60px;height:60px"></div></div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <div class="strip dark">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;border-radius:36px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="display:flex"><div style="width:60px;height:60px"></div><div style="width:60px;height:60px;background:#2dd4bf;border-radius:9px"></div><div style="width:60px;height:60px"></div></div>
+        <div style="display:flex"><div style="width:60px;height:60px;background:#2dd4bf;border-radius:9px"></div><div style="width:60px;height:60px;background:#facc15;border-radius:9px"></div><div style="width:60px;height:60px;background:#2dd4bf;border-radius:9px"></div></div>
+        <div style="display:flex"><div style="width:60px;height:60px"></div><div style="width:60px;height:60px;background:#2dd4bf;border-radius:9px"></div><div style="width:60px;height:60px"></div></div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <p class="inote">Five cells in a plus, the middle one yellow. A hundred years of crossword shorthand compressed into a favicon.</p></div><div class="lcard"><p class="ilabel">6. Λ built from blocks</p>
+      <div class="strip light">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;border-radius:36px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="display:flex"><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div></div><div style="display:flex"><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div></div><div style="display:flex"><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div></div><div style="display:flex"><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div></div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <div class="strip dark">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;border-radius:36px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="display:flex"><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div></div><div style="display:flex"><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div></div><div style="display:flex"><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div></div><div style="display:flex"><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:transparent;border-radius:7.2px"></div><div style="width:36px;height:36px;background:#facc15;border-radius:7.2px"></div></div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <p class="inote">The mosaic mark from cards 20 and 21, shrunk. At 16 px it stops being a letter and becomes a texture — check it in the strip below before choosing it.</p></div><div class="lcard"><p class="ilabel">7. Two crossing tiles</p>
+      <div class="strip light">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;border-radius:36px;background:#1c1917;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="position:absolute;width:111.6px;height:36px;background:#2dd4bf;border-radius:9px"></div>
+      <div style="position:absolute;width:36px;height:111.6px;background:#facc15;border-radius:9px"></div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <div class="strip dark">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;border-radius:36px;background:#1c1917;display:flex;align-items:center;justify-content:center;position:relative">
+      <div style="position:absolute;width:111.6px;height:36px;background:#2dd4bf;border-radius:9px"></div>
+      <div style="position:absolute;width:36px;height:111.6px;background:#facc15;border-radius:9px"></div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <p class="inote">A vertical and a horizontal tile overlapping — a crossword intersection reduced to two rectangles. Abstract, and the most logo-like of the twelve.</p></div><div class="lcard"><p class="ilabel">8. Tile stack</p>
+      <div class="strip light">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;position:relative;display:flex;align-items:center;justify-content:center">
+      <div style="position:absolute;left:0;top:28.8px;width:129.6px;height:129.6px;border-radius:28.8px;background:#57534e"></div>
+      <div style="position:absolute;left:25.200000000000003px;top:14.4px;width:129.6px;height:129.6px;border-radius:28.8px;background:#0d9488"></div>
+      <div style="position:absolute;left:50.400000000000006px;top:0;width:129.6px;height:129.6px;border-radius:28.8px;background:#facc15;display:flex;align-items:center;justify-content:center;font-size:75.6px;font-weight:700;color:#1c1917">Λ</div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <div class="strip dark">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;position:relative;display:flex;align-items:center;justify-content:center">
+      <div style="position:absolute;left:0;top:28.8px;width:129.6px;height:129.6px;border-radius:28.8px;background:#57534e"></div>
+      <div style="position:absolute;left:25.200000000000003px;top:14.4px;width:129.6px;height:129.6px;border-radius:28.8px;background:#0d9488"></div>
+      <div style="position:absolute;left:50.400000000000006px;top:0;width:129.6px;height:129.6px;border-radius:28.8px;background:#facc15;display:flex;align-items:center;justify-content:center;font-size:75.6px;font-weight:700;color:#1c1917">Λ</div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <p class="inote">Three tiles behind one another, top one lit. Suggests a pile of daily puzzles waiting; softest edge of the set.</p></div><div class="lcard"><p class="ilabel">9. Green tile, white Λ</p>
+      <div class="strip light">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;border-radius:39.6px;background:#16a34a;display:flex;align-items:center;justify-content:center;font-size:115.2px;font-weight:700;color:#ffffff">Λ</div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <div class="strip dark">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;border-radius:39.6px;background:#16a34a;display:flex;align-items:center;justify-content:center;font-size:115.2px;font-weight:700;color:#ffffff">Λ</div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <p class="inote">The plain one, in the strongest of the four colours. Nothing clever; the safest pick and the least distinguishable from any other app.</p></div><div class="lcard"><p class="ilabel">10. Dark tile, yellow Λ</p>
+      <div class="strip light">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;border-radius:39.6px;background:#292524;display:flex;align-items:center;justify-content:center;font-size:115.2px;font-weight:700;color:#facc15">Λ</div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <div class="strip dark">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;border-radius:39.6px;background:#292524;display:flex;align-items:center;justify-content:center;font-size:115.2px;font-weight:700;color:#facc15">Λ</div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <p class="inote">Inverted. Vanishes into dark browser chrome, which is now most people's setting — worth seeing at 16 px before deciding.</p></div><div class="lcard"><p class="ilabel">11. Quarter board</p>
+      <div class="strip light">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="display:flex;flex-wrap:wrap;width:180px;height:180px;border-radius:36px;background:#1c1917;padding:14.4px;gap:10.799999999999999px">
+      <div style="width:66.6px;height:66.6px;background:#16a34a;border-radius:12.600000000000001px"></div><div style="width:66.6px;height:66.6px;background:#0d9488;border-radius:12.600000000000001px"></div><div style="width:66.6px;height:66.6px;background:#facc15;border-radius:12.600000000000001px"></div><div style="width:66.6px;height:66.6px;background:#78716c;border-radius:12.600000000000001px"></div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <div class="strip dark">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="display:flex;flex-wrap:wrap;width:180px;height:180px;border-radius:36px;background:#1c1917;padding:14.4px;gap:10.799999999999999px">
+      <div style="width:66.6px;height:66.6px;background:#16a34a;border-radius:12.600000000000001px"></div><div style="width:66.6px;height:66.6px;background:#0d9488;border-radius:12.600000000000001px"></div><div style="width:66.6px;height:66.6px;background:#facc15;border-radius:12.600000000000001px"></div><div style="width:66.6px;height:66.6px;background:#78716c;border-radius:12.600000000000001px"></div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <p class="inote">Four squares, one per colour family, with a gap grid — a board cropped to its corner. Letterless, and it matches the block cards.</p></div><div class="lcard"><p class="ilabel">12. Tile with a base rule</p>
+      <div class="strip light">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;border-radius:36px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-bottom:18px;position:relative">
+      <div style="font-size:100.80000000000001px;font-weight:700;color:#ffffff;line-height:1">Λ</div>
+      <div style="position:absolute;bottom:25.200000000000003px;width:100.80000000000001px;height:18px;border-radius:9px;background:#facc15"></div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <div class="strip dark">
+        <div class="mark"><div class="m180" style="transform:scale(0.24444)"><div style="width:180px;height:180px;border-radius:36px;background:#292524;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-bottom:18px;position:relative">
+      <div style="font-size:100.80000000000001px;font-weight:700;color:#ffffff;line-height:1">Λ</div>
+      <div style="position:absolute;bottom:25.200000000000003px;width:100.80000000000001px;height:18px;border-radius:9px;background:#facc15"></div></div></div></div>
+        <span class="wm">Leksarxeia</span>
+      </div>
+      <p class="inote">A letter tile sitting on a coloured rack line. Reads as a physical tile rather than a coloured square, even at small sizes.</p></div></div>
 
 </body>
 </html>
