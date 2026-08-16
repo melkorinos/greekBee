@@ -327,7 +327,11 @@ anything about weight, hinting or small-size legibility. The generalisation on t
 the suite's job is to lock decisions, not prove results; the corollary is that **the artifact you look
 at must come out of the pipeline that ships it**, not out of a convenient imitation of it. Cost here
 was one throwaway test that wrote three PNGs to scratch. Note this is the counter-example to the
-paragraph above: rendering was cheap, it was done, and it paid twice.
+paragraph above: rendering was cheap, it was done, and it paid twice — the weight problem was then
+fixed with a 12 KB subset font, which the ticket had been pricing at ~350 KB since s151 because it
+had costed *full Greek coverage* rather than the glyphs the mark draws. **A number that makes an
+option look unaffordable deserves the same check as a number that makes one look cheap**, and this
+one had gone unexamined through four sessions of planning around it.
 
 ### 🟠 A DB test validates the migration and is blind to the deploy (s142, generalised)
 

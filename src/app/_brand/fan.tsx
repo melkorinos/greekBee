@@ -15,14 +15,17 @@
  *      must sit on top. satori honours document order and does not reliably
  *      honour `z-index`, so the tiles are positioned absolutely and the centre
  *      one is emitted LAST. Reordering this array changes the drawing.
- *   2. **Only the six free Greek glyphs.** The font `ImageResponse` ships covers
- *      Λ Ω λ μ π ω and nothing else — no accents, no final ς. Ω Λ π are all
- *      inside it, which is why this mark costs no committed font file. Any new
- *      letter here needs one (~350 KB), so check before changing a glyph.
+ *   2. **The mark ships its own font**, `Inter-Bold-subset.ttf` in this folder —
+ *      see `brandFont()` at the bottom for what it covers and why. Before that
+ *      it used the single-weight face `ImageResponse` bundles, which rendered
+ *      the whole mark regular instead of bold.
  *
  * The folder is `_brand` — a leading underscore keeps Next from treating it as
  * a route segment.
  */
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
 import type { ReactElement } from "react";
 
 export const INK = "#1c1917";
@@ -151,4 +154,34 @@ export function FanIcon({ px, radiusRatio }: { px: number; radiusRatio: number }
       <Fan spec={scaleFan(ICON_FAN, px / 180)} />
     </div>
   );
+}
+
+/** The font every image in this folder draws with, ready for `ImageResponse`.
+ *
+ *  **Why a committed file at all.** `ImageResponse` bundles one face at one
+ *  weight, so `fontWeight: 700` silently rendered regular — the mark was
+ *  approved bold and shipped light, and nothing but looking at the PNG could
+ *  have caught it.
+ *
+ *  **Why it is small.** `Inter-Bold-subset.ttf` is Inter Bold cut down to 62
+ *  characters by the Google Fonts `text=` parameter: the Latin alphabet, space,
+ *  period, hyphen, apostrophe, and the six Greek glyphs Λ Ω λ μ π ω. 12 KB.
+ *  A full Greek face is ~350 KB, which is the number that made a font look
+ *  expensive when this was first costed.
+ *
+ *  **The one hazard.** A character with no glyph in a subset renders as
+ *  *nothing* — no error, no fallback box. `PLATFORM_NAME` is a config value
+ *  whose own comment invites a rebrand, so the whole Latin alphabet is included
+ *  rather than the eight letters of `Leksarxeia`, and `shareMetadata.test.ts`
+ *  reads this file's `cmap` to assert every character actually drawn has a
+ *  glyph. Change the wordmark to anything accented or Cyrillic and that test
+ *  fails rather than the card going blank.
+ *
+ *  Inter is SIL Open Font License 1.1 — bundling is permitted and it obliges no
+ *  visible credit line (unlike CC-BY, refused for sound Cues for that reason).
+ *  Regenerate by re-fetching with the same `text=` set; note Google serves woff2
+ *  to a modern User-Agent and EOT to an old-IE one, and satori reads neither. */
+export async function brandFont() {
+  const data = await readFile(join(process.cwd(), "src/app/_brand/Inter-Bold-subset.ttf"));
+  return [{ name: "Inter", data, weight: 700 as const, style: "normal" as const }];
 }

@@ -13,7 +13,7 @@
 import { ImageResponse } from "next/og";
 
 import { PLATFORM_NAME } from "@/config/platform";
-import { CARD_FAN, Fan, INK, WHITE } from "./_brand/fan";
+import { brandFont, CARD_FAN, Fan, INK, WHITE } from "./_brand/fan";
 
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
@@ -23,7 +23,7 @@ export const contentType = "image/png";
  *  fine here — this string is a meta tag, not something satori has to draw. */
 export const alt = `${PLATFORM_NAME} — Ελληνικά παιχνίδια λέξεων`;
 
-export default function Image() {
+export default async function Image() {
   return new ImageResponse(
     (
       <div
@@ -52,6 +52,6 @@ export default function Image() {
         </div>
       </div>
     ),
-    { ...size },
+    { ...size, fonts: await brandFont() },
   );
 }

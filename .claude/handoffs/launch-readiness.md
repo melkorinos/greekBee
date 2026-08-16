@@ -220,12 +220,13 @@ work is **ADR 0018's Amendments**, and Offline Mode's park is **ADR 0010** plus 
   `FEATURE_FLAGS.soundCues`; the MP3s land whenever they land and flip it on. Reversing this means
   the launch waits on three audio files again.
 - **2026-08-16 — The mark is card 18 and icon 1: three letter tiles fanned out, Ω Λ π.** Chosen by
-  the operator from the round-two candidates page and shipped the same session. Two things worth
-  keeping: the three glyphs are all inside the six the `ImageResponse` font already covers, so the
-  card costs **no committed font file**; and the card renders **regular weight, not bold**, because
-  that font ships one weight — accepted as reading deliberate rather than wrong. A six-glyph subset
-  would fix it for single-digit KB if that ever matters, which is far below the ~350 KB this
-  document's font warning assumed.
+  the operator from the round-two candidates page and shipped the same session, with a **12 KB
+  subset of Inter Bold committed** (`src/app/_brand/Inter-Bold-subset.ttf`) once the first render
+  showed the mark coming out regular rather than bold — `ImageResponse` bundles a single-weight
+  face. The **~350 KB font price this document had been quoting was for full Greek coverage** and
+  made a font look unaffordable; the mark needs the Latin alphabet plus six Greek glyphs, which the
+  Google Fonts `text=` parameter cuts to a twenty-eighth of that. A missing glyph in a subset renders
+  as nothing, so a test reads the font's `cmap` and fails rather than shipping a gap.
 - **2026-08-15 — The platform logo is `TICKET-10`'s icon pick, not a project.** Removes the last
   cross-item dependency on this document. **Discharged 2026-08-16** by the ruling above.
 - **2026-08-15 — The preview play-through leaves this document.** The operator tests every branch on

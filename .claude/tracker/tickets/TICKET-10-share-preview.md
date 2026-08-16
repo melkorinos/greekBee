@@ -132,12 +132,16 @@ served from the CDN rather than costing a Fluid invocation per scrape.
 Both were found by generating the real PNGs and looking at them. Neither is a defect; both are
 operator calls that cost nothing to leave alone.
 
-1. **The card is not bold.** Every candidate was drawn `font-weight: 700`, but the font
-   `ImageResponse` ships has **one weight**, so `Λ Ω π` and the wordmark all render regular. It reads
-   clean and deliberate rather than wrong, which is why it shipped. **The fix is cheaper than this
-   ticket assumed:** the "~350 KB font file" price was for full Greek coverage, and the card needs
-   exactly six Greek glyphs plus the eleven Latin letters of `Leksarxeia` — a subset of that is
-   single-digit KB. It needs a committed asset, so it needs approval.
+1. **The card rendered regular, not bold — found, then fixed the same session.** Every candidate was
+   drawn `font-weight: 700`, but the face `ImageResponse` bundles has **one weight**, so the mark
+   shipped light. **The ticket's own price tag was what made this look expensive:** "~350 KB" was
+   full Greek coverage, and the mark needs six Greek glyphs plus a Latin wordmark. Operator approved
+   the subset; it is **12 KB**, `src/app/_brand/Inter-Bold-subset.ttf`, cut by the Google Fonts
+   `text=` parameter to the Latin alphabet plus Λ Ω λ μ π ω. Measured alternatives, since the choice
+   is not obvious: 11 glyphs (exactly what is drawn) is 3.4 KB, Latin + the six Greek is 12 KB,
+   adding digits and punctuation is 32 KB. **The 3.4 KB build is the trap** — `PLATFORM_NAME` is a
+   config value whose comment invites a rebrand, and a character with no glyph renders as *nothing*.
+   `_brand/cmap.ts` + a test now read the font's own `cmap` so that fails loudly instead.
 2. **At 32 px the three letters are noise.** Expected — the candidates page said so and icon 1 was
    picked knowing it. Worth knowing that the rendered 32 px is a little muddier than the scaled
    preview suggested. Icon 2 (the same fan without the flanking letters) is a one-line change to

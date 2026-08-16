@@ -12,12 +12,15 @@
  */
 import { ImageResponse } from "next/og";
 
-import { FanIcon } from "./_brand/fan";
+import { brandFont, FanIcon } from "./_brand/fan";
 
 export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
 
-export default function Icon() {
+export default async function Icon() {
   // 0.2 is the 36 px corner radius the 180 px master was drawn with.
-  return new ImageResponse(<FanIcon px={size.width} radiusRatio={0.2} />, { ...size });
+  return new ImageResponse(<FanIcon px={size.width} radiusRatio={0.2} />, {
+    ...size,
+    fonts: await brandFont(),
+  });
 }

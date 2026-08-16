@@ -8,33 +8,33 @@
 ## Session 163 — 2026-08-16: the Platform gets a face
 
 `TICKET-10` had been blocked since s151 on one operator pick, made here in two steps: card **18**
-from the round-one page, then icon **1** off a round-two page built for the second half of the
-decision (card 18 plus three variations, **eight icons derived from the fan**, lockups for each).
+from the round-one page, then icon **1** off a round-two page built for the second half of it.
 
 **One drawing, not three.** `src/app/_brand/fan.tsx` is rendered by `opengraph-image`, `icon` and
-`apple-icon` at their own sizes, the only thing stopping a favicon drifting from a share card. Two
-satori constraints are encoded in it: **paint order decides what lands on top, not `z-index`** — the
-centre tile is emitted last, and the preview's `z-index:2` would have shipped a teal π over the
-yellow Λ; and the letters must stay inside the six Greek glyphs the shipped font covers, now pinned
-by a test against the module's own `letter:` fields.
+`apple-icon` at their own sizes — the only thing stopping a favicon drifting from a share card. It
+encodes one satori constraint worth keeping: **paint order decides what lands on top, not
+`z-index`**, so the centre tile is emitted last; the preview's `z-index:2` would have put teal π over Λ.
 
-**The durable lesson is s143's, one layer deeper.** s143 established that no visual decision gets
-made in prose — render it and look. The same failure turned up *inside* the rendered preview: the
-candidates page drew every mark `font-weight: 700` and scaled one 180 px master by CSS transform,
-and **neither survives the real renderer.** `ImageResponse` ships a single-weight font, so the card
-is regular, not bold; the true 32 px icon is muddier than a scaled one. **A preview is only evidence
-about the renderer that drew it.** Generating the actual PNGs found both, for one throwaway test.
+**The durable lesson is s143's, one layer deeper.** s143 said no visual decision gets made in prose —
+render it and look. The same failure turned up *inside* the rendered preview: the candidates page
+drew every mark `font-weight: 700` and CSS-scaled one 180 px master, and **neither survives the real
+renderer** — `ImageResponse` bundles a single-weight face, so the card came out regular. **A preview
+is only evidence about the renderer that drew it.** Fixed the same session with a **12 KB** subset of
+Inter Bold (Latin + Λ Ω λ μ π ω via the Google Fonts `text=` parameter) — the "~350 KB font file"
+quoted since s151 had priced **full Greek coverage**, not what the mark draws, and made a font look
+unaffordable for four sessions. `_brand/cmap.ts` and a test now read the font's own glyph table:
+**a glyph missing from a subset renders as nothing, not an error**, so the cheaper 3.4 KB cut would
+have made any rebrand silently blank.
 
-That is also why the guard test **renders** and reads the PNG header rather than matching source: a
-blank card passes every text match there is. It needs the `node` environment (sharp rejects satori's
-SVG under jsdom), which exposed that `src/test/setup.ts` assumed a DOM for the whole suite.
-
-One number corrected: the ticket's "~350 KB font file" price was for **full Greek coverage**, while
-the card needs six Greek glyphs plus `Leksarxeia` — single-digit KB. That wrong figure had framed the
-choice since s151. `favicon.ico` was **verified** as the untouched stock file before deletion. 202
-files / **2637 tests**, eslint 0, build 0, e2e 13/2-skipped; all three images build `○ (Static)`.
-Decision marked in `launch-readiness.md`, the HTML page and the ticket, **rewriting three claims the
-pick falsified rather than appending under them**. `manifest.ts` decided against, not deferred.
+That is also why the guard test **renders** rather than matching source, needing the `node`
+environment (sharp rejects satori's SVG under jsdom) — which exposed that `src/test/setup.ts` assumed
+a DOM for the whole suite. Decision marked in `launch-readiness.md`, the HTML page and the ticket,
+**rewriting every claim the pick and then the font falsified rather than appending under them**;
+`manifest.ts` decided against, not deferred. Filed `ISSUE-10` — `leksodromia/board.test.tsx` times
+out under full-suite load, passes alone. This session's render tests were the obvious suspect and
+**were not the cause**: excluding them went green, but stashing only this session's paths and
+re-running at `HEAD` reproduced it anyway — step one alone would have convicted the wrong thing.
+202 files / 2638 tests (bar that flake), eslint 0, build 0, e2e 13/2-skipped; images `○ (Static)`.
 
 ## Session 162 — 2026-08-16: a border the whole platform did not ask for
 

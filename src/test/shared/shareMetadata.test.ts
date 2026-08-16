@@ -13,10 +13,12 @@
 //
 //   1. **Rendered.** `opengraph-image` / `icon` / `apple-icon` are actually run
 //      through satori and the resulting PNG is inspected. A source-text match
-//      would pass while the card rendered blank — which is the realistic
-//      failure, because the font `ImageResponse` ships covers only six Greek
-//      glyphs (Λ Ω λ μ π ω) and a seventh would silently draw nothing.
-//   2. **Source text.** The `layout.tsx` metadata block, where the contract is
+//      would pass while the card rendered blank.
+//   2. **Read out of the font.** The mark now ships its own 12 KB subset of
+//      Inter Bold, and a character missing from a subset renders as *nothing* —
+//      no error, no fallback box. So the cmap is parsed and every character the
+//      mark draws is checked against it.
+//   3. **Source text.** The `layout.tsx` metadata block, where the contract is
 //      "reuses the config values" and "does not name the image files" — neither
 //      of which is visible in output.
 
@@ -25,6 +27,7 @@ import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 
 import { PLATFORM_NAME, PLATFORM_DESCRIPTION } from "@/config/platform";
+import { missingGlyphs } from "@/app/_brand/cmap";
 
 const ROOT = resolve(__dirname, "../../../");
 const layoutSource = readFileSync(resolve(ROOT, "src/app/layout.tsx"), "utf8");
@@ -99,22 +102,38 @@ describe("Share preview — the mark cannot drift between sizes", () => {
     }
   });
 
-  it("the mark uses only the six Greek glyphs the shipped font covers", () => {
+  it("the bundled font has a glyph for everything the mark draws", () => {
+    // The real guard, and the reason it is not a text match: a character absent
+    // from a subset font renders as NOTHING — no error, no fallback box, no
+    // warning. A blank tile or a gap-toothed wordmark would pass every other
+    // assertion in this file.
+    const font = readFileSync(resolve(ROOT, "src/app/_brand/Inter-Bold-subset.ttf"));
     const src = readFileSync(resolve(ROOT, "src/app/_brand/fan.tsx"), "utf8");
-    const FREE = new Set([..."ΛΩλμπω"]);
-    // Every letter the tiles draw, taken from the `letter:` fields themselves.
-    const letters = [...src.matchAll(/letter:\s*"([^"]*)"/g)].map((m) => m[1]);
-    expect(letters.length).toBeGreaterThan(0);
-    for (const letter of letters) {
-      for (const glyph of letter) {
-        expect(
-          FREE.has(glyph) || /[\w\d]/.test(glyph),
-          `The mark draws "${glyph}", which is outside the six Greek glyphs ` +
-            `ImageResponse's font covers (Λ Ω λ μ π ω). Adding it costs a ~350 KB ` +
-            `font file committed to the repo and loaded in every generator here.`,
-        ).toBe(true);
-      }
-    }
+
+    // Every letter the tiles draw, taken from the `letter:` fields themselves,
+    // plus the wordmark the card sets beneath them.
+    const tileLetters = [...src.matchAll(/letter:\s*"([^"]*)"/g)].map((m) => m[1]);
+    expect(tileLetters.length).toBeGreaterThan(0);
+    const drawn = tileLetters.join("") + PLATFORM_NAME;
+
+    expect(
+      missingGlyphs(new Uint8Array(font), drawn),
+      `Inter-Bold-subset.ttf has no glyph for these characters, so they would ` +
+        `render as empty space in the share card or the icon. Either re-cut the ` +
+        `subset to include them (Google Fonts \`text=\` parameter, see brandFont() ` +
+        `in fan.tsx) or keep the mark inside what the font already carries.`,
+    ).toEqual([]);
+  });
+
+  it("the subset stays a subset — it is not a full font that crept in", () => {
+    // The point of the file is that it is ~12 KB rather than the ~350 KB a full
+    // Greek face costs. A regeneration that drops the `text=` parameter would
+    // still pass every other test here.
+    const font = readFileSync(resolve(ROOT, "src/app/_brand/Inter-Bold-subset.ttf"));
+    expect(font.byteLength).toBeLessThan(60_000);
+
+    // And it really is cut down: accented Greek is what a full face would carry.
+    expect(missingGlyphs(new Uint8Array(font), "άέίόύ")).toHaveLength(5);
   });
 });
 

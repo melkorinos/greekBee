@@ -91,19 +91,21 @@
 </div>
 
 <div class="note">
-  <b>Two things the real render showed that these previews could not.</b> First, the card ships
-  <b>regular weight, not bold</b> &mdash; every candidate here is drawn bold, but the font
-  <code>ImageResponse</code> carries has only one weight. It reads deliberate rather than wrong, so it
-  stands; a six-glyph subset font would fix it for single-digit KB if it ever matters. Second, at
-  <b>16&nbsp;px</b> icon 1's three letters really are noise. That was the known cost of picking the
-  highest-fidelity icon, and icon 2 &mdash; the same fan without the flanking letters &mdash; stays a
-  one-line change if the tab icon ever wants to be cleaner.
+  <b>Two things the real render showed that these previews could not.</b> First, the card came out
+  <b>regular weight, not bold</b> &mdash; every candidate here is drawn bold, but the face
+  <code>ImageResponse</code> bundles has only one weight. <b>Fixed:</b> the mark now ships a 12&nbsp;KB
+  subset of Inter Bold, so what deploys matches what you approved. Second, at <b>16&nbsp;px</b> icon 1's
+  three letters really are noise. That was the known cost of picking the highest-fidelity icon, and
+  icon 2 &mdash; the same fan without the flanking letters &mdash; stays a one-line change if the tab
+  icon ever wants to be cleaner.
 </div>
 
 <div class="note">
-  <b>The card costs no font file.</b> Its letters are <b>Ω Λ π</b>, all three inside the six Greek glyphs
-  the generator's font already covers (Λ Ω λ μ π ω). A test now pins that: adding a seventh glyph to the
-  mark fails the suite rather than silently rendering a blank tile.
+  <b>The font is 12&nbsp;KB, not 350.</b> The old warning on this page priced a <i>full Greek face</i>.
+  The mark needs the Latin alphabet plus six Greek glyphs, and the Google Fonts <code>text=</code>
+  parameter cuts a font to exactly that. A character missing from a subset renders as <i>nothing</i>
+  rather than erroring, so a test reads the font's own glyph table and fails if the wordmark or a tile
+  letter ever moves outside what it carries.
 </div>
 
 <!-- Pre-rendered on purpose: iOS Quick Look (Files, Mail, WhatsApp previews)
