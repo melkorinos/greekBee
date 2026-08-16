@@ -46,6 +46,11 @@ const SPENT: Record<string, string> = {
   // as ISSUE-02), deleted 2026-08-14. Verified against `git log --diff-filter=D`.
   "ISSUE-04": "env-local masks CI env absence, then the game_state DELETE flake",
   "ISSUE-08": "stale display_name on game_scores — fixed 2026-08-15, names now resolve at read time",
+  // Folded into ISSUE-01 on 2026-08-16, not shipped. The operator asked for one DB
+  // issue rather than four; each became a section there, keeping its own trigger.
+  "ISSUE-06": "player_profiles sequential scans — folded into ISSUE-01 §2",
+  "ISSUE-07": "nominations grow without bound — folded into ISSUE-01 §3",
+  "ISSUE-09": "unread Leksokipos score metadata — folded into ISSUE-01 §4",
 };
 
 /**

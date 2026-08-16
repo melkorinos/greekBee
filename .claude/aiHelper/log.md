@@ -5,6 +5,35 @@
 
 ---
 
+## Session 157 — 2026-08-16: a gate that was guarding nothing
+
+Operator asked whether `ISSUE-05` (the dead `game_scores.is_perfect` column) was ready or needed
+input. **It needed one decision, and not the one the file posed.** The file blocked the `DROP COLUMN`
+on `TICKET-11` — DDL against the append-forever substrate must wait for a restorable dump. **Reading
+`launch-reset.sql` dissolved that:** runbook step 4 deletes every row of `game_scores`, so the 536
+rows a dump would protect are condemned one step earlier. The block reasoned from the rule instead of
+from what obeying it buys — and the file half-knew, stopping short of its own conclusion.
+
+Grilled to a schedule rather than a fix (`/grill-with-docs`, four batches, eleven decisions). The
+drop becomes **runbook step 5**, between the wipe and the announce, where the table is already empty
+— **not a compromise between now and later but the one moment the risk is genuinely zero**, which
+beats the "do it now, the risk is small" reading the file was drifting toward. **Nothing enters
+`supabase/migrations/` in advance**: a committed-but-unpushed migration fires on the next unrelated
+`db push`, the trap that keeps `launch-reset.sql` in `supabase/scripts/`. So the SQL is pre-written
+*as text* in the step (nobody composes DDL at launch), with a one-line `information_schema` verify
+and an explicit **"this does not gate the announce"**. Types regenerate in the same commit (ADR 0017)
+and ride the next deploy — nothing selects the column. Owed on the day: ADR 0013's line saying the
+column is *kept* is a standing claim, not a dated one.
+
+**`coverageMap.md` was not stale but wrong** — three entries described an `is_perfect` latch and an
+`isPerfectRound` deleted in s108. A gap makes you write a test you may have; a false entry makes you
+trust one that never existed. Corrected. Checked and clear: both live-DB suites write to
+`game_scores` without naming the column, and `CONTEXT.md` never named it. Operator then asked to
+**consolidate the DB issues**: `ISSUE-01` absorbed `06` (profile scans), `07` (nominations growth)
+and `09` (unread score metadata) as sections, each keeping its trigger, with the dev/prod split named
+as the pivot two of them block on. **`ISSUE-05` stayed out** — scheduled work, not a deferred
+problem. Three `SPENT` rows. Gates 201 files / **2618 tests**, eslint 0, build 0.
+
 ## Session 156 — 2026-08-15: names stop being photocopies
 
 Operator asked whether `ISSUE-06` and `ISSUE-08` were agreed and could share a session. **08 yes, 06
@@ -31,40 +60,11 @@ lane**; `profileRoute.test.ts` asserts the *absence* of the update, so reinstati
 `ISSUE-09`, and changed `game-state/route.ts`. Found by `git log`, not by any announcement; a
 `git stash` used as a diagnostic reverted its work and popped back by luck. New red tension filed.
 
-## Session 155 — 2026-08-15: the database is fine, and that was the finding
-
-Operator asked for table sizes, growth risk, and whether we store data we don't need. **Docs only —
-no source file touched, so no gates were owed.** Headline: *nothing is close*. `pg_database_size`
-reads 13 MB against a 500 MB ceiling, ~1.5 MB of it the 13 public tables, growth ~1.2 kB per active
-player per day. **The schema had drifted from `project-mcp`'s note** — `player_pangrams`/`player_words`
-are gone into `player_milestones` (ADR 0013), which grows at **3.4 rows/player/day against
-game_scores' 1.2**, so the fastest-growing table is the small one.
-
-**The interesting numbers were writes, not bytes.** `game_state` has taken **29,025 updates to hold
-83 live rows** (350:1), `game_scores` 31,562 against 536. Cause confirmed in code: Leksokipos writes
-**twice per word** — `useGameStateSync` on every `foundWords` growth plus `useScoreSubmission` on
-every score increase — and `pushFoundWords` posts the **whole array** each time, so a 40-word round
-sends ~820 word-slots to persist 40. Judged **not a problem**: ~80k upserts/day at 1000 players is
-under 1 write/sec, autovacuum same-day on both. Promoted to `TICKET-12` with the threshold **in the
-title** at the operator's request, so a future session reads "don't build this yet" first.
-
-Four issues filed: **ISSUE-08** stale `display_name` (118 rows / 8 devices — the rename fan-out is in
-`profile/route.ts` alone, so renames via `auth/link` never propagate), **05** dead `is_perfect` (0
-true, three hits, all generated types) plus `data` empty on 55% of rows, **06** `player_profiles` on
-9,047 seq scans reading 363k tuples with `auth_user_id` at **zero** lifetime uses, **07** nominations
-pruned only when `accepted`. **08 was filed as `ISSUE-04` and renamed the same day — a number spent
-twice already** — because I read the folder to pick it, and a spent number cannot appear there:
-shipped files are deleted, so the folder always looks free. `trackerReferences.test.ts` caught it.
-
-**Two corrections.** `reflections.md` already knew the billed DB size is ~2× the SQL one (27.37 MB
-vs 13 MB) — I'd have reported the SQL figure as *the* number. And the memory claiming "the 10-day
-scores prune is a bug (issue 03)" was **stale in both halves**: the prune is long fixed, and
-`ISSUE-03` is now an unrelated file about e2e coverage.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 155 | 2026-08-15 | **The database is fine, and that was the finding.** Docs only. `pg_database_size` 13 MB against a 500 MB ceiling (~1.5 MB of it the 13 public tables), growth ~1.2 kB per active player per day — nothing is close, and the billed figure is ~2× the SQL one (27.37 MB). Schema had drifted from `project-mcp`'s note: `player_pangrams`/`player_words` are gone into `player_milestones`, which grows at **3.4 rows/player/day against game_scores' 1.2**, so the fastest-growing table is the small one. **The interesting numbers were writes, not bytes** — `game_state` has taken 29,025 updates to hold 83 live rows (350:1). Cause in code: Leksokipos writes **twice per word** and `pushFoundWords` posts the whole array each time, so a 40-word round sends ~820 word-slots to persist 40. Judged **not a problem** (~80k upserts/day at 1000 players is under 1 write/sec) → `TICKET-12`, threshold **in the title** at the operator's request so a future session reads "don't build this yet" first. Four issues filed (`ISSUE-05`/`06`/`07`/`08`); **08 was filed as `ISSUE-04` and renamed the same day — a number spent twice** because I read the folder to pick it, and a spent number cannot appear there: shipped files are deleted, so the folder always looks free. `trackerReferences.test.ts` caught it. |
 | 154 | 2026-08-15 | **The launch list loses its last dependency.** Operator triage of `launch-readiness.md`, then two builds; **four rulings, each removing an item rather than scheduling it.** The platform logo folded *into* `TICKET-10` (the icon picked from the candidates page **is** the mark), dissolving the last cross-item dependency; the preview play-through left the file as a habit not a task; Sound Cues became **post-launch and optional**, splitting `TICKET-05` (Part A shipped, Part B undated). Part A = `FEATURE_FLAGS.soundCues`, off, hiding only the 🔊 button — hook, preference and Cues stay wired and inert as Offline Mode is, so flipping it on **restores** the player's stored choice rather than resetting it; `Shell.test.tsx` mocks the flags as a mutable `vi.hoisted` object. **The backup question had the real answer:** the operator proposed committing the release-day dump to a private repo, but **this repo is public** and `pg_dump` with no schema filter carries `auth.users`, so a commit would publish every signed-in player's email **permanently** — git history survives the delete, and `.gitignore` line 46 had already anticipated it. Destination = encrypted archive in private Drive → **`TICKET-11`**, closing half of `ISSUE-01`; agent half built with 7-Zip preflighted **before** the first dump (failing after would leave three plaintext `.sql` files), `BACKUP_ARCHIVE_PASSWORD` required with no unencrypted fallback, `-mhe=on` so filenames are unreadable, keep-2 pruning, restore order documented. **Stripping the emails was the wrong instinct:** `--schema=public` yields an archive with no personal data *and no usable restore* — every `auth_user_id` would point at an account that no longer exists, so each signed-in player returns a stranger to their own history. 200 files / 2611 tests, e2e 13/2-skipped. |
 | 153 | 2026-08-14 | **One miss rule, and the module that was not needed.** Proposal: eight Games re-answer "which Puzzle is date D?", so extract `pickForDate(date, pool, {key, eligible, onMiss})`. **Rejected, problem accepted.** The **eight is really three families** and one already shares its rule (Λεξιαρχείο/Λεξινδέσεις/Βρες τη Φράση all miss through `consumeApprovedPuzzle`; Λεξόπλεγμα's hop loop is an answer-leak guard, not a miss policy); the **interface was as wide as the bodies** (three injection points for sort-filter-index); and its staged first step writes that interface with *less* evidence — Λογοπαίγνιο's predicate is a strict superset of Πόσο κάνει;'s, so eligibility collapses and only the **sort key** differs, a content decision (which board a gap day serves), not a refactor. **What was real is one line:** `getPuzzleForDate` fell back to `puzzles[length - 1]`. The cited gap scenario **cannot fire** (733 consecutive days, guarded since s131) but nothing guarded the **ends** — every date past 2028-03-26 served that one board forever, spoiling the furthest-future board and then freezing on it. Shipped **`pickByDateOrRotate`** in `puzzleRotation.ts` (no options; exact match else rotation over rows already **due**) with three real callers — both Λεξόκηπος loaders, which carried a "behaviour must stay identical" comment over two copies of the rule, plus Πόσο κάνει;. Invariant written down as **Miss Rule** in `CONTEXT.md`; `dailyPuzzleSelection.test.ts` asserts its three parts against **all nine Games** (answers every date, never freezes, never runs ahead), proved non-vacuous by restoring the old fallback — exactly one test fails, the right one. Plus a **180-day corpus horizon** check, the actual missing thing. 200 files / 2608 tests, eslint 0, build 0. **Lesson: a duplicated *rule* is not the same finding as a duplicated *shape*** — the eight share arithmetic and a shape, only two shared a rule, and the fix for the other six was a test, not an interface. |
 | 152 | 2026-08-14 | **The Stavrolekso Maker's rules leave the page** (`/tdd`, three seams agreed up front). `computeCells.ts` took the two projections out of `StavroleksoGrid.tsx` — **the last game file mixing React with pure logic** — plus `makerSlots.ts` and `makerReducer.ts` (12 actions); page **682→515 lines, 24→17 `useState`**. Slot numbering is **derived inside the reducer** from `size`+`blackSquares`, so no caller can pass a numbering that disagrees with the grid. **The proposal's action list was a third of the real surface** (four named, twelve needed). **The round trip is not an inverse and the submit gate hides it:** `assembleSlots` collapses a hole, so restoring a gappy grid left-packs letters and **invents one the author never typed** — pinned as a test that asserts the corruption so the gate cannot be relaxed quietly. Second live bug: `resetAll` set `editPin` to `""`, so "new puzzle" could never submit again. **Playwright cannot emit a Greek keydown at all** — `keyboard.type("ΑΒΓ")` fires *no events* (Latin in the same call arrives fine); cost an hour reading a green feature as broken. Gates 199/2559, eslint 0, build 0, e2e 13/2-skipped. |

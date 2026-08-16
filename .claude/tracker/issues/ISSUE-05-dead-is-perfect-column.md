@@ -1,14 +1,16 @@
 # game_scores carries a dead `is_perfect` column that nothing has ever read
 
 **Deferred:** 2026-08-15
-**Blocked by:** `TICKET-11` — see "Why deferred" for how much that block is really worth here.
-**Revisit when:** TICKET-11 has produced a restorable encrypted dump, or the next `game_scores`
-migration is written for any reason — fold this in rather than paying for a separate migration.
-No such migration is queued: the read-time display-name fix that was expected to trigger one shipped
-on 2026-08-15 without touching the schema, so this now waits on TICKET-11 alone.
+**Scheduled:** release day — **step 5 of the runbook** in
+[`.claude/handoffs/launch-readiness.md`](../../handoffs/launch-readiness.md), between
+`launch-reset.sql` and the announce. That step carries the exact migration body, the verify query
+and the failure rule; this file carries the reasoning. Do not duplicate one into the other.
+**Revisit when:** the runbook step executes, or launch slips far enough that the schedule needs
+re-deciding.
 
 *(Split from the original ISSUE-05 on 2026-08-15. The `data` jsonb half needs no schema change and
-is therefore not blocked by anything — it moved to [`ISSUE-09`](ISSUE-09-leksokipos-writes-unread-score-metadata.md).)*
+is therefore not blocked by anything — it became ISSUE-09, which was folded into
+[`ISSUE-01`](ISSUE-01-no-disaster-recovery-backups.md) §4 on 2026-08-16.)*
 
 ## Problem
 
@@ -28,27 +30,48 @@ meaningful to anyone reading the schema is in fact a trap: a future contributor 
 wire a "perfect round" feature to `is_perfect` and find it silently never populated, which is
 precisely the kind of plausible-but-false signal that has cost this repo whole sessions before.
 
-## Why deferred
+## Why it waits for release day, and why `TICKET-11` is no longer the gate
 
-Dropping a column on the append-forever substrate is the one place where a mistake is unrecoverable,
-and `ISSUE-01` records that there is still no dump to restore from. That is the formal block, and
-`TICKET-11` clears it.
+This file used to record the drop as blocked by `TICKET-11`, on the reasoning that DDL against the
+append-forever substrate is the one place a mistake is unrecoverable and there is still no dump to
+restore from (`ISSUE-01`). **That block was retired on 2026-08-16**: runbook step 4 runs
+`launch-reset.sql`, which deletes every row of `game_scores`. The 536 rows a backup would have
+protected are already condemned one step earlier, so waiting on a dump to guard them is incoherent.
 
-**Be honest about what the block is buying, though.** The column holds no information — 0 true, 536
-false, no reader — so a `DROP COLUMN` destroys nothing a restore would ever want back. The residual
-risk is the *operation*, not the data: a migration against `game_scores` going wrong in some way
-beyond the intended column. That is real but small, and whether it justifies waiting for TICKET-11
-is an operator judgement rather than something this file should decide. Recorded so the decision is
-made knowingly instead of by deferring to a rule whose reason does not quite apply.
+What survives of the concern is the *operation*, not the data — a migration against `game_scores`
+going wrong in some way beyond the intended column. Running it at step 5 answers that too: an
+encrypted dump was taken at step 3 minutes before, and the table is empty when the DDL executes, so
+there is no row for a bad operation to reach. **The release-day slot is not a compromise between
+now and later — it is the only moment where the risk is genuinely zero rather than argued down to
+small.** Doing it now on `dev` would be the version that trades a real if small risk for nothing.
 
-**Rides with the drop whenever it happens:** `database.types.ts` is generated, so it must be
-regenerated in the same change — otherwise the compiler keeps offering a column that no longer
-exists, and ADR 0017's whole point is that the generated types are trusted.
+Two consequences of that placement, both already written into the runbook step:
+
+- **Nothing enters `supabase/migrations/` in advance.** A committed-but-unpushed migration fires on
+  the next unrelated `npx supabase db push` — the identical failure mode that keeps
+  `launch-reset.sql` in `supabase/scripts/` instead. The SQL is therefore pre-written in the runbook
+  step as text, and only becomes a migration file on the day.
+- **`database.types.ts` is generated, so it must be regenerated in the same commit** — otherwise the
+  compiler keeps offering a column that no longer exists, and ADR 0017's whole point is that the
+  generated types are trusted. That commit needs no deploy of its own: types are compile-time only
+  and nothing selects the column, so it rides whatever deploy comes next.
+
+**Owed on the day, and easy to forget:** ADR 0013's line stating the column is *kept* — "data stays,
+nothing reads it; an optional drop can ride a future migration" — becomes false the moment the drop
+lands. It is a standing condition rather than a dated event, so a cold reader takes it as current.
+Amend ADR 0013; do not open a new ADR for this (a reader asking where `is_perfect` went is already
+sent to 0013, so it fails the surprising-without-context test).
+
+**Checked and clear:** `rlsInvariantsLiveDb.test.ts` and `cleanupScoresLiveDb.test.ts` both write to
+`game_scores` live and neither names the column — the `NOT NULL DEFAULT false` was covering their
+inserts, so nothing in the suite breaks. `CONTEXT.md` never names the column either; its Τζιμάνι
+entries already record the retired-versus-current fork, so the glossary needs no edit.
 
 ## References
 
-- ADR 0013 — retired the perfect-round concept in favour of the `tzimani` milestone lane.
+- ADR 0013 — retired the perfect-round concept in favour of the `tzimani` milestone lane; **amend it when the drop lands**.
 - ADR 0017 — generated Supabase types are compiler-enforced; regenerate them with the migration.
-- ISSUE-01 — no backups; the reason DDL on `game_scores` waits.
-- [`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup.md) — the encrypted dump that unblocks this.
-- [`ISSUE-09`](ISSUE-09-leksokipos-writes-unread-score-metadata.md) — the unblocked half of the original ISSUE-05.
+- [`.claude/handoffs/launch-readiness.md`](../../handoffs/launch-readiness.md) — runbook step 5, which owns the *when* and the exact SQL.
+- ISSUE-01 — the missing backups this used to be gated on, and the dev/prod split still deferred there.
+- [`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup.md) — the encrypted dump. Still owed before runbook step 3, but no longer a gate on this.
+- [`ISSUE-01`](ISSUE-01-no-disaster-recovery-backups.md) §4 — the other half of the original ISSUE-05, decided separately.

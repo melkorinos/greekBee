@@ -44,9 +44,10 @@ rather than a piece of pending work. The `TICKET-03` visual eye-checks ride alon
 
 ### Deferred, correctly, and not launch work
 
-`ISSUE-01` (no disaster-recovery backups — reduced here to one runbook line), `ISSUE-03` (thin E2E
-coverage), Offline Mode's manual device pass (`offlineFeature-handoff.md`), and the hidden Games'
-content supply.
+`ISSUE-01` (**the DB file** — backups and the dev/prod split, plus profile scans, nominations growth
+and the unread score metadata folded in on 2026-08-16; reduced here to one runbook line), `ISSUE-03`
+(thin E2E coverage), Offline Mode's manual device pass (`offlineFeature-handoff.md`), and the hidden
+Games' content supply. **`ISSUE-05` is not in this list** — it is scheduled, at runbook step 5.
 
 ### Tracked elsewhere — do not re-file here
 
@@ -72,7 +73,33 @@ content supply.
    risk is human: **the upload is manual and nothing enforces it.** A dump still sitting on the
    machine at step 4 means the wipe has no undo.
 4. `supabase/scripts/launch-reset.sql`, by hand in the dashboard.
-5. Announce.
+5. **Drop the dead `game_scores.is_perfect` column** — `ISSUE-05`, which is scheduled here and
+   nowhere else. The table is empty as of step 4, so this is the one moment the DDL cannot cost
+   anything. Do not compose it on the day; the body is written out already:
+
+   ```sql
+   -- supabase/migrations/<YYYYMMDD>120000_drop_is_perfect_from_game_scores.sql
+   alter table public.game_scores drop column if exists is_perfect;
+   ```
+
+   Copy that into a new file under `supabase/migrations/`, `npx supabase db push`, then regenerate
+   `src/lib/database.types.ts` and commit both together (ADR 0017 — the generated types are trusted,
+   so they cannot keep offering a column that is gone). **Nothing may enter `supabase/migrations/`
+   before this step** — a committed-but-unpushed migration fires on the next unrelated `db push`,
+   which is the same trap that keeps `launch-reset.sql` out of that folder. The types commit needs no
+   deploy of its own; it rides whatever deploy comes next, since nothing selects the column.
+
+   ```sql
+   -- verify: must return 0
+   select count(*) from information_schema.columns
+    where table_schema = 'public' and table_name = 'game_scores'
+      and column_name = 'is_perfect';
+   ```
+
+   **This step does not gate the announce.** If the push fails, announce anyway and re-file — the
+   column has never been read, so leaving it costs exactly what it costs today. Amend ADR 0013 once
+   the drop lands: its line stating the column is *kept* stops being true here.
+6. Announce.
 
 Steps 3 and 4 are why the order matters. The reset empties `game_scores`, `game_state`,
 `player_achievements` and `player_milestones` on a **Free-plan project with no PITR** — that dump is

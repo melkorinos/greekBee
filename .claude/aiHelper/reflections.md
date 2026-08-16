@@ -70,6 +70,18 @@ Watch: any release-day run where step 3 and step 4 happen close together, and th
 becomes scheduled rather than occasional — a weekly cadence nobody uploads is worse than no cadence,
 because it produces a folder full of evidence that backups are being taken.
 
+**s157 — the mirror image: a backup gate that was protecting nothing.** `ISSUE-05` blocked a
+`DROP COLUMN` on `game_scores` behind `TICKET-11`, on the correct-sounding rule that DDL against the
+append-forever substrate must wait for a restorable dump. Reading `launch-reset.sql` dissolved it:
+**step 4 deletes every row of that table**, so the data the dump would protect is condemned one step
+earlier. The block had been written by applying the rule rather than by checking what the rule was
+buying — and the issue file half-knew, carrying a paragraph headed *"be honest about what the block
+is buying"* that stopped short of the conclusion. The fix was not to weaken the gate but to **move
+the work to where the risk is genuinely zero** (step 5, after the wipe), which is strictly safer than
+the "do it now, the risk is small" reading the file was drifting toward. Watch for the same shape
+wherever a gate cites a rule instead of a consequence: the question is never "does the rule apply"
+but "what does obeying it protect, here."
+
 ### 🟢 The wrong instinct about the emails was cheap to catch, and would not have been later (s154)
 
 Stripping `auth.users` from the dump to avoid holding personal data is a good reflex pointed at the
@@ -442,6 +454,15 @@ missing, search for it by name before concluding it does not exist** — `git lo
 reports the containing directory's commits, which reads exactly like "deleted, never committed",
 and I nearly recommended deleting a rule on that basis.)*
 
+**s157 — the failure mode is worse than incompleteness.** Three entries did not merely omit a test,
+they **described tests that do not exist**: an "is_perfect latch" in `useScoreSubmission.test.ts`, an
+`isPerfectRound` in leksoplegma's `scoring.test.ts`, and "single live score post + is_perfect" in its
+`board.test.tsx`. The perfect-round wire was deleted in s108; the map has claimed coverage of it for
+seven months. A gap makes you write a test you may already have — a **wrong entry makes you trust
+one that was never there**, and the instruction to grep before writing turns it into a load-bearing
+lie. Corrected. When the Dream updates this file, re-read the rows it touches rather than only
+appending new ones.
+
 ### 🟡 ADR 0010's premise is dead; the ADR is not (s132)
 
 Both service-worker rejections rest on "warm start needs only route prefetching." That is false.
@@ -565,28 +586,6 @@ The word-length badges are **exact length** (operator's choice): a word of exact
 
 ---
 
-### 🟡 Sound Cues are built and mute — the deploy gate is now the only guard (s145, updated s146)
-
-`TICKET-04` shipped 2026-08-11: the toggle, the preference, the playback hook and all three Cues are
-live in code, and **the 🔊 button renders on every page today playing silence**. `TICKET-05` — three
-MP3s, sourced and ear-checked by a human — is the half no agent should do, for the s130 reason, and
-is now the *only* thing between this and a deploy. The risk changed shape rather than going away:
-before, an unbuilt feature could be cut for free; now the wrong deploy ships a visibly broken toggle
-on eleven Games. Nothing in the test suite can see this — every gate is green with `public/sounds/`
-empty, by design.
-
-**That shape has failed here before.** «Πόσο κάνει;» is a finished engine that has sat `wip:true`
-since s124 waiting on operator-sourced photos and prices, and its tracking was deleted out from
-under it; Λογοπαίγνιο's 144 assets are still 0 approved. Both are cases where the code was the easy
-half and the content never arrived. Sound Cues is far smaller — three files, not 150 — but it is the
-same dependency.
-
-Two guards, deliberately chosen: it is **pre-launch but explicitly non-blocking**, so it can be cut
-without ceremony rather than slipping a launch; and **neither ticket deploys alone**. That second
-guard is the live one now, and it lives in exactly two places — `TICKET-05`'s "done when" and the
-memory.md row. **Cutting it is not free any more**: with the code merged, "cut it" means reverting
-the toggle, not declining to write it.
-
 ---
 
 ## ✅ Resolved Tensions (archive)
@@ -597,4 +596,5 @@ the toggle, not declining to write it.
 - **`FeedbackBanner` graduation** — triggered by Leksindeseis needing it; graduated cleanly with `theme` prop ✅
 - **`normalizeLetters` cross-game utility** — graduated: the real implementation is now `src/lib/normalize.ts` and every caller imports `@/lib/normalize`. `src/games/leksokipos/lib/normalize.ts` survives only as a two-line re-export shim ✅
 - **Leksiarxeio answer pool quality** — `answers-5.json` curated subset created; obscure words excluded ✅
+- **Sound Cues built and mute (s145/s146)** — the tension was that a merged toggle playing silence could not be cut for free, guarded only by `TICKET-05`'s "neither ticket deploys alone" line. **Resolved s154**: `FEATURE_FLAGS.soundCues` (off) hides the 🔊 button, so the code is inert rather than visibly broken and the human-read deploy gate is spent. The MP3s are post-launch and optional ✅
 
