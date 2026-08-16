@@ -31,3 +31,29 @@ Evaluation algorithm (two-pass, per Leksiarxeio):
 - `buildPhraseLetterStateMap()` needs to handle the four-state priority order.
 - Tile and keyboard components need a `misplaced-word` colour token (purple) added to the Tailwind config.
 - The how-to-play modal is mandatory UX — without it, purple will confuse returning Leksiarxeio players who expect only three states.
+
+## Amendment (2026-08-16) — the yellow-over-purple priority is phrase-wide, and pass 2 had to split in two
+
+The Decision above states the priority (`present` > `misplaced-word`) and then describes an
+algorithm that only enforces it **within a single tile**. Pass 2 walked the words in index order and
+made both kinds of claim in the same sweep, so word 0's cross-word claim consumed an answer letter
+before word 2 ever got to make its same-word claim on it. Word 2's own tile then fell through to
+`absent`, and the purple appeared on the tile that had *not* earned it — word order, not
+information value, decided who got the letter.
+
+Found from a player screenshot on the live board **ΜΑΘΑΙΝΩ ΚΑΙ ΔΙΔΑΣΚΩ**, where it fired twice in
+two guesses: ΒΙΑΣΜΟΣ's α and ΦΟΥΡΝΟΣ's σ both went grey while ΜΑΝΑΡΙΑ and ΠΕΡΑΣΜΑ showed the purple
+for those same letters.
+
+**Pass 2 is now two sweeps.** Every same-word claim across *all* words resolves first; cross-word
+claims then run over whatever pool survives. Letter accounting is unchanged — each answer letter is
+still consumed exactly once.
+
+Measured over all 658 same-shape guess/answer pairs in `phrases-el.json`, 170 (26%) contained at
+least one mis-coloured tile. The correction only ever moves a signal to the tile that earned it:
+the only transitions are `misplaced-word → absent` (198) paired 1:1 with `absent → present` (198),
+plus `misplaced-word → present` (13). **No tile ever loses a `present` or a `correct`.**
+
+The durable rule: a stated priority between two claim kinds is a claim about the whole phrase, and
+enforcing it per tile is not the same thing. Any future state added to this ladder needs its own
+sweep, in priority order, rather than another branch inside an existing one.

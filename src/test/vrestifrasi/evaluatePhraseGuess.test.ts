@@ -119,4 +119,64 @@ describe("evaluatePhraseGuess", () => {
     expect(result[0][0]).toBe("present");
     expect(result[0][1]).toBe("present");
   });
+
+  // ── Yellow outranks purple ACROSS words, not just within a tile ───────────────
+  it("gives a letter to the word that owns it, even when an earlier word guessed it too", () => {
+    // answer: ["ββ", "αγ"] — the phrase's only α belongs to word 1.
+    // guess:  ["βα", "γα"]
+    //   word0 pos1 'α' — word0 owns no α, so this is only ever a cross-word claim.
+    //   word1 pos1 'α' — word1 DOES own an α (at pos 0), so this is a same-word
+    //                    claim and must win the α outright.
+    // Word order must not decide this: a same-word claim always outranks a
+    // cross-word one (ADR 0004 — yellow says which word, purple only says it exists).
+    const result = evaluatePhraseGuess(["βα", "γα"], ["ββ", "αγ"]);
+    expect(result[1][1]).toBe("present");  // word 1 keeps its own α
+    expect(result[0][1]).toBe("absent");   // word 0 has no α left to claim
+  });
+
+  // ── The reported board (operator screenshot, 2026-08-16) ─────────────────────
+  // Answer: ΜΑΘΑΙΝΩ ΚΑΙ ΔΙΔΑΣΚΩ. Both submitted guesses showed the same defect:
+  // a letter owned by ΔΙΔΑΣΚΩ was painted purple on word 1 while ΔΙΔΑΣΚΩ's own
+  // tile for it went grey.
+  describe("ΜΑΘΑΙΝΩ ΚΑΙ ΔΙΔΑΣΚΩ", () => {
+    // Words are written the way the reducer hands them over: normalizeLetters has
+    // already collapsed final sigma ς → σ, so "βιασμος"/"φουρνος" end in σ here.
+    const answer = ["μαθαινω", "και", "διδασκω"];
+
+    it("gives ΔΙΔΑΣΚΩ its own α rather than painting ΜΑΝΑΡΙΑ purple", () => {
+      const result = evaluatePhraseGuess(["μαναρια", "και", "βιασμοσ"], answer);
+      // ΔΙΔΑΣΚΩ owns an α (pos 3), so ΒΙΑΣΜΟΣ's α at pos 2 is right-word/wrong-position.
+      expect(result[2][2]).toBe("present");
+      // ΜΑΘΑΙΝΩ's two α's are both already matched, so ΜΑΝΑΡΙΑ's third α has nothing left.
+      expect(result[0][6]).toBe("absent");
+    });
+
+    it("gives ΔΙΔΑΣΚΩ its own σ rather than painting ΠΕΡΑΣΜΑ purple", () => {
+      const result = evaluatePhraseGuess(["περασμα", "οχι", "φουρνοσ"], answer);
+      // ΔΙΔΑΣΚΩ owns the phrase's only σ (pos 4) — ΦΟΥΡΝΟΣ's trailing σ earns yellow.
+      expect(result[2][6]).toBe("present");
+      // ΠΕΡΑΣΜΑ's σ is only ever a cross-word claim, and it now loses to the owner.
+      expect(result[0][4]).toBe("absent");
+    });
+
+    it("still paints purple where the letter genuinely belongs to another word", () => {
+      const result = evaluatePhraseGuess(["περασμα", "οχι", "φουρνοσ"], answer);
+      // ΜΑΘΑΙΝΩ owns the ν; ΦΟΥΡΝΟΣ guessed it — the cross-word signal survives.
+      expect(result[2][4]).toBe("misplaced-word");
+    });
+  });
+
+  // ── A stolen letter downgraded a tile from yellow to purple, not only to grey ──
+  it("upgrades a tile to present while leaving a genuinely cross-word purple alone", () => {
+    // answer: ["ββ", "αγ", "αδ"] — two α's in the phrase, one in word 1, one in word 2.
+    // guess:  ["αβ", "γα", "δδ"]
+    //   word1 pos1 'α' — word1 owns an α (pos 0) → present, and it must claim first.
+    //   word0 pos0 'α' — word0 owns no α, but word 2's α is still unclaimed → purple.
+    // Both survive: there are two α's, so the same-word claim and the cross-word
+    // claim can each be satisfied. Previously word0 took word1's α, which pushed
+    // word1's own tile down to purple against word2's α.
+    const result = evaluatePhraseGuess(["αβ", "γα", "δδ"], ["ββ", "αγ", "αδ"]);
+    expect(result[1][1]).toBe("present");          // the owner claims first
+    expect(result[0][0]).toBe("misplaced-word");   // the spare α is still a real signal
+  });
 });
