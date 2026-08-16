@@ -215,7 +215,7 @@ Four things the ledger makes visible that no single entry did:
   browser or runtime behaviour needs one real-browser test before it is called done.**
 - **A citation to a named artifact in this repo reads as verified and almost never is** (s146 twice,
   s148). A ticket's file list is a hypothesis; grep is the map.
-- **A spec's stated reason can be false while its decision is right** (s139, s150, s156) — which is
+- **A spec's stated reason can be false while its decision is right** (s139, s150, s156, s161) — which is
   the dangerous version, because the decision surviving review is taken as the reason surviving it.
   s156 is the sharpest form yet: ISSUE-08's *decision* (resolve names at read time) was correct and
   shipped unchanged, while the sentence justifying it — that the stored column becomes redundant —
@@ -223,6 +223,14 @@ Four things the ledger makes visible that no single entry did:
   fixed. **An issue file is a hypothesis with a number on it, not a design review that already
   happened.** The check that saved it took one query and was prompted only by asking "what does this
   read return for a row that has no match?" — the question every read-time resolution owes.
+  **s161 is the same shape arriving from the operator, and it is the cheapest version to get wrong.**
+  A bug report said a purple tile should be grey *because the third word has no Α*; the verdict was
+  right and the reason was its exact inverse — the third word is ΔΙΔΑΣΚΩ, it *does* hold an Α, and
+  that Α is why the purple rendered at all. Agreeing would have produced a "fix" aimed at suppressing
+  cross-word purple rather than at claim ordering, and it would have looked confirmed by the very
+  screenshot that prompted it. **Reproduce the reported symptom before adopting the reporter's model
+  of it** — recovering the real answer phrase from the corpus cost one query and turned a plausible
+  story into a tile-for-tile repro. A correct conclusion is not evidence of a correct diagnosis.
 - **"The only record of X" is a claim about every writer, not the one in front of you** (s158). A
   field's completeness is decided by the *quietest* path that writes the row — here an offline flush
   that omits it — and that path is never the one the issue cites. **Before calling data

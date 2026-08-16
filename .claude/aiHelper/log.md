@@ -5,6 +5,42 @@
 
 ---
 
+## Session 161 — 2026-08-16: the letter goes to the word that owns it
+
+Operator sent a **screenshot of the live Vres Tin Frasi board** and asked whether a purple tile was
+wrong. It was — and **the conclusion was right while the reason was inverted**, which is what made
+the check worth running: the operator reasoned "word 3 has no Α, so word 1's Α should be grey", but
+word 3 *is* ΔΙΔΑΣΚΩ and does contain an Α. That Α is precisely why the purple appeared.
+
+**`evaluatePhraseGuess` enforced ADR 0004's yellow-over-purple priority per tile and never across
+the phrase.** Pass 2 walked the words in index order making both kinds of claim in one sweep, so
+word 0's cross-word claim consumed an answer letter word 2 owned; word 2's own tile then fell to
+grey and word 0 showed a purple it had not earned. **Word order, not information value, decided who
+got the letter.** It fired **twice in the one screenshot** — ΒΙΑΣΜΟΣ's α and ΦΟΥΡΝΟΣ's σ both grey
+while ΜΑΝΑΡΙΑ and ΠΕΡΑΣΜΑ wore the purple for them.
+
+`/diagnosing-bugs` then `/tdd`, seam agreed as the pure function alone. The answer phrase was
+recovered from `phrases-el.json` by word-shape before any theory (**ΜΑΘΑΙΝΩ ΚΑΙ ΔΙΔΑΣΚΩ**), so the
+probe reproduced the board **tile for tile** rather than approximately.
+
+**The blast radius was measured, not estimated.** Across all **658 same-shape guess/answer pairs**
+in the corpus, **170 (26%)** held at least one mis-coloured tile, and the only transitions are
+`purple→grey` (198) paired **1:1** with `grey→yellow` (198) plus `purple→yellow` (13) — so the fix
+**only ever moves a signal to the tile that earned it** and no tile loses a `present` or `correct`.
+That pairing is the argument the change is safe; a raw "170 boards change" would have read as risk.
+
+Fix = pass 2 split into two sweeps (all same-word claims, then all cross-word). **Four tests, proven
+non-vacuous by restoring the old algorithm** — exactly those four fail, nothing else, so no existing
+test had been encoding the bug. **One test bug caught en route:** I typed final sigma `ς` in
+ΦΟΥΡΝΟΣ/ΒΙΑΣΜΟΣ, which `normalizeLetters` collapses to `σ` before this function ever runs — the test
+was feeding input production cannot produce, and it failed for that and not for the code.
+
+Accepted and written into the commit: **`RESTORE_STATE` replays stored tiles rather than re-deriving
+them**, so a round in progress at deploy keeps its old colours until the next daily rotation —
+operator's call, self-healing, not filed. ADR 0004 carries a dated amendment; `coverageMap.md`'s row
+said "two-pass" and now does not. Ran concurrently with s160, which committed its Dream mid-session;
+staged four explicit paths and left its two open files alone.
+
 ## Session 160 — 2026-08-16: the row that is two things at once
 
 Operator asked whether `ISSUE-07` needed grilling before a fix. **It did, and the file was already
@@ -39,50 +75,11 @@ is owed), **`CONTEXT.md` gaining `Refusal`**, and **`TICKET-14`**, which *measur
 blocked on `TICKET-13` (a planner question needs volume, not real rows), only on the local Postgres
 password. Two operator decisions are parked in it, not in a conversation. 200 files / **2610 tests**.
 
-## Session 159 — 2026-08-16: the blocker that was never there
-
-Operator asked whether `ISSUE-06` (profile sequential scans) was implementable. **It said it was
-blocked on the dev/prod split, and it was not.** Grilled that split instead (`/grill-with-docs`, six
-batches) — while the file moved under me, `ISSUE-06` having become `ISSUE-01` §2 in s157's
-consolidation, with a *second* live session grilling §3 and relaying its results by hand.
-
-**One environment check collapsed the premise.** PostgreSQL 18 is already installed for `pg_dump`,
-and whether the planner switches from a sequential scan to an index descent as a table grows is
-**Postgres behaviour, not Supabase behaviour** — any Postgres answers it, so no hosted scratch
-project was ever required.
-
-**ADR 0024: no split.** Three reasons, none reconstructible from code — the free org's second slot is
-the **disaster-restore target** and `disaster-recovery.md` step 3 needs it empty; an **empty staging
-DB passes exactly the migrations that hurt** (`NOT NULL` meeting real nulls, unique index meeting real
-duplicates); and seeding one from a dump puts a **second permanent cloud copy of every player's
-email** in play. Operator declined Pro ($25/mo), which would have dissolved the question entirely.
-
-**Docker was measured out, not argued out.** Installed but the daemon is not running, and across all
-**19 migrations the only objects outside `public` are `auth.uid()` (4 refs) and `auth.users` (3)** —
-no storage, no vault, no Supabase-only extension. The compatibility surface is a ~15-line shim.
-
-**The worst finding was not architectural.** `BACKUP_ARCHIVE_PASSWORD` is in `.env.local.example` but
-**absent from the real `.env.local`**, so `npm run db:backup` throws before dumping; `db-backups/`
-holds two **unencrypted** folders whose newest is 2026-08-08; the weekly task is **unregistered**. The
-operator had agreed to register it — which would have created a job **failing every Sunday at 02:00
-while looking like coverage**. Order corrected: password, dump, verify extraction, then schedule.
-
-**Thirteenth ledger entry, and the false claim was mine this time.** I reported §4's content as *lost
-in the fold*; it was **fixed** in `2f4cf77` the same day, and `git log --diff-filter=D` said so before
-I wrote the sentence. The `SPENT` row still read "folded into ISSUE-01 §4" — corrected to record the
-fix, since a pointer at a section that does not exist sends a cold session hunting.
-
-Shipped: **ADR 0024**, **`TICKET-13`** (blocked on `TICKET-11`'s operator half — a rehearsal needs a
-dump and there is none), `CONTEXT.md` glossary gaining **Backup / Restore / Rehearsal**, and
-`ISSUE-01` retitled: **the fold's stated common blocker dissolved with the split, so its sections now
-share a subject, not a cause.** `ISSUE-05`'s migration freeze is what makes this urgent — every
-pending migration lands in **one afternoon**, the same one `launch-reset.sql` wipes four tables.
-200 files / **2610 tests**, eslint 0, build 0.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 159 | 2026-08-16 | **The blocker that was never there.** `ISSUE-06` said it was blocked on the dev/prod split; it was not, and **one environment check collapsed the premise** — PostgreSQL 18 was already installed for `pg_dump`, and whether the planner switches from a sequential scan to an index descent as a table grows is **Postgres behaviour, not Supabase behaviour**, so no hosted scratch project was ever required. **ADR 0024: no split**, on three reasons none reconstructible from code — the free org's second slot is the **disaster-restore target** and `disaster-recovery.md` step 3 needs it empty; an **empty staging DB passes exactly the migrations that hurt** (`NOT NULL` meeting real nulls, unique index meeting real duplicates); and seeding one from a dump puts a **second permanent cloud copy of every player's email** in play. Operator declined Pro, which would have dissolved the question. **Docker was measured out, not argued out**: across all 19 migrations the only objects outside `public` are `auth.uid()` (4 refs) and `auth.users` (3), so the compatibility surface is a ~15-line shim. **The worst finding was not architectural** — `BACKUP_ARCHIVE_PASSWORD` is absent from the real `.env.local`, so `npm run db:backup` throws before dumping; `db-backups/` holds two **unencrypted** folders; the weekly task is unregistered, and registering it would have created a job **failing every Sunday at 02:00 while looking like coverage**. Order corrected: password, dump, verify extraction, then schedule. Thirteenth ledger entry, and **the false claim was mine** — I called §4's content lost in the fold when `git log --diff-filter=D`, run one call earlier, already showed it fixed. Shipped ADR 0024, `TICKET-13`, the CONTEXT glossary's Backup/Restore/Rehearsal, and an `ISSUE-01` retitle. 200 files / 2610 tests. |
 | 158 | 2026-08-16 | **A purpose nobody ever had.** `ISSUE-09` needed one ruling: the "fairness analysis" the Leksokipos `{ words, pangrams }` write existed for **does not exist and is not wanted**, which collapsed the other two questions before they were answered. Two facts reframed the file — `launch-reset.sql` condemns the 536 rows at runbook step 4, so the decision was only ever about post-launch data; and `pangrams` is derivable from `player_milestones` while `words` is derivable from nothing (score is not a word count, and the milestone lane floors at 10 letters). **The operator supplied the fact that killed the last argument:** `words` was called *the only record of a round's total word count*, but `flushOutbox` posts without `data`, so any Score queued in Offline Mode already landed `{}` — not the only record, a **silently lossy** one. Twelfth ledger entry, and the first where the unchecked claim was one I *repeated from a file* rather than wrote. Removed **end to end** (the hook's `data` argument, `StandardScorePayload.data`, `isCountRecord` + its test file) rather than at the call site; the route now destructures field by field, so a cached bundle still posting counts has them **ignored rather than sanitized**. Leksiarxeio untouched — its per-length jsonb is written server-side and never travelled the standard payload. `ISSUE-01` lost section 4 **and the intro claims about it**, which were wrong in both directions. 200 files / 2610 tests, e2e 13/2-skipped — the first run's 8 failures were a Turbopack cache corrupted by running e2e alongside vitest; **never read a broad e2e failure as a verdict on a narrow change**. |
 | 157 | 2026-08-16 | **A gate that was guarding nothing.** `ISSUE-05` blocked the dead `is_perfect` `DROP COLUMN` on `TICKET-11` — DDL against append-forever data must wait for a restorable dump. **`launch-reset.sql` dissolved it:** runbook step 4 deletes every `game_scores` row, so the 536 rows a dump would protect are condemned one step earlier; the block reasoned from the rule instead of from what obeying it buys. Grilled to a **schedule, not a fix** (four batches, eleven decisions): the drop becomes **runbook step 5**, between wipe and announce, **the one moment the risk is genuinely zero** — which beats the "do it now, the risk is small" reading the file was drifting toward. **Nothing enters `supabase/migrations/` in advance** (a committed-but-unpushed migration fires on the next unrelated `db push`), so the SQL is pre-written *as text* in the step with an `information_schema` verify and an explicit "does not gate the announce". **`coverageMap.md` was not stale but wrong** — three entries described an `is_perfect` latch deleted in s108; a gap makes you write a test you may have, a false entry makes you trust one that never existed. Operator then consolidated the DB issues: `ISSUE-01` absorbed `06`/`07`/`09` as sections, `ISSUE-05` stayed out as scheduled work. Three `SPENT` rows. 201 files / 2618 tests. |
 | 156 | 2026-08-15 | **Names stop being photocopies.** `ISSUE-08` shipped, `ISSUE-06` refused (it records no defect — the planner is right at 47 rows). `game_scores.display_name` was kept fresh by a fan-out `UPDATE` over every score row of a device, living in one of the **four** routes that can set a name, so 118 of 536 rows (22%) disagreed with the profile. Fix = resolve at read time: the leaderboard GET already batched a `player_profiles` `in()` for badges, so `resolveBadges` became **`resolveProfiles`** returning name *and* badge — no migration, no extra round-trip, and `TICKET-12`'s third write-amplification lane retired. **The measurement that changed the design:** the issue claimed the stored copy becomes redundant; **19 of 52 scoring devices have no profile row at all** (a device only gets one once it sets a name or picks a badge), so dropping it would have blanked a third of the leaderboard. It stays as the fallback — eleventh ledger entry. `profileRoute.test.ts` asserts the *absence* of the update. Also: **a second session was editing this tree throughout**, moving `HEAD` twice, found by `git log` and not by any announcement; a diagnostic `git stash` reverted its work and popped back by luck. 201 files / 2618 tests, e2e 13/2-skipped. |
