@@ -112,16 +112,6 @@ Watch: the horizon test going red, and any prune that shortens the corpus — a 
 closer without moving the date anyone has in mind. Note the memory's "799 puzzles" figure was already
 stale (**733**), which is exactly how a horizon quietly shrinks.
 
-### 🟢 The rejected module was rejected on evidence the proposal itself supplied (s153)
-
-Worth recording because it went well. The extraction proposal was wrong about its own headline
-scenario (a corpus gap — there are none, and a test has guarded that since s131) and about its count
-(eight implementations, but three already share a miss rule through `consumeApprovedPuzzle`). Both
-were one command to check, and checking them changed the deliverable from an interface to an
-invariant plus a test. The tension to keep alive is the general one: **"N places do X" is a claim
-about rules, and it is usually measured in shapes.** Shapes duplicate far more often than rules do,
-and only duplicated rules justify an interface.
-
 ### 🟠 A test harness that cannot express the product's own alphabet (s152)
 
 Playwright fires **no keydown events at all** for Greek characters — `keyboard.type("ΑΒΓ")` produces
@@ -226,6 +216,7 @@ treating any of them as reliable.
 | s148 | A ticket's **file list** | "update `e2e/games.spec.ts` for the new picker" | that spec has no picker assertions at all; the test that actually broke appeared in no list | grep |
 | s150 | **A tool** | `get_runtime_errors`/`get_runtime_logs` are reachable via MCP | both 403, `get_project` 404s on every id form | **call the tool** |
 | s155 | **My own persisted memory** | "the 10-day `game_scores` prune is a bug, tracked as issue 03" | the prune was fixed long ago (`retention.ts` exempts scores explicitly) **and** `ISSUE-03` is now an unrelated file about e2e coverage — *both halves stale* | one `Read` of `retention.ts`, one `ls` of `issues/` |
+| s158 | **An issue file, and then me repeating it** | ISSUE-09: `data.words` is "the only record of a round's total word count", the one argument against removing the write | `flushOutbox` posts **without** `data` (`offlineOutbox.ts:115-121`), so every Score queued in Offline Mode already landed `{}` — a lossy record, not the only one. The operator supplied it; I had restated the claim as fact | **read the other writer** |
 | s156 | **The repo's own issue file** | ISSUE-08: adding `display_name` to the badge `in()` "makes the stored copy redundant" | **19 of 52 scoring devices have no `player_profiles` row at all** — a device only gets one once it sets a name or picks a badge, so dropping the copy would have blanked a third of the leaderboard | one `SELECT count(*)` |
 
 Four things the ledger makes visible that no single entry did:
@@ -243,6 +234,12 @@ Four things the ledger makes visible that no single entry did:
   fixed. **An issue file is a hypothesis with a number on it, not a design review that already
   happened.** The check that saved it took one query and was prompted only by asking "what does this
   read return for a row that has no match?" — the question every read-time resolution owes.
+- **"The only record of X" is a claim about every writer, not the one in front of you** (s158). A
+  field's completeness is decided by the *quietest* path that writes the row — here an offline flush
+  that omits it — and that path is never the one the issue cites. **Before calling data
+  irreplaceable, list every writer.** Note also which way the error ran: the file's claim made
+  removal look costlier than it was, so an unchecked fact can defend the status quo just as easily
+  as it can license a change.
 - **A stale artifact can be wrong in both halves at once** (s155). The memory named a defect *and*
   the tracker file supposedly holding it; the defect was fixed and the number had been reused for
   something else. A citation that carries its own reference number reads as *more* verified than a
@@ -596,5 +593,6 @@ The word-length badges are **exact length** (operator's choice): a word of exact
 - **`FeedbackBanner` graduation** — triggered by Leksindeseis needing it; graduated cleanly with `theme` prop ✅
 - **`normalizeLetters` cross-game utility** — graduated: the real implementation is now `src/lib/normalize.ts` and every caller imports `@/lib/normalize`. `src/games/leksokipos/lib/normalize.ts` survives only as a two-line re-export shim ✅
 - **Leksiarxeio answer pool quality** — `answers-5.json` curated subset created; obscure words excluded ✅
+- **The rejected module, rejected on the proposal's own evidence (s153)** — the extraction was wrong about its headline scenario (no corpus gaps exist; a test has guarded that since s131) and its count (eight implementations, three already sharing a miss rule), both one command to check, and checking turned the deliverable from an interface into an invariant plus a test. Lesson kept: **"N places do X" is a claim about rules and is usually measured in shapes** — shapes duplicate far more often than rules, and only duplicated rules justify an interface ✅
 - **Sound Cues built and mute (s145/s146)** — the tension was that a merged toggle playing silence could not be cut for free, guarded only by `TICKET-05`'s "neither ticket deploys alone" line. **Resolved s154**: `FEATURE_FLAGS.soundCues` (off) hides the 🔊 button, so the code is inert rather than visibly broken and the human-read deploy gate is spent. The MP3s are post-launch and optional ✅
 
