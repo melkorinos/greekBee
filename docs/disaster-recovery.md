@@ -24,9 +24,13 @@ whole procedure:
   Supabase's guidance for free projects is to self-export via the CLI `db dump`
   and keep off-site copies. So DR here rests entirely on the manual exports below.
 - **Deleting a project is irreversible** and takes any stored backups with it.
-- **One shared dev/prod project** — the same DB backs both dev and prod, so there
+- **One shared dev/prod project, permanently** — the same DB backs both dev and prod, so there
   is no isolation buffer: a bad migration reaches real data immediately, with no
-  snapshot to roll back to. This is why a current off-site dump matters.
+  snapshot to roll back to. This is why a current off-site dump matters. A second
+  project was considered and **rejected** ([ADR 0024](adr/0024-no-dev-prod-split-migration-safety-is-local.md));
+  the free organization's second slot is deliberately held **empty as the restore
+  target for the procedure below**, and migration safety is bought by rehearsing
+  locally instead (`TICKET-13`).
 
 ---
 
@@ -153,5 +157,7 @@ Google OAuth is per-project configuration and does **not** travel in the dump; s
   append-forever and identity is device-keyed.
 - [google-oauth-setup.md](google-oauth-setup.md) — auth provisioning (per-project config).
 - CONTEXT.md → *Persistence decisions* — the append-forever guarantees this doc leans on.
-- Open work (automating dumps, the dev/main split decision) is tracked in the issue
-  tracker: `.claude/tracker/issues/ISSUE-01-no-disaster-recovery-backups.md`.
+- [ADR 0024](adr/0024-no-dev-prod-split-migration-safety-is-local.md) — why there is only one
+  project, and why the second free slot stays empty for the restore above.
+- Open work (the archive password, the first real dump, the upload) is tracked in the issue
+  tracker: `.claude/tracker/issues/ISSUE-01-no-disaster-recovery-backups.md` §1.

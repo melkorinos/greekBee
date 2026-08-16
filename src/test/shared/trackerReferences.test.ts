@@ -50,7 +50,11 @@ const SPENT: Record<string, string> = {
   // issue rather than four; each became a section there, keeping its own trigger.
   "ISSUE-06": "player_profiles sequential scans — folded into ISSUE-01 §2",
   "ISSUE-07": "nominations grow without bound — folded into ISSUE-01 §3",
-  "ISSUE-09": "unread Leksokipos score metadata — folded into ISSUE-01 §4",
+  // NOT folded, despite what this entry said until 2026-08-16. ISSUE-01 has no
+  // §4 and never had one: the finding was FIXED in 2f4cf77 the same day the fold
+  // happened, which removed the write end to end. Corrected rather than annotated
+  // because a pointer at a section that does not exist sends a cold session hunting.
+  "ISSUE-09": "unread Leksokipos score metadata — fixed 2026-08-16 in 2f4cf77, never folded",
 };
 
 /**

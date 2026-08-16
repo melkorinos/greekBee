@@ -74,8 +74,11 @@ order. eslint and build clean; no test — see the last done-when.
   `.env.local`, for a step the operator performs by hand a handful of times a year. Manual upload,
   automated encryption. Revisit only if the dump becomes scheduled rather than occasional.
 - **A scheduler.** `db:backup:schedule-weekly` already exists; wiring it to Drive is `ISSUE-01`
-  work, after the dev/prod split decision.
-- **The dev/prod project split.** Stays in `ISSUE-01`.
+  work. **Do not register the task until this ticket's operator half is done** — without
+  `BACKUP_ARCHIVE_PASSWORD` the script throws, so the job would fail every Sunday unattended while
+  looking like coverage.
+- **The dev/prod project split.** **Decided against** — ADR 0024, 2026-08-16. Migration safety is a
+  local rehearsal instead (`TICKET-13`), which is blocked on this ticket's operator half.
 
 ## Operator half — cannot be done by an agent
 

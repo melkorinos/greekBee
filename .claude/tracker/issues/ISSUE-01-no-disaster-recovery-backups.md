@@ -1,46 +1,68 @@
-# The database's deferred problems — no disaster recovery, and two findings that wait on it
+# The database's deferred problems — three findings, three triggers
 
 **Deferred:** 2026-07-05 (backups); the rest 2026-08-15
-**Revisit when:** each section carries its own trigger — they do not share one. The **dev/prod
-split** in section 1 is the pivot: section 2 is blocked on it outright, so grill that first.
+**Revisit when:** each section carries its own trigger — they do not share one, and no section
+gates another.
 
 **Consolidated 2026-08-16** from `ISSUE-06` (profile scans) and `ISSUE-07` (nominations growth), at
 the operator's request — one DB file instead of several. The `is_perfect` DROP stayed out on
 purpose: it is no longer a deferred problem but **scheduled work**, owned by
 [`ISSUE-05`](ISSUE-05-dead-is-perfect-column.md) and executed at release-day runbook step 5.
 
-**What binds these together:** one Free-plan Supabase project (`rnfsuvhgufhbekodkmlp`) backs both
-dev and prod, with no automatic backups, no PITR and no scratch copy. That single fact is why
-section 1 is unfixed, why a restore has never been rehearsed, and why section 2 cannot be
-*measured*.
+**These sections share a subject, not a cause.** The consolidation originally claimed a common
+blocker — one Free-plan project with no scratch copy, said to be why section 2 could not be
+*measured*. [ADR 0024](../../../docs/adr/0024-no-dev-prod-split-migration-safety-is-local.md)
+dissolved that on 2026-08-16: the dev/prod split was decided against, and section 2's verification
+turned out to need a local database rather than a hosted one. What remains is three unrelated
+findings that happen to be about the same database. Read the section you came for; the others will
+not tell you anything about it.
 
 ---
 
-## 1. No disaster-recovery backups, and no dev/prod split
+## 1. No disaster-recovery backups — and right now, no backup at all
 
 **Revisit when:** before the public launch, or the moment a risky migration is queued.
 
 The Free plan has **no automatic backups and no PITR** — those are Pro+ only. Verified against the
 Supabase Database Backups guide: free projects are told to self-export via the CLI. So if the DB is
 deleted, corrupted, or wiped by a bad migration, everyone's scores and derived achievements are
-**unrecoverable**. Amplified by the shared project: a bad dev migration hits prod instantly with no
-rollback point.
+**unrecoverable**.
+
+**The split question is closed.**
+[ADR 0024](../../../docs/adr/0024-no-dev-prod-split-migration-safety-is-local.md) decided against a
+second Supabase project on 2026-08-16: the second free slot is reserved as the disaster-restore
+target, an empty staging database passes exactly the migrations that hurt, and seeding one from a
+production dump would put a second permanent copy of every player's email in the cloud. Migration
+safety is bought locally instead — [`TICKET-13`](../tickets/TICKET-13-migration-rehearsal-loop.md)
+is the promotion this section's old *"promote to a ticket once the split is decided"* line called
+for.
 
 The "somewhere to put the dumps" question is **answered** — an encrypted 7-Zip archive in a private
 Google Drive folder, never a git repository (the repo is public and `pg_dump` carries `auth.users`).
 [`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup.md) shipped the encryption half of
-`scripts/backup-db.ps1` on 2026-08-15; its **operator half is still owed** and must be done before
-runbook step 3.
+`scripts/backup-db.ps1` on 2026-08-15.
 
-Two things stay deferred here:
+### What is actually owed — all of it operator-only, measured 2026-08-16
 
-- **Automating an off-site dump** needs a scheduler and a destination. The destination is settled;
-  `db:backup:schedule-weekly` exists but is not wired to Drive. Blocked on the split below, because
-  where you schedule from depends on how many projects there are.
-- **The dev/prod split** — two separate free Supabase projects (a free org allows two) versus staying
-  single. Structural, and needs a grill: isolation weighed against double-maintaining migrations,
-  secrets and OAuth config. **Promote to a ticket once this is decided** — it is what unblocks the
-  automation, section 2's verification, and any future rehearsal of section 4.
+The exposure is worse than "automation is missing". There is **no usable backup on the machine at
+all**:
+
+- `BACKUP_ARCHIVE_PASSWORD` is documented at `.env.local.example:38` but **absent from the real
+  `.env.local`**, so `npm run db:backup` throws at
+  [`backup-db.ps1:107`](../../../scripts/backup-db.ps1#L107) before dumping anything.
+- `db-backups/` holds **two unencrypted folders, newest 2026-08-08** — both predate the encryption
+  work. There is no `.7z` anywhere.
+- The weekly task **is not registered** (`Get-ScheduledTask GreekWordGames-DB-Backup` → not found).
+
+The order matters, and it is not the order the runbook implies. Registering the scheduled task
+first would create a job that fails every Sunday at 02:00 unattended — **worse than no job, because
+it looks like coverage.** Set the password, take one manual dump, confirm the archive opens on
+another machine, *then* register the task.
+
+The one thing that stays deferred after that is **nothing enforces the upload**. The dump lands in
+`db-backups/` and a human has to move it to Drive; a dump still sitting on the machine at runbook
+step 4 means the launch wipe has no undo. Automating the upload needs a Drive credential on the
+machine, which is a decision nobody has made.
 
 Full context, the "what must survive" table and the restore procedure live in
 [`docs/disaster-recovery.md`](../../../docs/disaster-recovery.md).
@@ -74,13 +96,22 @@ null with 20 dead tuples is worth a glance too: the table's statistics are whate
 **The work this reserves is a verification, not a change** — adding indexes against a 47-row table
 would be cargo-culting:
 
-1. Seed a scratch copy of `player_profiles` to ~50,000 rows.
+1. Seed a scratch copy of `player_profiles` to ~50,000 rows **in a local PostgreSQL database**.
 2. `EXPLAIN ANALYZE` the `resolveProfiles()` `in()` query and the `/api/auth/link` `auth_user_id`
    lookup against it.
 3. Confirm both flip to index scans. If not, that is the real bug and it gets its own ticket.
 
-**Blocked on section 1's split** — that needs a scratch database, and a 50,000-row seed against the
-live project is exactly the write the CLAUDE.md guardrails exist to prevent.
+**Not blocked on anything.** This section previously claimed to be blocked on section 1's dev/prod
+split, on the grounds that the verification needed a scratch database the shared project could not
+give it. That was wrong: whether the planner switches from a sequential scan to an index descent as
+a table grows is **Postgres behaviour, not Supabase behaviour**, so any Postgres answers it — and
+PostgreSQL 18 is already installed on the machine for `pg_dump`. Nothing needs to be seeded against
+the live project, and `TICKET-13`'s rehearsal loop will leave a local scratch database sitting there
+anyway.
+
+What still holds this back is only its trigger: at 47 rows there is nothing to verify and no index
+worth adding. Read the result as indicative rather than exact when it is run — local is PostgreSQL
+18, the hosted project is 17.
 
 ---
 
@@ -129,9 +160,11 @@ review SLA that does not exist. None should be guessed at under launch pressure.
 
 ## References
 
+- [ADR 0024](../../../docs/adr/0024-no-dev-prod-split-migration-safety-is-local.md) — why there is no dev/prod split, and what replaced it. Read before re-proposing a second project.
 - [`docs/disaster-recovery.md`](../../../docs/disaster-recovery.md) — the runbook section 1 tracks the open work for.
 - Supabase Database Backups — https://supabase.com/docs/guides/platform/backups (free-tier `db dump` guidance).
 - [`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup.md) — the encrypted dump; agent half shipped, operator half owed.
+- [`TICKET-13`](../tickets/TICKET-13-migration-rehearsal-loop.md) — the local rehearsal loop ADR 0024 chose instead of a split.
 - [`ISSUE-05`](ISSUE-05-dead-is-perfect-column.md) — the `is_perfect` DROP, scheduled to runbook step 5 rather than deferred here.
 - [`src/app/api/game-scores/route.ts`](../../../src/app/api/game-scores/route.ts) — `resolveProfiles()`, the hottest read against `player_profiles` (section 2).
 - [`src/app/api/cleanup-scores/route.ts`](../../../src/app/api/cleanup-scores/route.ts) + [`src/config/retention.ts`](../../../src/config/retention.ts) — the prune and what it deliberately skips.

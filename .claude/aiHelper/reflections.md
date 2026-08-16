@@ -27,30 +27,15 @@ dishonest version quietly carries another session's half-finished work. **Still 
 prevents a recurrence — no lock, no branch-per-session convention, and the Dream itself writes four
 shared files, exactly where two sessions finishing near each other collide hardest.
 
-### 🟢 An alarming ratio that is not a problem, and the reasoning that says so (s155)
-
-`game_state` carries **29,025 updates against 83 live rows** — 350:1 — and `game_scores` 31,562
-against 536. Those numbers look like a fire, and the correct response was **leave it alone**. This
-entry exists so the next session that runs the same query does not spend a day optimising.
-
-The cause is real and confirmed in code: Leksokipos writes **twice per word found**
-(`useGameStateSync` on every `foundWords` growth, `useScoreSubmission` on every score increase), and
-`pushFoundWords` sends the **entire array** each time, so a 40-word round ships ~820 word-slots to
-persist 40. The reason it does not matter is arithmetic nobody had done: at 1,000 daily players that
-is ~80,000 upserts/day — **under one write per second averaged** — and autovacuum is currently
-same-day on both tables with 23 and 96 dead tuples. Postgres is not the constrained resource;
-Vercel invocations are, and they are ~2% of the included allocation (see the Fluid CPU entry).
-
-**The general shape: a ratio is not a verdict.** 350:1 is frightening only until it is multiplied by
-the actual traffic. The dangerous version is the reverse of this repo's usual failure — not
-believing a claim without checking, but *reacting to a measurement without finishing it*. A number
-extracted from `pg_stat_user_tables` is an input to a capacity question, and the capacity question
-needs the projected load, the per-row cost and the ceiling before it means anything.
-
-`TICKET-12` holds the fix with its threshold **in the title** so the gate is read before the work.
-Watch: any session that opens that ticket without first re-running the measurement it asks for, and
-any proposal to send deltas instead of the full array — that one is blocked by ADR 0003's
-server-wins restore, not by effort.
+**s159 — the consolidation made this structurally worse, and the collision was not in git.** Two
+sessions grilled **the same file** simultaneously: this one on `ISSUE-01` §1–2, another on §3, with
+the second session's results **relayed by the operator in prose** because neither could see the
+other. The file I read at session start had already been replaced on disk — `ISSUE-06` no longer
+existed as a file, having become §2 — and I only learned that when the operator pasted it back.
+Folding four issues into one file was done to have fewer places to look; the cost that surfaced first
+was that **two agents now serialise through a human on a single file** where four files would have
+let them work independently. **A per-file grill is safe only while one file means one topic.** When
+consolidating, ask what concurrency the split was quietly buying.
 
 ### 🟠 The backup is now encrypted, and still nothing makes it leave the machine (s154)
 
@@ -82,18 +67,19 @@ the "do it now, the risk is small" reading the file was drifting toward. Watch f
 wherever a gate cites a rule instead of a consequence: the question is never "does the rule apply"
 but "what does obeying it protect, here."
 
-### 🟢 The wrong instinct about the emails was cheap to catch, and would not have been later (s154)
-
-Stripping `auth.users` from the dump to avoid holding personal data is a good reflex pointed at the
-wrong artifact: it produces an archive that satisfies a privacy intuition and **fails at the one job
-it exists for** — restored rows point at accounts that no longer exist, so every signed-in player
-comes back a stranger to their own history. The failure would have surfaced only during a restore,
-which is the single worst moment to learn what your backup does not contain.
-
-The general shape worth keeping: **a data-minimisation instinct and a recovery requirement can point
-in opposite directions, and minimisation feels more responsible while being wrong.** The test is not
-"how little can this file hold" but "what does this file have to contain for the restore to be a
-restore". Encryption is what reconciles them, and it is the answer more often than deletion is.
+**s159 — the predicted failure was already live, and worse than predicted.** This entry warned that
+"a weekly cadence nobody uploads is worse than no cadence." Measured: `BACKUP_ARCHIVE_PASSWORD` is
+absent from `.env.local`, so `npm run db:backup` **throws before dumping anything**; `db-backups/`
+holds two unencrypted folders whose newest is 2026-08-08, predating `TICKET-11` entirely; and the
+weekly task is unregistered. So there is **no encrypted archive in existence** — three sessions have
+now written about the backup's destination, encryption and cadence while the thing itself has never
+run once in its finished form. The operator had approved registering the scheduler that same session,
+which would have produced exactly the folder-of-evidence failure named above, except emptier: a job
+throwing at line 107 every Sunday at 02:00 with nobody watching stderr. **Order corrected to password
+→ manual dump → verify extraction on another machine → schedule.** The general shape: **work that
+ships as a script is not work that has run**, and a `TICKET`'s "agent half shipped" says nothing about
+whether the artifact it produces exists. Watch for any other capability whose only evidence of
+working is that its code was reviewed.
 
 ### 🟡 Λεξόκηπος now degrades quietly where it used to degrade loudly (s153)
 
@@ -198,8 +184,8 @@ future session can see which claims have been touched since anyone last looked.
 
 ### 🔴 Measure the artifact, don't trust the response — the standing rule and its ledger
 
-**This repo's most expensive recurring failure, in eleven recorded instances across s130–s156.** The
-shape is always the same: a claim that is **plausible, load-bearing, and cheap to check** is
+**This repo's most expensive recurring failure, in fourteen recorded instances across s130–s159.**
+The shape is always the same: a claim that is **plausible, load-bearing, and cheap to check** is
 believed instead of checked. What varies is only *who is narrating* — and the point of keeping the
 ledger rather than nine separate entries is that the list of narrators is now long enough to stop
 treating any of them as reliable.
@@ -218,6 +204,8 @@ treating any of them as reliable.
 | s155 | **My own persisted memory** | "the 10-day `game_scores` prune is a bug, tracked as issue 03" | the prune was fixed long ago (`retention.ts` exempts scores explicitly) **and** `ISSUE-03` is now an unrelated file about e2e coverage — *both halves stale* | one `Read` of `retention.ts`, one `ls` of `issues/` |
 | s158 | **An issue file, and then me repeating it** | ISSUE-09: `data.words` is "the only record of a round's total word count", the one argument against removing the write | `flushOutbox` posts **without** `data` (`offlineOutbox.ts:115-121`), so every Score queued in Offline Mode already landed `{}` — a lossy record, not the only one. The operator supplied it; I had restated the claim as fact | **read the other writer** |
 | s156 | **The repo's own issue file** | ISSUE-08: adding `display_name` to the badge `in()` "makes the stored copy redundant" | **19 of 52 scoring devices have no `player_profiles` row at all** — a device only gets one once it sets a name or picks a badge, so dropping the copy would have blanked a third of the leaderboard | one `SELECT count(*)` |
+| s159 | **An issue file** | ISSUE-01 §2's verification "needs a scratch database the shared project does not give us" — a blocker inherited unexamined through two rewrites and a consolidation | a scan-vs-index crossover is **Postgres behaviour, not Supabase behaviour**, and PostgreSQL 18 was already installed on the machine for `pg_dump`. Nothing was ever blocked | `command -v psql` |
+| s159 | **Me, past output I had already generated** | "ISSUE-09's content was lost in the fold — the ledger points at a §4 that does not exist" | it was **fixed** in `2f4cf77`, and that commit was **visible in the `git log --oneline` I had run one call earlier**. The ledger row was mislabelled, not orphaned | **read the output you already have** |
 
 Four things the ledger makes visible that no single entry did:
 
@@ -249,6 +237,19 @@ Four things the ledger makes visible that no single entry did:
   a tool-reachability claim can only be checked by *calling the tool*, and nothing about reading a
   ticket prompts that. **A spec that names a tool as its mechanism should have that tool invoked
   before the spec is believed.**
+- **A blocker outlives the rewrites that pass over it** (s159). "Blocked on the dev/prod split"
+  survived two rewrites of `ISSUE-01` and a four-way consolidation, and each pass edited the prose
+  around it while treating the dependency as settled. It was one `command -v psql` from false the
+  whole time. **A `Blocked by:` line is the highest-value claim in any tracker file and the least
+  often checked** — it is what stops work from starting, so nobody reaches the point of testing it.
+  Re-derive the blocker before accepting that something is blocked; deferral compounds silently in a
+  way a wrong implementation detail does not.
+- **The cheapest check is the output you already have.** s159's second entry is the only one in this
+  ledger where the check had *already been run*: `git log --oneline -5` printed the fix commit one
+  call before I wrote that its content was lost. Every other row is a check not performed; this one
+  is a result not read. **Running the command and reading the command are different acts**, and a
+  conclusion formed before the scroll-back is re-read is not evidence-based just because evidence
+  was fetched.
 
 **Two narrators are ours and deserve their own line.** First, **our own hedging adjectives**: the
 Leksindeseis fallback pool was called "thin" for weeks across three docs, in the tone of something
@@ -275,19 +276,6 @@ the licence of the site it came from — Freesound hosts CC0, CC-BY and CC-BY-NC
 most famous rooster is CC-BY. For the Shell header at four buttons: no test can cover it, so the
 guard is an operator on a phone. For the Leksindeseis pool: **parked, not fixed** — the Game is
 `hidden` (ADR 0022), so nothing ships until unhiding is considered, and unhiding is a checklist.
-
-### 🟢 Vercel Fluid Active CPU — no longer the binding cost constraint
-
-Measured 2026-08-13 over a whole billing period: **1.19 CPU-hours** + 18.97 GB-hrs ≈ **$0.35, about
-2% of the $20 Pro included allocation**. The old "4h/day cap" framing is obsolete (Pro
-`planIteration: "plus"` has no per-metric free allotment). Readable from the CLI — recipe in
-`/project-mcp`, which had recorded it as dashboard-only.
-
-Mitigations that got it there, and should not be undone: the module-level `validWordsCache` in
-`buildCustomPuzzle` (warm instances skip the ~795k scan), `revalidate = 3600` on the custom route,
-and Edge runtime on all API routes. **Rejected and settled:** stripping `validWords` from
-`puzzles-el.json` — it saves 4–10 ms of parse and costs 50–200 ms of dictionary computation on the
-first request per puzzle.
 
 ### 🟡 A component with no visual gate is verified by compiling it, not by rendering it (s144)
 
@@ -587,6 +575,9 @@ The word-length badges are **exact length** (operator's choice): a word of exact
 
 ## ✅ Resolved Tensions (archive)
 
+- **`game_state`’s 350:1 update ratio (s155, judged and closed)** — 29,025 updates against 83 live rows looks like a fire; the correct response was **leave it alone**. Cause is real (Leksokipos writes twice per word and `pushFoundWords` posts the whole array, ~820 word-slots to persist 40), but at 1,000 daily players that is ~80,000 upserts/day, **under one write per second**, with same-day autovacuum. **A ratio is not a verdict** — it means nothing until multiplied by projected load against the ceiling. `TICKET-12` holds the fix with its threshold in the title; re-run the measurement before opening it, and note that sending deltas is blocked by ADR 0003’s server-wins restore ✅
+- **Stripping the emails from the dump (s154, settled)** — a data-minimisation instinct pointed at the wrong artifact: `pg_dump --schema=public` yields an archive that satisfies a privacy intuition and **fails at the one job it exists for**, since restored rows point at accounts that no longer exist and every signed-in player returns a stranger to their own history. **A minimisation instinct and a recovery requirement can point in opposite directions, and minimisation feels more responsible while being wrong.** Encryption reconciles them; deletion does not ✅
+- **Vercel Fluid Active CPU as the binding cost constraint (s144, resolved 2026-08-13)** — measured over a full billing period at **1.19 CPU-hours ≈ $0.35, ~2% of the $20 Pro allocation**; the old "4h/day cap" framing is obsolete. Mitigations that must not be undone: the module-level `validWordsCache` in `buildCustomPuzzle`, `revalidate = 3600` on the custom route, Edge runtime on all API routes. **Settled:** stripping `validWords` from `puzzles-el.json` saves 4–10 ms of parse and costs 50–200 ms of dictionary computation per puzzle ✅
 - **Mobile input path for Leksiarxeio** — `keyboardInteraction.test.tsx` now verifies the on-screen keyboard dispatches end-to-end (letter click → pending tile, ⌫ → removal, ↵ → submit). Verified during the 2026-07-02 test audit ✅
 
 - **`dark:` Tailwind classes** — re-enabled safely via `@custom-variant dark (&:where(.dark, .dark *))` in `globals.css`. The prefix fires only when `.dark` is on `<html>` (never from `prefers-color-scheme`). `useTheme` hook owns the toggle; preference lives in `localStorage["theme-preference"]` outside the game-state envelope. ADR 0002 documents the decision ✅

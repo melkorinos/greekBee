@@ -44,8 +44,10 @@ rather than a piece of pending work. The `TICKET-03` visual eye-checks ride alon
 
 ### Deferred, correctly, and not launch work
 
-`ISSUE-01` (**the DB file** — backups and the dev/prod split, plus profile scans, nominations growth
-and the unread score metadata folded in on 2026-08-16; reduced here to one runbook line), `ISSUE-03`
+`ISSUE-01` (**the DB file** — backups, plus profile scans and nominations growth folded in on
+2026-08-16; the dev/prod split is no longer among them, decided against in **ADR 0024** on the same
+day, and the unread score metadata was fixed rather than folded; reduced here to one runbook line),
+`ISSUE-03`
 (thin E2E coverage), Offline Mode's manual device pass (`offlineFeature-handoff.md`), and the hidden
 Games' content supply. **`ISSUE-05` is not in this list** — it is scheduled, at runbook step 5.
 
@@ -140,7 +142,11 @@ finite. The full blocking/accepted split produced five tickets. Three have shipp
   Revisit if money or public user-generated content enters.
 - **E2E coverage** — the gate is `npm run test -- --run` and `npm run test:e2e` both green on the
   merge commit, not a bigger suite. `ISSUE-03`.
-- **Disaster-recovery backups** — `ISSUE-01`. Automation and the dev/prod split are not launch work.
+- **Disaster-recovery backups** — `ISSUE-01`. The dev/prod split is **decided against** (ADR 0024,
+  2026-08-16) and migration safety moved to `TICKET-13`'s local rehearsal; neither is launch work.
+  **What *is* launch work is runbook step 3, and it currently cannot run** —
+  `BACKUP_ARCHIVE_PASSWORD` is absent from `.env.local`, so `npm run db:backup` throws. That is
+  `TICKET-11`'s operator half, already listed above.
 - **Content supply for the three hidden Games** — moot while they are hidden. Leksindeseis's static
   fallback is **one** puzzle rotating over a single-item array; Πόσο κάνει; and Λογοπαίγνιο hold one
   placeholder each.
