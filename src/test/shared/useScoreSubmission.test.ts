@@ -130,24 +130,18 @@ describe("useScoreSubmission — submit()", () => {
     expect(spy).toHaveBeenCalledTimes(2);
   });
 
-  it("includes the data record in the body when provided", async () => {
-    const spy = mockFetch();
-    const { result } = renderHook(() => useScoreSubmission(BASE));
-
-    await act(async () => { result.current.submit(10, { words: 12, pangrams: 2 }); });
-
-    const body = JSON.parse((spy.mock.calls[0] as [string, RequestInit])[1].body as string);
-    expect(body.data).toEqual({ words: 12, pangrams: 2 });
-  });
-
-  it("omits data from the body when not provided", async () => {
+  // A Score is the whole payload — no per-round metadata rides along into
+  // game_scores.data. Leksokipos sent { words, pangrams } until 2026-08-16.
+  it("posts the five score fields and nothing else", async () => {
     const spy = mockFetch();
     const { result } = renderHook(() => useScoreSubmission(BASE));
 
     await act(async () => { result.current.submit(10); });
 
     const body = JSON.parse((spy.mock.calls[0] as [string, RequestInit])[1].body as string);
-    expect(body).not.toHaveProperty("data");
+    expect(Object.keys(body).sort()).toEqual(
+      ["device_id", "display_name", "game_id", "puzzle_date", "score"],
+    );
   });
 
   it("falls back to 'Ανώνυμος' when displayName is empty", async () => {
@@ -202,14 +196,16 @@ describe("useScoreSubmission — submitWithName()", () => {
     expect(body.score).toBe(10);
   });
 
-  it("forwards the data record when provided", async () => {
+  it("posts the five score fields and nothing else", async () => {
     const spy = mockFetch();
     const { result } = renderHook(() => useScoreSubmission(BASE));
 
-    await act(async () => { result.current.submitWithName(10, "Νέος", { words: 8, pangrams: 1 }); });
+    await act(async () => { result.current.submitWithName(10, "Νέος"); });
 
     const body = JSON.parse((spy.mock.calls[0] as [string, RequestInit])[1].body as string);
-    expect(body.data).toEqual({ words: 8, pangrams: 1 });
+    expect(Object.keys(body).sort()).toEqual(
+      ["device_id", "display_name", "game_id", "puzzle_date", "score"],
+    );
   });
 
   it("does not POST when score is 0", async () => {

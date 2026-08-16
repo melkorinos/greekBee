@@ -39,9 +39,6 @@ interface StandardScorePayload {
   device_id:    string;
   display_name: string;
   score:        number;
-  // Optional per-game metadata (e.g. Leksokipos { words, pangrams }) stored in the
-  // row's jsonb. Counts only — never the word list (game_scores is public-read).
-  data?:        Record<string, number>;
 }
 
 interface LeksiarxeioScorePayload {
@@ -55,15 +52,12 @@ interface LeksiarxeioScorePayload {
 
 type ScorePayload = StandardScorePayload | LeksiarxeioScorePayload;
 
-// The optional `data` blob is client-supplied and lands in a public-read jsonb, so
-// only accept a flat object whose values are all finite numbers (word/pangram counts).
-// Anything else — nested objects, strings, an attempt to smuggle the word list — is dropped.
-export function isCountRecord(data: unknown): data is Record<string, number> {
-  if (typeof data !== "object" || data === null || Array.isArray(data)) return false;
-  const values = Object.values(data);
-  return values.length > 0 && values.every((v) => typeof v === "number" && Number.isFinite(v));
-}
-
+// `data` is written by the Leksiarxeio branch below and by nothing else. A standard
+// game's POST cannot reach the column at all: the body is destructured field by
+// field, so a client sending `data` — a stale bundle, or anyone with the anon key —
+// has it ignored rather than sanitized. Leksokipos posted { words, pangrams } here
+// until 2026-08-16; nothing ever read them back and the Offline Outbox flush omitted
+// them, so the counts were a lossy record of a question no one was asking.
 export async function POST(req: NextRequest) {
   const parsed = await parseJson<ScorePayload>(req);
   if (!parsed.ok) return parsed.response;
@@ -118,13 +112,12 @@ export async function POST(req: NextRequest) {
   }
 
   // ── Standard games ──────────────────────────────────────────────────────────
-  const { score, data } = body as StandardScorePayload;
+  const { score } = body as StandardScorePayload;
   if (typeof score !== "number") {
     return jsonMessage("Missing required fields");
   }
 
   const row: Insert<"game_scores"> = { game_id, puzzle_date, device_id, display_name: name, score };
-  if (isCountRecord(data)) row.data = data;
 
   const err = await upsertAndClean(
     "game_scores",

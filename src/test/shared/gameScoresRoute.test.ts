@@ -9,9 +9,10 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-import { makeQueuedClient, tableShim } from "@/test/helpers/supabaseMock";
+import { makeQueuedClient, tableShim, type ChainCall } from "@/test/helpers/supabaseMock";
 
-const _db = makeQueuedClient();
+const calls: ChainCall[] = [];
+const _db = makeQueuedClient({ onCall: (c) => calls.push(c) });
 const enqueue = _db.enqueue;
 
 vi.mock("@/lib/supabase", () => ({
@@ -38,8 +39,8 @@ function makeGetReq(params: Record<string, string>): NextRequest {
   return new NextRequest(url.toString());
 }
 
-beforeEach(() => { _db.reset(); });
-afterEach(()  => { _db.reset(); });
+beforeEach(() => { _db.reset(); calls.length = 0; });
+afterEach(()  => { _db.reset(); calls.length = 0; });
 
 // ── POST — validation ─────────────────────────────────────────────────────────
 
@@ -117,6 +118,28 @@ describe("POST /api/game-scores — happy path", () => {
     expect(res.status).toBe(200);
     const json = await res.json() as { ok: boolean };
     expect(json.ok).toBe(true);
+  });
+
+  // A standard game's Score is the whole payload. The route destructures the body
+  // field by field, so a stale bundle still sending the retired Leksokipos
+  // { words, pangrams } — or anyone with the anon key sending anything else —
+  // cannot reach the public-read jsonb. Replaces the isCountRecord sanitizer,
+  // deleted 2026-08-16 with the write it guarded.
+  it("writes no data key when the client sends one", async () => {
+    enqueue({ error: null });
+    const res = await POST(makePostReq({
+      game_id:      "leksokipos",
+      puzzle_date:  "2026-05-22",
+      device_id:    "device-abc",
+      display_name: "Νίκος",
+      score:        42,
+      data:         { words: 12, cheat: "ΑΠΟΛΥΤΟΤΗΤΑ" },
+    }));
+    expect(res.status).toBe(200);
+
+    const upsert = calls.find((c) => c.table === "game_scores" && c.op === "upsert");
+    expect(upsert).toBeDefined();
+    expect(upsert!.args[0]).not.toHaveProperty("data");
   });
 
   it("succeeds with no display_name (falls back to Ανώνυμος)", async () => {

@@ -1,17 +1,18 @@
-# The database's deferred problems — no disaster recovery, and three findings that all wait on it
+# The database's deferred problems — no disaster recovery, and two findings that wait on it
 
 **Deferred:** 2026-07-05 (backups); the rest 2026-08-15
 **Revisit when:** each section carries its own trigger — they do not share one. The **dev/prod
-split** in section 1 is the pivot: sections 2 and 4 are blocked on it outright, so grill that first.
+split** in section 1 is the pivot: section 2 is blocked on it outright, so grill that first.
 
-**Consolidated 2026-08-16** from `ISSUE-06` (profile scans), `ISSUE-07` (nominations growth) and
-`ISSUE-09` (unread score metadata), at the operator's request — one DB file instead of four. The
-`is_perfect` DROP stayed out on purpose: it is no longer a deferred problem but **scheduled work**,
-owned by [`ISSUE-05`](ISSUE-05-dead-is-perfect-column.md) and executed at release-day runbook step 5.
+**Consolidated 2026-08-16** from `ISSUE-06` (profile scans) and `ISSUE-07` (nominations growth), at
+the operator's request — one DB file instead of several. The `is_perfect` DROP stayed out on
+purpose: it is no longer a deferred problem but **scheduled work**, owned by
+[`ISSUE-05`](ISSUE-05-dead-is-perfect-column.md) and executed at release-day runbook step 5.
 
 **What binds these together:** one Free-plan Supabase project (`rnfsuvhgufhbekodkmlp`) backs both
 dev and prod, with no automatic backups, no PITR and no scratch copy. That single fact is why
-section 1 is unfixed, why section 2 cannot be *measured*, and why section 4 has never been rehearsed.
+section 1 is unfixed, why a restore has never been rehearsed, and why section 2 cannot be
+*measured*.
 
 ---
 
@@ -126,53 +127,13 @@ review SLA that does not exist. None should be guessed at under launch pressure.
 
 ---
 
-## 4. Leksokipos writes `{ words, pangrams }` into `game_scores.data` and nothing reads it back
-
-**Revisit when:** whenever you want to answer it — **this one needs a decision, not a window**, and
-it is the only section here that is waiting on the operator rather than on scale or on the split.
-
-`game_scores.data jsonb DEFAULT '{}'` is **empty on 294 of 536 rows (55%)**, measured 2026-08-15.
-
-| Game | Keys written | Read back? |
-| --- | --- | --- |
-| `leksiarxeio` | `4`,`5`,`6`,`7`,`8` | **Yes — load-bearing** |
-| `leksokipos` | `words`, `pangrams` | **No** |
-| the other 5 games | *(none — stays `{}`)* | — |
-
-**The Leksiarxeio keys must stay** — `mergeLengthScore` reads them back to fold each word length into
-the day's row ([`src/app/api/game-scores/route.ts:96-115`](../../../src/app/api/game-scores/route.ts#L96-L115)).
-The column is not droppable and nothing here proposes dropping it.
-
-**The Leksokipos counts are write-only.** They are described at the payload type as *"for fairness
-analysis"* ([`route.ts:42-44`](../../../src/app/api/game-scores/route.ts#L42-L44)), but nothing in
-`src/` reads them, and the same two facts are now recorded per-word in `player_milestones`
-(`kind='pangram'`, `kind='word'`), which is what `/api/profile/stats` actually queries.
-
-**The two honest options**, because picking silently is the bad outcome:
-
-1. **Stop writing them.** Drop the `data` argument at the Leksokipos
-   [`useScoreSubmission`](../../../src/hooks/useScoreSubmission.ts) call site — roughly one line plus
-   a test. Existing rows keep their counts; nothing reads them, so nothing breaks.
-2. **Keep writing them and say so.** If the fairness analysis is genuinely wanted later, the counts
-   are cheap and the honest fix is a comment naming who reads them and when — not silence.
-
-**Do not half-remove it.** Stopping the write while leaving the "for fairness analysis" comment is
-exactly the plausible-but-false signal this repo keeps paying for.
-
-One input against option 1 being obviously right: `player_milestones` stores `word` rows only for
-words of **length ≥ 10** (the client-side floor capping the write lane). So `words` is *not*
-redundant with the milestone lane — it is the only record of a round's total word count. `pangrams`
-genuinely is redundant. Row cost of leaving it: ~14 kB across the whole table.
-
----
-
 ## References
 
 - [`docs/disaster-recovery.md`](../../../docs/disaster-recovery.md) — the runbook section 1 tracks the open work for.
 - Supabase Database Backups — https://supabase.com/docs/guides/platform/backups (free-tier `db dump` guidance).
 - [`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup.md) — the encrypted dump; agent half shipped, operator half owed.
 - [`ISSUE-05`](ISSUE-05-dead-is-perfect-column.md) — the `is_perfect` DROP, scheduled to runbook step 5 rather than deferred here.
-- [`src/app/api/game-scores/route.ts`](../../../src/app/api/game-scores/route.ts) — `resolveProfiles()` (section 2) and the `data` payload contract (section 4).
+- [`src/app/api/game-scores/route.ts`](../../../src/app/api/game-scores/route.ts) — `resolveProfiles()`, the hottest read against `player_profiles` (section 2).
 - [`src/app/api/cleanup-scores/route.ts`](../../../src/app/api/cleanup-scores/route.ts) + [`src/config/retention.ts`](../../../src/config/retention.ts) — the prune and what it deliberately skips.
 - `.claude/skills/project-mcp/SKILL.md` — the advisor baseline explaining why the always-true INSERT policy is intended.
 - The `supabase` CLI is an approved devDependency; `db push` works without Docker.
