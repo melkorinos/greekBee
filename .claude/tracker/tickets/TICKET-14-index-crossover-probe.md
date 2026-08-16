@@ -115,9 +115,9 @@ update the docs, drop the database.
 - [ ] **`ISSUE-01` §2** — replace the three-step reserved verification with what was measured. If the
       planner flips as expected, the section is discharged and deleted; if it does not, that is a real
       finding and gets its own ticket.
-- [ ] **`ISSUE-01` §3** — record the verdict on the index, and fix the two stale statements while
-      there: it says **190** rows (live: **191**) and attributes the sequential scans to the listing
-      GET rather than the lookup's unindexed counts.
+- [ ] **`ISSUE-01` §3** — record the verdict on the index. Its two stale statements (a 190-row count,
+      and the sequential scans attributed to the listing GET) were already corrected on 2026-08-16
+      alongside ADR 0011's amendment; nothing else there is known to be wrong.
 - [ ] If the index earns its place, write its body into **runbook step 5** in
       `.claude/handoffs/launch-readiness.md`, beside the `is_perfect` DROP — **not** into
       `supabase/migrations/`, which is frozen until release day.

@@ -5,6 +5,40 @@
 
 ---
 
+## Session 160 — 2026-08-16: the row that is two things at once
+
+Operator asked whether `ISSUE-07` needed grilling before a fix. **It did, and the file was already
+gone** — s157 folded it into `ISSUE-01` §3, yet the opening `@`-mention served the deleted file's
+content in full, so everything below was re-measured against disk. Ran concurrently with s159.
+
+**Three measurements moved the design before any decision.** `nominations` carries exactly **two
+indexes** (the PK, and the partial unique on `(word, direction) WHERE status = 'pending'`), so the
+lookup route's `rejected`/`accepted` counts match **none** — that, not the listing GET, is what §3's
+4,655 sequential scans are. The review route never sets `reviewed_at` (only `apply-nominations`
+does), so an approved-but-unapplied row escapes the 30-day sweep forever — but **41 accepted, 0 with
+a null `reviewed_at`**, so the manual habit holds. And of 191 rows (**148/41/2**) exactly **one is
+not normalised**: «ιουνιος» ends in a final sigma, so a re-proposal normalises to «ιουνιοσ» and its
+own warning can never fire; the blocklist misses it too, running on `add` only.
+
+**The finding worth keeping is a domain one.** A `rejected` row does two jobs — it is one player's
+**Nomination**, perishable, and the standing **Refusal** that warns the next player. Only the second
+is why ADR 0011 keeps it, and the ADR never named it, which is why "prune the rejected rows" looks
+cheap to every session that meets this table and why the fix always seems to need a replacement
+`rejected_words` set. Naming them apart dissolved it: keep the row, make the lookup cheap.
+
+**Two corrections, both mine, both caught by a machine rather than by thought.** I called the index
+work executable now because PostgreSQL 18.4 was **accepting connections** — but every `pg_hba.conf`
+line is `scram-sha-256` and `.env.local`'s `PGPASSWORD` is the *Supabase* one: **the check I ran was
+adjacent to the claim I made.** Then `trackerReferences.test.ts` failed `TICKET-14`'s first draft for
+naming `ISSUE-10` — a reference to a file that does not exist is dangling even as a reservation.
+
+Shipped: the **ADR 0011 amendment** (retention affirmed; `rejected_words` decided against; rate
+limiting left with the accepted risk; `pending` bounded by the partial unique index, so no review SLA
+is owed), **`CONTEXT.md` gaining `Refusal`**, and **`TICKET-14`**, which *measures* whether the
+`(word, direction, status)` index earns its place instead of assuming it — deliberately **not**
+blocked on `TICKET-13` (a planner question needs volume, not real rows), only on the local Postgres
+password. Two operator decisions are parked in it, not in a conversation. 200 files / **2610 tests**.
+
 ## Session 159 — 2026-08-16: the blocker that was never there
 
 Operator asked whether `ISSUE-06` (profile sequential scans) was implementable. **It said it was
@@ -45,45 +79,11 @@ share a subject, not a cause.** `ISSUE-05`'s migration freeze is what makes this
 pending migration lands in **one afternoon**, the same one `launch-reset.sql` wipes four tables.
 200 files / **2610 tests**, eslint 0, build 0.
 
-## Session 158 — 2026-08-16: a purpose nobody ever had
-
-Operator asked whether `ISSUE-09` was implementable. **It needed one ruling and the file said so.**
-Grilled (`/grill-with-docs`): the "fairness analysis" the Leksokipos `{ words, pangrams }` write
-existed for **does not exist and is not wanted** — which collapsed the other two questions (who runs
-it, and whether a public-read count matters) before they were answered.
-
-Two facts reframed the file first. `launch-reset.sql` empties `game_scores` at runbook step 4, so
-the 536 rows the issue proposed leaving intact are condemned one step earlier — the decision was only
-ever about post-launch data. And the redundancy split held: `pangrams` is derivable from
-`player_milestones`, `words` from nothing, since score is not a word count (pangram bonus 7 plus
-length weighting) and the milestone lane floors at 10 letters.
-
-**The operator supplied the fact that killed the last argument.** `words` was called *the only record
-of a round's total word count* — but `flushOutbox` posts without `data`
-([`offlineOutbox.ts:115-121`](../../src/lib/offlineOutbox.ts#L115-L121)), so any Score queued in
-Offline Mode already landed `{}`. Not the only record, a **silently lossy** one. Twelfth ledger
-entry, and the first where the unchecked claim was one I *repeated from a file* rather than wrote.
-
-Removed **end to end** rather than at the call site: the hook's `data` argument,
-`StandardScorePayload.data`, and the `isCountRecord` sanitizer with its test file — a
-validated-but-unused lane is the same plausible-but-false signal as the comment. Leksiarxeio is
-untouched; its per-length jsonb is written server-side by `mergeLengthScore` in the route's own
-branch and never travelled through the standard payload. The route is now **stricter than the guard
-it lost**: the body is destructured field by field, so a cached bundle still posting counts has them
-ignored rather than sanitized. Two replacement tests — no `data` reaches the upsert, and both posters
-send exactly five fields.
-
-`ISSUE-01` loses section 4 **and the intro claims about it**, which were wrong in both directions:
-the counts were never blocked on the dev/prod split, and "never been rehearsed" describes the
-restore. Rewritten, not annotated. `CONTEXT.md`'s `game_scores` row now owns the shape — the `data`
-jsonb is Leksiarxeio's alone. 200 files / **2610 tests**, eslint 0, build 0, **e2e 13/2 skipped**;
-the first e2e run failed 8 specs on a Turbopack cache corrupted by running it alongside vitest, and a
-clean re-run is green — **never read a broad e2e failure as a verdict on a narrow change**.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 158 | 2026-08-16 | **A purpose nobody ever had.** `ISSUE-09` needed one ruling: the "fairness analysis" the Leksokipos `{ words, pangrams }` write existed for **does not exist and is not wanted**, which collapsed the other two questions before they were answered. Two facts reframed the file — `launch-reset.sql` condemns the 536 rows at runbook step 4, so the decision was only ever about post-launch data; and `pangrams` is derivable from `player_milestones` while `words` is derivable from nothing (score is not a word count, and the milestone lane floors at 10 letters). **The operator supplied the fact that killed the last argument:** `words` was called *the only record of a round's total word count*, but `flushOutbox` posts without `data`, so any Score queued in Offline Mode already landed `{}` — not the only record, a **silently lossy** one. Twelfth ledger entry, and the first where the unchecked claim was one I *repeated from a file* rather than wrote. Removed **end to end** (the hook's `data` argument, `StandardScorePayload.data`, `isCountRecord` + its test file) rather than at the call site; the route now destructures field by field, so a cached bundle still posting counts has them **ignored rather than sanitized**. Leksiarxeio untouched — its per-length jsonb is written server-side and never travelled the standard payload. `ISSUE-01` lost section 4 **and the intro claims about it**, which were wrong in both directions. 200 files / 2610 tests, e2e 13/2-skipped — the first run's 8 failures were a Turbopack cache corrupted by running e2e alongside vitest; **never read a broad e2e failure as a verdict on a narrow change**. |
 | 157 | 2026-08-16 | **A gate that was guarding nothing.** `ISSUE-05` blocked the dead `is_perfect` `DROP COLUMN` on `TICKET-11` — DDL against append-forever data must wait for a restorable dump. **`launch-reset.sql` dissolved it:** runbook step 4 deletes every `game_scores` row, so the 536 rows a dump would protect are condemned one step earlier; the block reasoned from the rule instead of from what obeying it buys. Grilled to a **schedule, not a fix** (four batches, eleven decisions): the drop becomes **runbook step 5**, between wipe and announce, **the one moment the risk is genuinely zero** — which beats the "do it now, the risk is small" reading the file was drifting toward. **Nothing enters `supabase/migrations/` in advance** (a committed-but-unpushed migration fires on the next unrelated `db push`), so the SQL is pre-written *as text* in the step with an `information_schema` verify and an explicit "does not gate the announce". **`coverageMap.md` was not stale but wrong** — three entries described an `is_perfect` latch deleted in s108; a gap makes you write a test you may have, a false entry makes you trust one that never existed. Operator then consolidated the DB issues: `ISSUE-01` absorbed `06`/`07`/`09` as sections, `ISSUE-05` stayed out as scheduled work. Three `SPENT` rows. 201 files / 2618 tests. |
 | 156 | 2026-08-15 | **Names stop being photocopies.** `ISSUE-08` shipped, `ISSUE-06` refused (it records no defect — the planner is right at 47 rows). `game_scores.display_name` was kept fresh by a fan-out `UPDATE` over every score row of a device, living in one of the **four** routes that can set a name, so 118 of 536 rows (22%) disagreed with the profile. Fix = resolve at read time: the leaderboard GET already batched a `player_profiles` `in()` for badges, so `resolveBadges` became **`resolveProfiles`** returning name *and* badge — no migration, no extra round-trip, and `TICKET-12`'s third write-amplification lane retired. **The measurement that changed the design:** the issue claimed the stored copy becomes redundant; **19 of 52 scoring devices have no profile row at all** (a device only gets one once it sets a name or picks a badge), so dropping it would have blanked a third of the leaderboard. It stays as the fallback — eleventh ledger entry. `profileRoute.test.ts` asserts the *absence* of the update. Also: **a second session was editing this tree throughout**, moving `HEAD` twice, found by `git log` and not by any announcement; a diagnostic `git stash` reverted its work and popped back by luck. 201 files / 2618 tests, e2e 13/2-skipped. |
 | 155 | 2026-08-15 | **The database is fine, and that was the finding.** Docs only. `pg_database_size` 13 MB against a 500 MB ceiling (~1.5 MB of it the 13 public tables), growth ~1.2 kB per active player per day — nothing is close, and the billed figure is ~2× the SQL one (27.37 MB). Schema had drifted from `project-mcp`'s note: `player_pangrams`/`player_words` are gone into `player_milestones`, which grows at **3.4 rows/player/day against game_scores' 1.2**, so the fastest-growing table is the small one. **The interesting numbers were writes, not bytes** — `game_state` has taken 29,025 updates to hold 83 live rows (350:1). Cause in code: Leksokipos writes **twice per word** and `pushFoundWords` posts the whole array each time, so a 40-word round sends ~820 word-slots to persist 40. Judged **not a problem** (~80k upserts/day at 1000 players is under 1 write/sec) → `TICKET-12`, threshold **in the title** at the operator's request so a future session reads "don't build this yet" first. Four issues filed (`ISSUE-05`/`06`/`07`/`08`); **08 was filed as `ISSUE-04` and renamed the same day — a number spent twice** because I read the folder to pick it, and a spent number cannot appear there: shipped files are deleted, so the folder always looks free. `trackerReferences.test.ts` caught it. |

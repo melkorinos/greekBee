@@ -127,7 +127,9 @@ Two facts combine badly.
 deletes nominations only when all three hold: `status = 'accepted'`, `reviewed_at IS NOT NULL`, and
 `reviewed_at` older than `NOMINATION_APPLIED_RETENTION_DAYS` (30). Its comment states the intent
 plainly — *"Rejected and pending nominations are never deleted."* So `rejected` accumulates forever,
-and `pending` accumulates forever if nobody reviews it. Measured: 190 live rows, 2 pending.
+and `pending` accumulates forever if nobody reviews it. Measured 2026-08-16: **191 rows — 148
+rejected, 41 accepted, 2 pending**. `pending` is the least of it: the partial unique index admits one
+pending row per `(word, direction)`, so that queue is bounded by distinct words, not by volume.
 
 **Anyone can insert.** RLS on `nominations` is a deliberate permissive open-INSERT policy (one of the
 15 `rls_policy_always_true` warnings the project-mcp skill documents as by-design), and the route
@@ -140,8 +142,11 @@ an independent leak.
 The exposure is not storage — a row is ~200 bytes. The real costs are the **review queue becoming
 unusable** (`/leksikastirio` lists pending nominations and there is no bulk-reject), **`word` and
 `note` being free text written by strangers and rendered in an admin UI** (a moderation problem, not
-a size one), and the listing GET already scanning (4,655 sequential scans reading 697,815 tuples at
-190 rows — fine now, linear later).
+a size one), and **the lookup already full-scanning the table** — `nominations` carries only the
+primary key and the partial unique on `(word, direction) WHERE status = 'pending'`, so the `rejected`
+and `accepted` counts in `GET /api/nominations/lookup` match no index at all. That, not the listing
+GET, is what the 4,655 sequential scans over 697,815 tuples are, and it grows in exactly the rows
+nothing prunes. `TICKET-14` measures whether a `(word, direction, status)` index earns its place.
 
 **This does not reopen the accepted risk.** `reflections.md` carries an *"API rate limiting (accepted
 risk)"* entry covering anon INSERT spam across all routes, with a ~500 DAU trigger and a 5,000-row
@@ -149,12 +154,21 @@ risk)"* entry covering anon INSERT spam across all routes, with a ~500 DAU trigg
 is recorded here is the nominations-specific half that a rate limit would not fix: the retention
 asymmetry and the moderation-queue consequence.
 
-**Why deferred** — every real fix needs an undecided decision. *Rate limiting* needs a throttle key
-that is not `device_id`, meaning IP-based limiting at the edge (Vercel firewall rules) or a Postgres
-counter table, with cost implications either way. *Pruning rejected* is easy but removes what stops a
-word being re-nominated and re-reviewed forever — it needs a replacement de-duplication mechanism,
-most likely a small `rejected_words` set outliving the rows. *Pruning stale pending* presumes a
-review SLA that does not exist. None should be guessed at under launch pressure.
+**Two of the three questions here are now closed** (grilled 2026-08-16, recorded as ADR 0011's
+amendment). *Pruning rejected* is decided against, and so is the `rejected_words` set this section
+used to propose as its replacement: a rejected row is both a **Nomination** and the standing
+**Refusal** that warns a re-proposer, and keeping it is cheaper than rebuilding the second half
+elsewhere. *Pruning stale pending* is moot — see the bound above; no review SLA is owed.
+
+**What is still deferred is the moderation half**, which no retention rule and no rate limit
+addresses: there is no bulk-reject, and `word`/`note` are stranger-authored free text rendered in an
+admin UI. *Rate limiting* stays with the platform-wide accepted risk and is not re-opened here — it
+would need a throttle key that is not the spoofable `device_id`, meaning edge IP limiting or a
+Postgres counter table, with cost implications either way.
+
+Open, and parked on `TICKET-14` rather than in a conversation: whether this moderation half leaves as
+its own issue, and when the one non-normalised row (`ιουνιος`, whose Refusal warning can therefore
+never fire) gets fixed.
 
 ---
 
