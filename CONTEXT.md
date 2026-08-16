@@ -159,6 +159,8 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 
 **Nomination Status** — `"pending"` → `"accepted"` or `"rejected"`.
 
+**Refusal** — The standing verdict that a word will not be added or removed. Distinct from the **Nomination** that carried it: a Nomination is one player's submission and could in principle be forgotten, while a Refusal must outlive it — it is what warns the next player that this word has already been argued and lost. The two are carried by the same rejected row today, which is why that row is never deleted (ADR 0011); naming them apart is what stops a future session reading the retention rule as an oversight. (Not: a rejected Nomination, which is one submission; not the proper-noun/month/place guard that refuses a word before any Nomination is filed)
+
 **Vote** — Player endorsement of a Nomination, stored as `(nomination_id, device_id)`.
 
 **Admin Mode** — `?admin=<secret>` URL param matching `ADMIN_SECRET`. Reveals Approve/Reject on Nomination Cards and Community Puzzle review tabs. Not linked from nav. On the wire the secret always travels as an `X-Admin-Secret` header and a bad one is always a 401 — one shape across every admin route, enforced by `requireAdmin` in the **Route Envelope** (ADR 0016).
