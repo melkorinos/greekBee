@@ -32,7 +32,7 @@ Audited against the filesystem and git on 2026-08-14, re-cut against the operato
 |---|---|---|
 | `TICKET-05` | **Split, and no longer a deploy blocker. Part A shipped 2026-08-15** — the 🔊 toggle is behind `FEATURE_FLAGS.soundCues`, off, with the machine wired and inert beneath it. What is left is Part B: the three MP3s, **post-launch and optional**, ending in the flag flip | operator, no date |
 | `TICKET-11` | **New 2026-08-15, agent half shipped the same day.** `npm run db:backup` now emits an AES-256 `.7z` and refuses to run unprotected; `docs/disaster-recovery.md` carries the restore order. What is left is **operator-only**: create the private Drive folder, set and safely store `BACKUP_ARCHIVE_PASSWORD`, and prove one archive extracts on another machine. Must be done **before** runbook step 3 is executed | operator |
-| `TICKET-10` | **In-progress, and now owns the platform logo.** The metadata half shipped in s151 (`PLATFORM_DESCRIPTION` now filters `hidden`, guarded by seam 1d; `metadataBase`/`openGraph`/`twitter` in `layout.tsx`; `PLATFORM_ORIGIN`). What is left: `opengraph-image`, `icon`, `apple-icon`, deleting the stock `favicon.ico` that ships the **Next.js logo** in production today, and a test that the metadata block survives. **Blocked on one operator pick** — a card number and an icon number from `html/share-card-candidates.html`, the icon being the mark itself | operator pick, then agent |
+| `TICKET-10` | **Code complete 2026-08-16. The pick is made and the platform logo now exists** — card 18 and icon 1, built from one shared mark so the favicon cannot drift from the card. `opengraph-image`, `icon`, `apple-icon`, the stock `favicon.ico` deleted, and a guard test that *renders* the images rather than matching source. All four gates clean; all three images prerender static. **Nothing is pending but a look:** the card has to be seen in a real scraper, which cannot happen before a deploy. It is not a separate task — it rides runbook steps 1–2 | operator, at deploy |
 
 ### Owed, and not tickets
 
@@ -56,10 +56,10 @@ Games' content supply. **`ISSUE-05` is not in this list** — it is scheduled, a
 - **UI redesign** — operator-driven in separate sessions. Untracked by design.
 - **Game icons** — `.claude/handoffs/game-icon-system.md` + `goals.md` item 5. Nothing designed;
   that handoff exists to make a grill productive and is expected to produce a ticket.
-- **Platform logo** — **folded into `TICKET-10` on 2026-08-15** and owned there. The icon the
-  operator picks from the candidates page *is* the mark; there is no separate logo project and no
-  placeholder branch. This was the last untracked item, and the last live dependency between two
-  pieces of launch work. Do not re-file it here.
+- **Platform logo** — **done 2026-08-16, and no longer pending anywhere.** Folded into `TICKET-10`
+  on 2026-08-15 on the ruling that the icon the operator picks *is* the mark; the operator picked
+  icon 1 the next day and it shipped as `src/app/_brand/fan.tsx`. There was never a separate logo
+  project and there is no placeholder to revisit. Do not re-file it here.
 
 ---
 
@@ -178,8 +178,9 @@ list and the go/no-go is a scheduling call.
 - **No ordering constraints survive between the tickets at all**, as of 2026-08-15. The
   `TICKET-08`-before-`TICKET-07` coupling was withdrawn once the no-SDK ruling made it moot; both
   shipped. The last one, **platform logo → `TICKET-10`**, dissolved when the logo moved *inside*
-  `TICKET-10`. Both remaining tickets can be worked in any order, or at the same time — what gates
-  them is two operator acts (one pick, one flag decision already made), not each other
+  `TICKET-10`. **As of 2026-08-16 only one operator act gates anything at all** — `TICKET-11`'s
+  backup setup, which runbook step 3 depends on. `TICKET-10`'s pick is spent, and its one open box
+  is a look at the deployed card, which the merge itself provides
 - The UI redesign runs in parallel on operator sessions and is deliberately **not an input** — it
   cannot block this, and if it turns out to, that is a new decision rather than a known one
 
@@ -218,8 +219,15 @@ work is **ADR 0018's Amendments**, and Offline Mode's park is **ADR 0010** plus 
   `TICKET-05` no longer blocks a deploy. The agent hides the 🔊 button behind
   `FEATURE_FLAGS.soundCues`; the MP3s land whenever they land and flip it on. Reversing this means
   the launch waits on three audio files again.
+- **2026-08-16 — The mark is card 18 and icon 1: three letter tiles fanned out, Ω Λ π.** Chosen by
+  the operator from the round-two candidates page and shipped the same session. Two things worth
+  keeping: the three glyphs are all inside the six the `ImageResponse` font already covers, so the
+  card costs **no committed font file**; and the card renders **regular weight, not bold**, because
+  that font ships one weight — accepted as reading deliberate rather than wrong. A six-glyph subset
+  would fix it for single-digit KB if that ever matters, which is far below the ~350 KB this
+  document's font warning assumed.
 - **2026-08-15 — The platform logo is `TICKET-10`'s icon pick, not a project.** Removes the last
-  cross-item dependency on this document.
+  cross-item dependency on this document. **Discharged 2026-08-16** by the ruling above.
 - **2026-08-15 — The preview play-through leaves this document.** The operator tests every branch on
   preview by habit; tracking it here recorded a routine rather than a task.
 - **2026-08-15 — The release-day dump never enters a git repository.** The repo is public and
