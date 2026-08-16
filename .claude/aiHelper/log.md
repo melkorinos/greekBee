@@ -5,6 +5,37 @@
 
 ---
 
+## Session 163 — 2026-08-16: the Platform gets a face
+
+`TICKET-10` had been blocked since s151 on one operator pick, made here in two steps: card **18**
+from the round-one page, then icon **1** off a round-two page built for the second half of the
+decision (card 18 plus three variations, **eight icons derived from the fan**, lockups for each).
+
+**One drawing, not three.** `src/app/_brand/fan.tsx` is rendered by `opengraph-image`, `icon` and
+`apple-icon` at their own sizes, the only thing stopping a favicon drifting from a share card. Two
+satori constraints are encoded in it: **paint order decides what lands on top, not `z-index`** — the
+centre tile is emitted last, and the preview's `z-index:2` would have shipped a teal π over the
+yellow Λ; and the letters must stay inside the six Greek glyphs the shipped font covers, now pinned
+by a test against the module's own `letter:` fields.
+
+**The durable lesson is s143's, one layer deeper.** s143 established that no visual decision gets
+made in prose — render it and look. The same failure turned up *inside* the rendered preview: the
+candidates page drew every mark `font-weight: 700` and scaled one 180 px master by CSS transform,
+and **neither survives the real renderer.** `ImageResponse` ships a single-weight font, so the card
+is regular, not bold; the true 32 px icon is muddier than a scaled one. **A preview is only evidence
+about the renderer that drew it.** Generating the actual PNGs found both, for one throwaway test.
+
+That is also why the guard test **renders** and reads the PNG header rather than matching source: a
+blank card passes every text match there is. It needs the `node` environment (sharp rejects satori's
+SVG under jsdom), which exposed that `src/test/setup.ts` assumed a DOM for the whole suite.
+
+One number corrected: the ticket's "~350 KB font file" price was for **full Greek coverage**, while
+the card needs six Greek glyphs plus `Leksarxeia` — single-digit KB. That wrong figure had framed the
+choice since s151. `favicon.ico` was **verified** as the untouched stock file before deletion. 202
+files / **2637 tests**, eslint 0, build 0, e2e 13/2-skipped; all three images build `○ (Static)`.
+Decision marked in `launch-readiness.md`, the HTML page and the ticket, **rewriting three claims the
+pick falsified rather than appending under them**. `manifest.ts` decided against, not deferred.
+
 ## Session 162 — 2026-08-16: a border the whole platform did not ask for
 
 Operator wanted Λεξιαρχείο's and Βρες τη Φράση's letter boxes "20% darker and 10% thicker", with
@@ -45,46 +76,11 @@ Ran concurrently with s160 **and** s161: `HEAD` moved three commits mid-session,
 and by an edit tool reporting the file had changed under me. Staged explicit paths; left the other
 session's two open files alone.
 
-## Session 161 — 2026-08-16: the letter goes to the word that owns it
-
-Operator sent a **screenshot of the live Vres Tin Frasi board** and asked whether a purple tile was
-wrong. It was — and **the conclusion was right while the reason was inverted**, which is what made
-the check worth running: the operator reasoned "word 3 has no Α, so word 1's Α should be grey", but
-word 3 *is* ΔΙΔΑΣΚΩ and does contain an Α. That Α is precisely why the purple appeared.
-
-**`evaluatePhraseGuess` enforced ADR 0004's yellow-over-purple priority per tile and never across
-the phrase.** Pass 2 walked the words in index order making both kinds of claim in one sweep, so
-word 0's cross-word claim consumed an answer letter word 2 owned; word 2's own tile then fell to
-grey and word 0 showed a purple it had not earned. **Word order, not information value, decided who
-got the letter.** It fired **twice in the one screenshot** — ΒΙΑΣΜΟΣ's α and ΦΟΥΡΝΟΣ's σ both grey
-while ΜΑΝΑΡΙΑ and ΠΕΡΑΣΜΑ wore the purple for them.
-
-`/diagnosing-bugs` then `/tdd`, seam agreed as the pure function alone. The answer phrase was
-recovered from `phrases-el.json` by word-shape before any theory (**ΜΑΘΑΙΝΩ ΚΑΙ ΔΙΔΑΣΚΩ**), so the
-probe reproduced the board **tile for tile** rather than approximately.
-
-**The blast radius was measured, not estimated.** Across all **658 same-shape guess/answer pairs**
-in the corpus, **170 (26%)** held at least one mis-coloured tile, and the only transitions are
-`purple→grey` (198) paired **1:1** with `grey→yellow` (198) plus `purple→yellow` (13) — so the fix
-**only ever moves a signal to the tile that earned it** and no tile loses a `present` or `correct`.
-That pairing is the argument the change is safe; a raw "170 boards change" would have read as risk.
-
-Fix = pass 2 split into two sweeps (all same-word claims, then all cross-word). **Four tests, proven
-non-vacuous by restoring the old algorithm** — exactly those four fail, nothing else, so no existing
-test had been encoding the bug. **One test bug caught en route:** I typed final sigma `ς` in
-ΦΟΥΡΝΟΣ/ΒΙΑΣΜΟΣ, which `normalizeLetters` collapses to `σ` before this function ever runs — the test
-was feeding input production cannot produce, and it failed for that and not for the code.
-
-Accepted and written into the commit: **`RESTORE_STATE` replays stored tiles rather than re-deriving
-them**, so a round in progress at deploy keeps its old colours until the next daily rotation —
-operator's call, self-healing, not filed. ADR 0004 carries a dated amendment; `coverageMap.md`'s row
-said "two-pass" and now does not. Ran concurrently with s160, which committed its Dream mid-session;
-staged four explicit paths and left its two open files alone.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 161 | 2026-08-16 | **The letter goes to the word that owns it.** Operator sent a screenshot of the live Vres Tin Frasi board asking whether a purple tile was wrong. It was — and **the conclusion was right while the reason was inverted**, which is what made checking worth it: the operator reasoned "word 3 has no Α", but word 3 *is* ΔΙΔΑΣΚΩ and its Α is precisely why the purple appeared. **`evaluatePhraseGuess` enforced ADR 0004's yellow-over-purple priority per tile and never across the phrase** — pass 2 walked words in index order making both kinds of claim in one sweep, so word 0's cross-word claim consumed a letter word 2 owned and word 2's own tile fell to grey. **Word order, not information value, decided who got the letter**; it fired twice in the one screenshot. The answer phrase was recovered from `phrases-el.json` by word-shape *before* any theory (ΜΑΘΑΙΝΩ ΚΑΙ ΔΙΔΑΣΚΩ), so the probe reproduced the board tile for tile. **Blast radius measured, not estimated:** of 658 same-shape pairs in the corpus, 170 (26%) held a mis-coloured tile, and the only transitions are `purple→grey` (198) paired **1:1** with `grey→yellow` (198) plus `purple→yellow` (13) — the fix only ever moves a signal to the tile that earned it, which is the argument it is safe; a raw "170 boards change" would have read as risk. Fix = pass 2 split into two sweeps. Four tests, non-vacuous by restoring the old algorithm. **One test bug en route:** I typed final sigma `ς`, which `normalizeLetters` collapses before the function runs — the test fed input production cannot produce. Accepted: `RESTORE_STATE` replays stored tiles, so a round in progress at deploy keeps old colours until rotation. ADR 0004 amended. |
 | 160 | 2026-08-16 | **The row that is two things at once.** Operator asked whether `ISSUE-07` needed grilling; **the file was already gone** (s157 folded it into `ISSUE-01` §3) while the opening `@`-mention served the deleted file's content in full, so everything below was re-measured against disk. Three measurements moved the design first: `nominations` carries exactly **two indexes**, so the lookup route's `rejected`/`accepted` counts match none — that, not the listing GET, is §3's 4,655 sequential scans; the review route never sets `reviewed_at`, so an approved-but-unapplied row escapes the 30-day sweep forever, but **41 accepted, 0 with a null `reviewed_at`** means the manual habit holds; and of 191 rows exactly **one is not normalised** («ιουνιος» ends in a final sigma, so its own re-proposal warning can never fire). **The finding worth keeping is a domain one:** a `rejected` row is both one player's perishable **Nomination** and the standing **Refusal** that warns the next player — only the second is why ADR 0011 keeps it, and the ADR never named it, which is why "prune the rejected rows" looks cheap to every session that meets this table. Naming them apart dissolved it: keep the row, make the lookup cheap. **Two corrections, both mine, both caught by a machine:** I called the index work executable because Postgres 18.4 was *accepting connections*, but every `pg_hba.conf` line is `scram-sha-256` and `.env.local`'s `PGPASSWORD` is the Supabase one — **the check I ran was adjacent to the claim I made**; then `trackerReferences.test.ts` failed `TICKET-14` for naming a reserved-but-nonexistent `ISSUE-10`. Shipped the ADR 0011 amendment, `CONTEXT.md` gaining `Refusal`, and `TICKET-14`, which *measures* whether the index earns its place. 200 files / 2610 tests. |
 | 159 | 2026-08-16 | **The blocker that was never there.** `ISSUE-06` said it was blocked on the dev/prod split; it was not, and **one environment check collapsed the premise** — PostgreSQL 18 was already installed for `pg_dump`, and whether the planner switches from a sequential scan to an index descent as a table grows is **Postgres behaviour, not Supabase behaviour**, so no hosted scratch project was ever required. **ADR 0024: no split**, on three reasons none reconstructible from code — the free org's second slot is the **disaster-restore target** and `disaster-recovery.md` step 3 needs it empty; an **empty staging DB passes exactly the migrations that hurt** (`NOT NULL` meeting real nulls, unique index meeting real duplicates); and seeding one from a dump puts a **second permanent cloud copy of every player's email** in play. Operator declined Pro, which would have dissolved the question. **Docker was measured out, not argued out**: across all 19 migrations the only objects outside `public` are `auth.uid()` (4 refs) and `auth.users` (3), so the compatibility surface is a ~15-line shim. **The worst finding was not architectural** — `BACKUP_ARCHIVE_PASSWORD` is absent from the real `.env.local`, so `npm run db:backup` throws before dumping; `db-backups/` holds two **unencrypted** folders; the weekly task is unregistered, and registering it would have created a job **failing every Sunday at 02:00 while looking like coverage**. Order corrected: password, dump, verify extraction, then schedule. Thirteenth ledger entry, and **the false claim was mine** — I called §4's content lost in the fold when `git log --diff-filter=D`, run one call earlier, already showed it fixed. Shipped ADR 0024, `TICKET-13`, the CONTEXT glossary's Backup/Restore/Rehearsal, and an `ISSUE-01` retitle. 200 files / 2610 tests. |
 | 158 | 2026-08-16 | **A purpose nobody ever had.** `ISSUE-09` needed one ruling: the "fairness analysis" the Leksokipos `{ words, pangrams }` write existed for **does not exist and is not wanted**, which collapsed the other two questions before they were answered. Two facts reframed the file — `launch-reset.sql` condemns the 536 rows at runbook step 4, so the decision was only ever about post-launch data; and `pangrams` is derivable from `player_milestones` while `words` is derivable from nothing (score is not a word count, and the milestone lane floors at 10 letters). **The operator supplied the fact that killed the last argument:** `words` was called *the only record of a round's total word count*, but `flushOutbox` posts without `data`, so any Score queued in Offline Mode already landed `{}` — not the only record, a **silently lossy** one. Twelfth ledger entry, and the first where the unchecked claim was one I *repeated from a file* rather than wrote. Removed **end to end** (the hook's `data` argument, `StandardScorePayload.data`, `isCountRecord` + its test file) rather than at the call site; the route now destructures field by field, so a cached bundle still posting counts has them **ignored rather than sanitized**. Leksiarxeio untouched — its per-length jsonb is written server-side and never travelled the standard payload. `ISSUE-01` lost section 4 **and the intro claims about it**, which were wrong in both directions. 200 files / 2610 tests, e2e 13/2-skipped — the first run's 8 failures were a Turbopack cache corrupted by running e2e alongside vitest; **never read a broad e2e failure as a verdict on a narrow change**. |

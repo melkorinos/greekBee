@@ -68,18 +68,15 @@ wherever a gate cites a rule instead of a consequence: the question is never "do
 but "what does obeying it protect, here."
 
 **s159 — the predicted failure was already live, and worse than predicted.** This entry warned that
-"a weekly cadence nobody uploads is worse than no cadence." Measured: `BACKUP_ARCHIVE_PASSWORD` is
-absent from `.env.local`, so `npm run db:backup` **throws before dumping anything**; `db-backups/`
-holds two unencrypted folders whose newest is 2026-08-08, predating `TICKET-11` entirely; and the
-weekly task is unregistered. So there is **no encrypted archive in existence** — three sessions have
-now written about the backup's destination, encryption and cadence while the thing itself has never
-run once in its finished form. The operator had approved registering the scheduler that same session,
-which would have produced exactly the folder-of-evidence failure named above, except emptier: a job
-throwing at line 107 every Sunday at 02:00 with nobody watching stderr. **Order corrected to password
-→ manual dump → verify extraction on another machine → schedule.** The general shape: **work that
-ships as a script is not work that has run**, and a `TICKET`'s "agent half shipped" says nothing about
-whether the artifact it produces exists. Watch for any other capability whose only evidence of
-working is that its code was reviewed.
+"a weekly cadence nobody uploads is worse than no cadence"; measurement found no encrypted archive in
+existence at all, three sessions after the destination, encryption and cadence had each been written
+up. (**Current measured state is `ISSUE-01` §1 — read it, never a copy here.**) Registering the
+scheduler was one approval away, which would have produced exactly the folder-of-evidence failure
+named above, except emptier: a job throwing before it dumps, every Sunday at 02:00, with nobody
+watching stderr. **Order corrected to password → manual dump → verify extraction on another machine
+→ schedule.** The general shape: **work that ships as a script is not work that has run**, and a
+`TICKET`'s "agent half shipped" says nothing about whether the artifact it produces exists. Watch for
+any other capability whose only evidence of working is that its code was reviewed.
 
 ### 🟡 Λεξόκηπος now degrades quietly where it used to degrade loudly (s153)
 
@@ -318,6 +315,20 @@ flagged in the reply rather than dropped** — which is now the third owed opera
 alongside the Trophy Case and the Shell header at four buttons. Watch: whether any of the three ever
 happens, or whether "flagged it in the reply" is quietly becoming this repo's substitute for a gate.
 
+**s163 — the render step happened, and the preview it produced was itself wrong.** s143's method says
+put the decision in HTML and look. The share-card page did that, and the operator picked from it — but
+the page drew every mark `font-weight: 700` and produced its 32 px icons by CSS-scaling one 180 px
+master, and **neither survives the renderer that actually ships the image**. `ImageResponse` carries a
+single-weight font, so the card is regular, not bold; and a true 32 px raster is muddier than a
+transform-scaled one. Both were found in minutes by generating the real PNGs and looking at them, and
+neither is visible from any test. **A preview is evidence about the renderer that drew it and nothing
+else** — the browser is a fine stand-in for a decision about shape or colour, and a poor one for
+anything about weight, hinting or small-size legibility. The generalisation on this list already says
+the suite's job is to lock decisions, not prove results; the corollary is that **the artifact you look
+at must come out of the pipeline that ships it**, not out of a convenient imitation of it. Cost here
+was one throwaway test that wrote three PNGs to scratch. Note this is the counter-example to the
+paragraph above: rendering was cheap, it was done, and it paid twice.
+
 ### 🟠 A DB test validates the migration and is blind to the deploy (s142, generalised)
 
 Recorded as a standing rule for the **next** migration window, since the `player_milestones` one is
@@ -343,14 +354,8 @@ Vres Tin Frasi shipped with 29% of its phrase corpus unsolvable — the game rej
 
 Related trap, same session: a derived file can be **regenerated empty**. `words-1.json` had to be authored and deliberately placed outside `src/data/leksiarxeio/`, because the re-sync adapter rebuilds those from `words-el.json`, which has no single-letter entries. Any future "just add a list" instinct should first ask whether a re-sync owns that directory.
 
-### Leksindeseis "one away" UX gap
-The reducer detects "one away" and sets feedback text, but `GroupGrid` has no visual highlight indicating _which_ group the player is close to. NYT shows colour intensity. Consider adding in Phase 4 polish.
-
-### Custom URL word count warning
-The `/leksokipos/[center]/[outer]` route shows a banner if `validWords.length < 5`, but there is no lower bound that triggers a 404 — a player can construct a URL that yields 0 valid words. The UX is honest (warning banner), but consider whether to 404 on 0-word combos instead.
-
-### Greek letters in URLs
-Modern messaging apps (WhatsApp, Telegram, iMessage) and all mainstream browsers handle Greek path segments correctly via IRI/percent-encoding. Edge risk: some old email clients or corporate proxies may mangle `%CE%B1`-style sequences. Acceptable for the current use case; document if a user reports it.
+### 🟡 Two small UX gaps, both accepted and unfiled
+Leksindeseis's reducer detects "one away" and says so in text, but `GroupGrid` never shows *which* group is close (NYT uses colour intensity). And `/leksokipos/[center]/[outer]` warns when `validWords.length < 5` yet has no lower bound that 404s, so a hand-built URL can yield zero valid words — honest, but arguably the wrong response. Neither is a defect; both are polish, and they live here rather than in `tracker/` because neither has ever been asked for.
 
 ### 🟡 API rate limiting (accepted risk)
 
@@ -375,33 +380,16 @@ SELECT (SELECT count(*) FROM game_scores) AS scores, (SELECT count(*) FROM nomin
        pg_size_pretty(pg_database_size(current_database())) AS db_size;
 ```
 
-**Measured 2026-08-12** (`execute_sql`, live DB) against the Free ceilings read off supabase.com/pricing,
-with the two dashboard cells filled in by the operator 2026-08-13:
+**The measured numbers live in `ISSUE-01` — read them there, never a copy here.** They have been
+re-measured twice since this entry was written, which is exactly how a second copy goes stale. What
+belongs here is the shape they had: every quota sits in low single-digit percentages, and the growth
+rate is ~1.2 score rows per player per day, so on a generous 50-players/day soft launch the 500 MB
+ceiling is decades away and the row tripwire years away.
 
-| | now | Free limit | at limit |
-|---|---|---|---|
-| Database size | **27.37 MB** (dashboard figure — this is the billed one) | 500 MB | **5.5%** |
-| MAU | **8** auth users, lifetime | 50 000 | 0.02% |
-| File storage | **0 bytes, 0 buckets** | 1 GB | 0% |
-| Connections | **22 in use at idle** | 60 (`max_connections`, Nano) | 37% |
-| Egress | **~5 MB/day, peak 11 MB → ~150 MB/mo**; cached egress zero | 5 GB/mo | **3%** |
-| `game_scores` | **505** rows | (the 50 000 tripwire) | 1.0% |
-| `nominations` | **189** rows | (the 5 000 tripwire) | 3.8% |
-
-**Trust the dashboard's size number, not `pg_database_size`.** The SQL read said 13 MB and the usage
-page says 27.37 MB for the same database on the same day. The dashboard figure is what bills and
-what trips the read-only cliff, so the SQL row-count query is a *row* tripwire only — take size from
-the usage page. The measured egress landing on ~150 MB/month is the estimate below confirmed, not a
-coincidence worth re-deriving.
-
-**Traffic estimate, stated so it can be argued with:** 50 active days hold 505 scores from 51
-lifetime devices — a 30-day mean of **10.5 scores/day across 8.9 distinct devices**, so **≈1.2 score
-rows per player per day**. A soft launch to a wider circle plausibly lands 30–50 daily players; the
-arithmetic below uses **50/day**, a deliberately generous 5.6× the measured figure. At 50 players a
-day: 60 score rows/day at a measured **730 bytes per row including indexes** ≈ **16 MB/year**, so
-the 500 MB ceiling is **~25 years** away and the 50 000-row tripwire **~2.3 years**. Egress at an
-estimated ~100 KB/player/day is ~150 MB/month, **3%** of 5 GB; it needs roughly **1 700 players/day**
-to bind.
+**Trust the dashboard's size number, not `pg_database_size`.** The SQL read and the usage page
+disagreed by roughly 2× on the same database on the same day. The dashboard figure is what bills and
+what trips the read-only cliff, so treat the SQL query above as a *row* tripwire only and take size
+from the usage page.
 
 **The binding constraint is not one of the four quotas.** Ranked:
 
@@ -449,25 +437,18 @@ Tickets 01 (foundation) + 02 (playable UI, s127) shipped `wip:true` on one place
 - **Pool reachability — eased, and the bottleneck MOVED (s130).** 144 assets are staged against a 150 floor, helped by dropping the Greek-origin rule. Sourcing is no longer the risk; **curation is**: 0 of 144 are approved, and many are still full logos with the name attached. The remaining work is the eye check + wordmark stripping, which no script can do. Watch for the temptation to bank "144" as progress toward 150 — the honest number is 0 until marks are cropped and approved. If the pool still stalls, relax "recognizable" before "icon-only" (relaxing icon-only breaks the game outright). Blur difficulty stays a `BLUR_STEP_RADII_PX` knob.
 - **Automated sourcing is confidently wrong, and only verification catches it (s130).** Commons search matched ΔΕΗ to "Namibia Power Corporation" and ΣΤΑΣΥ to a Lithuanian choir — plausible-looking files, downloaded and presented as correct. Two of my *own* checks were also wrong until measured: the duplicate detector reported 48 false duplicates, and an HTML error page was saved as `logo.svg`. Nothing here is covered by the test suite (it is all `scripts/`), so the only defence is measuring the artifact rather than trusting the response. Any future expansion of this pipeline should assume its own output is wrong until checked.
 
-### 🟡 `coverageMap.md` is stale by roughly 31 files
+### 🟡 `coverageMap.md` covers 174 of 202 test files (measured s163)
 
-It covered 153 of 184 test files when it was moved back to `.claude/aiHelper/coverageMap.md` on
-2026-08-03, and no Dream since has reconciled the remainder. Grep it before writing a test, but do
-not read a miss as proof no test exists.
+The gap has never been closed by a Dream, only narrowed. Grep it before writing a test, but do not
+read a miss as proof no test exists. **Re-count rather than trusting this line** —
+`find src/test -name "*.test.*" | wc -l` against `grep -c "^| \`"` on the map.
 
-*(The move itself is resolved. The process lesson survives it: **when a mandated artifact is
-missing, search for it by name before concluding it does not exist** — `git log` on a missing path
-reports the containing directory's commits, which reads exactly like "deleted, never committed",
-and I nearly recommended deleting a rule on that basis.)*
-
-**s157 — the failure mode is worse than incompleteness.** Three entries did not merely omit a test,
-they **described tests that do not exist**: an "is_perfect latch" in `useScoreSubmission.test.ts`, an
-`isPerfectRound` in leksoplegma's `scoring.test.ts`, and "single live score post + is_perfect" in its
-`board.test.tsx`. The perfect-round wire was deleted in s108; the map has claimed coverage of it for
-seven months. A gap makes you write a test you may already have — a **wrong entry makes you trust
-one that was never there**, and the instruction to grep before writing turns it into a load-bearing
-lie. Corrected. When the Dream updates this file, re-read the rows it touches rather than only
-appending new ones.
+**The failure mode is worse than incompleteness (s157).** Three entries did not omit a test, they
+**described tests that do not exist** — an `is_perfect` latch in `useScoreSubmission.test.ts` and two
+siblings, all describing a wire deleted in s108, claimed as covered for seven months. A gap makes
+you write a test you may already have; a **wrong entry makes you trust one that was never there**,
+which turns "grep before writing" into a load-bearing lie. Corrected. When the Dream updates this
+file, re-read the rows it touches rather than only appending new ones.
 
 ### 🟡 ADR 0010's premise is dead; the ADR is not (s132)
 
@@ -605,6 +586,7 @@ The word-length badges are **exact length** (operator's choice): a word of exact
 - **`FeedbackBanner` graduation** — triggered by Leksindeseis needing it; graduated cleanly with `theme` prop ✅
 - **`normalizeLetters` cross-game utility** — graduated: the real implementation is now `src/lib/normalize.ts` and every caller imports `@/lib/normalize`. `src/games/leksokipos/lib/normalize.ts` survives only as a two-line re-export shim ✅
 - **Leksiarxeio answer pool quality** — `answers-5.json` curated subset created; obscure words excluded ✅
+- **Greek letters in URLs** — mainstream browsers and messaging apps handle Greek path segments correctly via IRI/percent-encoding. The residual risk (old mail clients or corporate proxies mangling `%CE%B1` sequences) was accepted and has never been reported ✅
 - **The rejected module, rejected on the proposal's own evidence (s153)** — the extraction was wrong about its headline scenario (no corpus gaps exist; a test has guarded that since s131) and its count (eight implementations, three already sharing a miss rule), both one command to check, and checking turned the deliverable from an interface into an invariant plus a test. Lesson kept: **"N places do X" is a claim about rules and is usually measured in shapes** — shapes duplicate far more often than rules, and only duplicated rules justify an interface ✅
 - **Sound Cues built and mute (s145/s146)** — the tension was that a merged toggle playing silence could not be cut for free, guarded only by `TICKET-05`'s "neither ticket deploys alone" line. **Resolved s154**: `FEATURE_FLAGS.soundCues` (off) hides the 🔊 button, so the code is inert rather than visibly broken and the human-read deploy gate is spent. The MP3s are post-launch and optional ✅
 
