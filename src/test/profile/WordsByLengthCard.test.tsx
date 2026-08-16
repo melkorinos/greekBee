@@ -9,6 +9,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { WordsByLengthCard } from "@/components/profile/WordsByLengthCard";
+import { WORDS_MIN_TRACKED } from "@/lib/wordsByLength";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -61,6 +62,19 @@ describe("WordsByLengthCard", () => {
     render(<WordsByLengthCard deviceId="dev-A" />);
     await waitFor(() => expect(screen.queryByTestId("words-by-length-skeleton")).toBeNull());
     expect(screen.getByTestId("words-by-length-empty")).toBeInTheDocument();
+    // A total of 0 is only honest if the card says WHY short finds never counted.
+    expect(screen.getByTestId("words-by-length-empty")).toHaveTextContent(
+      `${WORDS_MIN_TRACKED}+ γράμματα`,
+    );
+  });
+
+  it("names the tracked-length floor whether or not anything has been found", async () => {
+    mockWords(response({ 11: 2 }));
+    render(<WordsByLengthCard deviceId="dev-A" />);
+    await waitFor(() => expect(screen.queryByTestId("words-by-length-skeleton")).toBeNull());
+    expect(screen.getByTestId("words-by-length-floor")).toHaveTextContent(
+      `${WORDS_MIN_TRACKED}+ γράμματα`,
+    );
   });
 
   it("degrades to a dash total on fetch error without blocking", async () => {

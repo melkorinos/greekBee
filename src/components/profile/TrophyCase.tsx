@@ -38,10 +38,13 @@ const TILE_BADGE_PX = 32;
 function TierChips({
   tiers,
   held,
+  labelsIncludeThreshold = false,
 }: {
   tiers: readonly AchievementTier[];
   /** Tier ids this player holds — the crossing rule already applied, once. */
   held:  ReadonlySet<string>;
+  /** The rung labels already state their threshold — print it once, not twice. */
+  labelsIncludeThreshold?: boolean;
 }) {
   return (
     <div className="mt-1 flex flex-wrap justify-center gap-x-2 gap-y-0.5">
@@ -57,7 +60,7 @@ function TierChips({
               (lit ? "font-semibold text-foreground" : "text-muted")
             }
           >
-            {t.label} · {fmt(t.threshold)}
+            {labelsIncludeThreshold ? t.label : `${t.label} · ${fmt(t.threshold)}`}
           </span>
         );
       })}
@@ -142,7 +145,13 @@ function TrophyTile({
       />
       <span className="text-xs font-semibold text-foreground">{achievement.name}</span>
       <span className="text-[11px] leading-tight text-muted">{achievement.hint}</span>
-      {tiers && <TierChips tiers={tiers} held={held} />}
+      {tiers && (
+        <TierChips
+          tiers={tiers}
+          held={held}
+          labelsIncludeThreshold={achievement.tierLabelsIncludeThreshold}
+        />
+      )}
       {nextThreshold !== null && liveValue !== undefined && (
         <span
           data-testid={`tier-progress-${achievement.id}`}

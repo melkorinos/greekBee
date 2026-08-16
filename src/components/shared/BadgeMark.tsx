@@ -10,9 +10,6 @@
 // borrowing a tier colour would advertise a rung the player has not earned, and a
 // greyscale filter would hide the mark. The mark stays visible on purpose, so a
 // player can see what they are chasing. This is what deleted the 🔒.
-//
-// The visual record — every mark at every real size in both themes — is
-// `.claude/aiHelper/html/badge-visual-grill.html`.
 
 import type { BadgeMarkArt, TierName } from "@/games/leksokipos/lib/achievements";
 

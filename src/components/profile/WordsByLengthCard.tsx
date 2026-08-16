@@ -16,9 +16,16 @@
 
 import { useEffect, useState } from "react";
 
-import type { WordsByLength } from "@/lib/wordsByLength";
+import { WORDS_MIN_TRACKED, type WordsByLength } from "@/lib/wordsByLength";
 
 const HEADING = "Λέξεις ανά μήκος";
+
+// The floor is the card's most confusing fact: a player who has found hundreds of
+// words sees a total of 0 and reads it as broken, because nothing on the card said
+// short words were never counted. Both strings name the floor, and both DERIVE it —
+// the tracked minimum is achievementTuning.wordLengthBadges' smallest length.
+const FLOOR_NOTE  = `Μετρώνται μόνο λέξεις με ${WORDS_MIN_TRACKED}+ γράμματα.`;
+const EMPTY_COPY  = `Δεν έχεις βρει ακόμη λέξη με ${WORDS_MIN_TRACKED}+ γράμματα. Βρες μία για να ξεκινήσεις τη συλλογή σου.`;
 
 function Row({ label, count, max }: { label: string; count: number; max: number }) {
   // Bar length is proportional to the busiest bucket; a found-but-small bucket still
@@ -65,16 +72,19 @@ export function WordsByLengthCard({ deviceId }: { deviceId: string }) {
 
   return (
     <div className="px-5 py-4">
-      <div className="mb-3 flex items-baseline justify-between">
+      <div className="flex items-baseline justify-between">
         <h2 className="text-sm font-semibold text-foreground">{HEADING}</h2>
         <span className="text-lg font-semibold text-foreground tabular-nums">
           {data ? fmt(data.total) : "—"}
         </span>
       </div>
+      <p data-testid="words-by-length-floor" className="mb-3 text-[11px] leading-tight text-muted">
+        {FLOOR_NOTE}
+      </p>
 
       {data && data.total === 0 ? (
         <p data-testid="words-by-length-empty" className="py-2 text-sm text-muted">
-          Βρες λέξεις στο παιχνίδι για να χτίσεις τη συλλογή σου.
+          {EMPTY_COPY}
         </p>
       ) : data ? (
         <div className="space-y-2">
