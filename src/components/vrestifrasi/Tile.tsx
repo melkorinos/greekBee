@@ -20,7 +20,7 @@ const STATE_CLASSES: Record<PhraseTileState, string> = {
   present:        "bg-present  border-present  text-white",
   "misplaced-word": "bg-misplaced border-misplaced text-white",
   absent:         "bg-absent   border-absent   text-white",
-  empty:          "bg-transparent border-border text-foreground",
+  empty:          "bg-transparent border-tile-border text-foreground",
   pending:        "bg-transparent border-muted  text-foreground",
 };
 
@@ -36,8 +36,11 @@ export function Tile({
       className={[
         "flex items-center justify-center",
         sizeClass,
-        // 1px border, not 2 — every pixel of border is a pixel the letter loses.
-        "border rounded",
+        // 2px, matching every other letter box on the platform. This was 1px on
+        // the grounds that a 32px tile cannot spare the pixels; legibility of the
+        // *blank* grid turned out to be the tighter constraint, and 28px of
+        // interior still clears the 16px letter comfortably.
+        "border-2 rounded",
         textClass,
         "font-bold uppercase select-none",
         "transition-all duration-300",

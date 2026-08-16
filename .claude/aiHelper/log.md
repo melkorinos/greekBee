@@ -5,6 +5,46 @@
 
 ---
 
+## Session 162 — 2026-08-16: a border the whole platform did not ask for
+
+Operator wanted Λεξιαρχείο's and Βρες τη Φράση's letter boxes "20% darker and 10% thicker", with
+consistency across the games. `/grill-with-docs`, three batches. **Every number in the ask turned out
+to be the wrong shape**, and none of that was visible without reading the components.
+
+**"Darker" inverts.** On the `stone-950` page a darker outline vanishes rather than sharpens, so the
+spec is **contrast against the page**: light goes `stone-200`→`stone-400`, dark goes
+`stone-700`→**lighter**, `stone-500`. **"10% thicker" has no pixel to land on** — 2px+10% is 2.2px,
+which Tailwind has no step for and which renders unevenly; it became "unify at 2px", which is the
+consistency half of the ask anyway. And **only unfilled tiles have a visible border at all**:
+`correct`/`present`/`absent` set the border *equal to* the fill, so the entire change lives in the
+blank grid and the row being typed.
+
+**The token had to be new.** `--border` is the platform's hairline for cards, inputs, secondary
+buttons and page separators, so strengthening the boxes through it would have been a redesign.
+`--tile-border` keeps the two free to move apart — the reason written into `globals.css` is that a
+card outline should be quiet while a letter box **is** the thing being read.
+
+**Βρες τη Φράση's 1px was defended by a comment** ("every pixel of border is a pixel the letter
+loses", 32px tiles). Overruled deliberately, comment rewritten rather than deleted: legibility of the
+*blank* grid was the tighter constraint, and 28px of interior still clears the 16px letter. The
+packing maths in `phraseLayout.ts` was left untouched — growing the tile to compensate would have
+rewritten `AVAILABLE`/`TILE` and pushed long phrases onto extra lines.
+
+**Scope reversed mid-grill**: two games → all five that draw a letter box, once the operator saw that
+Λεξόπλεγμα/Λεξοδρομία/Λεξινδέσεις would otherwise be left lighter than the two being fixed — the
+opposite of the consistency being asked for.
+
+Two checks, both the standing rules paying out. **The token was confirmed compiled out of the
+production bundle**, not assumed — `.border-tile-border{border-color:var(--tile-border)}` plus both
+theme values; a missing `@theme` line renders no border while every test stays green (s144). And the
+new `letterBoxBorder.test.ts` was **proven non-vacuous** by reverting Λεξοδρομία, which failed
+exactly one test. **The operator declined the render-and-look step** (s143's method, offered as
+Q6), so values were picked by arithmetic and **an eye-check on a real phone is owed** — flagged in
+the reply, not silently dropped. 201 files / **2627 tests**, eslint 0, build 0, e2e 13/2-skipped.
+Ran concurrently with s160 **and** s161: `HEAD` moved three commits mid-session, found by `git log`
+and by an edit tool reporting the file had changed under me. Staged explicit paths; left the other
+session's two open files alone.
+
 ## Session 161 — 2026-08-16: the letter goes to the word that owns it
 
 Operator sent a **screenshot of the live Vres Tin Frasi board** and asked whether a purple tile was
@@ -41,44 +81,11 @@ operator's call, self-healing, not filed. ADR 0004 carries a dated amendment; `c
 said "two-pass" and now does not. Ran concurrently with s160, which committed its Dream mid-session;
 staged four explicit paths and left its two open files alone.
 
-## Session 160 — 2026-08-16: the row that is two things at once
-
-Operator asked whether `ISSUE-07` needed grilling before a fix. **It did, and the file was already
-gone** — s157 folded it into `ISSUE-01` §3, yet the opening `@`-mention served the deleted file's
-content in full, so everything below was re-measured against disk. Ran concurrently with s159.
-
-**Three measurements moved the design before any decision.** `nominations` carries exactly **two
-indexes** (the PK, and the partial unique on `(word, direction) WHERE status = 'pending'`), so the
-lookup route's `rejected`/`accepted` counts match **none** — that, not the listing GET, is what §3's
-4,655 sequential scans are. The review route never sets `reviewed_at` (only `apply-nominations`
-does), so an approved-but-unapplied row escapes the 30-day sweep forever — but **41 accepted, 0 with
-a null `reviewed_at`**, so the manual habit holds. And of 191 rows (**148/41/2**) exactly **one is
-not normalised**: «ιουνιος» ends in a final sigma, so a re-proposal normalises to «ιουνιοσ» and its
-own warning can never fire; the blocklist misses it too, running on `add` only.
-
-**The finding worth keeping is a domain one.** A `rejected` row does two jobs — it is one player's
-**Nomination**, perishable, and the standing **Refusal** that warns the next player. Only the second
-is why ADR 0011 keeps it, and the ADR never named it, which is why "prune the rejected rows" looks
-cheap to every session that meets this table and why the fix always seems to need a replacement
-`rejected_words` set. Naming them apart dissolved it: keep the row, make the lookup cheap.
-
-**Two corrections, both mine, both caught by a machine rather than by thought.** I called the index
-work executable now because PostgreSQL 18.4 was **accepting connections** — but every `pg_hba.conf`
-line is `scram-sha-256` and `.env.local`'s `PGPASSWORD` is the *Supabase* one: **the check I ran was
-adjacent to the claim I made.** Then `trackerReferences.test.ts` failed `TICKET-14`'s first draft for
-naming `ISSUE-10` — a reference to a file that does not exist is dangling even as a reservation.
-
-Shipped: the **ADR 0011 amendment** (retention affirmed; `rejected_words` decided against; rate
-limiting left with the accepted risk; `pending` bounded by the partial unique index, so no review SLA
-is owed), **`CONTEXT.md` gaining `Refusal`**, and **`TICKET-14`**, which *measures* whether the
-`(word, direction, status)` index earns its place instead of assuming it — deliberately **not**
-blocked on `TICKET-13` (a planner question needs volume, not real rows), only on the local Postgres
-password. Two operator decisions are parked in it, not in a conversation. 200 files / **2610 tests**.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 160 | 2026-08-16 | **The row that is two things at once.** Operator asked whether `ISSUE-07` needed grilling; **the file was already gone** (s157 folded it into `ISSUE-01` §3) while the opening `@`-mention served the deleted file's content in full, so everything below was re-measured against disk. Three measurements moved the design first: `nominations` carries exactly **two indexes**, so the lookup route's `rejected`/`accepted` counts match none — that, not the listing GET, is §3's 4,655 sequential scans; the review route never sets `reviewed_at`, so an approved-but-unapplied row escapes the 30-day sweep forever, but **41 accepted, 0 with a null `reviewed_at`** means the manual habit holds; and of 191 rows exactly **one is not normalised** («ιουνιος» ends in a final sigma, so its own re-proposal warning can never fire). **The finding worth keeping is a domain one:** a `rejected` row is both one player's perishable **Nomination** and the standing **Refusal** that warns the next player — only the second is why ADR 0011 keeps it, and the ADR never named it, which is why "prune the rejected rows" looks cheap to every session that meets this table. Naming them apart dissolved it: keep the row, make the lookup cheap. **Two corrections, both mine, both caught by a machine:** I called the index work executable because Postgres 18.4 was *accepting connections*, but every `pg_hba.conf` line is `scram-sha-256` and `.env.local`'s `PGPASSWORD` is the Supabase one — **the check I ran was adjacent to the claim I made**; then `trackerReferences.test.ts` failed `TICKET-14` for naming a reserved-but-nonexistent `ISSUE-10`. Shipped the ADR 0011 amendment, `CONTEXT.md` gaining `Refusal`, and `TICKET-14`, which *measures* whether the index earns its place. 200 files / 2610 tests. |
 | 159 | 2026-08-16 | **The blocker that was never there.** `ISSUE-06` said it was blocked on the dev/prod split; it was not, and **one environment check collapsed the premise** — PostgreSQL 18 was already installed for `pg_dump`, and whether the planner switches from a sequential scan to an index descent as a table grows is **Postgres behaviour, not Supabase behaviour**, so no hosted scratch project was ever required. **ADR 0024: no split**, on three reasons none reconstructible from code — the free org's second slot is the **disaster-restore target** and `disaster-recovery.md` step 3 needs it empty; an **empty staging DB passes exactly the migrations that hurt** (`NOT NULL` meeting real nulls, unique index meeting real duplicates); and seeding one from a dump puts a **second permanent cloud copy of every player's email** in play. Operator declined Pro, which would have dissolved the question. **Docker was measured out, not argued out**: across all 19 migrations the only objects outside `public` are `auth.uid()` (4 refs) and `auth.users` (3), so the compatibility surface is a ~15-line shim. **The worst finding was not architectural** — `BACKUP_ARCHIVE_PASSWORD` is absent from the real `.env.local`, so `npm run db:backup` throws before dumping; `db-backups/` holds two **unencrypted** folders; the weekly task is unregistered, and registering it would have created a job **failing every Sunday at 02:00 while looking like coverage**. Order corrected: password, dump, verify extraction, then schedule. Thirteenth ledger entry, and **the false claim was mine** — I called §4's content lost in the fold when `git log --diff-filter=D`, run one call earlier, already showed it fixed. Shipped ADR 0024, `TICKET-13`, the CONTEXT glossary's Backup/Restore/Rehearsal, and an `ISSUE-01` retitle. 200 files / 2610 tests. |
 | 158 | 2026-08-16 | **A purpose nobody ever had.** `ISSUE-09` needed one ruling: the "fairness analysis" the Leksokipos `{ words, pangrams }` write existed for **does not exist and is not wanted**, which collapsed the other two questions before they were answered. Two facts reframed the file — `launch-reset.sql` condemns the 536 rows at runbook step 4, so the decision was only ever about post-launch data; and `pangrams` is derivable from `player_milestones` while `words` is derivable from nothing (score is not a word count, and the milestone lane floors at 10 letters). **The operator supplied the fact that killed the last argument:** `words` was called *the only record of a round's total word count*, but `flushOutbox` posts without `data`, so any Score queued in Offline Mode already landed `{}` — not the only record, a **silently lossy** one. Twelfth ledger entry, and the first where the unchecked claim was one I *repeated from a file* rather than wrote. Removed **end to end** (the hook's `data` argument, `StandardScorePayload.data`, `isCountRecord` + its test file) rather than at the call site; the route now destructures field by field, so a cached bundle still posting counts has them **ignored rather than sanitized**. Leksiarxeio untouched — its per-length jsonb is written server-side and never travelled the standard payload. `ISSUE-01` lost section 4 **and the intro claims about it**, which were wrong in both directions. 200 files / 2610 tests, e2e 13/2-skipped — the first run's 8 failures were a Turbopack cache corrupted by running e2e alongside vitest; **never read a broad e2e failure as a verdict on a narrow change**. |
 | 157 | 2026-08-16 | **A gate that was guarding nothing.** `ISSUE-05` blocked the dead `is_perfect` `DROP COLUMN` on `TICKET-11` — DDL against append-forever data must wait for a restorable dump. **`launch-reset.sql` dissolved it:** runbook step 4 deletes every `game_scores` row, so the 536 rows a dump would protect are condemned one step earlier; the block reasoned from the rule instead of from what obeying it buys. Grilled to a **schedule, not a fix** (four batches, eleven decisions): the drop becomes **runbook step 5**, between wipe and announce, **the one moment the risk is genuinely zero** — which beats the "do it now, the risk is small" reading the file was drifting toward. **Nothing enters `supabase/migrations/` in advance** (a committed-but-unpushed migration fires on the next unrelated `db push`), so the SQL is pre-written *as text* in the step with an `information_schema` verify and an explicit "does not gate the announce". **`coverageMap.md` was not stale but wrong** — three entries described an `is_perfect` latch deleted in s108; a gap makes you write a test you may have, a false entry makes you trust one that never existed. Operator then consolidated the DB issues: `ISSUE-01` absorbed `06`/`07`/`09` as sections, `ISSUE-05` stayed out as scheduled work. Three `SPENT` rows. 201 files / 2618 tests. |

@@ -306,6 +306,18 @@ the decisions, not to prove the result.** Two decisions are locked that way here
 frame (same path `d` across two tiers) and a locked badge keeps its mark visible. Both would otherwise
 survive only as prose in an ADR, which is precisely the thing s139 showed rots.
 
+**s162 — the same shape, and this time the render step was offered and declined.** The letter-box outline
+strengthened across five games on values picked by *arithmetic* (`stone-200`→`stone-400` light,
+`stone-700`→`stone-500` dark), because the operator chose to skip the s143 render-and-look page and
+implement directly. That is a legitimate call — it saved a round trip on a change that is one token wide —
+but it means the accepted artifact was never seen before it shipped, and the last time a page was rendered
+for exactly this kind of decision **one answer changed on sight**. `letterBoxBorder.test.ts` locks what a
+test can lock (one token, one weight, both themes defined, the utility actually exposed) and is explicit in
+its own header that it cannot tell a legible grid from an illegible one. **The eye-check is owed and was
+flagged in the reply rather than dropped** — which is now the third owed operator eye-check on this list,
+alongside the Trophy Case and the Shell header at four buttons. Watch: whether any of the three ever
+happens, or whether "flagged it in the reply" is quietly becoming this repo's substitute for a gate.
+
 ### 🟠 A DB test validates the migration and is blind to the deploy (s142, generalised)
 
 Recorded as a standing rule for the **next** migration window, since the `player_milestones` one is

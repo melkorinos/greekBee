@@ -241,8 +241,8 @@ export function LeksodromiaBoard({
           const slotClass = isLocked
             ? "bg-game-accent/20 border-game-accent"
             : letter
-              ? "bg-surface-raised border-border"
-              : "bg-transparent border-border border-dashed";
+              ? "bg-surface-raised border-tile-border"
+              : "bg-transparent border-tile-border border-dashed";
           return (
             <div
               key={i}

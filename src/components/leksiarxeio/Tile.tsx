@@ -19,7 +19,7 @@ const STATE_CLASSES: Record<TileState, string> = {
   correct: "bg-correct  border-correct  text-white",
   present: "bg-present  border-present  text-white",
   absent:  "bg-absent   border-absent   text-white",
-  empty:   "bg-transparent border-border text-foreground",
+  empty:   "bg-transparent border-tile-border text-foreground",
   pending: "bg-transparent border-muted  text-foreground",
 };
 
