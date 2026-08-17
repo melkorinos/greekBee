@@ -61,8 +61,8 @@ pending row per `(word, direction)`, so the queue is bounded by the number of di
 proposes, not by submission volume. No review SLA is owed, and none is implied by keeping the rows.
 
 **5. Anonymous INSERT volume is explicitly out of scope here.** It is a platform-wide accepted risk
-with its own trigger and its own measured quota table, recorded in `reflections.md` under *API rate
-limiting*. This ADR governs what happens to rows once they exist, and a rate limit would not change
+with its own trigger and its own constraint ranking, recorded in `CONTEXT.md` under *Persistence
+decisions → API rate limiting* (it lived in `reflections.md` until 2026-08-17). This ADR governs what happens to rows once they exist, and a rate limit would not change
 any of it.
 
 **6. One known live gap in the guardrail this ADR rests on.** The Refusal warning matches on the

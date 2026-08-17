@@ -86,7 +86,7 @@ This project is managed with a dedicated AI coding agent using **Claude Code**. 
 | `.claude/aiHelper/memory.md` | All architecture decisions and context across sessions |
 | `.claude/aiHelper/goals.md` | Roadmap — completed phases + current focus |
 | `.claude/aiHelper/log.md` | Per-session changelog |
-| `.claude/aiHelper/reflections.md` | Post-session risks, tensions, and open questions |
+| `.claude/aiHelper/reflections.md` | Live, still-open risks and tensions — capped at 120 lines; resolved ones are deleted (git is the archive) and long lessons are promoted to an ADR |
 | `.claude/aiHelper/coverageMap.md` | Per-file test coverage map — loaded on demand, never at session start |
 | `.claude/aiHelper/skillsNotes.md` | Skill install/fork/junction traps — read before any skill maintenance |
 

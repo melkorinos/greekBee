@@ -148,9 +148,9 @@ and `accepted` counts in `GET /api/nominations/lookup` match no index at all. Th
 GET, is what the 4,655 sequential scans over 697,815 tuples are, and it grows in exactly the rows
 nothing prunes. `TICKET-14` measures whether a `(word, direction, status)` index earns its place.
 
-**This does not reopen the accepted risk.** `reflections.md` carries an *"API rate limiting (accepted
-risk)"* entry covering anon INSERT spam across all routes, with a ~500 DAU trigger and a 5,000-row
-`nominations` tripwire in its monitoring SQL; read it first, it holds the measured quota table. What
+**This does not reopen the accepted risk.** `CONTEXT.md`'s *Persistence decisions → API rate
+limiting* entry covers anon INSERT spam across all routes, with a ~500 DAU trigger and the monitoring
+SQL; read it first, it holds the constraint ranking and the Pro trigger. What
 is recorded here is the nominations-specific half that a rate limit would not fix: the retention
 asymmetry and the moderation-queue consequence.
 

@@ -159,7 +159,7 @@ finite. The full blocking/accepted split produced five tickets. Three have shipp
 - **Content supply for the three hidden Games** — moot while they are hidden. Leksindeseis's static
   fallback is **one** puzzle rotating over a single-item array; Πόσο κάνει; and Λογοπαίγνιο hold one
   placeholder each.
-- **API rate limiting** — the accepted risk in `reflections.md` stands.
+- **API rate limiting** — the accepted risk in `CONTEXT.md` (*Persistence decisions*) stands.
 - **Λογοπαίγνιο's trademark question** — the Game is hidden, so nothing visible needs an answer.
 
 ---

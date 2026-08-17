@@ -256,7 +256,18 @@ A browser-based platform hosting multiple daily Greek word games. Each game is i
 ## Persistence decisions
 
 **API rate limiting — accepted risk (2026-06-30; guardrail corrected 2026-08-13)**
-No per-device rate limiting is implemented on INSERT-capable API routes; RLS allows unlimited anon inserts. Decision: accept the risk at current scale, revisit with a Redis sliding-window approach (Upstash) above ~500 DAU. The guardrail is **not** a dashboard alert — no such alert can be built on any Supabase plan — but a periodic SQL row read folded into the ADR 0023 monitoring habit. **The query, the measured headroom, and the Pro-migration trigger live in one place: the rate-limiting entry in `reflections.md`.** The binding constraint is database size, not row count.
+No per-device rate limiting is implemented on INSERT-capable API routes; RLS allows unlimited anon inserts. Decision: accept the risk at current scale, revisit with a Redis sliding-window approach (Upstash) above ~500 DAU. Scope is **INSERT spam only** — the adjacent anon UPDATE/DELETE exposure was closed by migrations `202607161200xx`.
+
+The guardrail is **not** a dashboard alert: the original "set a Supabase row-count alert" mitigation **cannot be built on any plan** (Supabase tracks no row-count metric, and Free has no configurable threshold alert), so the decision rested for months on a control that never existed while "the operator will set it up" read as a completed step. The operator-accepted substitution (2026-08-13) is one periodic SQL read folded into the ADR 0023 monitoring habit:
+
+```sql
+SELECT (SELECT count(*) FROM game_scores) AS scores, (SELECT count(*) FROM nominations) AS noms,
+       pg_size_pretty(pg_database_size(current_database())) AS db_size;
+```
+
+**Measured numbers live in `ISSUE-01`, never a copy here** — shape: every quota sits in low single-digit percentages, growth is ~1.2 score rows per player per day. **Trust the dashboard's size number, not `pg_database_size`** — the two disagreed by ~2× on the same database on the same day, and the dashboard figure is what bills and what trips the read-only cliff, so treat the SQL above as a **row** tripwire only.
+
+**The binding constraint is not one of the four quotas.** Ranked: (1) **Nano compute** — shared CPU, 500 MB RAM, 60 connections with 22 already gone at idle; a performance wall rather than a quota, so it has no gauge and no email, and it is what degrades first. (2) **Database size, because of *how* it fails** — Free enters **read-only mode above 500 MB with no grace period**, so every score post 500s and the Platform silently stops recording; decades away on the estimate, and the only thing that shortens it is a write loop, which is precisely the INSERT-spam risk this entry exists for. (3) **Egress**, ~1 700 players/day. (4) **MAU is structurally unreachable** — it counts Supabase Auth logins and token refreshes only, while players are anonymous device ids that never touch Auth; cross it off rather than tracking it. **Trigger for moving to Pro**, not a row count: database size crossing **250 MB** (half the cliff), *or* the first sustained slowness report, *or* wanting PITR — which is `ISSUE-01`'s real fix rather than a capacity decision.
 
 **Nominations retention policy (2026-07-01)**
 `pending` and `rejected` Nominations are never deleted. Rejected rows are retained permanently because `NominationModal` uses them to warn players on re-submission (by word + direction). `accepted` Nominations are deleted 30 days after `reviewed_at` is set by `apply-nominations.ts` — at that point the word is in the JSON and deployed, and the row is pure audit trail. The `reviewed_at` column serves dual purpose: `null` = accepted but not yet applied to the word list; non-null = applied. See ADR 0011.

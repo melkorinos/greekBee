@@ -146,7 +146,7 @@ that is good news about the code, recorded so a future session does not read the
   written for `TICKET-07` and it guards this decision too.
 - **The check is a habit with no gate behind it.** Nothing in CI runs it and nothing can — it reads a
   live external service. It will decay silently if it decays, exactly like the Supabase row-count
-  alerts in `reflections.md` that were decided and apparently never configured. `TICKET-09` closes
+  alerts (now in `CONTEXT.md`) that were decided and apparently never configured. `TICKET-09` closes
   that adjacent gap; this one has no such backstop.
 - **`npm install` was explicitly out of scope** and remains so. Adding an error SDK is not a
   dependency decision, it is a reversal of this ADR plus a privacy-page revision.
