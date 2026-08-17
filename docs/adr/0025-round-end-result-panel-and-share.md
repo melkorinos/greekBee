@@ -1,6 +1,6 @@
 # ADR 0025 — Round End, the Result Panel, and what a shared summary carries
 
-**Status:** accepted (2026-08-17) · **not built** — the work is [TICKET-15](../../.claude/tracker/tickets/TICKET-15-round-end-result-panel.md)
+**Status:** accepted (2026-08-17) · **not built** — the work is [TICKET-15](../../.claude/tracker/tickets/TICKET-15-round-end-result-panel-launch.md)
 **Supersedes nothing.** Extends `ShareResultPanel`, which shipped for Τοποθεσίες and the two hidden slot-fill Games.
 
 ## Context

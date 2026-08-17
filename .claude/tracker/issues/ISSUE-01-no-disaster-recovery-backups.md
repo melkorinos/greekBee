@@ -13,7 +13,7 @@ keep theirs, because ADR 0011, ADR 0026 and `TICKET-13` all cite them.
 **Consolidated 2026-08-16** from `ISSUE-06` (profile scans) and `ISSUE-07` (nominations growth), at
 the operator's request — one DB file instead of several. The `is_perfect` DROP stayed out on
 purpose: it is no longer a deferred problem but **scheduled work**, owned by
-[`ISSUE-05`](ISSUE-05-dead-is-perfect-column.md) and executed at release-day runbook step 5.
+[`ISSUE-05`](ISSUE-05-dead-is-perfect-column-launch.md) and executed at release-day runbook step 5.
 
 **These sections share a subject, not a cause.** The consolidation originally claimed a common
 blocker — one Free-plan project with no scratch copy, said to be why section 2 could not be
@@ -45,7 +45,7 @@ for.
 
 The "somewhere to put the dumps" question is **answered** — an encrypted 7-Zip archive in a private
 Google Drive folder, never a git repository (the repo is public and `pg_dump` carries `auth.users`).
-[`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup.md) shipped the encryption half of
+[`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup-launch.md) shipped the encryption half of
 `scripts/backup-db.ps1` on 2026-08-15.
 
 ### What is actually owed — all of it operator-only, measured 2026-08-16
@@ -159,9 +159,9 @@ either:
 - [ADR 0024](../../../docs/adr/0024-no-dev-prod-split-migration-safety-is-local.md) — why there is no dev/prod split, and what replaced it. Read before re-proposing a second project.
 - [`docs/disaster-recovery.md`](../../../docs/disaster-recovery.md) — the runbook section 1 tracks the open work for.
 - Supabase Database Backups — https://supabase.com/docs/guides/platform/backups (free-tier `db dump` guidance).
-- [`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup.md) — the encrypted dump; agent half shipped, operator half owed.
+- [`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup-launch.md) — the encrypted dump; agent half shipped, operator half owed.
 - [`TICKET-13`](../tickets/TICKET-13-migration-rehearsal-loop.md) — the local rehearsal loop ADR 0024 chose instead of a split.
-- [`ISSUE-05`](ISSUE-05-dead-is-perfect-column.md) — the `is_perfect` DROP, scheduled to runbook step 5 rather than deferred here.
+- [`ISSUE-05`](ISSUE-05-dead-is-perfect-column-launch.md) — the `is_perfect` DROP, scheduled to runbook step 5 rather than deferred here.
 - [`src/app/api/cleanup-scores/route.ts`](../../../src/app/api/cleanup-scores/route.ts) + [`src/config/retention.ts`](../../../src/config/retention.ts) — the prune and what it deliberately skips.
 - `.claude/skills/project-mcp/SKILL.md` — the advisor baseline explaining why the always-true INSERT policy is intended.
 - The `supabase` CLI is an approved devDependency; `db push` works without Docker.
