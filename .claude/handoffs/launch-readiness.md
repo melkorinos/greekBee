@@ -33,7 +33,6 @@ Audited against the filesystem and git on 2026-08-14, re-cut against the operato
 | `TICKET-05` | **Split, and no longer a deploy blocker. Part A shipped 2026-08-15** — the 🔊 toggle is behind `FEATURE_FLAGS.soundCues`, off, with the machine wired and inert beneath it. What is left is Part B: the three MP3s, **post-launch and optional**, ending in the flag flip | operator, no date |
 | `TICKET-11` | **New 2026-08-15, agent half shipped the same day.** `npm run db:backup` now emits an AES-256 `.7z` and refuses to run unprotected; `docs/disaster-recovery.md` carries the restore order. What is left is **operator-only**: create the private Drive folder, set and safely store `BACKUP_ARCHIVE_PASSWORD`, and prove one archive extracts on another machine. Must be done **before** runbook step 3 is executed | operator |
 | `TICKET-15` | **New 2026-08-17, nothing built.** Every Game gets a Result Panel at its Round End, sharing a four-line summary and a link (**ADR 0025**). This is the other half of `TICKET-10`: that card renders when a link is posted and nothing on the Platform posts one today. The only launch item that makes the launch *spread* rather than merely not fail — so it is a real input to question 2's ordering, not a nice-to-have appended after it | agent, `/tdd` |
-| `TICKET-10` | **Code complete 2026-08-16. The pick is made and the platform logo now exists** — card 18 and icon 1, built from one shared mark so the favicon cannot drift from the card. `opengraph-image`, `icon`, `apple-icon`, the stock `favicon.ico` deleted, and a guard test that *renders* the images rather than matching source. All four gates clean; all three images prerender static. **Nothing is pending but a look:** the card has to be seen in a real scraper, which cannot happen before a deploy. It is not a separate task — it rides runbook steps 1–2 | operator, at deploy |
 
 ### Owed, and not tickets
 
@@ -57,10 +56,13 @@ Games' content supply. **`ISSUE-05` is not in this list** — it is scheduled, a
 - **UI redesign** — operator-driven in separate sessions. Untracked by design.
 - **Game icons** — `.claude/handoffs/game-icon-system.md` + `goals.md` item 5. Nothing designed;
   that handoff exists to make a grill productive and is expected to produce a ticket.
-- **Platform logo** — **done 2026-08-16, and no longer pending anywhere.** Folded into `TICKET-10`
-  on 2026-08-15 on the ruling that the icon the operator picks *is* the mark; the operator picked
-  icon 1 the next day and it shipped as `src/app/_brand/fan.tsx`. There was never a separate logo
-  project and there is no placeholder to revisit. Do not re-file it here.
+- **Platform logo and share card** — **done, and no longer pending anywhere.** The logo was folded
+  into `TICKET-10` on 2026-08-15 on the ruling that the icon the operator picks *is* the mark; the
+  operator picked icon 1 the next day and it shipped as `src/app/_brand/fan.tsx`, with the card,
+  favicon and apple-icon rendered from that same drawing. `TICKET-10` was **closed 2026-08-17** with
+  its code complete and its only remaining act — looking at the card in a real scraper — moved into
+  runbook step 2. There was never a separate logo project and there is no placeholder to revisit. Do
+  not re-file either of them here.
 
 ---
 
@@ -69,7 +71,13 @@ Games' content supply. **`ISSUE-05` is not in this list** — it is scheduled, a
 1. Merge `dev → main` and deploy.
 2. **Verify production is serving the merge commit.** Not the migration, the deploy —
    `reflections.md` records that live-DB tests go green on a migration alone and are blind to
-   whether the deploy happened.
+   whether the deploy happened. **Then look at the share preview on the same deploy** — request
+   `/favicon.ico` (browsers and several scrapers ask for that path whatever the `<link>` tag says),
+   check the tab icon, and post the production link into Messenger or Viber and look at the card.
+   This is all that was left of `TICKET-10`, which is why that ticket is gone rather than open: it
+   cannot be done before this step and it is not worth a file of its own. A preview deploy cannot
+   substitute — previews are SSO-protected and answer 302, so Facebook's and Viber's scrapers, which
+   carry no session, fetch the login page or nothing.
 3. `npm run db:backup`, then upload `db-backups/<timestamp>.7z` — the **encrypted archive**, not the
    folder — to the private Google Drive backup folder. The script builds the archive as of
    2026-08-15 (`TICKET-11`) and refuses to run without `BACKUP_ARCHIVE_PASSWORD`, so the remaining
@@ -179,9 +187,8 @@ list and the go/no-go is a scheduling call.
 - **No ordering constraints survive between the tickets at all**, as of 2026-08-15. The
   `TICKET-08`-before-`TICKET-07` coupling was withdrawn once the no-SDK ruling made it moot; both
   shipped. The last one, **platform logo → `TICKET-10`**, dissolved when the logo moved *inside*
-  `TICKET-10`. **As of 2026-08-16 only one operator act gates anything at all** — `TICKET-11`'s
-  backup setup, which runbook step 3 depends on. `TICKET-10`'s pick is spent, and its one open box
-  is a look at the deployed card, which the merge itself provides
+  `TICKET-10`, which then shipped and was closed. **As of 2026-08-16 only one operator act gates
+  anything at all** — `TICKET-11`'s backup setup, which runbook step 3 depends on
 - The UI redesign runs in parallel on operator sessions and is deliberately **not an input** — it
   cannot block this, and if it turns out to, that is a new decision rather than a known one
 

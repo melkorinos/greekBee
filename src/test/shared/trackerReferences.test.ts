@@ -40,6 +40,10 @@ const SPENT: Record<string, string> = {
   "TICKET-07": "privacy page — shipped s149",
   "TICKET-08": "error monitoring / ADR 0023 — shipped s150",
   "TICKET-09": "row-count alert — closed s150, substitution accepted",
+  // Code shipped s160/s163; the last three boxes were a look at the deployed card,
+  // which the operator closed on 2026-08-17 by ruling that verification rides the
+  // release-day deploy rather than holding a ticket open.
+  "TICKET-10": "share preview + platform mark — shipped s163, closed 2026-08-17",
   "ISSUE-02": "game_state DELETE flake — deleted 2026-08-14, mechanism now a comment in the suite",
   // Used twice already, which is why this ledger exists: first for the
   // env-local/CI issue, then for the game_state DELETE flake (the same finding
