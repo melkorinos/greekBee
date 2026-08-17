@@ -5,6 +5,35 @@
 
 ---
 
+## Session 166 — 2026-08-17: a migration meets real rows before production does
+
+`TICKET-13` built and deleted — `npm run db:rehearse`, the loop ADR 0024 chose over a second Supabase
+project. **The blocker went first:** the operator supplied the archive password, so `db:backup` ran for
+the first time and `db-backups/20260817-123332.7z` exists. Everything else was unblocked by that one
+line in `.env.local`, which had been the stated blocker across three sessions.
+
+**The ticket's own acceptance test could not have failed.** Its done-when named `player_profiles
+.display_name SET NOT NULL` against "a dump that has nulls there" — the restored dump has **0 nulls in
+47 rows**, so the poison would have passed and reported the rehearsal working. Swapped for
+`selected_badge_id` (**42 of 47 null**) plus a unique index on `game_scores.device_id` (**35 duplicated
+values**), which covers both failure shapes the ticket exists to catch. **An acceptance test written
+from an assumed data shape is not an acceptance test** — ADR 0026's class, narrator being the ticket.
+
+**The restore is selective, not tolerant.** The dump carries `auth`, `storage`, `realtime` and
+Supabase-only extensions a stock PostgreSQL cannot run; blocks are filtered by the schema in pg_dump's
+own object headers and applied with `ON_ERROR_STOP`, because **a restore that prints expected errors
+hides unexpected ones**. Only the 8 `auth.users` **ids** are loaded — enough for the foreign keys, and
+the emails never reach the scratch database. The shim measured at ADR 0024's fifteen lines and needed
+no growth. `supabase/migrations/` is frozen (`ISSUE-05`), so the pending path was proven with a
+throwaway probe migration created and deleted inside one command.
+
+**Windows trap, caught by a guard test:** editing `TICKET-11-…-launch.md` through a path spelled
+`-LAUNCH.md` **renamed the file on disk**, and `trackerReferences.test.ts`'s lowercase-slug regex then
+failed two tests — including making every `TICKET-11` reference read as dangling. Git reports nothing;
+the case-insensitive filesystem hides it. 202 files / 2638 tests, eslint 0, build 0; no e2e (nothing
+touched a page). Owed and now written into `ISSUE-01` §1: the archive has never been opened on another
+machine, and its password is `ADMIN_SECRET` reused.
+
 ## Session 165 — 2026-08-17: the Games learn to end
 
 Operator wanted one feature for when a player finishes any Game: a prompt to share, plus a brief
@@ -44,41 +73,11 @@ step 5 — the Subtract step applied to this file rather than to a handoff. **s1
 throughout** (`d44686c`, then the `TICKET-10` closure) and owes its own entry; staged explicit paths and
 left `goals.md`, `launch-readiness.md` and `trackerReferences.test.ts` to it.
 
-## Session 163 — 2026-08-16: the Platform gets a face
-
-`TICKET-10` had been blocked since s151 on one operator pick, made here in two steps: card **18**
-from the round-one page, then icon **1** off a round-two page built for the second half of it.
-
-**One drawing, not three.** `src/app/_brand/fan.tsx` is rendered by `opengraph-image`, `icon` and
-`apple-icon` at their own sizes — the only thing stopping a favicon drifting from a share card. It
-encodes one satori constraint worth keeping: **paint order decides what lands on top, not
-`z-index`**, so the centre tile is emitted last; the preview's `z-index:2` would have put teal π over Λ.
-
-**The durable lesson is s143's, one layer deeper.** s143 said no visual decision gets made in prose —
-render it and look. The same failure turned up *inside* the rendered preview: the candidates page
-drew every mark `font-weight: 700` and CSS-scaled one 180 px master, and **neither survives the real
-renderer** — `ImageResponse` bundles a single-weight face, so the card came out regular. **A preview
-is only evidence about the renderer that drew it.** Fixed the same session with a **12 KB** subset of
-Inter Bold (Latin + Λ Ω λ μ π ω via the Google Fonts `text=` parameter) — the "~350 KB font file"
-quoted since s151 had priced **full Greek coverage**, not what the mark draws, and made a font look
-unaffordable for four sessions. `_brand/cmap.ts` and a test now read the font's own glyph table:
-**a glyph missing from a subset renders as nothing, not an error**, so the cheaper 3.4 KB cut would
-have made any rebrand silently blank.
-
-That is also why the guard test **renders** rather than matching source, needing the `node`
-environment (sharp rejects satori's SVG under jsdom) — which exposed that `src/test/setup.ts` assumed
-a DOM for the whole suite. Decision marked in `launch-readiness.md`, the HTML page and the ticket,
-**rewriting every claim the pick and then the font falsified rather than appending under them**;
-`manifest.ts` decided against, not deferred. Filed `ISSUE-10` — `leksodromia/board.test.tsx` times
-out under full-suite load, passes alone. This session's render tests were the obvious suspect and
-**were not the cause**: excluding them went green, but stashing only this session's paths and
-re-running at `HEAD` reproduced it anyway — step one alone would have convicted the wrong thing.
-202 files / 2638 tests (bar that flake), eslint 0, build 0, e2e 13/2-skipped; images `○ (Static)`.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 163 | 2026-08-16 | **The Platform gets a face** — `TICKET-10`, blocked since s151 on one operator pick, made in two steps (card 18, then icon 1 off a second page). **One drawing, not three:** `src/app/_brand/fan.tsx` renders `opengraph-image`, `icon` and `apple-icon` at their own sizes, the only thing stopping a favicon drifting from a share card; satori paints in **emission order, not `z-index`**, so the centre tile is emitted last. **The durable lesson is s143's, one layer deeper:** the failure turned up *inside* a rendered preview — the candidates page drew marks `font-weight: 700` and CSS-scaled one 180 px master, and **neither survives `ImageResponse`**, which bundles a single-weight face. **A preview is only evidence about the renderer that drew it.** Fixed with a **12 KB** Inter Bold subset (Latin + Λ Ω λ μ π ω via the Google Fonts `text=` parameter) — the "~350 KB font" quoted since s151 had priced **full Greek coverage** and made a font look unaffordable for four sessions. `_brand/cmap.ts` + a test read the font's own glyph table, because **a glyph missing from a subset renders as nothing, not an error**. The guard test therefore **renders** rather than matching source, needing the `node` environment (sharp rejects satori's SVG under jsdom) — which exposed that `src/test/setup.ts` assumed a DOM for the whole suite. Filed `ISSUE-10`; this session's render tests were the obvious suspect and **were not the cause** — excluding them went green, but re-running at `HEAD` reproduced it anyway. 202 files / 2638 tests, e2e 13/2-skipped. |
 | 162 | 2026-08-16 | **A border the whole platform did not ask for.** Operator wanted Λεξιαρχείο's and Βρες τη Φράση's letter boxes "20% darker and 10% thicker" with consistency across the games; **every number in the ask was the wrong shape**, none of it visible without reading the components. **"Darker" inverts** — on the `stone-950` page a darker outline vanishes rather than sharpens, so the spec is *contrast against the page*: light `stone-200`→`stone-400`, dark `stone-700`→**lighter**, `stone-500`. **"10% thicker" has no pixel to land on** (2.2px, no Tailwind step, renders unevenly) → "unify at 2px", which was the consistency half anyway. And **only unfilled tiles have a visible border at all** — `correct`/`present`/`absent` set it equal to the fill — so the change lives entirely in the blank grid and the row being typed. **The token had to be new:** `--border` is the hairline for cards, inputs, secondary buttons and separators, so `--tile-border` keeps the two free to move apart (a card outline should be quiet; a letter box **is** the thing being read). Βρες τη Φράση's 1px was defended by a comment about pixels the letter loses — overruled deliberately, comment rewritten rather than deleted, and `phraseLayout.ts`'s packing maths left alone. **Scope reversed mid-grill** to all five games that draw a letter box, once the operator saw the other three would be left lighter than the two being fixed. Token **confirmed compiled out of the production bundle** (a missing `@theme` line renders no border while every test stays green — s144); `letterBoxBorder.test.ts` proven non-vacuous by reverting Λεξοδρομία. **The operator declined the render-and-look step**, so values were picked by arithmetic and an eye-check on a real phone is owed. 201 files / 2627 tests. Ran concurrently with s160 *and* s161; `HEAD` moved three commits mid-session. |
 | 161 | 2026-08-16 | **The letter goes to the word that owns it.** Operator sent a screenshot of the live Vres Tin Frasi board asking whether a purple tile was wrong. It was — and **the conclusion was right while the reason was inverted**, which is what made checking worth it: the operator reasoned "word 3 has no Α", but word 3 *is* ΔΙΔΑΣΚΩ and its Α is precisely why the purple appeared. **`evaluatePhraseGuess` enforced ADR 0004's yellow-over-purple priority per tile and never across the phrase** — pass 2 walked words in index order making both kinds of claim in one sweep, so word 0's cross-word claim consumed a letter word 2 owned and word 2's own tile fell to grey. **Word order, not information value, decided who got the letter**; it fired twice in the one screenshot. The answer phrase was recovered from `phrases-el.json` by word-shape *before* any theory (ΜΑΘΑΙΝΩ ΚΑΙ ΔΙΔΑΣΚΩ), so the probe reproduced the board tile for tile. **Blast radius measured, not estimated:** of 658 same-shape pairs in the corpus, 170 (26%) held a mis-coloured tile, and the only transitions are `purple→grey` (198) paired **1:1** with `grey→yellow` (198) plus `purple→yellow` (13) — the fix only ever moves a signal to the tile that earned it, which is the argument it is safe; a raw "170 boards change" would have read as risk. Fix = pass 2 split into two sweeps. Four tests, non-vacuous by restoring the old algorithm. **One test bug en route:** I typed final sigma `ς`, which `normalizeLetters` collapses before the function runs — the test fed input production cannot produce. Accepted: `RESTORE_STATE` replays stored tiles, so a round in progress at deploy keeps old colours until rotation. ADR 0004 amended. |
 | 160 | 2026-08-16 | **The row that is two things at once.** Operator asked whether `ISSUE-07` needed grilling; **the file was already gone** (s157 folded it into `ISSUE-01` §3) while the opening `@`-mention served the deleted file's content in full, so everything below was re-measured against disk. Three measurements moved the design first: `nominations` carries exactly **two indexes**, so the lookup route's `rejected`/`accepted` counts match none — that, not the listing GET, is §3's 4,655 sequential scans; the review route never sets `reviewed_at`, so an approved-but-unapplied row escapes the 30-day sweep forever, but **41 accepted, 0 with a null `reviewed_at`** means the manual habit holds; and of 191 rows exactly **one is not normalised** («ιουνιος» ends in a final sigma, so its own re-proposal warning can never fire). **The finding worth keeping is a domain one:** a `rejected` row is both one player's perishable **Nomination** and the standing **Refusal** that warns the next player — only the second is why ADR 0011 keeps it, and the ADR never named it, which is why "prune the rejected rows" looks cheap to every session that meets this table. Naming them apart dissolved it: keep the row, make the lookup cheap. **Two corrections, both mine, both caught by a machine:** I called the index work executable because Postgres 18.4 was *accepting connections*, but every `pg_hba.conf` line is `scram-sha-256` and `.env.local`'s `PGPASSWORD` is the Supabase one — **the check I ran was adjacent to the claim I made**; then `trackerReferences.test.ts` failed `TICKET-14` for naming a reserved-but-nonexistent `ISSUE-10`. Shipped the ADR 0011 amendment, `CONTEXT.md` gaining `Refusal`, and `TICKET-14`, which *measures* whether the index earns its place. 200 files / 2610 tests. |

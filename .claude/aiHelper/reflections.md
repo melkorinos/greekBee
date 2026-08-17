@@ -35,8 +35,10 @@ Counted together, because each one alone looks acceptable:
   runbook dumps at step 3 and runs the wipe it is the only undo for at step 4. Deliberately manual,
   so an accepted risk. s159 measured the predicted failure already live: **no archive existed at
   all**, three sessions after destination, encryption and cadence were each written up. **Work that
-  ships as a script is not work that has run.** Setup order is in the memory.md Backup-order row;
-  **current measured state is `ISSUE-01` §1 — read it, never a copy here.**
+  ships as a script is not work that has run** — s166 ran it, and one archive now exists, **which
+  has still never been opened on another machine and whose password is `ADMIN_SECRET` reused**.
+  Setup order is in the memory.md Backup-order row; **current measured state is `ISSUE-01` §1 —
+  read it, never a copy here.**
 - **Three operator eye-checks are owed and none has happened:** Trophy Case + leaderboard chip in
   both themes (s144), Shell header at four buttons (jsdom has no layout — no test can cover it), and
   letter-box grid legibility (s162; `letterBoxBorder.test.ts` says so in its own header). Watch
