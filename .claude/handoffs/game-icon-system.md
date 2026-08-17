@@ -25,8 +25,10 @@ mechanics of drawn art in this codebase. **This job is deliberately different fr
 | 8 | Leksikastirio | `/leksikastirio` | ⚖️ | `indigo-600` **(placeholder)** |
 
 **Out of scope by operator decision (2026-08-10):** Leksindeseis, Πόσο κάνει; and Λογοπαίγνιο — all three
-are `wip:true`. They will need icons when they flip; the grill should settle a **rule** that covers them
-rather than leaving the set unextendable.
+are `wip:true`, and since 2026-08-12 all three are also **`hidden:true`** (ADR 0022), so they appear on no
+picker or drawer surface at all. That strengthens the exclusion rather than changing it: there is currently
+nowhere for their icons to render. They will need icons when they are unhidden; the grill should settle a
+**rule** that covers them rather than leaving the set unextendable.
 
 Note rows 7 and 8 are not dated games: Stavrolekso is a community crossword browser + maker with no
 leaderboard, and Leksikastirio is the word-court, which `CONTEXT.md` says is not a game at all. They sit in
@@ -177,12 +179,15 @@ survives an accent-plus-neutrals icon almost unchanged; it does not survive a fr
 which is now permitted. So this question is no longer "which option" but "how much expressiveness is worth
 how much guardability" — and item 2 (*games are richer than badges*) pushes toward the expensive end.
 
-### Q5 — What is the rule for the three `wip` games?
+### Q5 — What is the rule for the three hidden games?
 
-Leksindeseis, Πόσο κάνει; and Λογοπαίγνιο are out of scope but will need icons on their `wip` flip, and that
-flip is already a documented four-step checklist (registry flag + `Shell.tsx GAME_IDS` + HomeTrophy branch +
-docs — `reflections.md`, the 2026-08-06 entry). The grill should land a rule the ninth icon can follow
-without reopening any of Q1–Q4, and the flip checklist should gain a fifth step.
+Leksindeseis, Πόσο κάνει; and Λογοπαίγνιο are out of scope but will need icons when they are unhidden. That
+flip is a documented checklist (`reflections.md`, the 2026-08-06 entry as updated 2026-08-14) — and note it
+is now **two** registry flags, not one: ADR 0022 made `wip` and `hidden` orthogonal, and Leksindeseis is
+finished-but-hidden while the other two are both. The parts of that checklist a guard test now owns
+(`GAME_IDS`, the HomeTrophy branch) have been struck; what remains manual is both flags, the accent row,
+the capability grant, content supply, and docs. The grill should land a rule the ninth icon can follow
+without reopening any of Q1–Q4, and the checklist should gain an icon step.
 
 ---
 
@@ -232,9 +237,11 @@ Numbers are never reused. Concretely:
 
 ## What this must not do
 
-- **Must not touch `emoji` semantics elsewhere.** The rank ladder (`RANKS[].emoji`), the share cards
+- **Must not touch `emoji` semantics elsewhere.** The rank ladder (`RANKS[].emoji`) and the share cards
   (Topothesies and Λογοπαίγνιο both copy emoji grids **on purpose** — `reflections.md` says do not "fix"
-  them), and the 🚧 wip chip are all unrelated and stay.
+  them) are unrelated and stay. *(The 🚧 wip chip this list used to name no longer exists — `TICKET-06`
+  deleted both it and the «Υπό κατασκευή» section outright on 2026-08-12, since a hidden Game is not
+  signposted. Nothing to avoid there.)*
 - **Must not change a game's identity, route, or registry id.** Renames are UI strings only, forever.
 - **Must not quietly repaint a game's pages.** Deciding an icon colour that disagrees with `--game-accent`
   is allowed; changing `--game-accent` itself is a redesign decision that belongs to open question 2 of

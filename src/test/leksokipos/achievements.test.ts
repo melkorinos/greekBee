@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   LEKSOKIPOS_ACHIEVEMENTS,
+  MAKRYLEXIS_ID,
   WORD_LENGTH_BADGES,
   SELECTABLE_BADGE_IDS,
   qualifyingEarnedIds,
@@ -126,8 +127,8 @@ describe("LEKSOKIPOS_ACHIEVEMENTS catalog", () => {
   });
 
   it("assigns the operator-approved mark to each badge", () => {
-    // The five drawings are art the operator signed off on (TICKET-03, rendered in
-    // .claude/aiHelper/html/badge-visual-grill.html) — a silent change should fail.
+    // The five drawings are art the operator signed off on (TICKET-03) — a silent
+    // change should fail.
     // Marks never carry tier colour, so these five serve every tier at every size.
     const pathByName = Object.fromEntries(
       LEKSOKIPOS_ACHIEVEMENTS.map((a) => [a.name, a.mark.path]),
@@ -195,6 +196,25 @@ describe("WORD_LENGTH_BADGES — the exact-length ladder", () => {
 
   it("maps length 10 to the frozen Σιδηρόδρομος id", () => {
     expect(lengthBadgeId(10)).toBe("leksokipos-sidirodromos");
+  });
+
+  // The rungs carried invented names (Σιδηρόδρομος / Υπερταχεία / Νταλίκα / Σεντόνι)
+  // that gave a player no way to tell which outranked which. They are labelled by
+  // the word length now, and the id stays frozen underneath — this pins both halves.
+  it("labels every rung by its word length and carries no invented rung names", () => {
+    const ladder = LEKSOKIPOS_ACHIEVEMENTS.find((a) => a.id === MAKRYLEXIS_ID);
+    expect(ladder?.tiers?.map((t) => t.label)).toEqual(
+      LEKSOKIPOS_ACHIEVEMENT_TUNING.wordLengthBadges.map((n) => `${n} γράμματα`),
+    );
+    for (const b of WORD_LENGTH_BADGES) expect(b).not.toHaveProperty("name");
+  });
+
+  // A rung label that already states its threshold must not have it appended again
+  // by the Trophy Case chip — "10 γράμματα · 10". The flag is what the chip reads.
+  it("flags the ladder as self-describing, and leaves the metal ladders unflagged", () => {
+    for (const a of LEKSOKIPOS_ACHIEVEMENTS) {
+      expect(Boolean(a.tierLabelsIncludeThreshold)).toBe(a.id === MAKRYLEXIS_ID);
+    }
   });
 });
 
@@ -423,7 +443,7 @@ describe("describeAchievement — earned-id → toast display", () => {
   it("resolves a bare word-length rung to the ladder's name plus its rung label", () => {
     expect(describeAchievement("leksokipos-word-13")).toMatchObject({
       name: "Μακρυλέξης",
-      tierLabel: "Σεντόνι",
+      tierLabel: "13 γράμματα",
     });
   });
 

@@ -25,7 +25,7 @@ export function WordCard({ word, selected, disabled = false, onSelect }: WordCar
           : "cursor-pointer active:opacity-80",
         selected
           ? "bg-inverted border-inverted text-inverted-foreground"
-          : "bg-surface-raised border-border text-foreground hover:border-muted",
+          : "bg-surface-raised border-tile-border text-foreground hover:border-muted",
       ].join(" ")}
     >
       {word}

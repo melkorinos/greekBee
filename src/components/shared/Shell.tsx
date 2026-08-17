@@ -4,6 +4,7 @@
 // Provides a sticky header with the platform name, a theme toggle, and a
 // hamburger button that opens a slide-out drawer listing all available games.
 
+import { FEATURE_FLAGS } from "@/config/featureFlags";
 import { GAME_REGISTRY, type RegistryGameId } from "@/config/games";
 import { PLATFORM_NAME } from "@/config/platform";
 import { FeedbackModal } from "./FeedbackModal";
@@ -125,14 +126,22 @@ export function Shell({ children }: ShellProps) {
             {/* Sound toggle — a Platform preference like theme (ADR 0021), so it
                 renders on every page even though only Leksokipos has Cues today.
                 Written inline exactly like the theme toggle rather than extracted:
-                the two are siblings and should read as one pair. */}
-            <button
-              onClick={toggleSound}
-              aria-label={soundEnabled ? "Turn sound off" : "Turn sound on"}
-              className="flex items-center justify-center w-9 h-9 rounded-full text-muted hover:bg-surface-raised active:bg-border transition-colors"
-            >
-              {soundEnabled ? "🔊" : "🔇"}
-            </button>
+                the two are siblings and should read as one pair.
+
+                Gated on FEATURE_FLAGS.soundCues (TICKET-05 Part A): `public/sounds/`
+                is empty, so with the flag off this button would toggle silence
+                against silence. Only the button is gated — useSoundEnabled above
+                still runs and still persists the preference, so flipping the flag
+                back on restores the player's stored choice rather than resetting it. */}
+            {FEATURE_FLAGS.soundCues && (
+              <button
+                onClick={toggleSound}
+                aria-label={soundEnabled ? "Turn sound off" : "Turn sound on"}
+                className="flex items-center justify-center w-9 h-9 rounded-full text-muted hover:bg-surface-raised active:bg-border transition-colors"
+              >
+                {soundEnabled ? "🔊" : "🔇"}
+              </button>
+            )}
 
             {/* Hamburger */}
             <button

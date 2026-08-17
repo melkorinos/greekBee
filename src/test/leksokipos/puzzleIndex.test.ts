@@ -63,10 +63,12 @@ describe("puzzleIndex — parity with the full loader", () => {
     expect(stub.outerLetters).toEqual(full.outerLetters);
   });
 
-  it("falls back to the most recent puzzle for an unknown date, like the full loader", () => {
-    const stub = getPuzzleStubForDate("1900-01-01");
-    const full = getPuzzleForDate("1900-01-01");
-    expect(stub.id).toBe(full.id);
+  it("resolves an unknown date to the same puzzle as the full loader", () => {
+    // Both delegate their miss rule to pickByDateOrRotate, so parity holds on
+    // either side of the calendar's ends.
+    for (const date of ["1900-01-01", "2030-06-15"]) {
+      expect(getPuzzleStubForDate(date).id).toBe(getPuzzleForDate(date).id);
+    }
   });
 
   it("getTodaysPuzzleStub matches getTodaysPuzzle", () => {

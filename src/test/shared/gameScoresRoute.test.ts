@@ -9,9 +9,10 @@ import { NextRequest } from "next/server";
 
 // ── Supabase mock ─────────────────────────────────────────────────────────────
 
-import { makeQueuedClient, tableShim } from "@/test/helpers/supabaseMock";
+import { makeQueuedClient, tableShim, type ChainCall } from "@/test/helpers/supabaseMock";
 
-const _db = makeQueuedClient();
+const calls: ChainCall[] = [];
+const _db = makeQueuedClient({ onCall: (c) => calls.push(c) });
 const enqueue = _db.enqueue;
 
 vi.mock("@/lib/supabase", () => ({
@@ -38,8 +39,8 @@ function makeGetReq(params: Record<string, string>): NextRequest {
   return new NextRequest(url.toString());
 }
 
-beforeEach(() => { _db.reset(); });
-afterEach(()  => { _db.reset(); });
+beforeEach(() => { _db.reset(); calls.length = 0; });
+afterEach(()  => { _db.reset(); calls.length = 0; });
 
 // ── POST — validation ─────────────────────────────────────────────────────────
 
@@ -117,6 +118,28 @@ describe("POST /api/game-scores — happy path", () => {
     expect(res.status).toBe(200);
     const json = await res.json() as { ok: boolean };
     expect(json.ok).toBe(true);
+  });
+
+  // A standard game's Score is the whole payload. The route destructures the body
+  // field by field, so a stale bundle still sending the retired Leksokipos
+  // { words, pangrams } — or anyone with the anon key sending anything else —
+  // cannot reach the public-read jsonb. Replaces the isCountRecord sanitizer,
+  // deleted 2026-08-16 with the write it guarded.
+  it("writes no data key when the client sends one", async () => {
+    enqueue({ error: null });
+    const res = await POST(makePostReq({
+      game_id:      "leksokipos",
+      puzzle_date:  "2026-05-22",
+      device_id:    "device-abc",
+      display_name: "Νίκος",
+      score:        42,
+      data:         { words: 12, cheat: "ΑΠΟΛΥΤΟΤΗΤΑ" },
+    }));
+    expect(res.status).toBe(200);
+
+    const upsert = calls.find((c) => c.table === "game_scores" && c.op === "upsert");
+    expect(upsert).toBeDefined();
+    expect(upsert!.args[0]).not.toHaveProperty("data");
   });
 
   it("succeeds with no display_name (falls back to Ανώνυμος)", async () => {
@@ -332,5 +355,62 @@ describe("GET /api/game-scores — display badges", () => {
     const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22", deviceId: "a" }));
     const json = await res.json() as { top20: BadgedRow[] };
     expect(json.top20[0].badge).toBeNull();
+  });
+});
+
+// ── GET — display names resolved at read time ─────────────────────────────────
+//
+// game_scores carries a denormalized display_name per row, written at score time.
+// It is NOT the source of truth: the same player_profiles fan-out that resolves
+// badges also returns the current name, and the profile wins whenever there is
+// one. The stored copy survives only as the fallback for a device that has never
+// written a profile row (19 of 52 scoring devices, measured 2026-08-15).
+
+describe("GET /api/game-scores — display names", () => {
+  it("shows the profile's current name, not the stale copy stored on the score row", async () => {
+    enqueue(
+      { data: [{ device_id: "a", display_name: "Παλιό Όνομα", score: 100 }], error: null },
+      { data: [{ device_uuid: "a", display_name: "Νέο Όνομα", selected_badge_id: null }], error: null },
+    );
+    const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22", deviceId: "a" }));
+    const json = await res.json() as { top20: BadgedRow[] };
+    expect(json.top20[0].display_name).toBe("Νέο Όνομα");
+  });
+
+  it("falls back to the score row's stored name when the device has no profile row", async () => {
+    enqueue(
+      { data: [
+        { device_id: "a", display_name: "Άννα",  score: 100 },
+        { device_id: "b", display_name: "Βάσω",  score: 80  },
+      ], error: null },
+      // only "a" has ever written a profile; "b" is profile-less
+      { data: [{ device_uuid: "a", display_name: "Άννα Β.", selected_badge_id: null }], error: null },
+    );
+    const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22", deviceId: "a" }));
+    const json = await res.json() as { top20: BadgedRow[] };
+    expect(json.top20[0].display_name).toBe("Άννα Β.");
+    expect(json.top20[1].display_name).toBe("Βάσω");
+  });
+
+  it("falls back when the profile row carries a blank name", async () => {
+    enqueue(
+      { data: [{ device_id: "a", display_name: "Άννα", score: 100 }], error: null },
+      { data: [{ device_uuid: "a", display_name: "   ", selected_badge_id: null }], error: null },
+    );
+    const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22", deviceId: "a" }));
+    const json = await res.json() as { top20: BadgedRow[] };
+    expect(json.top20[0].display_name).toBe("Άννα");
+  });
+
+  it("resolves the pinned playerRow's name from the profile too", async () => {
+    enqueue(
+      { data: [{ device_id: "a", display_name: "Άννα", score: 100 }], error: null },
+      { data: { display_name: "Παλιό Όνομα", score: 5 }, error: null }, // the player's own row
+      { data: null, error: null, count: 1 },                            // rank count
+      { data: [{ device_uuid: "outsider", display_name: "Νέο Όνομα", selected_badge_id: null }], error: null },
+    );
+    const res = await GET(makeGetReq({ game_id: "leksokipos", puzzle_date: "2026-05-22", deviceId: "outsider" }));
+    const json = await res.json() as { playerRow: { display_name: string } | null };
+    expect(json.playerRow!.display_name).toBe("Νέο Όνομα");
   });
 });

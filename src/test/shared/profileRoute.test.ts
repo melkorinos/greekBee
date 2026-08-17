@@ -127,21 +127,17 @@ describe("POST /api/profile — idempotent upsert", () => {
     expect(new Date(payload.last_active as string).getTime()).not.toBeNaN();
   });
 
-  // Names are denormalized onto game_scores rows; a rename must fan out there
-  // or the leaderboard keeps the stale name (the reason this route exists).
-  it("propagates the new display_name to the player's game_scores rows", async () => {
-    enqueue({ data: null, error: null }); // player_profiles upsert
-    enqueue({ data: null, error: null }); // game_scores update
+  // The rename used to fan out to every game_scores row of the device. It no
+  // longer does: the leaderboard GET resolves names from player_profiles at read
+  // time, so the profile upsert IS the rename. Asserting the absence matters —
+  // reinstating the fan-out would silently restore the write amplification it
+  // cost (one rename rewriting every historical row for that device).
+  it("does not fan the rename out to game_scores", async () => {
+    enqueue({ data: null, error: null }); // player_profiles upsert — the only write
     const res = await POST(makePostReq({ display_name: "Μαρία", device_uuid: "uuid-x" }));
     expect(res.status).toBe(200);
-    expect(_lastUpdatePayload).toEqual({ display_name: "Μαρία" });
-  });
-
-  it("returns 500 when the game_scores propagation fails", async () => {
-    enqueue({ data: null, error: null });                        // profile upsert ok
-    enqueue({ data: null, error: { message: "scores boom" } });  // scores update fails
-    const res = await POST(makePostReq({ display_name: "Μαρία", device_uuid: "uuid-x" }));
-    expect(res.status).toBe(500);
+    expect(_lastUpsertPayload).toMatchObject({ display_name: "Μαρία", device_uuid: "uuid-x" });
+    expect(_lastUpdatePayload).toBeNull();
   });
 
   // A signed-in player's row is auth.uid()-scoped by RLS (profile_update), so the
@@ -149,7 +145,6 @@ describe("POST /api/profile — idempotent upsert", () => {
   // "new row violates row-level security policy" on an auth-linked row.
   it("routes the write through the token-scoped client when a Bearer token is present", async () => {
     enqueue({ data: null, error: null }); // profile upsert
-    enqueue({ data: null, error: null }); // scores update
     const req = new NextRequest("http://localhost/api/profile", {
       method:  "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer tok-123" },
@@ -161,7 +156,6 @@ describe("POST /api/profile — idempotent upsert", () => {
   });
 
   it("uses the anon client (no token captured) when no Authorization header is present", async () => {
-    enqueue({ data: null, error: null });
     enqueue({ data: null, error: null });
     await POST(makePostReq({ display_name: "Μαρία", device_uuid: "uuid-anon" }));
     expect(hoisted.tokens).toHaveLength(0);

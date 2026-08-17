@@ -1,11 +1,15 @@
 // POST /api/game-state — upsert a game state blob for cross-device sync
 // GET  /api/game-state?device_uuid=&game_id=&puzzle_date= — fetch blob for restore
 //
-// The state blob (JSONB) holds the full Leksokipos session:
-//   { foundWords: string[], score: number, currentInput: string }
+// The state blob (JSONB) holds the found words of a Leksokipos session, and nothing
+// else: { foundWords: string[] }. It is deliberately NOT the full session — ADR 0003's
+// server-wins restore rebuilds score, rank and startedAt from the puzzle, so storing
+// them would create a second source of truth that could disagree with the board.
+// (Verified against the live table 2026-08-15: `foundWords` is the only key present.)
 //
 // Uniqueness: (device_uuid, game_id, puzzle_date) — one blob per player per puzzle.
-// Retention: 7-day rolling window via the daily Vercel Cron at /api/cleanup-scores.
+// Retention: SESSION_RETENTION_DAYS (10) rolling window, via the daily Vercel Cron at
+// /api/cleanup-scores. Never hardcode that number — it lives in src/config/retention.ts.
 // updated_at is set explicitly on every upsert (no DB trigger).
 
 import { NextRequest, NextResponse } from "next/server";

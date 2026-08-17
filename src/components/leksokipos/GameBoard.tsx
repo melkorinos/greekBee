@@ -60,7 +60,7 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
     shuffleLetters,
     handleKeyboardLetter,
     giveUp,
-    restoreFromServer,
+    restoreRound,
     godModeInject,
     resetGame,
   } = useGameState(puzzle);
@@ -116,15 +116,8 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
     enabled:     isDaily && !isGodMode,
   });
 
-  // Per-score metadata for fairness analysis: how many words / pangrams this score
-  // represents. Counts only — the word list never leaves the client (issue 10).
-  const scoreData = useMemo(
-    () => ({ words: foundWords.length, pangrams: foundPangrams.length }),
-    [foundWords.length, foundPangrams.length],
-  );
-
   // Auto-post whenever the score increases.
-  useEffect(() => { postScore(score, scoreData); }, [score, scoreData, postScore]);
+  useEffect(() => { postScore(score); }, [score, postScore]);
 
   // Sound Cues (ADR 0021). lastSubmission is a fresh object on every submit and is
   // deliberately never persisted, so it is already the event source — the reducer
@@ -158,7 +151,7 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
   const { profileLinked, createProfile, generateTransferCode, claimTransferCode, disconnect } = useProfile({
     deviceId,
     onDeviceIdChange:    setDeviceIdState,
-    onDisplayNameChange: (name) => { setDisplayNameState(name); postScoreWithName(score, name, scoreData); },
+    onDisplayNameChange: (name) => { setDisplayNameState(name); postScoreWithName(score, name); },
   });
 
   // Cross-device sync — pushes state on every valid word, daily puzzles only.
@@ -166,8 +159,9 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
 
   const handleTransferClaim = useCallback(async (code: string): Promise<void> => {
     await claimTransferCode(code);
-    await restoreFromServer();
-  }, [claimTransferCode, restoreFromServer]);
+    // force: the local round for this puzzle belongs to the pre-claim identity.
+    await restoreRound({ force: true });
+  }, [claimTransferCode, restoreRound]);
 
   useProfileVerification({
     profileLinked,

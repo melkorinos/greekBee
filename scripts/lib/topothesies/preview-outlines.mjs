@@ -92,7 +92,21 @@ const html = `<!doctype html><html lang="el"><head><meta charset="utf-8">
   .tag.st-deferred { background: #fef3c7; color: #92500c; }
   .tag.st-placeholder { background: #ede9fe; color: #6d28d9; }
   .hidden { display: none; }
-</style></head><body>
+  /* Phones. The operator reads these previews on an iPhone, where iOS Quick Look
+     (Files / Mail / WhatsApp attachments) renders HTML and CSS but runs NO
+     JavaScript — so the filter and the outline toggle below are dead there. The
+     cards themselves are static markup and draw fine; the <noscript> block hides
+     the controls that cannot work and says why, rather than leaving them inert. */
+  @media (max-width: 700px) {
+    header { padding: 10px 14px; }
+    .grid { padding: 14px; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    .card svg, .placeholder { height: 130px; }
+  }
+</style>
+<noscript><style>
+  #q, header button { display: none; }
+  .noscript-note { display: block !important; }
+</style></noscript></head><body>
 <header>
   <h1>Νομοί & Νησιά</h1>
   <span class="muted">${cards.length} μονάδες · ${count("live")} live · ${count("deferred")} deferred · ${count("placeholder")} backlog · ${islands} νησιά</span>
@@ -101,6 +115,7 @@ const html = `<!doctype html><html lang="el"><head><meta charset="utf-8">
   <button data-f="placeholder">only backlog</button>
   <button data-f="">all</button>
   <button id="toggle">outline-only</button>
+  <span class="noscript-note muted" style="display:none">Το φίλτρο θέλει κανονικό browser — σε προεπισκόπηση αρχείου (iPhone) δείχνει μόνο τα σχήματα.</span>
 </header>
 <div class="grid">${html_cards}</div>
 <script>

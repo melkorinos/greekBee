@@ -188,7 +188,7 @@ describe("useGameState — server restore error handling", () => {
   });
 });
 
-describe("useGameState — restoreFromServer", () => {
+describe("useGameState — restoreRound({ force: true })", () => {
   beforeEach(() => {
     vi.mocked(isProfileLinked).mockReturnValue(true);
     vi.mocked(readSlice).mockReturnValue({ "2026-01-01-el": { foundWords: ["αντι"] } });
@@ -202,7 +202,7 @@ describe("useGameState — restoreFromServer", () => {
     // mount fetch is skipped (local session exists, no flag)
     expect(spy).not.toHaveBeenCalled();
 
-    await act(async () => { await result.current.restoreFromServer(); });
+    await act(async () => { await result.current.restoreRound({ force: true }); });
 
     expect(spy).toHaveBeenCalledOnce();
     expect(result.current.foundWords).toEqual(["αντι", "παιδι", "παιδια"]);
@@ -216,8 +216,8 @@ describe("useGameState — restoreFromServer", () => {
     // flag caused mount fetch to fire and clear the flag
     expect(localStorage.getItem("leksokipos-needs-restore")).toBeNull();
 
-    // calling restoreFromServer again should not re-set the flag
-    await act(async () => { await result.current.restoreFromServer(); });
+    // calling it again should not re-set the flag
+    await act(async () => { await result.current.restoreRound({ force: true }); });
     expect(localStorage.getItem("leksokipos-needs-restore")).toBeNull();
   });
 
@@ -225,7 +225,7 @@ describe("useGameState — restoreFromServer", () => {
     const spy = mockFetchState(["αντι"]);
 
     const { result } = await act(async () => renderHook(() => useGameState(CUSTOM_PUZZLE)));
-    await act(async () => { await result.current.restoreFromServer(); });
+    await act(async () => { await result.current.restoreRound({ force: true }); });
 
     expect(spy).not.toHaveBeenCalled();
   });

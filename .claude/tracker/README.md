@@ -71,8 +71,10 @@ able to open the file and start working.
 ```
 
 `Status:` exists so a concurrent session can see what is already claimed — set it to
-`in-progress` before starting work. `Blocked by:` names tickets that must close first; leave
-the line out when there are none.
+`in-progress` before starting work. `Blocked by:` names what must resolve first — usually another
+ticket, but it may also be a **named operator decision or piece of operator work**, which is the
+commonest real blocker here (a sound file to record, a card to pick). Leave the line out when
+nothing blocks it. A ticket blocked on a person should say exactly what the person has to hand back.
 
 `/to-tickets` is the sanctioned way to turn a resolved decision into tickets. It writes here.
 

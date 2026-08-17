@@ -1,8 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { StavroleksoGrid, computeHighlightedCells, computeSolvedCells } from "@/games/stavrolekso/StavroleksoGrid";
-import { makeBlackSet, getSlotCells, getSlotLength, normalizeAndCompare } from "@/games/stavrolekso/lib";
+import { StavroleksoGrid } from "@/games/stavrolekso/StavroleksoGrid";
+import {
+  makeBlackSet,
+  getSlotCells,
+  getSlotLength,
+  normalizeAndCompare,
+  computeHighlightedCells,
+  computeSolvedCells,
+} from "@/games/stavrolekso/lib";
 import type { Direction, StavroleksoPuzzleData, StavroleksoSession } from "@/games/stavrolekso/types";
 
 function storageKey(id: number): string {

@@ -176,7 +176,7 @@ amendment. Two more are granted here, both licensed by the pre-launch wipe and b
 - **`leksokipos-tzimani` is revived** for the tiered 80% badge, in preference to keeping
   `leksokipos-theristis` with new display copy. Reviving it costs nothing while the data is wiped, and it
   avoids an id and a name that disagree forever. Tier ids are `leksokipos-tzimani-chalkino/-asimenio/-chryso`.
-  **This resolves parked item 1 of `.claude/handoffs/badgeIdeas.md`** — that item asked for exactly this, Τζιμάνι
+  **This resolves parked item 1 of `badgeIdeas.md`** (that handoff was fully discharged and deleted on 2026-08-10 — this ADR is what survives of it) — that item asked for exactly this, Τζιμάνι
   re-awarded under less demanding conditions than "found all the words".
 
 **After launch this window shuts.** Post-release, the rule is absolute again: an id may be added, never renamed,
@@ -235,8 +235,8 @@ different picture, and `badgeMark.test.tsx` locks that ("changes only the frame 
 - **Per-game accent is deliberately deferred** — the mark stays neutral on all eleven boards. Revisit only if
   badge earning ever leaves Leksokipos.
 
-The visual record — every mark at every real size in both themes — is
-`.claude/aiHelper/html/badge-visual-grill.html`.
+The five path strings themselves live in `MARKS` in `src/games/leksokipos/lib/achievements.ts` and are
+pinned by a test, so a silent redraw fails the suite.
 
 **Note the structural consequence of §3 + §4:** with Πρώτα Βήματα gone and Στην Κορυφή and Τζιμάνι tiered,
 **every remaining badge is tiered** — the catalog has no one-shot entries left. The tier treatment is therefore
@@ -350,3 +350,27 @@ The Trophy Case and Λέξεις ανά μήκος now sit inside one labelled L
 scoping rather than a caveat sentence. **Tabs were rejected for now**: they advertise a sibling to switch to,
 and exactly one game earns badges. A second earning game is what justifies them, along with the `game_id`
 migration described in the storage section above.
+
+---
+
+## Amendment (2026-08-16) — the word-length rungs lose their names, and the card states its floor
+
+Two display-copy corrections. Neither touches an id, a threshold, a row or a detector.
+
+**The Μακρυλέξης rungs are labelled by word length.** They shipped as Σιδηρόδρομος / Υπερταχεία / Νταλίκα /
+Σεντόνι — four invented words carrying no information about which outranks which, so a player had to learn a
+private vocabulary to read their own ladder. Each rung's label is now `${length} γράμματα`, and the `name`
+field is gone from `WORD_LENGTH_BADGE_META` entirely rather than left unread. **The frozen ids are untouched**
+and still spell `leksokipos-sidirodromos`; that is the point of separating an id from its copy, and §7's
+record of the names above stays true as history.
+
+One structural consequence: the Trophy Case chip renders `label · threshold`, which for a self-describing
+rung reads "10 γράμματα · 10". Rather than special-casing the ladder in the component, `Achievement` gained
+`tierLabelsIncludeThreshold`, and a test asserts exactly one badge in the catalog sets it — so a future ladder
+that labels itself the same way cannot silently re-introduce the doubled number.
+
+**Λέξεις ανά μήκος now names its ≥10 floor on the card.** The card's total counts only tracked words, and
+`player_words` has stored nothing shorter than 10 letters since the 2026-07-26 amendment. A player who had
+found hundreds of words therefore saw a total of 0 with no stated reason and read it as broken. Both the
+standing subtitle and the empty-state copy state the floor, and both derive it from `WORDS_MIN_TRACKED` —
+which derives from `achievementTuning.wordLengthBadges` — so raising the badge ladder moves the copy with it.

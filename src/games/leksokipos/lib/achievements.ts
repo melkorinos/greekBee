@@ -50,36 +50,34 @@ export type OneShotAchievementId =
 // storage floor); the id and name per length are frozen display copy, here.
 
 /**
- * Frozen id + display copy for each exact word length that has a badge.
+ * Frozen id + rung colour for each exact word length that has a badge.
  *
  * `tier` maps each length onto a rung of the Μακρυλέξης ladder (below). The four
  * lengths remain four independent earned facts — only their *presentation* is
  * laddered, so nothing about detection or storage changes.
  *
- * There is no per-length art: the ladder is ONE badge wearing four tier frames
- * (TICKET-03), so the four per-length emoji are gone and only the rung *labels*
- * survive. Nothing ever rendered them anyway — the Trophy Case tier chips are text.
+ * There is no per-length art and, since 2026-08-16, no per-length NAME either: the
+ * rungs were once Σιδηρόδρομος / Υπερταχεία / Νταλίκα / Σεντόνι, four invented
+ * words a player had to learn before knowing which was longer. A rung is now
+ * labelled by the only thing that distinguishes it — the word length. The frozen
+ * ids still spell `sidirodromos`; ids never change, display copy always may.
  */
-const WORD_LENGTH_BADGE_META: Record<
-  number,
-  { id: OneShotAchievementId; name: string; tier: TierName }
-> = {
-  10: { id: LEKSOKIPOS_ONESHOT_IDS.sidirodromos, name: "Σιδηρόδρομος", tier: "chalkino" },
-  11: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength11,  name: "Υπερταχεία",   tier: "asimenio" },
-  12: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength12,  name: "Νταλίκα",      tier: "chryso" },
-  13: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength13,  name: "Σεντόνι",      tier: "diamanti" },
+const WORD_LENGTH_BADGE_META: Record<number, { id: OneShotAchievementId; tier: TierName }> = {
+  10: { id: LEKSOKIPOS_ONESHOT_IDS.sidirodromos, tier: "chalkino" },
+  11: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength11,  tier: "asimenio" },
+  12: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength12,  tier: "chryso" },
+  13: { id: LEKSOKIPOS_ONESHOT_IDS.wordLength13,  tier: "diamanti" },
 };
 
 /**
  * The exact-length ladder, in the configured order. Lengths come from tuning; the
- * per-length id/copy come from the frozen meta above. If tuning ever lists a length
+ * per-length id/rung come from the frozen meta above. If tuning ever lists a length
  * with no meta entry it throws at module load — a loud, immediate failure rather
  * than a silently missing badge.
  */
 export const WORD_LENGTH_BADGES: readonly {
   length: number;
   id:     OneShotAchievementId;
-  name:   string;
   tier:   TierName;
 }[] = TUNING.wordLengthBadges.map((length) => {
   const meta = WORD_LENGTH_BADGE_META[length];
@@ -104,8 +102,7 @@ export type TierName = "chalkino" | "asimenio" | "chryso" | "diamanti";
  * Deliberately path DATA, never raw SVG markup — the catalog stays plain data that
  * no renderer has to trust, and BadgeMark owns the one `<svg>` element. The mark is
  * always painted in `currentColor` and never carries tier colour, which is what lets
- * five drawings serve every tier at every size (TICKET-03; the visual record is
- * `.claude/aiHelper/html/badge-visual-grill.html`).
+ * five drawings serve every tier at every size (TICKET-03).
  */
 export interface BadgeMarkArt {
   path:    string;
@@ -156,6 +153,13 @@ export interface Achievement {
   mark:   BadgeMarkArt;
   kind:   AchievementKind;
   tiers?: readonly AchievementTier[];
+  /**
+   * True when each rung's `label` already states its own threshold, so the Trophy
+   * Case chip must not print it a second time. Μακρυλέξης is the only such ladder —
+   * its rungs ARE word lengths, and "10 γράμματα · 10" is noise. A metal ladder
+   * needs both halves ("Χρυσό · 25") and leaves this unset.
+   */
+  tierLabelsIncludeThreshold?: boolean;
 }
 
 // ─── Detection ─────────────────────────────────────────────────────────────
@@ -283,7 +287,7 @@ const MAKRYLEXIS_TIERS: readonly AchievementTier[] = WORD_LENGTH_BADGES.map((b) 
   id:        b.id,
   tier:      b.tier,
   threshold: b.length,
-  label:     b.name,
+  label:     `${b.length} γράμματα`,
 }));
 
 /** The three metal thresholds a cumulative badge ladders on, from achievementTuning. */
@@ -330,6 +334,7 @@ export const LEKSOKIPOS_ACHIEVEMENTS: readonly Achievement[] = [
     mark: mark(MARKS.grammes),
     kind: "tiered",
     tiers: MAKRYLEXIS_TIERS,
+    tierLabelsIncludeThreshold: true,
   },
   {
     id:   TZIMANI_ID,

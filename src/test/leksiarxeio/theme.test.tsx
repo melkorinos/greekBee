@@ -12,10 +12,10 @@ import { Tile } from "@/components/leksiarxeio/Tile";
 // ── Tile ──────────────────────────────────────────────────────────────────────
 
 describe("Tile light theme classes", () => {
-  it('empty tile has border-border token', () => {
+  it('empty tile has border-tile-border token', () => {
     const { container } = render(<Tile state="empty" />);
     const div = container.firstElementChild as HTMLElement;
-    expect(div.className).toContain("border-border");
+    expect(div.className).toContain("border-tile-border");
   });
 
   it('empty tile has text-foreground token', () => {

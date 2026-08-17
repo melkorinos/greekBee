@@ -14,6 +14,13 @@
   --surface-raised: var(--color-stone-50);
   --muted:          var(--color-stone-500);
   --border:         var(--color-stone-200);
+  /* Letter-box outline — the border a player looks at while a tile is still
+     blank, in all five games that draw one. Deliberately a step stronger than
+     --border: that token is a hairline meant to be quiet (cards, inputs, page
+     separators), whereas a letter box IS the thing being read, and at hairline
+     weight an unplayed grid was hard to make out. Kept as its own token so
+     strengthening the boxes never darkens the platform's chrome. */
+  --tile-border:    var(--color-stone-400);
   --brand:          var(--color-yellow-400);
   --accent:         var(--color-yellow-500);
   --danger:         var(--color-red-500);
@@ -77,6 +84,9 @@
   --surface-raised: var(--color-stone-800);
   --muted:          var(--color-stone-400);
   --border:         var(--color-stone-700);
+  /* Lifts rather than darkens: contrast against the page is the goal, and on a
+     stone-950 background a darker outline would disappear instead of sharpen. */
+  --tile-border:    var(--color-stone-500);
   --accent:         var(--color-yellow-400);
   --danger:         var(--color-red-400);
   --success:        var(--color-green-500);
@@ -138,6 +148,7 @@
   --color-surface-raised: var(--surface-raised);
   --color-muted:          var(--muted);
   --color-border:         var(--border);
+  --color-tile-border:    var(--tile-border);
   --color-brand:          var(--brand);
   --color-accent:         var(--accent);
   --color-danger:         var(--danger);

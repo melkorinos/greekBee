@@ -3,8 +3,9 @@
 // Owns BOTH directions of sync, so the endpoint, the JSON shape, and the
 // snapshot reconstruction live in exactly one place. Previously the push was
 // here-ish (inlined in useGameStateSync) and the pull was copy-pasted twice
-// inside useGameState (mount-time + restoreFromServer) — that duplication is
-// the kind of drift that produced "the name synced but the found words didn't".
+// inside useGameState — that duplication is the kind of drift that produced
+// "the name synced but the found words didn't". Both callers now go through
+// useGameState's single restoreRound().
 //
 // No React here: the hooks own the effects, the gates, and the dispatch. This
 // module owns only what crosses the wire. Server-wins restore (ADR-0003):

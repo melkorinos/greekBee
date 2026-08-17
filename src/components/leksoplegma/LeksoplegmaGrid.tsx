@@ -156,7 +156,7 @@ export function LeksoplegmaGrid({
                 className={`flex items-center justify-center w-[68%] aspect-square rounded-2xl border-2 text-xl font-bold uppercase transition-colors ${
                   isTraced
                     ? "bg-game-accent border-game-accent text-game-accent-foreground"
-                    : "bg-surface-raised border-border text-foreground hover:bg-border"
+                    : "bg-surface-raised border-tile-border text-foreground hover:bg-border"
                 } ${isDim ? "opacity-40" : ""} ${isHinted && !isTraced ? "ring-2 ring-game-accent ring-offset-2 ring-offset-background" : ""}`}
               >
                 {letter}

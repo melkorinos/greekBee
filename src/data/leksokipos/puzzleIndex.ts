@@ -16,6 +16,7 @@
 import type { Language } from "@/types";
 import { greekToGreeklish } from "@/lib/greeklish";
 import { todayISO } from "@/lib/puzzleDate";
+import { pickByDateOrRotate } from "@/lib/puzzleRotation";
 import puzzleIndexEl from "./puzzles-index-el.json";
 
 /** A pre-built puzzle minus its validWords — enough to build its canonical URL. */
@@ -31,9 +32,10 @@ const STUBS: Record<Language, LeksokiposPuzzleStub[]> = {
 };
 
 /**
- * Slim mirror of getPuzzleForDate (see ./index.ts): match by date, fall back
- * to the most recent puzzle. Behaviour must stay identical — the redirect page
- * relies on both producing the same puzzle for the same input.
+ * Slim mirror of getPuzzleForDate (see ./index.ts). Behaviour must stay
+ * identical — the redirect page relies on both producing the same puzzle for
+ * the same input — so both delegate the whole rule to pickByDateOrRotate
+ * rather than each spelling out a miss fallback that can drift.
  */
 export function getPuzzleStubForDate(date: string, language: Language = "el"): LeksokiposPuzzleStub {
   const stubs = STUBS[language];
@@ -42,7 +44,7 @@ export function getPuzzleStubForDate(date: string, language: Language = "el"): L
     throw new Error(`No puzzles available for language: ${language}`);
   }
 
-  return stubs.find((p) => p.date === date) ?? stubs[stubs.length - 1];
+  return pickByDateOrRotate(date, stubs);
 }
 
 /** Slim mirror of getTodaysPuzzle (see ./index.ts). */

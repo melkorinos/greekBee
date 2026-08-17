@@ -388,8 +388,19 @@ describe("TrophyCase", () => {
     await waitFor(() =>
       expect(tileFor("Μακρυλέξης")).toHaveAttribute("data-earned", "true"),
     );
-    // Σεντόνι is the diamanti rung — the fourth tier above gold.
+    // 13 γράμματα is the diamanti rung — the fourth tier above gold.
     expect(markIn(tileFor("Μακρυλέξης"))).toHaveAttribute("data-tier", "diamanti");
+  });
+
+  // The metal ladders print "label · threshold"; this one's labels ARE the threshold,
+  // so appending it would render "10 γράμματα · 10".
+  it("prints each rung's word length once, with no appended threshold", async () => {
+    renderCase({ earned: [] });
+
+    await waitFor(() => expect(tierChip("leksokipos-sidirodromos")).toBeInTheDocument());
+    expect(tierChip("leksokipos-sidirodromos")).toHaveTextContent("10 γράμματα");
+    expect(tierChip("leksokipos-sidirodromos").textContent).not.toContain("·");
+    expect(tierChip("leksokipos-word-13")).toHaveTextContent("13 γράμματα");
   });
 
   it("selects the ladder by its base id, not the frozen rung id", async () => {

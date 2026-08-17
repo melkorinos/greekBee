@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import type { Direction, SlotDef } from "./types";
-import { makeBlackSet, getSlotCells } from "./lib";
+import type { SlotDef } from "./types";
+import { makeBlackSet } from "./lib";
 
 interface StavroleksoGridProps {
   width: number;
@@ -116,39 +116,4 @@ export function StavroleksoGrid({
       })}
     </div>
   );
-}
-
-// ── Helper exported for use in maker + player ─────────────────────────────────
-
-export function computeHighlightedCells(
-  selectedSlot: { number: number; direction: Direction } | null,
-  slots: SlotDef[],
-  width: number,
-  height: number,
-  blackSet: Set<string>,
-): Set<string> {
-  if (!selectedSlot) return new Set();
-  const slot = slots.find(
-    (s) => s.number === selectedSlot.number && s.direction === selectedSlot.direction,
-  );
-  if (!slot) return new Set();
-  return new Set(getSlotCells(slot.direction, slot.startRow, slot.startCol, width, height, blackSet));
-}
-
-export function computeSolvedCells(
-  solvedSlots: number[],
-  slots: SlotDef[],
-  width: number,
-  height: number,
-  blackSet: Set<string>,
-): Set<string> {
-  const solved = new Set<string>();
-  const solvedSet = new Set(solvedSlots);
-  for (const slot of slots) {
-    if (!solvedSet.has(slot.number)) continue;
-    for (const cell of getSlotCells(slot.direction, slot.startRow, slot.startCol, width, height, blackSet)) {
-      solved.add(cell);
-    }
-  }
-  return solved;
 }

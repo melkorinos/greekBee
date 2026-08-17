@@ -11,8 +11,11 @@
 //   - error silencing — score posting must never crash the game
 //   - no-op when disabled or deviceId unknown
 //
-// submit/submitWithName take an optional `data` record (counts only) that rides along
-// into the row's jsonb — e.g. Leksokipos posts { words, pangrams } for fairness analysis.
+// A Score is the whole payload: no game may ride per-round metadata along into
+// game_scores.data. Leksokipos posted { words, pangrams } there until 2026-08-16
+// with no reader, and the Offline Outbox flush dropped them anyway — see the
+// commit and CONTEXT.md's game_scores row. Leksiarxeio's per-length jsonb is
+// written server-side by mergeLengthScore and never travels through here.
 
 import { useCallback, useEffect, useRef } from "react";
 
@@ -68,7 +71,7 @@ export function useScoreSubmission({
   // ── Leksokipos + Leksindeseis ──────────────────────────────────────────────
 
   const submit = useCallback(
-    (score: number, data?: Record<string, number>) => {
+    (score: number) => {
       if (!enabled || !deviceId) return;
       if (score <= 0 || score <= lastPostedRef.current) return;
 
@@ -88,22 +91,20 @@ export function useScoreSubmission({
       }
 
       lastPostedRef.current = score;
-      const body: Record<string, unknown> = {
+      postScore("/api/game-scores", {
         game_id:      gameId,
         puzzle_date:  puzzleDate,
         device_id:    deviceId,
         score,
         display_name: sanitizeDisplayName(displayNameRef.current),
-      };
-      if (data) body.data = data;
-      postScore("/api/game-scores", body);
+      });
     },
     [enabled, gameId, puzzleDate, deviceId],
   );
 
   /** Force-post with a new name, bypassing the strictly-increasing guard. */
   const submitWithName = useCallback(
-    (score: number, name: string, data?: Record<string, number>) => {
+    (score: number, name: string) => {
       if (!enabled || !deviceId || score <= 0) return;
 
       if (offlineRef.current) {
@@ -117,15 +118,13 @@ export function useScoreSubmission({
         return;
       }
 
-      const body: Record<string, unknown> = {
+      postScore("/api/game-scores", {
         game_id:      gameId,
         puzzle_date:  puzzleDate,
         device_id:    deviceId,
         score,
         display_name: sanitizeDisplayName(name),
-      };
-      if (data) body.data = data;
-      postScore("/api/game-scores", body);
+      });
     },
     [enabled, gameId, puzzleDate, deviceId],
   );

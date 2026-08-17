@@ -23,12 +23,22 @@ describe("getPuzzleForDate", () => {
     expect(p.id).toBe("2026-03-25-el");
   });
 
-  it("falls back to the most recent puzzle when date has no match", () => {
-    // A date far in the past that is not in the JSON
+  it("falls back to a rotation when the date has no match", () => {
+    // A date far in the past that is not in the JSON.
     const p = getPuzzleForDate("1999-01-01");
-    // Should be the last puzzle in the file (most recent)
     expect(p).toBeDefined();
     expect(p.id).toBeTruthy();
+  });
+
+  it("does not serve the furthest-future board once the calendar runs out", () => {
+    // The old miss rule returned puzzles[length - 1], so every date past the
+    // last authored day served the same 2028 board forever. Full invariant and
+    // its sweep across all Games: src/test/shared/dailyPuzzleSelection.test.ts.
+    const last = puzzlesEl[puzzlesEl.length - 1];
+    const beyond = ["2030-01-01", "2030-01-02", "2030-01-03"].map((d) => getPuzzleForDate(d));
+
+    expect(beyond.map((p) => p.id)).not.toContain(last.id);
+    expect(new Set(beyond.map((p) => p.id)).size).toBeGreaterThan(1);
   });
 
   it("returned puzzle has the expected Puzzle shape", () => {
@@ -111,13 +121,12 @@ describe("getNextPuzzle", () => {
   });
 
   it("cycles back to the first puzzle after the last one", () => {
-    // Get the last puzzle in the list by using a far-future fallback date
-    const last = getPuzzleForDate("2099-01-01"); // no match → falls back to last
+    // Taken from the JSON directly: a far-future date no longer resolves to the
+    // last board (getPuzzleForDate rotates on a miss rather than pinning it).
+    const last = getPuzzleForDate(puzzlesEl[puzzlesEl.length - 1].date);
     const cycled = getNextPuzzle(last);
-    // Should cycle back to the first puzzle in the array
-    const first = getPuzzleForDate("2026-03-25");
-    // If last is truly the last, cycled should equal first
-    // (only true if last is actually the last in the array — valid assumption given fallback logic)
+    const first = getPuzzleForDate(puzzlesEl[0].date);
+
     expect(cycled.id).toBe(first.id);
   });
 });

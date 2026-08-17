@@ -245,7 +245,22 @@ async function main() {
   .note { color: #52525b; }
   .src { color: #a1a1aa; font-size: 11px; word-break: break-word; }
   .src a { color: #71717a; }
-</style></head><body>
+  /* Phones. iOS Quick Look (Files / Mail / WhatsApp attachments) renders HTML and
+     CSS but runs NO JavaScript, so the filter pills are dead there. The cards are
+     static markup and draw fine; the <noscript> block hides the controls that
+     cannot work and says why, rather than leaving them inert. */
+  @media (max-width: 700px) {
+    header { padding: 10px 14px; }
+    .filters { margin-left: 0; }
+    .legend { padding: 12px 14px 0; }
+    .grid { grid-template-columns: 1fr; gap: 10px; padding: 12px 14px; }
+    h2 { margin: 20px 14px 0; }
+  }
+</style>
+<noscript><style>
+  .filters { display: none; }
+  .noscript-note { display: block !important; }
+</style></noscript></head><body>
 <header>
   <h1>Λογοπαίγνιο — έλεγχος υποψηφίων</h1>
   <span class="muted">${rows.length} μάρκες · ${ok.length} με αρχείο (${clean} καθαρά, ${flagged.length} με σημείωση) · ${missing.length} χωρίς αρχείο</span>
@@ -257,6 +272,7 @@ async function main() {
     <button data-filter="missing">Χωρίς αρχείο</button>
     <button data-filter="manual">Θέλουν εικόνα από εσένα</button>
   </div>
+  <span class="noscript-note muted" style="display:none">Τα φίλτρα θέλουν κανονικό browser — σε προεπισκόπηση αρχείου (iPhone) δείχνει όλες τις κάρτες.</span>
 </header>
 <div class="legend">
   Κάθε κάρτα δείχνει το <b>πλήρες λογότυπο όπως κατέβηκε</b> — <b>όχι</b> το τελικό «mark-only» crop.

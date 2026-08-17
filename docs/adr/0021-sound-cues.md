@@ -174,3 +174,18 @@ Nothing about the design changes. `SOUND_CUES` shipped with volumes 0.7 / 0.2 / 
 slow clap), and `TICKET-05` remains open, which means **the toggle currently renders on every page
 and plays silence** — the deploy gate above is now the only thing enforcing that, and it is live
 rather than hypothetical.
+
+## Amendment (2026-08-15) — the deploy gate is replaced by a feature flag
+
+**"Neither ticket ships alone" is spent, and no future session should re-impose it.** The Decision's
+deploy gate was a correct rule with a human as its only enforcement — the third such rule in the
+repo at the time, and the shape that had already failed here twice. It is now structural instead:
+the 🔊 button renders only under `FEATURE_FLAGS.soundCues`, shipped **off**.
+
+The hook, the preference and the Cue registry stay wired and inert — the same posture Offline Mode
+took when it was parked (ADR 0010) — so flipping the flag on **restores the player's stored
+choice** rather than resetting it. Consequence: sourcing the three MP3s is **post-launch and
+optional**, blocking nothing. Cutting the feature no longer means reverting the toggle.
+
+The operator phone-check that the previous amendment moved into `TICKET-05`'s done-when travels
+with the flag flip, not with the files.

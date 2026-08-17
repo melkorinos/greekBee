@@ -86,11 +86,11 @@ This project is managed with a dedicated AI coding agent using **Claude Code**. 
 | `.claude/aiHelper/memory.md` | All architecture decisions and context across sessions |
 | `.claude/aiHelper/goals.md` | Roadmap — completed phases + current focus |
 | `.claude/aiHelper/log.md` | Per-session changelog |
-| `.claude/aiHelper/reflections.md` | Post-session risks, tensions, and open questions |
+| `.claude/aiHelper/reflections.md` | Live, still-open risks and tensions — capped at 120 lines; resolved ones are deleted (git is the archive) and long lessons are promoted to an ADR |
 | `.claude/aiHelper/coverageMap.md` | Per-file test coverage map — loaded on demand, never at session start |
 | `.claude/aiHelper/skillsNotes.md` | Skill install/fork/junction traps — read before any skill maintenance |
 
-Longer-lived working documents live outside `aiHelper/`: `.claude/handoffs/` holds parked feature briefs (monetization, offline mode, the Λογοπαίγνιο content pool, badge ideas, the engagement epic), and `.claude/tracker/` holds deferred issues and agent-ready tickets.
+Longer-lived working documents live outside `aiHelper/`: `.claude/handoffs/` holds open questions and parked feature briefs (launch readiness, monetization, offline mode, the Λογοπαίγνιο content pool, the game-icon system, the engagement epic), and `.claude/tracker/` holds deferred issues and agent-ready tickets.
 
 ### Claude Code workflow
 
@@ -159,69 +159,19 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
 
 ---
 
-## How the game works — step by step
+## How the game works — the shape of a round
 
 > This describes the **Leksokipos** flow. Every other game follows the same shell/persistence patterns but has its own pure-logic modules under `src/games/`; the round-based games additionally share one of the two round spines (ADR 0019).
 
-1. **Puzzle load** (`src/app/leksokipos/page.tsx` — server component)
-   - The server reads the `?puzzle=YYYY-MM-DD` query param (or uses today's date).
-   - It calls `getPuzzleForDate` from `src/data/leksokipos/index.ts`.
-   - The resolved `Puzzle` object is passed as a prop to `<GameBoard>`.
-
-2. **State initialisation** (`src/games/leksokipos/hooks/gameReducer.ts → buildInitialState`)
-   - A clean `GameState` is built: empty input, zero score, lowest rank (`RANKS[0]`).
-   - `puzzleMaxScore` is computed once here (see Scoring below) and stored in state so it never needs to be recalculated.
-
-3. **Client rehydration** (`src/games/leksokipos/hooks/useGameState.ts`)
-   - After first render, `loadPersistedState` checks `localStorage` for a saved session matching the puzzle ID.
-   - If found, a `RESTORE_STATE` action merges the saved fields (found words, score, rank) back into state.
-
-4. **Player input**
-   - Flower cells (`<FlowerGrid>`) call `addLetter` on click.
-   - Physical keyboard events are handled by `handleKeyboardLetter` (normalises accented input → base letter, then filters against the puzzle's allowed set). This logic lives entirely in `useGameState` — `<GameBoard>` is a pure event dispatcher.
-   - Backspace → `deleteLetter`, Enter → `submitWord`.
-
-5. **Word submission** (`src/games/leksokipos/hooks/gameReducer.ts → SUBMIT_WORD`)
-   - `validateWord` (pure, `src/games/leksokipos/lib/validation.ts`) runs 5 rules in order: length ≥ 4, letters in puzzle set, contains centre letter, in valid word list, not already found.
-   - A puzzle index (letter sets + valid word set) is built once per puzzle ID and cached in a module-level Map — never rebuilt on subsequent submissions.
-   - If valid: score is updated, rank is recalculated via `calculateRank`, word is added to `foundWords`.
-
-6. **Scoring** (`src/games/leksokipos/lib/scoring.ts`)
-   - 4-letter word → 1 pt
-   - 5+ letter word → 1 pt per letter
-   - Pangram (uses all 7 letters) → above + 7 bonus pts
-   - `maxScore` = sum of all word scores, scaled by `SCORE_SCALE` (0.75), then a soft cap (`softCap`) compresses totals above the knee so each puzzle's rank bar tracks its richness (no hard ceiling). Knobs live in `src/config/gameRules.ts`: `SCORE_SCALE`, `SOFT_CAP_KNEE`, `SOFT_CAP_K` — that file is the source of truth if these numbers drift.
-
-7. **Rank calculation** (`src/games/leksokipos/lib/ranking.ts`)
-   - Score is compared against thresholds as a % of `maxScore`:
-
-   | Rank         | Threshold |
-   |--------------|-----------|
-   | Ψαράκι       | 0%        |
-   | Έτσι κιέτσι  | 8%        |
-   | Οκέι         | 16%       |
-   | Για πάμε     | 24%       |
-   | Θηρίο        | 35%       |
-   | Φωτιά        | 45%       |
-   | Γκουρού      | 60%       |
-   | Απολυτότητα  | 80%       |
-
-   (The ladder lives in `src/games/leksokipos/lib/ranking.ts` (`RANKS`) — that array is the source of truth if this table drifts.)
-
-   `rankProgress()` (pure function) derives the progress-bar fill, points-to-next and the full ladder for the UI — keeping all rank display logic out of React components.
-
-8. **Persistence** (`src/hooks/useRoundPersistence.ts`)
-   - After first render, the hook hydrates from `localStorage` — if a saved session matches the current puzzle ID it dispatches `RESTORE_STATE` into the reducer.
-   - On every snapshot change, `foundWords`, `score`, `currentRank`, `startedAt`, and `givenUp` are written to the `wordgames:state` envelope under the game's slice (via `useGameStore`).
-   - State is tied to the session key (puzzle ID) — switching puzzles starts a fresh session automatically.
-
-9. **UI composition** (`src/components/leksokipos/GameBoard.tsx`)
-   - `<ScoreBar>` — rank label, progress bar, rank ladder popover, leaderboard button (daily only).
-   - `<WordInput>` — live letter display, centre letter highlighted in yellow.
-   - `<FeedbackMessage>` — toast after each submission.
-   - `<FlowerGrid>` — SVG letter grid with two visual variants: **Pie Slice** (annular sectors) and **Flower** (elliptical petals). Configured via `FlowerGridConfig`. The player's variant preference is toggled from the page header and stored in `localStorage`.
-   - `<FoundWordsList>` — sorted found words, pangrams highlighted.
-   - `<HowToPlayModal>` — rules modal (? button, Greek only).
+1. **Puzzle load** — a server component resolves the date (`?puzzle=YYYY-MM-DD` or today) to a `Puzzle` and passes it to the board. The miss rule for a date the calendar does not cover is one platform-wide invariant — see **Miss Rule** in `CONTEXT.md`.
+2. **State init** — the reducer builds a clean state and computes `puzzleMaxScore` once.
+3. **Rehydration** — after first render, persistence hydrates from `localStorage` and dispatches `RESTORE_STATE` if a saved session matches the puzzle ID.
+4. **Input** — grid clicks and physical keys both funnel through the game's hook; the board is a pure event dispatcher.
+5. **Submission** — a pure validator runs its rules in order (length, letters in set, centre letter, in word list, not already found). The puzzle index is built once per puzzle ID and cached.
+6. **Scoring** — 4-letter word = 1 pt, 5+ = 1 pt per letter, pangram = +7. `maxScore` is the sum scaled by `SCORE_SCALE` and passed through a soft cap so the rank bar tracks each puzzle's richness. **All knobs live in `src/config/gameRules.ts`** — never copy the numbers.
+7. **Rank** — score as a % of `maxScore` against the `RANKS` ladder in `src/games/leksokipos/lib/ranking.ts`, which is the source of truth for both the names and the thresholds. `rankProgress()` derives everything the UI shows, so no rank logic sits in a component.
+8. **Persistence** — the snapshot is written to the `wordgames:state` envelope under the game's slice via `useGameStore`, keyed on the session key, so switching puzzles starts fresh.
+9. **UI** — score bar, word input, feedback toast, the SVG `FlowerGrid` (two variants, **Pie Slice** and **Flower**, player-toggled), found-words list and the rules modal. **Sound Cues** (ADR 0021) map each submission to at most one Cue; off by default, and the toggle itself is behind `FEATURE_FLAGS.soundCues`.
 
 ---
 
@@ -229,109 +179,31 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
 
 ```
 src/
-  app/              Next.js App Router — shell layout, game picker, per-game routes
-    leksokipos/     Daily puzzle + custom /[center]/[outer] dynamic route (server component delegates to LeksokiposLayout)
-    leksiarxeio/    4–8 letter Greek word game (multi-length)
-    leksindeseis/   Group 16 words into 4 categories
-    vres-tin-frasi/ Daily Greek phrase guessing game
-    stavrolekso/    Community crossword browser + maker (/[id], /maker)
-    leksodromia/    Daily anagram sprint (decay-to-floor scoring)
-    leksoplegma/    Daily word-web (trace words across a 4×4 grid, no timer)
-    topothesies/    Daily Greek geography (silhouette → regional unit → capital)
-    posokanei/      Daily guess-the-price (wip)
-    logopaignio/    Daily guess-the-logo (wip)
-    profile/        Player identity, Lifetime Stats, Trophy Case
-    leksikastirio/  Community word-court (public voting + admin review)
-    api/            Edge routes: game-scores, game-state, profile, transfer, nominations, community-puzzles, pangrams, words, auth
-  components/
-    shared/         Cross-game UI primitives (Shell, GamePageShell, GameHeader, Modal, FeedbackBanner, FramedMedia, GameLeaderboardModal, LetterPickerModal)
-    leksokipos/     Leksokipos components (LeksokiposLayout, GameBoard, FlowerGrid, FlowerGridPlayground, ScoreBar, LeaderboardModal, …)
-    leksiarxeio/    Leksiarxeio components (LeksiarxeioBoard, GuessGrid, Tile, Keyboard)
-    leksindeseis/   Leksindeseis components (GroupGrid, WordCard, CategoryReveal, ConnectionsBoard, ConnectionsLeaderboardModal)
-    vrestifrasi/    Vres Tin Frasi components (board, phrase tiles, leaderboard modal)
-    leksodromia/    Leksodromia components (board, tile rack, recap, leaderboard modal)
-    leksoplegma/    Leksoplegma components (board, SVG live edges, hint chips, recap)
-    topothesies/    Topothesies components (silhouette, guess autocomplete, board, name reveal, result)
-    posokanei/      Πόσο κάνει; components (board, price input, result) — wip
-    logopaignio/    Λογοπαίγνιο components (de-blurring logo reveal, typed guess field, board, result) — wip
-    profile/        Profile Page cards (Lifetime Stats strip, Trophy Case, Words by Length)
-    leksikastirio/  Community word-court admin / voting UI
-  games/            Pure logic — one folder per game, zero React imports
-    leksokipos/
-      lib/          validation, scoring, ranking, pangram, normalize, computeValidWords, parseCustomUrl
-      hooks/        useGameState, gameReducer
-      types.ts
-    leksiarxeio/
-      lib/          evaluateGuess, isValidGuess, letterState, scoring
-      hooks/        useLeksiarxeioState, leksiarxeioReducer
-      types.ts
-    leksindeseis/
-      lib/          matching
-      hooks/        useLeksindeseisState, leksindeseisReducer
-      types.ts
-    vrestifrasi/
-      lib/          evaluatePhraseGuess, letterState, scoring
-      hooks/        useVresTinFrasiState, vresTinFrasiReducer
-      types.ts
-    stavrolekso/
-      lib/          autoNumberSlots, getSlotLength, isConnected, normalizeAndCompare
-      types.ts   (also holds StavroleksoGrid.tsx — a React component, unlike the other games' pure-logic folders)
-    leksodromia/
-      lib/          selectDailyWords, scrambleWord, scoring
-      hooks/        useLeksodromiaRound (incl. useElapsedClock), leksodromiaReducer
-      types.ts
-    leksoplegma/
-      lib/          graph, scoring, generator (offline generator core), dataLoader
-      hooks/        useLeksoplegmaRound, leksoplegmaReducer
-      types.ts
-    topothesies/
-      lib/          geo (haversine/arrow/proximity), selectDailyPuzzle, evaluateGuess, scoring, topothesiesReducer, shareText
-      hooks/        useTopothesiesRound
-      types.ts
-    posokanei/
-      lib/          evaluateGuess (price proximity), format, selectDailyPuzzle, scoring, posokaneiReducer, shareText
-      hooks/        usePosokaneiRound
-      types.ts
-    logopaignio/
-      lib/          evaluateGuess (accept-list brand matching), blur, selectDailyPuzzle, scoring, logopaignioReducer, shareText
-      hooks/        useLogopaignioRound
-      types.ts
-  hooks/
-    useGameStore.ts        Unified localStorage envelope — the only code that touches localStorage
-    usePlayerIdentity.ts   Bundles migrate + useGameIdentity + useProfile + useAuth for side-effect-free surfaces
-    useGameIdentity.ts     SSR-safe DeviceId + DisplayName init; used across the game boards
-    useScoreSubmission.ts  Unified score-posting (submit / submitWithName / submitLength)
-    useLiveScorePost.ts    Continuous-post + finish-once-open policy shared by the round games
-    useRoundPersistence.ts Generic per-session persistence hook (hydrate/save/clear)
-    useGameStateSync.ts    Cross-device sync hook — pushes Leksokipos state on valid word submit
-    useGuessRound.ts       Round spine for the guess family (leksiarxeio, vrestifrasi) — ADR 0019
-    useSlotFillRound.ts    Round spine for the slot-fill family (topothesies, posokanei, logopaignio, leksoplegma) — ADR 0019
-    useOfflineMode.tsx     Offline Mode context — PARKED (ADR 0010), wired but unreachable
-  data/
-    leksokipos/     puzzles-el.json (daily puzzles), index.ts
-    leksiarxeio/    words-2..8.json (per-length guess lists), answers-4..8.json (curated answer pools), answerPools.ts (same-day-answer seam), index.ts
-    leksindeseis/   puzzles-connections.json (hand-curated), index.ts
-    vrestifrasi/    phrases-el.json (static phrase fallback), index.ts
-    leksoplegma/    puzzles-el.json (committed generator batch, npm run generate-leksoplegma), index.ts
-    leksodromia/    anagramAlternates.json (anagram credit for curated answers), index.ts (words derived from the leksiarxeio answer pools)
-    topothesies/    answers.json + shapes.json (precomputed SVG silhouette paths, ADR 0018), index.ts
-    posokanei/      puzzles-el.json (placeholder pool), index.ts
-    logopaignio/    puzzles-el.json (placeholder pool), index.ts
-    words-el.json   ~795k normalised Greek words (no accents, ς→σ)
-  lib/
-    apiRoute.ts     The route envelope — parseJson, requireAdmin, jsonError/jsonMessage (ADR 0016)
-    greeklish.ts    Bijective Greek↔greeklish codec for clean ASCII custom URLs
-    normalize.ts    normalizeLetters() — the platform's single Greek normalisation point
-    postScore.ts    Fire-and-forget POST utility (+ postScoreAwaitable for the offline flush)
-    supabase.ts     Typed Supabase clients (anon / token-scoped / service-role, ADR 0017)
-    communityPuzzleLifecycle.ts  Submit → approve/reject → serve, shared by all community-puzzle games
-    puzzleDate.ts   todayISO(), nextFreeScheduledDate() — the platform's single clock
-    placement.ts    Podium/first-place counts derived from full game_scores history
-    scoreMerge.ts / achievementMerge.ts / pangramMerge.ts / wordsMerge.ts  Sign-in Restore merge planners (ADR 0012/0013)
-    offlineOutbox.ts             Pending offline scores (PARKED with Offline Mode, ADR 0010)
-  types/            Shared types: Language, SliceId, PersistenceEnvelope
-scripts/            Puzzle generation & curation CLIs (batch-generate, curate-answers, generate-topothesies, logopaignio fetchers, …)
+  app/          Next.js App Router — shell layout, picker, one folder per game route,
+                plus profile/, leksikastirio/, privacy/, auth/ and api/ (Edge routes)
+  components/   shared/ holds cross-game primitives (Shell, GamePageShell, GameHeader, Modal,
+                FramedMedia, GameLeaderboardModal); every other folder is one game's UI
+  games/        Pure logic — one folder per game, zero React imports. lib/ = pure functions,
+                hooks/ = that game's reducer + state hook, types.ts
+  hooks/        Cross-game hooks: useGameStore (the only localStorage writer), identity,
+                score submission, the two round spines (ADR 0019), useTheme, useSoundCue
+  lib/          Platform seams: apiRoute (the route envelope, ADR 0016), normalize, supabase +
+                generated database.types (ADR 0017), puzzleDate, puzzleRotation,
+                communityPuzzleLifecycle, the Sign-in Restore merge planners (ADR 0012/0013)
+  data/         One folder per game (puzzle pools, word lists) + words-el.json (~795k words)
+  config/       The platform's tuning knobs — see the config note below
+  types/        Language, SliceId, PersistenceEnvelope
+scripts/        Puzzle generation & curation CLIs
+supabase/       config.toml + migrations/ — the authoritative DB schema
 ```
+
+The tree above is deliberately shallow. **Per-file detail is not documented here** — it drifts with
+every refactor, and the directory itself is accurate by construction. For the pure-logic modules of
+a given game, read `src/games/<game>/lib/`.
+
+**Never hardcode a value that lives in `src/config/`** — import it. That folder holds `games`
+(the registry, and the `wip`/`hidden` flags this README's table derives from), `gameRules` (every
+numeric knob per game), `achievementTuning`, `platform`, `retention`, `sound` and `featureFlags`.
 
 **Key design principles:**
 - Game logic (`src/games/*/lib/`) is pure functions with no React dependency — testable with plain Vitest, no DOM required
@@ -343,21 +215,13 @@ scripts/            Puzzle generation & curation CLIs (batch-generate, curate-an
 
 ## High scores / leaderboard
 
-**Leksokipos** — live. Rolling 7-day leaderboard via Supabase (`game_scores` table with `game_id = "leksokipos"`). Score = Leksokipos points, higher = better.
+One `game_scores` table backs every board, keyed by `game_id` + `device_id`. Boards are **per daily
+puzzle**, on a rolling 7-day window, and custom puzzles never post. **Every leaderboard is
+higher-is-better** (ADR 0014) — that is the one invariant worth knowing here.
 
-**Leksiarxeio** — live. Rolling 7-day daily leaderboard via Supabase (`game_scores` with `game_id = "leksiarxeio"`, per-length rows via `word_length`). Score = sum of in-game points across all 5 lengths (4–8) for a given day (6 pts for a 1st-guess solve … 1 pt at the 6th); higher = better. Failed/unplayed length = 0. Players appear on the board as soon as they finish at least one length.
-
-**Leksindeseis** — board wired, game still `wip: true` and `hidden: true` (reachable by direct URL only). Per-puzzle leaderboard via Supabase (`game_scores` with `game_id = "leksindeseis"`). Score = mistakes remaining (1–4) when won; higher = better. Lost games do not appear on the board.
-
-**Vres Tin Frasi** — live. Per-day leaderboard via Supabase (`game_scores` with `game_id = "vrestifrasi"`). Score = points from `scoreVresTinFrasi` (6 pts for a 1-guess win … 1 pt for a 6-guess win; loss = 0); higher = better (ADR 0014 — every leaderboard is higher-is-better).
-
-**Leksodromia** — live. Per-day leaderboard (`game_id = "leksodromia"`). Score = decay-scoring points across the 10-word run (perfect round = 1000); higher = better.
-
-**Leksoplegma** — live. Per-day leaderboard (`game_id = "leksoplegma"`). Score = required-word + extra-word points minus hint costs; higher = better.
-
-**Topothesies** — live. Per-day leaderboard (`game_id = "topothesies"`). Score = 100 per remaining shape guess (of 5) + 40 per remaining capital guess (of 3); a failed stage scores nothing but the other still counts. Higher = better.
-
-**Πόσο κάνει;** and **Λογοπαίγνιο** — wired into the same board (`posokanei` / `logopaignio`), 100 points per remaining guess, but both games are still `wip: true`, `hidden: true` (reachable by direct URL only) and run on a single placeholder puzzle.
+Which games have a board is *derived, not listed*: it is the registry rows declaring the `scores`
+capability (ADR 0020). Each game's scoring formula lives in its own `lib/scoring.ts` with the numbers
+in `src/config/gameRules.ts`; `CONTEXT.md` defines the per-game **Score** terms.
 
 ---
 
@@ -365,22 +229,16 @@ scripts/            Puzzle generation & curation CLIs (batch-generate, curate-an
 
 Everything lives under [`.claude/tracker/`](.claude/tracker/) — conventions and both file templates in [its README](.claude/tracker/README.md). Two folders, and the split is the point: **issues** are problems we have decided not to fix yet; **tickets** are work an agent can pick up cold and execute. There are no triage labels — the folder is the state — and resolved files are **deleted**, not marked done.
 
-### Deferred problems ([`issues/`](.claude/tracker/issues/))
+Numbers are **never reused** — read `log.md` before picking one, not the folder.
 
-| # | Issue | Revisit when |
-|---|-------|--------------|
-| ISSUE-01 | [No disaster-recovery backups](.claude/tracker/issues/ISSUE-01-no-disaster-recovery-backups.md) | Before public launch, or the next risky migration |
-
-### Ready for pickup ([`tickets/`](.claude/tracker/tickets/))
-
-| # | Ticket | Status |
-|---|--------|--------|
-| TICKET-01 | [`player_milestones` table](.claude/tracker/tickets/TICKET-01-player-milestones-table.md) | ready |
-| TICKET-02 | [Catalog rebuild + launch reset](.claude/tracker/tickets/TICKET-02-catalog-rebuild-launch-reset.md) | ready — blocked by TICKET-01 |
+**What is currently open is not listed here.** Read [`issues/`](.claude/tracker/issues/) and
+[`tickets/`](.claude/tracker/tickets/) directly — the folder is the state, each file carries its own
+status, and a table in this README is a hand-maintained copy that goes stale the first time a ticket
+is split or closed.
 
 ### Open questions
 
-Questions that must be answered before work can be ticketed are **not** tracker items — they live in [`.claude/handoffs/launch-readiness.md`](.claude/handoffs/launch-readiness.md): the launch checklist, the UI redesign scope, and the launch sequencing. Resolving one produces an ADR or a `CONTEXT.md` entry plus, usually, tickets.
+Questions that must be answered before work can be ticketed are **not** tracker items — they live in [`.claude/handoffs/launch-readiness.md`](.claude/handoffs/launch-readiness.md), which now holds exactly one: sequencing the launch run. Resolving one produces an ADR or a `CONTEXT.md` entry plus, usually, tickets. The **UI redesign** is deliberately not tracked there — the operator drives it in separate sessions.
 
 ---
 

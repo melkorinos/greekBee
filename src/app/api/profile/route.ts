@@ -53,19 +53,12 @@ export async function POST(req: NextRequest) {
     return jsonError("db_error", error.message);
   }
 
-  // Propagate the rename to the leaderboard. Display names are denormalized onto
-  // each game_scores row (the leaderboard GET reads display_name there, never
-  // from player_profiles), so without this fan-out the player's existing rows
-  // keep the stale name. anon UPDATE is permitted (scores_update USING(true),
-  // ADR 0012). No-op for a brand-new device with no scores yet.
-  const { error: scoresError } = await table(supabase, "game_scores")
-    .update({ display_name })
-    .eq("device_id", device_uuid);
-
-  if (scoresError) {
-    return jsonError("db_error", scoresError.message);
-  }
-
+  // No fan-out to game_scores. That column is still written per score row, but the
+  // leaderboard GET now resolves names from player_profiles at read time and only
+  // falls back to the stored copy for devices with no profile row — so this upsert
+  // is the whole rename. The fan-out it replaces was both incomplete (three other
+  // routes write a name and never called it, leaving 22% of score rows stale) and
+  // a write amplifier (one rename rewrote every historical row for the device).
   return NextResponse.json({ ok: true });
 }
 

@@ -146,6 +146,18 @@ describe.skipIf(!canRun)("live DB — narrowed anon policies (achievements/miles
 
   const DEVICE = `__rls_${crypto.randomUUID()}`;
 
+  // If the game_state DELETE block below ever fails intermittently — a count of 0
+  // where 1 is asserted, only under full-suite load and never in isolation — this
+  // wipe is the first suspect, not an RLS regression. It is scoped by a FIXED
+  // prefix, not per run, and it fires in beforeAll/afterAll. Against the single
+  // shared dev/prod Supabase project, a second overlapping run of this file (a
+  // local run against CI, or two terminals) deletes the first run's seeded row
+  // between its seed and its assertion. The per-test unique device_uuid does not
+  // help: `like "__rls_%"` matches every run's rows alike. The fix, if it is ever
+  // worth making, is a per-run nonce prefix (`__rls_<uuid>_`) wiped on its own —
+  // same for the shared `__rls_test__` game_id in the game_scores block above.
+  // Unreproduced as of 2026-08-14; documented here rather than fixed because the
+  // race cannot fire unless two runs actually overlap.
   async function wipeSentinelRows() {
     await table(service, "player_achievements").delete().like("device_uuid", "__rls_%");
     await table(service, "player_milestones").delete().like("device_uuid", "__rls_%");
