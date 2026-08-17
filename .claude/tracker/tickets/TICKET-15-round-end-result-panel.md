@@ -1,4 +1,4 @@
-# Every Game ends with a Result Panel that shares a summary and a link
+# [LAUNCH] Every Game ends with a Result Panel that shares a summary and a link
 
 **Status:** ready
 **Spec:** [docs/adr/0025-round-end-result-panel-and-share.md](../../../docs/adr/0025-round-end-result-panel-and-share.md) — every ruling below is authorised there, including the rejected alternatives. Read it first; this file is the execution list, not the reasoning.

@@ -1,4 +1,4 @@
-# game_scores carries a dead `is_perfect` column that nothing has ever read
+# [LAUNCH] game_scores carries a dead `is_perfect` column that nothing has ever read
 
 **Deferred:** 2026-08-15
 **Scheduled:** release day — **step 5 of the runbook** in

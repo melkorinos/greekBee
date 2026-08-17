@@ -1,4 +1,4 @@
-# Get the release-day dump off the machine — encrypted, into Google Drive
+# [LAUNCH] Get the release-day dump off the machine — encrypted, into Google Drive
 
 **Status:** ready
 **Spec:** [.claude/handoffs/launch-readiness.md](../../handoffs/launch-readiness.md) — the release-day
