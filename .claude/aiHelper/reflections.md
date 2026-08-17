@@ -339,6 +339,17 @@ had costed *full Greek coverage* rather than the glyphs the mark draws. **A numb
 option look unaffordable deserves the same check as a number that makes one look cheap**, and this
 one had gone unexamined through four sessions of planning around it.
 
+**s165 — the artifact was plain text, and drawing it still overturned three answers out of four.**
+This list has only ever been about images, so a share summary — a string — seemed not to need the s143
+treatment; four format questions were answered in prose, then drawn as six worked examples as a
+courtesy. **Three of the four changed on sight**: `3/6` fractions collapsed to one emoji per Length,
+spider-web cells became green blocks, and the platform name left the identity line entirely — that last
+one because seeing `Leksarxeia · Leksiarxeio` adjacent is what made the collision obvious, and no
+description would have. **A format is a visual decision wearing text's clothes**, and drawing it cost
+one code block and no tooling. Practical form: **when the deliverable is a shape someone reads — a
+message, a filename pattern, a log line, CLI output — write six real examples before asking whether the
+shape is right.**
+
 ### 🟠 A DB test validates the migration and is blind to the deploy (s142, generalised)
 
 Recorded as a standing rule for the **next** migration window, since the `player_milestones` one is
@@ -351,11 +362,6 @@ The failure mode lives precisely in that gap: a migration that drops a table whi
 serves code writing to it means **a green suite actively reassuring the operator while every write
 500s**. A window needs one check that hits the **deployed route**. Related: never read a commit count
 out of a doc — re-measure with `git rev-list --count` before starting.
-
-### 🟡 A discharged handoff is a second source of truth until it is deleted (s143)
-`badgeIdeas.md` was fully discharged on 2026-08-07 — every build item shipped, every decision landed in ADR 0012/0013, `goals.md` and `launch-readiness.md` — and then **sat in `handoffs/` for three days**, because s140's Dream promoted its lessons but never removed the file. In the same window its sibling `badgeVisualSystem.md` went **stale on three facts** (a threshold, a tier ladder, and a citation to a superseded ADR amendment) with nothing flagging it, because a handoff has no mechanism that notices the world moved.
-
-The operator caught both by asking. That is the tension: **the Dream reliably promotes content and unreliably deletes files.** `tracker/` has the rule (done means delete, git is the archive); `handoffs/` has the same need and no rule. Worth a habit at Dream time — for every handoff still on disk, name the thread that is still open, and if none is, delete it. A handoff whose decisions have all landed elsewhere is not documentation, it is a stale copy that a cold session will read as current.
 
 ### 🟡 Authored content vs derived word lists (the s133 class of bug)
 Vres Tin Frasi shipped with 29% of its phrase corpus unsolvable — the game rejected its own answers — because **authored content (`phrases-el.json`) and the derived guess pool (fixed-length `words-N.json` lists) have no structural link.** A phrase can be written using any word; the pool only stocks lengths 1–8, and only what the dictionary happens to contain. Nothing failed loudly: the puzzle rendered fine and only the correct answer was refused.
@@ -546,22 +552,14 @@ being recorded in the gap?**
 
 ### 🟡 A retired id is not gone — it is still sitting in your fixtures (s140)
 
-Removing two achievement ids from the catalog broke **8 test files**, and only two of those
-breaks were about the badges. Everywhere else the ids were just *arbitrary valid strings* a past
-session had reached for — `authLinkRoute`, `achievementMerge`, `achievementsRoute`,
-`gameScoresRoute`, `profileBadgeRoute`, `achievementToast`, `leaderboardBadge`. They read as
-noise to fix, but two of them were not:
-
-- **`profileBadgeRoute`'s "saves a one-shot" and `gameScoresRoute`'s "one-shot resolves to
-  `tier: null`" were testing a shape the catalog can no longer produce.** Once every entry is
-  tiered, those cases cannot arise from real data. Swapping the string would have kept a green
-  test that asserts nothing reachable; they had to become genuinely different scenarios. **When a
-  fixture stops compiling against reality, ask whether the test still describes a possible
-  world** — a mechanical rename is the tempting wrong answer.
-- **A blanket `sed` over `TrophyCase.test.tsx` rewrote the *selected* badge id into a tier id.**
-  Selection stores the BASE id and always has; the sed could not know that. It went green-adjacent
-  and failed loudly, but a slightly different sed would have passed while encoding a wire format
-  the route rejects.
+Removing two achievement ids broke **8 test files**, and only two breaks were about badges — everywhere
+else the ids were *arbitrary valid strings* a past session had reached for. Two of those looked like
+noise and were not. `profileBadgeRoute`'s "saves a one-shot" and `gameScoresRoute`'s "one-shot resolves
+to `tier: null`" tested a shape the catalog can no longer produce (every entry is tiered), so swapping
+the string would have kept a green test asserting nothing reachable — **when a fixture stops compiling
+against reality, ask whether the test still describes a possible world.** And a blanket `sed` over
+`TrophyCase.test.tsx` rewrote the *selected* badge id into a tier id; selection stores the BASE id and
+always has, so a slightly different sed would have passed while encoding a wire format the route rejects.
 
 The durable point: **the blast radius of retiring an id is not "the badge code", it is every
 place that ever needed a plausible id.** Nothing marks a fixture as arbitrary, so grep is the only
@@ -583,13 +581,12 @@ The word-length badges are **exact length** (operator's choice): a word of exact
 
 ---
 
----
-
 ## ✅ Resolved Tensions (archive)
 
 - **`game_state`’s 350:1 update ratio (s155, judged and closed)** — 29,025 updates against 83 live rows looks like a fire; the correct response was **leave it alone**. Cause is real (Leksokipos writes twice per word and `pushFoundWords` posts the whole array, ~820 word-slots to persist 40), but at 1,000 daily players that is ~80,000 upserts/day, **under one write per second**, with same-day autovacuum. **A ratio is not a verdict** — it means nothing until multiplied by projected load against the ceiling. `TICKET-12` holds the fix with its threshold in the title; re-run the measurement before opening it, and note that sending deltas is blocked by ADR 0003’s server-wins restore ✅
 - **Stripping the emails from the dump (s154, settled)** — a data-minimisation instinct pointed at the wrong artifact: `pg_dump --schema=public` yields an archive that satisfies a privacy intuition and **fails at the one job it exists for**, since restored rows point at accounts that no longer exist and every signed-in player returns a stranger to their own history. **A minimisation instinct and a recovery requirement can point in opposite directions, and minimisation feels more responsible while being wrong.** Encryption reconciles them; deletion does not ✅
 - **Vercel Fluid Active CPU as the binding cost constraint (s144, resolved 2026-08-13)** — measured over a full billing period at **1.19 CPU-hours ≈ $0.35, ~2% of the $20 Pro allocation**; the old "4h/day cap" framing is obsolete. Mitigations that must not be undone: the module-level `validWordsCache` in `buildCustomPuzzle`, `revalidate = 3600` on the custom route, Edge runtime on all API routes. **Settled:** stripping `validWords` from `puzzles-el.json` saves 4–10 ms of parse and costs 50–200 ms of dictionary computation per puzzle ✅
+- **A discharged handoff is a second source of truth until it is deleted (s143, promoted s165)** — `badgeIdeas.md` sat in `handoffs/` for three days after every decision in it had landed elsewhere, and its sibling went stale on three facts, because **the Dream reliably promotes content and unreliably deletes files.** Resolved by becoming a rule rather than a warning: soul.md's Dream step 5 now requires naming the open thread in every surviving handoff or deleting it. The prose is deleted here because it was promoted — which is that same step applied to this file ✅
 - **Mobile input path for Leksiarxeio** — `keyboardInteraction.test.tsx` now verifies the on-screen keyboard dispatches end-to-end (letter click → pending tile, ⌫ → removal, ↵ → submit). Verified during the 2026-07-02 test audit ✅
 
 - **`dark:` Tailwind classes** — re-enabled safely via `@custom-variant dark (&:where(.dark, .dark *))` in `globals.css`. The prefix fires only when `.dark` is on `<html>` (never from `prefers-color-scheme`). `useTheme` hook owns the toggle; preference lives in `localStorage["theme-preference"]` outside the game-state envelope. ADR 0002 documents the decision ✅

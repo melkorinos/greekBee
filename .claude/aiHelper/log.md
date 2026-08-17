@@ -5,6 +5,45 @@
 
 ---
 
+## Session 165 — 2026-08-17: the Games learn to end
+
+Operator wanted one feature for when a player finishes any Game: a prompt to share, plus a brief
+performance summary. `/grill-with-docs`, five batches, twenty-five decisions, **docs only** — ADR 0025,
+two `CONTEXT.md` entries, `TICKET-15`, one `launch-readiness.md` row. No code.
+
+**The framing fact was an absence.** Seven Games are live and **one ends with a share** (Τοποθεσίες);
+Λεξοδρομία and Λεξόπλεγμα already compute a full recap and offer no way to send it anywhere, and
+Λεξιαρχείο and Βρες τη Φράση end with a one-line banner. Worse: **no share text on the Platform
+carries a link**, so the emoji summaries that do exist are untraceable back to the site — and `TICKET-10`
+had shipped an og:card the day before with nothing posting a link for it to render. The two are one bet.
+
+**Λεξόκηπος has no terminal state**, which is what forced the vocabulary. `Round End` is deliberately
+**not one rule** — six Games, six triggers, list closed — and Λεξόκηπος's is reaching the top Rank, past
+which play continues, so it alone **pops** rather than rendering inline and its shared score is **live,
+not a snapshot**. The Platform turned out to have **five names for "the round is over"**
+(`won`/`lost`, `stage: "finished"`, `isFinished`, `gaveUp`, `isEndgame`) and no glossary entry for the
+concept; ADR 0020's own criterion then settled that this is **not a `GameCapability`** — it writes
+nothing to the shared database, exactly the Cues ruling.
+
+**Measured before recommending, and the recommendation lost:** only **7 of 35 Λεξιαρχείο player-days
+resolve all five Lengths (20%)**, so I proposed the looser trigger. The operator kept "all five" with
+that number on the table, so both artifacts now say **do not fix it by loosening** and to re-measure
+after launch, since it is beta data `launch-reset.sql` wipes.
+
+**The durable lesson is s143's, in a medium this list had never applied it to.** Four format questions
+were answered in prose, then drawn as six worked examples as a courtesy — and **three of the four
+answers changed on sight** (`3/6` fractions → one emoji per Length, spider-web cells → green blocks,
+and the platform name left the identity line entirely). That last one only because seeing
+`Leksarxeia · Leksiarxeio` adjacent made the collision obvious — a collision the operator had
+demonstrated a batch earlier by writing one name for the other. **A format is a visual decision wearing
+text's clothes**, and drawing it cost one code block.
+
+Dream note: `reflections.md` was at **602 against its 600 cap**, pushed over by s164's ledger row.
+Brought to 599 by archiving the s143 discharged-handoff tension, whose content is now soul.md's Dream
+step 5 — the Subtract step applied to this file rather than to a handoff. **s164 ran concurrently
+throughout** (`d44686c`, then the `TICKET-10` closure) and owes its own entry; staged explicit paths and
+left `goals.md`, `launch-readiness.md` and `trackerReferences.test.ts` to it.
+
 ## Session 163 — 2026-08-16: the Platform gets a face
 
 `TICKET-10` had been blocked since s151 on one operator pick, made here in two steps: card **18**
@@ -36,50 +75,11 @@ out under full-suite load, passes alone. This session's render tests were the ob
 re-running at `HEAD` reproduced it anyway — step one alone would have convicted the wrong thing.
 202 files / 2638 tests (bar that flake), eslint 0, build 0, e2e 13/2-skipped; images `○ (Static)`.
 
-## Session 162 — 2026-08-16: a border the whole platform did not ask for
-
-Operator wanted Λεξιαρχείο's and Βρες τη Φράση's letter boxes "20% darker and 10% thicker", with
-consistency across the games. `/grill-with-docs`, three batches. **Every number in the ask turned out
-to be the wrong shape**, and none of that was visible without reading the components.
-
-**"Darker" inverts.** On the `stone-950` page a darker outline vanishes rather than sharpens, so the
-spec is **contrast against the page**: light goes `stone-200`→`stone-400`, dark goes
-`stone-700`→**lighter**, `stone-500`. **"10% thicker" has no pixel to land on** — 2px+10% is 2.2px,
-which Tailwind has no step for and which renders unevenly; it became "unify at 2px", which is the
-consistency half of the ask anyway. And **only unfilled tiles have a visible border at all**:
-`correct`/`present`/`absent` set the border *equal to* the fill, so the entire change lives in the
-blank grid and the row being typed.
-
-**The token had to be new.** `--border` is the platform's hairline for cards, inputs, secondary
-buttons and page separators, so strengthening the boxes through it would have been a redesign.
-`--tile-border` keeps the two free to move apart — the reason written into `globals.css` is that a
-card outline should be quiet while a letter box **is** the thing being read.
-
-**Βρες τη Φράση's 1px was defended by a comment** ("every pixel of border is a pixel the letter
-loses", 32px tiles). Overruled deliberately, comment rewritten rather than deleted: legibility of the
-*blank* grid was the tighter constraint, and 28px of interior still clears the 16px letter. The
-packing maths in `phraseLayout.ts` was left untouched — growing the tile to compensate would have
-rewritten `AVAILABLE`/`TILE` and pushed long phrases onto extra lines.
-
-**Scope reversed mid-grill**: two games → all five that draw a letter box, once the operator saw that
-Λεξόπλεγμα/Λεξοδρομία/Λεξινδέσεις would otherwise be left lighter than the two being fixed — the
-opposite of the consistency being asked for.
-
-Two checks, both the standing rules paying out. **The token was confirmed compiled out of the
-production bundle**, not assumed — `.border-tile-border{border-color:var(--tile-border)}` plus both
-theme values; a missing `@theme` line renders no border while every test stays green (s144). And the
-new `letterBoxBorder.test.ts` was **proven non-vacuous** by reverting Λεξοδρομία, which failed
-exactly one test. **The operator declined the render-and-look step** (s143's method, offered as
-Q6), so values were picked by arithmetic and **an eye-check on a real phone is owed** — flagged in
-the reply, not silently dropped. 201 files / **2627 tests**, eslint 0, build 0, e2e 13/2-skipped.
-Ran concurrently with s160 **and** s161: `HEAD` moved three commits mid-session, found by `git log`
-and by an edit tool reporting the file had changed under me. Staged explicit paths; left the other
-session's two open files alone.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 162 | 2026-08-16 | **A border the whole platform did not ask for.** Operator wanted Λεξιαρχείο's and Βρες τη Φράση's letter boxes "20% darker and 10% thicker" with consistency across the games; **every number in the ask was the wrong shape**, none of it visible without reading the components. **"Darker" inverts** — on the `stone-950` page a darker outline vanishes rather than sharpens, so the spec is *contrast against the page*: light `stone-200`→`stone-400`, dark `stone-700`→**lighter**, `stone-500`. **"10% thicker" has no pixel to land on** (2.2px, no Tailwind step, renders unevenly) → "unify at 2px", which was the consistency half anyway. And **only unfilled tiles have a visible border at all** — `correct`/`present`/`absent` set it equal to the fill — so the change lives entirely in the blank grid and the row being typed. **The token had to be new:** `--border` is the hairline for cards, inputs, secondary buttons and separators, so `--tile-border` keeps the two free to move apart (a card outline should be quiet; a letter box **is** the thing being read). Βρες τη Φράση's 1px was defended by a comment about pixels the letter loses — overruled deliberately, comment rewritten rather than deleted, and `phraseLayout.ts`'s packing maths left alone. **Scope reversed mid-grill** to all five games that draw a letter box, once the operator saw the other three would be left lighter than the two being fixed. Token **confirmed compiled out of the production bundle** (a missing `@theme` line renders no border while every test stays green — s144); `letterBoxBorder.test.ts` proven non-vacuous by reverting Λεξοδρομία. **The operator declined the render-and-look step**, so values were picked by arithmetic and an eye-check on a real phone is owed. 201 files / 2627 tests. Ran concurrently with s160 *and* s161; `HEAD` moved three commits mid-session. |
 | 161 | 2026-08-16 | **The letter goes to the word that owns it.** Operator sent a screenshot of the live Vres Tin Frasi board asking whether a purple tile was wrong. It was — and **the conclusion was right while the reason was inverted**, which is what made checking worth it: the operator reasoned "word 3 has no Α", but word 3 *is* ΔΙΔΑΣΚΩ and its Α is precisely why the purple appeared. **`evaluatePhraseGuess` enforced ADR 0004's yellow-over-purple priority per tile and never across the phrase** — pass 2 walked words in index order making both kinds of claim in one sweep, so word 0's cross-word claim consumed a letter word 2 owned and word 2's own tile fell to grey. **Word order, not information value, decided who got the letter**; it fired twice in the one screenshot. The answer phrase was recovered from `phrases-el.json` by word-shape *before* any theory (ΜΑΘΑΙΝΩ ΚΑΙ ΔΙΔΑΣΚΩ), so the probe reproduced the board tile for tile. **Blast radius measured, not estimated:** of 658 same-shape pairs in the corpus, 170 (26%) held a mis-coloured tile, and the only transitions are `purple→grey` (198) paired **1:1** with `grey→yellow` (198) plus `purple→yellow` (13) — the fix only ever moves a signal to the tile that earned it, which is the argument it is safe; a raw "170 boards change" would have read as risk. Fix = pass 2 split into two sweeps. Four tests, non-vacuous by restoring the old algorithm. **One test bug en route:** I typed final sigma `ς`, which `normalizeLetters` collapses before the function runs — the test fed input production cannot produce. Accepted: `RESTORE_STATE` replays stored tiles, so a round in progress at deploy keeps old colours until rotation. ADR 0004 amended. |
 | 160 | 2026-08-16 | **The row that is two things at once.** Operator asked whether `ISSUE-07` needed grilling; **the file was already gone** (s157 folded it into `ISSUE-01` §3) while the opening `@`-mention served the deleted file's content in full, so everything below was re-measured against disk. Three measurements moved the design first: `nominations` carries exactly **two indexes**, so the lookup route's `rejected`/`accepted` counts match none — that, not the listing GET, is §3's 4,655 sequential scans; the review route never sets `reviewed_at`, so an approved-but-unapplied row escapes the 30-day sweep forever, but **41 accepted, 0 with a null `reviewed_at`** means the manual habit holds; and of 191 rows exactly **one is not normalised** («ιουνιος» ends in a final sigma, so its own re-proposal warning can never fire). **The finding worth keeping is a domain one:** a `rejected` row is both one player's perishable **Nomination** and the standing **Refusal** that warns the next player — only the second is why ADR 0011 keeps it, and the ADR never named it, which is why "prune the rejected rows" looks cheap to every session that meets this table. Naming them apart dissolved it: keep the row, make the lookup cheap. **Two corrections, both mine, both caught by a machine:** I called the index work executable because Postgres 18.4 was *accepting connections*, but every `pg_hba.conf` line is `scram-sha-256` and `.env.local`'s `PGPASSWORD` is the Supabase one — **the check I ran was adjacent to the claim I made**; then `trackerReferences.test.ts` failed `TICKET-14` for naming a reserved-but-nonexistent `ISSUE-10`. Shipped the ADR 0011 amendment, `CONTEXT.md` gaining `Refusal`, and `TICKET-14`, which *measures* whether the index earns its place. 200 files / 2610 tests. |
 | 159 | 2026-08-16 | **The blocker that was never there.** `ISSUE-06` said it was blocked on the dev/prod split; it was not, and **one environment check collapsed the premise** — PostgreSQL 18 was already installed for `pg_dump`, and whether the planner switches from a sequential scan to an index descent as a table grows is **Postgres behaviour, not Supabase behaviour**, so no hosted scratch project was ever required. **ADR 0024: no split**, on three reasons none reconstructible from code — the free org's second slot is the **disaster-restore target** and `disaster-recovery.md` step 3 needs it empty; an **empty staging DB passes exactly the migrations that hurt** (`NOT NULL` meeting real nulls, unique index meeting real duplicates); and seeding one from a dump puts a **second permanent cloud copy of every player's email** in play. Operator declined Pro, which would have dissolved the question. **Docker was measured out, not argued out**: across all 19 migrations the only objects outside `public` are `auth.uid()` (4 refs) and `auth.users` (3), so the compatibility surface is a ~15-line shim. **The worst finding was not architectural** — `BACKUP_ARCHIVE_PASSWORD` is absent from the real `.env.local`, so `npm run db:backup` throws before dumping; `db-backups/` holds two **unencrypted** folders; the weekly task is unregistered, and registering it would have created a job **failing every Sunday at 02:00 while looking like coverage**. Order corrected: password, dump, verify extraction, then schedule. Thirteenth ledger entry, and **the false claim was mine** — I called §4's content lost in the fold when `git log --diff-filter=D`, run one call earlier, already showed it fixed. Shipped ADR 0024, `TICKET-13`, the CONTEXT glossary's Backup/Restore/Rehearsal, and an `ISSUE-01` retitle. 200 files / 2610 tests. |
