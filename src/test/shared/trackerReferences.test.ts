@@ -52,7 +52,10 @@ const SPENT: Record<string, string> = {
   "ISSUE-08": "stale display_name on game_scores — fixed 2026-08-15, names now resolve at read time",
   // Folded into ISSUE-01 on 2026-08-16, not shipped. The operator asked for one DB
   // issue rather than four; each became a section there, keeping its own trigger.
-  "ISSUE-06": "player_profiles sequential scans — folded into ISSUE-01 §2",
+  // §2 itself is gone as of 2026-08-17 — TICKET-14 measured the crossover and the
+  // existing indexes were already right. ISSUE-01 keeps sections 1 and 3 at their
+  // numbers rather than renumbering, because ADR 0011/0026 and TICKET-13 cite them.
+  "ISSUE-06": "player_profiles sequential scans — folded into ISSUE-01 §2, discharged 2026-08-17",
   "ISSUE-07": "nominations grow without bound — folded into ISSUE-01 §3",
   // NOT folded, despite what this entry said until 2026-08-16. ISSUE-01 has no
   // §4 and never had one: the finding was FIXED in 2f4cf77 the same day the fold
@@ -60,6 +63,15 @@ const SPENT: Record<string, string> = {
   // because a pointer at a section that does not exist sends a cold session hunting.
   "ISSUE-09": "unread Leksokipos score metadata — fixed 2026-08-16 in 2f4cf77, never folded",
   "ISSUE-10": "leksodromia board.test.tsx timeouts — fixed 2026-08-17, userEvent delay:null",
+  // Withdrawn, not shipped: the ticket was gated on ~500 daily players and the
+  // re-measure on 2026-08-17 read 3-9. Kept as a two-line note in the project-mcp
+  // skill so a session that rediscovers the update ratios stops there.
+  "TICKET-12": "Leksokipos per-word write volume — withdrawn 2026-08-17, two orders below its gate",
+  // Asked once, answered once, no script committed (its own scope said so). Both
+  // planner questions resolved on 2026-08-17 against a local scratch database:
+  // ISSUE-01 §2 discharged and deleted, §3's index verdict written into runbook
+  // step 5. The two operator decisions it was parking moved back into §3.
+  "TICKET-14": "index crossover probe — measured 2026-08-17, ISSUE-01 §2 discharged",
 };
 
 /**

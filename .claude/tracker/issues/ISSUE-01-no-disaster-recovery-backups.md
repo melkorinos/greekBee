@@ -1,8 +1,14 @@
-# The database's deferred problems — three findings, three triggers
+# The database's deferred problems — two findings, two triggers
 
 **Deferred:** 2026-07-05 (backups); the rest 2026-08-15
 **Revisit when:** each section carries its own trigger — they do not share one, and no section
 gates another.
+
+**Section 2 is gone, discharged 2026-08-17** by `TICKET-14`'s local measurement: at 5,000 rows the
+planner switches to `player_profiles_device_uuid_key` for `resolveProfiles()` and to
+`player_profiles_auth_user_id_key` for `/api/auth/link`, exactly as the section predicted. The
+existing indexes are correct and nothing was owed. **The number is not reused** — sections 1 and 3
+keep theirs, because ADR 0011, ADR 0026 and `TICKET-13` all cite them.
 
 **Consolidated 2026-08-16** from `ISSUE-06` (profile scans) and `ISSUE-07` (nominations growth), at
 the operator's request — one DB file instead of several. The `is_perfect` DROP stayed out on
@@ -13,9 +19,9 @@ purpose: it is no longer a deferred problem but **scheduled work**, owned by
 blocker — one Free-plan project with no scratch copy, said to be why section 2 could not be
 *measured*. [ADR 0024](../../../docs/adr/0024-no-dev-prod-split-migration-safety-is-local.md)
 dissolved that on 2026-08-16: the dev/prod split was decided against, and section 2's verification
-turned out to need a local database rather than a hosted one. What remains is three unrelated
-findings that happen to be about the same database. Read the section you came for; the others will
-not tell you anything about it.
+turned out to need a local database rather than a hosted one — and once it was run, section 2 was
+discharged outright. What remains is two unrelated findings that happen to be about the same
+database. Read the section you came for; the other will not tell you anything about it.
 
 ---
 
@@ -69,52 +75,6 @@ Full context, the "what must survive" table and the restore procedure live in
 
 ---
 
-## 2. `player_profiles` is served almost entirely by sequential scans
-
-**Revisit when:** `player_profiles` passes roughly 5,000 rows, or leaderboard latency becomes
-visible. Both are launch-scale events, not today's 47 rows.
-
-`pg_stat_user_tables` on 2026-08-15, for 47 live rows: `seq_scan` 9,047 · `seq_tup_read` 363,185 ·
-`idx_scan` 133 · `last_autovacuum` never. **98.5% of accesses are full table scans.** For comparison
-`game_scores` runs 45,009 index scans against 7,624 sequential ones — profiles is the outlier.
-
-Per-index usage: `player_profiles_device_uuid_key` 97 scans, `player_profiles_pkey` 36,
-`player_profiles_auth_user_id_key` **0**. That unique index has never been used once, despite
-[`src/app/api/auth/link/route.ts:89`](../../../src/app/api/auth/link/route.ts#L89) selecting on the
-column. At 47 rows the planner correctly prefers a sequential scan, so this is expected small-table
-behaviour rather than a missing index — but the index has never been *proven* and the crossover has
-never been exercised.
-
-The cost is zero today. It stops being zero when the table grows: every leaderboard GET calls
-`resolveProfiles()` ([`src/app/api/game-scores/route.ts`](../../../src/app/api/game-scores/route.ts)),
-an `in()` over up to 21 device UUIDs, and since 2026-08-15 that same query resolves every *display
-name* on the leaderboard — making it the hottest read against this table. If it resolves as a
-sequential scan at 50,000 profiles, each leaderboard open reads 50,000 rows. `last_autovacuum` being
-null with 20 dead tuples is worth a glance too: the table's statistics are whatever the last manual
-`ANALYZE` left, and a planner on stale statistics is exactly how a crossover gets missed.
-
-**The work this reserves is a verification, not a change** — adding indexes against a 47-row table
-would be cargo-culting:
-
-1. Seed a scratch copy of `player_profiles` to ~50,000 rows **in a local PostgreSQL database**.
-2. `EXPLAIN ANALYZE` the `resolveProfiles()` `in()` query and the `/api/auth/link` `auth_user_id`
-   lookup against it.
-3. Confirm both flip to index scans. If not, that is the real bug and it gets its own ticket.
-
-**Not blocked on anything.** This section previously claimed to be blocked on section 1's dev/prod
-split, on the grounds that the verification needed a scratch database the shared project could not
-give it. That was wrong: whether the planner switches from a sequential scan to an index descent as
-a table grows is **Postgres behaviour, not Supabase behaviour**, so any Postgres answers it — and
-PostgreSQL 18 is already installed on the machine for `pg_dump`. Nothing needs to be seeded against
-the live project, and `TICKET-13`'s rehearsal loop will leave a local scratch database sitting there
-anyway.
-
-What still holds this back is only its trigger: at 47 rows there is nothing to verify and no index
-worth adding. Read the result as indicative rather than exact when it is run — local is PostgreSQL
-18, the hosted project is 17.
-
----
-
 ## 3. Rejected and pending nominations are never pruned, and anyone can INSERT
 
 **Revisit when:** the public launch opens the nomination form to strangers, or `nominations` passes
@@ -144,9 +104,21 @@ unusable** (`/leksikastirio` lists pending nominations and there is no bulk-reje
 `note` being free text written by strangers and rendered in an admin UI** (a moderation problem, not
 a size one), and **the lookup already full-scanning the table** — `nominations` carries only the
 primary key and the partial unique on `(word, direction) WHERE status = 'pending'`, so the `rejected`
-and `accepted` counts in `GET /api/nominations/lookup` match no index at all. That, not the listing
-GET, is what the 4,655 sequential scans over 697,815 tuples are, and it grows in exactly the rows
-nothing prunes. `TICKET-14` measures whether a `(word, direction, status)` index earns its place.
+and `accepted` counts in `GET /api/nominations/lookup` match no index at all, and it grows in
+exactly the rows nothing prunes.
+
+**The index earns its place — measured 2026-08-17, `TICKET-14`.** A local probe at 191 / 5,000 /
+50,000 rows seeded at the live status mix: without `(word, direction, status)` the lookup counts
+sequentially scan at every scale, reading 1,064 buffers and 2.77 ms at 50,000 rows; with it the
+planner chooses an index-only scan **at every scale including today's 191**, at 3 buffers and
+0.04 ms. The index costs about 2 MB at 50,000 rows. Its body is written into **runbook step 5**,
+beside the `is_perfect` DROP, because `supabase/migrations/` is frozen until then.
+
+The same probe qualifies this section's attribution of the sequential scans. The listing GET does
+**not** stay unindexed as the table grows — the existing partial unique on `(word, direction) WHERE
+status = 'pending'` picks it up as a bitmap index scan from 5,000 rows onward. But at today's 191
+rows it sequentially scans too, so the 4,655 scans are both queries, not the lookup alone. Only the
+lookup never improves on its own.
 
 **This does not reopen the accepted risk.** `CONTEXT.md`'s *Persistence decisions → API rate
 limiting* entry covers anon INSERT spam across all routes, with a ~500 DAU trigger and the monitoring
@@ -166,9 +138,19 @@ admin UI. *Rate limiting* stays with the platform-wide accepted risk and is not 
 would need a throttle key that is not the spoofable `device_id`, meaning edge IP limiting or a
 Postgres counter table, with cost implications either way.
 
-Open, and parked on `TICKET-14` rather than in a conversation: whether this moderation half leaves as
-its own issue, and when the one non-normalised row (`ιουνιος`, whose Refusal warning can therefore
-never fire) gets fixed.
+**Two operator decisions are open, and they outlived `TICKET-14`** — that ticket carried them only
+because it was the next file anyone would open, and it shipped on 2026-08-17 without answering
+either:
+
+1. **Does the moderation half leave as its own issue?** Retention is affirmed and the index has a
+   verdict, so what is left here — no bulk-reject in `/leksikastirio`, and stranger-authored
+   `word`/`note` free text rendered in an admin UI — is a review-workflow problem with nothing to do
+   with the database. If it leaves, it takes the next free issue number.
+2. **When does the one non-normalised row get fixed?** `ιουνιος` (`direction` `remove`, rejected
+   2026-07-15) ends in a final sigma, so `normalizeLetters` turns a re-proposal into `ιουνιοσ` and
+   its prior-rejection warning can never fire. It is the only such row in 191, and `isBlockedWord`
+   does not cover it because that only runs on `add`. It is a data `UPDATE`, not DDL, so the
+   migrations freeze does not reach it — runbook step 5, or the dashboard at any time.
 
 ---
 
@@ -180,7 +162,6 @@ never fire) gets fixed.
 - [`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup.md) — the encrypted dump; agent half shipped, operator half owed.
 - [`TICKET-13`](../tickets/TICKET-13-migration-rehearsal-loop.md) — the local rehearsal loop ADR 0024 chose instead of a split.
 - [`ISSUE-05`](ISSUE-05-dead-is-perfect-column.md) — the `is_perfect` DROP, scheduled to runbook step 5 rather than deferred here.
-- [`src/app/api/game-scores/route.ts`](../../../src/app/api/game-scores/route.ts) — `resolveProfiles()`, the hottest read against `player_profiles` (section 2).
 - [`src/app/api/cleanup-scores/route.ts`](../../../src/app/api/cleanup-scores/route.ts) + [`src/config/retention.ts`](../../../src/config/retention.ts) — the prune and what it deliberately skips.
 - `.claude/skills/project-mcp/SKILL.md` — the advisor baseline explaining why the always-true INSERT policy is intended.
 - The `supabase` CLI is an approved devDependency; `db push` works without Docker.

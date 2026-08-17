@@ -107,6 +107,22 @@ Games' content supply. **`ISSUE-05` is not in this list** — it is scheduled, a
       and column_name = 'is_perfect';
    ```
 
+   **In the same migration, add the nominations lookup index** — `ISSUE-01` §3, measured on
+   2026-08-17 rather than argued. `GET /api/nominations/lookup` counts prior `rejected` and
+   `accepted` rows for a word and matches no existing index, so it sequentially scans the table on
+   every nomination-modal open; a local probe showed the planner taking this index at every row
+   count tested, including today's 191. It costs ~2 MB at 50,000 rows. It is here rather than in
+   `supabase/migrations/` for the same reason the DROP is — the folder is frozen until this step:
+
+   ```sql
+   create index if not exists nominations_word_direction_status_idx
+     on public.nominations (word, direction, status);
+   ```
+
+   Unlike the DROP, this one does **not** care that the table is empty — `nominations` survives
+   step 4's reset, and building the index on 191 rows is instant. It also needs no types
+   regeneration, since an index is not a column.
+
    **This step does not gate the announce.** If the push fails, announce anyway and re-file — the
    column has never been read, so leaving it costs exactly what it costs today. Amend ADR 0013 once
    the drop lands: its line stating the column is *kept* stops being true here.
