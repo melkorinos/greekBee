@@ -55,6 +55,7 @@ const SPENT: Record<string, string> = {
   // happened, which removed the write end to end. Corrected rather than annotated
   // because a pointer at a section that does not exist sends a cold session hunting.
   "ISSUE-09": "unread Leksokipos score metadata — fixed 2026-08-16 in 2f4cf77, never folded",
+  "ISSUE-10": "leksodromia board.test.tsx timeouts — fixed 2026-08-17, userEvent delay:null",
 };
 
 /**

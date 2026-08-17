@@ -69,6 +69,19 @@ function renderBoard() {
   );
 }
 
+/**
+ * userEvent's default `delay: 0` still yields to the macrotask queue between
+ * every action, which measures at ~50 ms per click here — that yield, not jsdom
+ * dispatch or the board's re-render, is the whole cost of a click in this file.
+ * It is why the two 40-click round tests sat at 2.4 s against vitest's 5 s
+ * default and tipped over under full-suite load. Nothing here waits on a timer
+ * between actions — every assertion is synchronous after its click — so
+ * dispatching synchronously is free, and the same 20-skip round costs ~0.3 s.
+ */
+function setupUser() {
+  return userEvent.setup({ delay: null });
+}
+
 /** Click the rack tiles spelling `word`, using each physical tile once. */
 async function pickWord(user: ReturnType<typeof userEvent.setup>, word: string) {
   const clicked = new Set<HTMLElement>();
@@ -105,14 +118,14 @@ describe("LeksodromiaBoard", () => {
   });
 
   it("filling the last slot auto-submits a correct word and advances", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderBoard();
     await pickWord(user, WORDS[0]); // "αυγο" — auto-submits on the 4th tile
     expect(screen.getByText(/λέξη 2\/10/i)).toBeDefined();
   });
 
   it("a wrong word auto-submits, shows an error, clears the input, and stays put", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderBoard();
     await pickWord(user, "γοαυ"); // valid tiles, wrong order — auto-submits
     expect(screen.getByText(/λέξη 1\/10/i)).toBeDefined();
@@ -121,7 +134,7 @@ describe("LeksodromiaBoard", () => {
   });
 
   it("the clear button empties the answer row without submitting", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderBoard();
     await pickWord(user, "γοα"); // 3 of 4 tiles — no auto-submit yet
     expect(screen.getByTestId("answer-row").textContent).not.toBe("");
@@ -131,7 +144,7 @@ describe("LeksodromiaBoard", () => {
   });
 
   it("tapping the answer row removes only the most recent letter", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderBoard();
     await pickWord(user, "γοα"); // 3 of 4 tiles — no auto-submit yet
     expect(screen.getByTestId("answer-row").textContent).toBe("γοα");
@@ -141,7 +154,7 @@ describe("LeksodromiaBoard", () => {
   });
 
   it("skip is two-phase and requeues: the word returns at the end of the run", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderBoard();
     await user.click(screen.getByRole("button", { name: /επόμεν/i }));
     expect(screen.getByText(/λέξη 1\/10/i)).toBeDefined(); // not yet skipped
@@ -167,7 +180,7 @@ describe("LeksodromiaBoard", () => {
         },
       },
     }));
-    const user = userEvent.setup();
+    const user = setupUser();
     renderBoard();
     // Second chance: αυγο's rack is back, badge shown.
     expect(screen.getByTestId("second-chance-badge")).toBeDefined();
@@ -177,7 +190,7 @@ describe("LeksodromiaBoard", () => {
   });
 
   it("finishing the round shows a recap of all 10 words", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderBoard();
     // First pass requeues all 10; the second pass of skips is final.
     for (let i = 0; i < WORDS.length * 2; i++) await skipCurrentWord(user);
@@ -188,7 +201,7 @@ describe("LeksodromiaBoard", () => {
   });
 
   it("posts the score as soon as it increases — no finish required", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderBoard();
     await pickWord(user, WORDS[0]); // auto-submits on the last tile
     expect(postScore).toHaveBeenCalledTimes(1);
@@ -198,7 +211,7 @@ describe("LeksodromiaBoard", () => {
   });
 
   it("skips never re-post (score unchanged); the round still ends after the second pass", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderBoard();
     await pickWord(user, WORDS[0]);
     for (let i = 1; i < WORDS.length; i++) await skipCurrentWord(user); // requeue 9
@@ -238,7 +251,7 @@ describe("LeksodromiaPageClient", () => {
   });
 
   it("the rules modal explains the time decay", async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     render(<LeksodromiaPageClient puzzle={PUZZLE} today={PUZZLE.date} />);
     await user.click(screen.getByRole("button", { name: /πώς να παίξεις/i }));
     expect(screen.getAllByText(/πόντο/i).length).toBeGreaterThan(0);

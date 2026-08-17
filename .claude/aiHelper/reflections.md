@@ -181,7 +181,7 @@ future session can see which claims have been touched since anyone last looked.
 
 ### 🔴 Measure the artifact, don't trust the response — the standing rule and its ledger
 
-**This repo's most expensive recurring failure, in fourteen recorded instances across s130–s159.**
+**This repo's most expensive recurring failure, in sixteen recorded instances across s130–s164.**
 The shape is always the same: a claim that is **plausible, load-bearing, and cheap to check** is
 believed instead of checked. What varies is only *who is narrating* — and the point of keeping the
 ledger rather than nine separate entries is that the list of narrators is now long enough to stop
@@ -204,6 +204,7 @@ treating any of them as reliable.
 | s159 | **An issue file** | ISSUE-01 §2's verification "needs a scratch database the shared project does not give us" — a blocker inherited unexamined through two rewrites and a consolidation | a scan-vs-index crossover is **Postgres behaviour, not Supabase behaviour**, and PostgreSQL 18 was already installed on the machine for `pg_dump`. Nothing was ever blocked | `command -v psql` |
 | s159 | **Me, past output I had already generated** | "ISSUE-09's content was lost in the fold — the ledger points at a §4 that does not exist" | it was **fixed** in `2f4cf77`, and that commit was **visible in the `git log --oneline` I had run one call earlier**. The ledger row was mislabelled, not orphaned | **read the output you already have** |
 | s160 | **My own probe** | `pg_isready` returned *accepting connections*, so I told the operator the index measurement could be run now | listening is not authenticated: every `pg_hba.conf` line is `scram-sha-256` and the only password to hand was Supabase's. **The check I ran was adjacent to the claim I made** — the first ledger row where the measurement was real and simply answered a different question | open the connection, don't ping the port |
+| s164 | **An issue file's own section titled "The cause, measured"** | ISSUE-10: the two slow tests cost "35–60 ms per click — jsdom event dispatch plus a React re-render of the whole board" | the timings and the linearity in click count were real and reproduced exactly. **The cause bolted to them was never measured.** It was userEvent's default `delay: 0` yielding to the macrotask queue: `delay: null` took 40 clicks from 1951 ms to 312 ms, while killing the pointer-events check moved nothing. All three fixes the file proposed (raise the timeout, bypass the DOM, shrink `WORDS`) would have kept the slowness | **A/B one knob at a time** |
 
 Four things the ledger makes visible that no single entry did:
 
@@ -228,6 +229,11 @@ Four things the ledger makes visible that no single entry did:
   screenshot that prompted it. **Reproduce the reported symptom before adopting the reporter's model
   of it** — recovering the real answer phrase from the corpus cost one query and turned a plausible
   story into a tile-for-tile repro. A correct conclusion is not evidence of a correct diagnosis.
+  **s164 is the shape a heading can hide.** ISSUE-10 carried a section called *The cause, measured*
+  whose numbers were genuine, reproduced to the millisecond — and whose causal sentence was pure
+  assertion sitting inside the credibility the numbers had earned. **A measurement tells you how much,
+  never why**; the why needs its own experiment, which here was one A/B per suspect and cost minutes.
+  Grep this file for the word "measured" before trusting it: it marks where someone stopped.
 - **"The only record of X" is a claim about every writer, not the one in front of you** (s158). A
   field's completeness is decided by the *quietest* path that writes the row — here an offline flush
   that omits it — and that path is never the one the issue cites. **Before calling data
