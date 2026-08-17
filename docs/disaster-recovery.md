@@ -30,7 +30,7 @@ whole procedure:
   project was considered and **rejected** ([ADR 0024](adr/0024-no-dev-prod-split-migration-safety-is-local.md));
   the free organization's second slot is deliberately held **empty as the restore
   target for the procedure below**, and migration safety is bought by rehearsing
-  locally instead (`TICKET-13`).
+  locally instead — `npm run db:rehearse`, see below.
 
 ---
 
@@ -114,6 +114,32 @@ encryption half.
   day's *new* rows, never rewrites history. A daily-to-weekly schedule is
   proportionate at current DAU. Always take a fresh dump immediately before any
   risky migration.
+
+## Rehearsing a migration
+
+```bash
+npm run db:rehearse
+```
+
+`scripts/rehearse-migration.ps1` restores the newest `db-backups/*.7z` into a local
+scratch database (`greek_rehearsal`, dropped and recreated every run) and applies
+the migrations in `supabase/migrations/` that the restored ledger has not seen —
+each in its own transaction, stopping at the first failure and printing the
+statement that failed. It needs `REHEARSAL_DB_URL` in `.env.local` pointing at the
+**local** server; it refuses any host that is not localhost, because it issues a
+`DROP DATABASE`. The extracted plaintext dump is deleted on the way out, including
+after a failure.
+
+**Run it before every `db push`** — most of all on release day, where the whole
+migration queue lands in one afternoon on top of a table `launch-reset.sql` has
+just emptied. The failures it catches are the ones an empty database passes:
+`SET NOT NULL` meeting a column that has nulls, a unique index meeting rows that
+are already duplicated, a foreign key or check that existing rows violate.
+
+A pass means **the migrations apply**. It is not a green test suite (the live-DB
+RLS checks go through Supabase's HTTP API, which a bare PostgreSQL does not have)
+and not a statement about query plans (local is PostgreSQL 18, hosted is 17). See
+[ADR 0024](adr/0024-no-dev-prod-split-migration-safety-is-local.md).
 
 ## Restoring from a backup
 

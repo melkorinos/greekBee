@@ -71,6 +71,7 @@ const SPENT: Record<string, string> = {
   // planner questions resolved on 2026-08-17 against a local scratch database:
   // ISSUE-01 §2 discharged and deleted, §3's index verdict written into runbook
   // step 5. The two operator decisions it was parking moved back into §3.
+  "TICKET-13": "migration rehearsal loop — shipped 2026-08-17, npm run db:rehearse",
   "TICKET-14": "index crossover probe — measured 2026-08-17, ISSUE-01 §2 discharged",
 };
 

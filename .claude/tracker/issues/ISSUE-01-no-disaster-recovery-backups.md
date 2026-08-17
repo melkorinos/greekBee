@@ -39,31 +39,31 @@ deleted, corrupted, or wiped by a bad migration, everyone's scores and derived a
 second Supabase project on 2026-08-16: the second free slot is reserved as the disaster-restore
 target, an empty staging database passes exactly the migrations that hurt, and seeding one from a
 production dump would put a second permanent copy of every player's email in the cloud. Migration
-safety is bought locally instead — [`TICKET-13`](../tickets/TICKET-13-migration-rehearsal-loop.md)
-is the promotion this section's old *"promote to a ticket once the split is decided"* line called
-for.
+safety is bought locally instead — the rehearsal loop that promotion called for **shipped
+2026-08-17** as `npm run db:rehearse`.
 
 The "somewhere to put the dumps" question is **answered** — an encrypted 7-Zip archive in a private
 Google Drive folder, never a git repository (the repo is public and `pg_dump` carries `auth.users`).
 [`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup-launch.md) shipped the encryption half of
 `scripts/backup-db.ps1` on 2026-08-15.
 
-### What is actually owed — all of it operator-only, measured 2026-08-16
+### What is actually owed — all of it operator-only, re-measured 2026-08-17
 
-The exposure is worse than "automation is missing". There is **no usable backup on the machine at
-all**:
-
-- `BACKUP_ARCHIVE_PASSWORD` is documented at `.env.local.example:38` but **absent from the real
-  `.env.local`**, so `npm run db:backup` throws at
-  [`backup-db.ps1:107`](../../../scripts/backup-db.ps1#L107) before dumping anything.
-- `db-backups/` holds **two unencrypted folders, newest 2026-08-08** — both predate the encryption
-  work. There is no `.7z` anywhere.
+- `BACKUP_ARCHIVE_PASSWORD` is **set**, and `npm run db:backup` has run: `db-backups/` holds one
+  encrypted archive taken 2026-08-17 alongside its folder. The Rehearsal restores it end to end,
+  which is a real proof the archive opens — **on this machine only**.
+- **The archive has never been opened anywhere else.** That is the remaining half of the test that
+  matters: a `.7z` that exists is the response, a `.7z` that extracts on a different machine with
+  the password from a password manager is the artifact.
+- **The password is `ADMIN_SECRET` reused.** Fine for a placeholder, weak for the one secret that
+  stands between a lost laptop and every player's email address. Change it before the archive goes
+  to Drive, and store the new one in a password manager rather than only in `.env.local`.
 - The weekly task **is not registered** (`Get-ScheduledTask GreekWordGames-DB-Backup` → not found).
 
 The order matters, and it is not the order the runbook implies. Registering the scheduled task
 first would create a job that fails every Sunday at 02:00 unattended — **worse than no job, because
-it looks like coverage.** Set the password, take one manual dump, confirm the archive opens on
-another machine, *then* register the task.
+it looks like coverage.** Confirm the archive opens on another machine first, *then* register the
+task.
 
 The one thing that stays deferred after that is **nothing enforces the upload**. The dump lands in
 `db-backups/` and a human has to move it to Drive; a dump still sitting on the machine at runbook
@@ -160,7 +160,7 @@ either:
 - [`docs/disaster-recovery.md`](../../../docs/disaster-recovery.md) — the runbook section 1 tracks the open work for.
 - Supabase Database Backups — https://supabase.com/docs/guides/platform/backups (free-tier `db dump` guidance).
 - [`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup-launch.md) — the encrypted dump; agent half shipped, operator half owed.
-- [`TICKET-13`](../tickets/TICKET-13-migration-rehearsal-loop.md) — the local rehearsal loop ADR 0024 chose instead of a split.
+- [`scripts/rehearse-migration.ps1`](../../../scripts/rehearse-migration.ps1) — the local rehearsal loop ADR 0024 chose instead of a split, shipped 2026-08-17.
 - [`ISSUE-05`](ISSUE-05-dead-is-perfect-column-launch.md) — the `is_perfect` DROP, scheduled to runbook step 5 rather than deferred here.
 - [`src/app/api/cleanup-scores/route.ts`](../../../src/app/api/cleanup-scores/route.ts) + [`src/config/retention.ts`](../../../src/config/retention.ts) — the prune and what it deliberately skips.
 - `.claude/skills/project-mcp/SKILL.md` — the advisor baseline explaining why the always-true INSERT policy is intended.

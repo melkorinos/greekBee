@@ -26,30 +26,13 @@
 
 $ErrorActionPreference = "Stop"
 
+. (Join-Path $PSScriptRoot "lib\pg-tooling.ps1")
+
 $RepoRoot  = Split-Path $PSScriptRoot -Parent
 $EnvFile   = Join-Path $RepoRoot ".env.local"
 
 # --- Preflight: locate pg_dump / pg_dumpall ---
-$PgBin = Get-ChildItem "C:\Program Files\PostgreSQL" -ErrorAction SilentlyContinue |
-         Sort-Object Name -Descending | Select-Object -First 1 |
-         ForEach-Object { Join-Path $_.FullName "bin" }
-
-# Fall back to PATH if not found under Program Files
-if (-not $PgBin -or -not (Test-Path "$PgBin\pg_dump.exe")) {
-    $PgBin = Split-Path (Get-Command pg_dump -ErrorAction SilentlyContinue).Source -Parent
-}
-
-if (-not $PgBin -or -not (Test-Path "$PgBin\pg_dump.exe")) {
-    throw @"
-pg_dump not found. Install PostgreSQL client tools then retry:
-
-    choco install postgresql -y          # requires admin PowerShell
-
-If Chocolatey is not installed:
-    winget install chocolatey.chocolatey
-    choco install postgresql -y
-"@
-}
+$PgBin = Find-PgBin
 
 $PgDump    = "$PgBin\pg_dump.exe"
 $PgDumpAll = "$PgBin\pg_dumpall.exe"
@@ -61,36 +44,10 @@ if (-not (Test-Path $PgDumpAll)) {
 # --- Preflight: locate 7-Zip ---
 # Checked BEFORE the dumps run, not after: failing at the end would leave three
 # plaintext .sql files on disk and report an error, which is the worst of both.
-$SevenZip = @(
-    "C:\Program Files\7-Zip\7z.exe",
-    "C:\Program Files (x86)\7-Zip\7z.exe"
-) | Where-Object { Test-Path $_ } | Select-Object -First 1
-
-if (-not $SevenZip) {
-    $SevenZip = (Get-Command 7z -ErrorAction SilentlyContinue).Source
-}
-
-if (-not $SevenZip) {
-    throw @"
-7z not found. Install 7-Zip then retry:
-
-    winget install 7zip.7zip
-
-The archive step is not optional — an unencrypted dump must not leave this machine.
-"@
-}
+$SevenZip = Find-SevenZip
 
 # --- Read connection string ---
-if (-not (Test-Path $EnvFile)) {
-    throw ".env.local not found at $EnvFile`nAdd:  SUPABASE_DB_URL=<session-pooler-url>"
-}
-
-$Vars = @{}
-foreach ($line in Get-Content $EnvFile) {
-    if ($line -match '^([^#][^=]*)=(.+)$') {
-        $Vars[$Matches[1].Trim()] = $Matches[2].Trim().Trim('"').Trim("'")
-    }
-}
+$Vars = Read-EnvFile $EnvFile
 
 $Conn = $Vars["SUPABASE_DB_URL"]
 if (-not $Conn) { throw "SUPABASE_DB_URL not found in .env.local" }

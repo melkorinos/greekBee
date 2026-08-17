@@ -78,22 +78,26 @@ order. eslint and build clean; no test — see the last done-when.
   `BACKUP_ARCHIVE_PASSWORD` the script throws, so the job would fail every Sunday unattended while
   looking like coverage.
 - **The dev/prod project split.** **Decided against** — ADR 0024, 2026-08-16. Migration safety is a
-  local rehearsal instead (`TICKET-13`), which is blocked on this ticket's operator half.
+  local rehearsal instead — `npm run db:rehearse`, shipped 2026-08-17 once the password was set and
+  the first archive existed.
 
 ## Operator half — cannot be done by an agent
 
 - [ ] Create the Drive folder and keep it **private** — not "anyone with the link".
 - [ ] Choose the archive password and **store it somewhere that is not the machine being backed
       up and not `.env.local` alone** (a password manager). An encrypted archive whose password
-      died with the laptop is a brick.
+      died with the laptop is a brick. **As of 2026-08-17 it is `ADMIN_SECRET` reused** — enough to
+      unblock the rehearsal, not enough for the artifact that guards every player's email. Replace
+      it before the first upload.
 - [ ] Consider a second copy on an external disk. A cloud account you can lose access to is one
       point of failure wearing a different hat.
 
 ## Done when
 
-- [ ] `npm run db:backup` produces the three dumps **and** one encrypted `.7z`, and fails loudly
-      when either the password or 7-Zip is missing.
-- [ ] `git status` is clean immediately after a backup run — no dump, no archive, nothing staged.
+- [x] `npm run db:backup` produces the three dumps **and** one encrypted `.7z`, and fails loudly
+      when either the password or 7-Zip is missing. **Run 2026-08-17** — `20260817-123332.7z`.
+- [x] `git status` is clean immediately after a backup run — no dump, no archive, nothing staged.
+      **Verified 2026-08-17.**
 - [ ] The archive has been opened once from Drive **on a different machine** and the password
       worked. Measure the artifact, not the response: a `.7z` that exists is the response, a `.7z`
       that extracts elsewhere is the artifact.

@@ -93,7 +93,9 @@ Games' content supply. **`ISSUE-05` is not in this list** — it is scheduled, a
    alter table public.game_scores drop column if exists is_perfect;
    ```
 
-   Copy that into a new file under `supabase/migrations/`, `npx supabase db push`, then regenerate
+   Copy that into a new file under `supabase/migrations/`, **`npm run db:rehearse` first** — it
+   replays the whole queue against the archive taken at step 3, which is the only rehearsal this
+   project's highest-stakes migration afternoon will get — then `npx supabase db push`, then regenerate
    `src/lib/database.types.ts` and commit both together (ADR 0017 — the generated types are trusted,
    so they cannot keep offering a column that is gone). **Nothing may enter `supabase/migrations/`
    before this step** — a committed-but-unpushed migration fires on the next unrelated `db push`,
@@ -168,10 +170,11 @@ finite. The full blocking/accepted split produced five tickets. Three have shipp
 - **E2E coverage** — the gate is `npm run test -- --run` and `npm run test:e2e` both green on the
   merge commit, not a bigger suite. `ISSUE-03`.
 - **Disaster-recovery backups** — `ISSUE-01`. The dev/prod split is **decided against** (ADR 0024,
-  2026-08-16) and migration safety moved to `TICKET-13`'s local rehearsal; neither is launch work.
-  **What *is* launch work is runbook step 3, and it currently cannot run** —
-  `BACKUP_ARCHIVE_PASSWORD` is absent from `.env.local`, so `npm run db:backup` throws. That is
-  `TICKET-11`'s operator half, already listed above.
+  2026-08-16); migration safety is the local rehearsal, which shipped 2026-08-17 as
+  `npm run db:rehearse` and is now part of runbook step 5. Runbook step 3 **can run** as of
+  2026-08-17 — the archive password is set and one encrypted archive exists. What is still owed is
+  `TICKET-11`'s operator half, already listed above: opening that archive on a different machine,
+  and the upload itself, which nothing enforces.
 - **Content supply for the three hidden Games** — moot while they are hidden. Leksindeseis's static
   fallback is **one** puzzle rotating over a single-item array; Πόσο κάνει; and Λογοπαίγνιο hold one
   placeholder each.

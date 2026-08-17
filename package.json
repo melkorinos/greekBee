@@ -31,6 +31,7 @@
     "apply-proposed:dry": "tsx scripts/apply-proposed-words.ts --dry-run",
     "db:backup": "pwsh -NonInteractive -File scripts/backup-db.ps1",
     "db:backup:schedule-weekly": "pwsh -File scripts/schedule-backup.ps1",
+    "db:rehearse": "pwsh -NonInteractive -File scripts/rehearse-migration.ps1",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
