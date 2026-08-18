@@ -1,7 +1,7 @@
 # ADR 0021 — Sound Cues
 
 **Status:** accepted (2026-08-10) · **built 2026-08-11, not deployed** — see the 2026-08-11 amendment
-**Tickets:** [TICKET-05-sound-cue-assets.md](../../.claude/tracker/tickets/TICKET-05-sound-cue-assets.md) (open — the three MP3s). `TICKET-04` (the primitive) shipped 2026-08-11 and its file is deleted per the tracker rule; git history is the archive.
+**Tickets:** [TICKET-05-sound-cue-assets.md](../../.claude/tracker/tickets/TICKET-05-sound-cue-assets.md) (open — two MP3s, down from three; see the 2026-08-17 amendment). `TICKET-04` (the primitive) shipped 2026-08-11 and its file is deleted per the tracker rule; git history is the archive.
 
 ## Context
 
@@ -116,10 +116,12 @@ experience (s130: Commons matched ΔΕΗ to Namibia Power), and nobody can eye-c
 ## Traps
 
 - **iOS mutes HTML5 audio when the physical silent switch is on**, and this is neither detectable
-  nor overridable. Accepted, with no workaround: the Web Audio escape hatch costs an entire second
-  playback path for a case the player deliberately asked for. Every Cue is triggered by a tap or an
-  Enter press, so the browser's user-gesture requirement is satisfied naturally and **no separate
-  "enable audio" priming step is needed**.
+  nor overridable. Accepted, with no workaround. ⚠️ **The reasoning here is spent — see the
+  2026-08-17 amendment.** It rejected Web Audio as "an entire second playback path"; that path now
+  exists anyway, for a different reason, and it does **not** change this trap: Safari routes Web
+  Audio through the same silent switch by default. What survives is the second half — every Cue is
+  triggered by a tap or an Enter press, so the user-gesture requirement is satisfied naturally and
+  **no separate "enable audio" priming step is needed**, for either playback path.
 - **jsdom does not implement `HTMLMediaElement.play`** — it needs a global stub in
   `src/test/setup.ts`, alongside the `scrollIntoView` stub added in s123 for the same reason.
   ⚠️ **This trap is stated wrongly — see the 2026-08-11 amendment.** The stub is needed; the
@@ -189,3 +191,39 @@ optional**, blocking nothing. Cutting the feature no longer means reverting the 
 
 The operator phone-check that the previous amendment moved into `TICKET-05`'s done-when travels
 with the flag flip, not with the files.
+
+## Amendment (2026-08-17) — a Cue can be synthesized, and `wordFound` now is
+
+**"The files are the other half" was true of three Cues and is now true of two.** A Cue no longer
+has to be a file. `CueSound` in `src/config/sound.ts` is a two-member union — `file` (an MP3 in
+`public/sounds/`, as before) and `synth` (one oscillator through a gain envelope, generated in the
+browser) — and `useSoundCue` dispatches on the `kind`. Call sites are unchanged: `play(cue)` takes
+a Cue name and nothing else, so which kind a Cue is stays a config fact.
+
+`wordFound` moved to `synth` — a sine blip at 0.10 / 1440 Hz / 0.09 s, tuned by ear. The decision above described it as a
+"short, quiet click", and a recording of a click costs 30 KB, a licence, a provenance line and a
+format question to reproduce something twelve lines of Web Audio produce exactly. **Character is
+the criterion**: a rooster cannot be synthesized and stays a file; a blip should never be one.
+`public/sounds/` is down to two files, and `TICKET-05` is rewritten to match.
+
+**A per-keystroke `keyPress` Cue was built the same day and cut before it shipped.** It worked —
+keyed on the input growing, so it survived the keyboard path silently dropping letters that are
+not in the puzzle — but it read as keyboard feedback rather than as a reward, and Cues here are
+for *outcomes*. The Cue-per-moment vocabulary took it without complaint, which is the design
+working: adding and removing a Cue was a registry row and one effect, exactly as claimed.
+
+Two new traps, both about Web Audio rather than `HTMLAudioElement`:
+
+- **jsdom implements no `AudioContext` at all** — neither `AudioContext` nor `webkitAudioContext`,
+  confirmed by probe rather than assumed, which is now this ADR's third instance of that rule. So
+  the hook guards on the constructor's presence and the tests **stub an absent API** rather than
+  subclassing a real one as the Audio tests do. That is a weaker position than the Audio tests
+  hold, and it is stated in both test files rather than papered over: the assertions pin the
+  wiring, never the sound.
+- **One `AudioContext` for the session, not one per play.** Browsers cap how many a page may open,
+  so a context per Cue eventually stops working silently. The hook keeps one in a ref, mirroring
+  the one-Audio-per-Cue rule above.
+
+The two `volume` fields are **not the same scale** — `file` sets `HTMLAudioElement.volume`, `synth`
+sets a Web Audio gain. Normalise the Cues against each other by ear; matching the numbers means
+nothing.

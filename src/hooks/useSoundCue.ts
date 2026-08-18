@@ -1,28 +1,87 @@
 "use client";
 
-// Sound Cue playback (ADR 0021) — the only place in the Platform that touches Audio.
+// Sound Cue playback (ADR 0021) — the only place in the Platform that touches
+// Audio or Web Audio.
 //
-// Returns play(cue). Nothing is fetched at all while the preference is off, so a
-// player who never enables sound never downloads a byte of audio.
+// Returns play(cue). Nothing is fetched or constructed at all while the preference
+// is off, so a player who never enables sound never downloads a byte of audio.
+//
+// Two kinds of Cue, both dispatched from here: file Cues stream an MP3 through an
+// HTMLAudioElement, synth Cues are generated on the spot and have no asset at all.
+// Which kind a Cue is belongs to src/config/sound.ts, not to any call site — play()
+// takes a Cue name and nothing else.
 
 import { useCallback, useRef } from "react";
 
-import { SOUND_CUES, type SoundCue } from "@/config/sound";
+import { SOUND_CUES, type CueSound, type SoundCue } from "@/config/sound";
 import { useSoundEnabled } from "./useSoundEnabled";
+
+type SynthCue = Extract<CueSound, { kind: "synth" }>;
+
+/**
+ * Play one synthesized Cue: a single oscillator through a gain envelope, no asset.
+ *
+ * Returns the AudioContext it used (creating one on first call) so the caller can
+ * keep it for the session — browsers cap how many a page may open, so one per Cue
+ * would eventually stop working. `undefined` means Web Audio is unavailable, which
+ * is the state under jsdom and on any engine without an `AudioContext`.
+ */
+function playSynth(existing: AudioContext | null, { volume, frequency, duration }: SynthCue) {
+  if (typeof window === "undefined" || !window.AudioContext) return undefined;
+
+  try {
+    const ctx = existing ?? new window.AudioContext();
+    // A context can start suspended; every Cue follows a tap or a keypress, so a
+    // resume here is always inside the user gesture the autoplay policy wants.
+    if (ctx.state === "suspended") void ctx.resume();
+
+    const now  = ctx.currentTime;
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(frequency, now);
+
+    // The attack has to be a ramp, not a jump. A gain that steps straight from 0
+    // to full clicks on its own — an artefact, not the click we asked for — and
+    // the decay is exponential because a linear fade to zero clicks at the end
+    // for the same reason. Exponential cannot reach 0, hence the epsilon floor.
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(volume, now + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + duration);
+    return ctx;
+  } catch {
+    // Same contract as a rejected play(): a Cue is decoration and must never
+    // throw into a round. A context creation refused by the browser lands here.
+    return undefined;
+  }
+}
 
 export function useSoundCue() {
   const { soundEnabled } = useSoundEnabled();
-  // One Audio per Cue, created on that Cue's first play and kept for the session.
+  // One Audio per file Cue, created on that Cue's first play and kept for the session.
   const audioRef = useRef<Partial<Record<SoundCue, HTMLAudioElement>>>({});
+  // One AudioContext for every synth Cue, likewise created on first play.
+  const ctxRef = useRef<AudioContext | null>(null);
 
   const play = useCallback((cue: SoundCue) => {
     if (!soundEnabled) return;
 
+    const sound: CueSound = SOUND_CUES[cue];
+    if (sound.kind === "synth") {
+      ctxRef.current = playSynth(ctxRef.current, sound) ?? ctxRef.current;
+      return;
+    }
+
     let audio = audioRef.current[cue];
     if (!audio) {
-      const { src, volume } = SOUND_CUES[cue];
-      audio = new Audio(src);
-      audio.volume = volume;
+      audio = new Audio(sound.src);
+      audio.volume = sound.volume;
       audioRef.current[cue] = audio;
     }
 

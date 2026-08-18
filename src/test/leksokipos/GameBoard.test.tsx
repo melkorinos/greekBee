@@ -604,13 +604,44 @@ describe("GameBoard — day changed while Offline Mode is active", () => {
 
 describe("Sound Cues", () => {
   let playSpy: ReturnType<typeof vi.spyOn>;
+  /** Oscillators started — the only observable a synth Cue leaves behind. */
+  let blips: number;
 
   beforeEach(() => {
     playSpy = vi.spyOn(HTMLMediaElement.prototype, "play");
+
+    // wordFound is synthesized rather than a file, and jsdom has no AudioContext
+    // at all (probed, not assumed), so stub the slice the hook calls and count
+    // oscillators. As everywhere else here: this pins WHICH moment makes a noise,
+    // never that the noise is audible.
+    blips = 0;
+    const noop = () => {};
+    vi.stubGlobal("AudioContext", class {
+      state = "running";
+      currentTime = 0;
+      destination = {};
+      resume() { return Promise.resolve(); }
+      createOscillator() {
+        return {
+          type: "", frequency: { setValueAtTime: noop }, connect: noop,
+          start: () => { blips += 1; }, stop: noop,
+        };
+      }
+      createGain() {
+        return {
+          gain: {
+            setValueAtTime: noop, linearRampToValueAtTime: noop,
+            exponentialRampToValueAtTime: noop,
+          },
+          connect: noop,
+        };
+      }
+    });
   });
 
   afterEach(() => {
     playSpy.mockRestore();
+    vi.unstubAllGlobals();
   });
 
   /** The src of every Audio element play() was called on, in order. */
@@ -630,7 +661,8 @@ describe("Sound Cues", () => {
     const played = playedSources();
     expect(played).toHaveLength(1);
     expect(played[0]).toContain(SOUND_CUES.pangram.src);
-    expect(played[0]).not.toContain(SOUND_CUES.wordFound.src);
+    // Never the rooster layered over the word blip — that sounds like a bug.
+    expect(blips).toBe(0);
   });
 
   it("plays the word-found Cue on a valid non-pangram", async () => {
@@ -638,7 +670,8 @@ describe("Sound Cues", () => {
     const { user } = setup();
     await user.keyboard("paint{Enter}");
 
-    expect(playedSources()).toEqual([expect.stringContaining(SOUND_CUES.wordFound.src)]);
+    expect(blips).toBe(1);
+    expect(playSpy).not.toHaveBeenCalled(); // synthesized: no file is fetched
   });
 
   it("plays the missing-centre Cue when the centre letter is forgotten", async () => {
@@ -656,6 +689,7 @@ describe("Sound Cues", () => {
     await user.keyboard("ant{Enter}");   // too_short
 
     expect(playSpy).not.toHaveBeenCalled();
+    expect(blips).toBe(0);
   });
 
   it("stays silent for every Cue while the preference is off", async () => {
@@ -666,6 +700,19 @@ describe("Sound Cues", () => {
     await user.keyboard("paint{Enter}");
     await user.keyboard("pint{Enter}");
 
+    expect(playSpy).not.toHaveBeenCalled();
+    expect(blips).toBe(0);
+  });
+
+  it("stays silent while typing — entering letters is not a Cue", async () => {
+    // Considered and rejected: a per-keystroke tick reads as keyboard feedback,
+    // and the Cues are for outcomes. Nothing sounds until a word is submitted.
+    enableSound();
+    const { user } = setup();
+    await user.keyboard("paint");
+    await user.click(screen.getByRole("button", { name: "Letter P" }));
+
+    expect(blips).toBe(0);
     expect(playSpy).not.toHaveBeenCalled();
   });
 });
