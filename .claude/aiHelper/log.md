@@ -19,6 +19,14 @@ The pair is composed once, in `btnSquircle`, with an arbitrary-property utility 
 built CSS rather than assumed (`border-radius:var(--radius-squircle-x)/var(--radius-squircle-y)`).
 `h-8.5` compiles to the spec's 34 px on Tailwind v4's dynamic spacing scale.
 
+**Then the operator sized it by eye, and the two Καταχώρηση stopped being one button.** The row
+gap went `gap-2`→`gap-5` and the row's buttons grew **15%** (50 × 39, marks at 25 px, corner
+`18px / 15px`) while the inline one kept the authored 44 × 34 — it sits beside 3 rem letters,
+the row is hit with a thumb. So the recipe **splits box from skin**: `squircleBox` /
+`squircleBoxRow` carry size and shape, `btnSquircle` / `-Go` / `-Disabled` carry only colour,
+composed at the call site. Overriding a size by appending a second `w-` class does not work —
+Tailwind resolves that in stylesheet order, not class order.
+
 **Submit is now always rendered, disabled below `MIN_WORD_LENGTH`** — the point of the ticket: an
 appearing button gives a typing player no target. That inverted four existing tests which asserted
 its *absence*, and the two copies needed distinct ids (`btn-enter` stays on the inline one so

@@ -24,8 +24,8 @@ import { ScoreBar } from "./ScoreBar";
 import { NominationModal } from "@/components/shared/NominationModal";
 import { WordInput } from "./WordInput";
 import { chipWarning } from "@/styles/recipes";
-import { ClearMark, DeleteMark, ShuffleMark, SubmitMark } from "./icons";
-import { btnSquircle, btnSquircleDisabled, btnSquircleGo } from "./styles";
+import { ClearMark, DeleteMark, ICON_PX_ROW, ShuffleMark, SubmitMark } from "./icons";
+import { btnSquircle, btnSquircleDisabled, btnSquircleGo, squircleBoxRow } from "./styles";
 import { LEKSOKIPOS } from "@/config/gameRules";
 import { todayISO } from "@/lib/puzzleDate";
 import { useAchievementSync } from "@/games/leksokipos/hooks/useAchievementSync";
@@ -193,7 +193,7 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
   const canSubmit = currentInput.length >= LEKSOKIPOS.MIN_WORD_LENGTH;
 
   const containerClass = "flex flex-col items-center gap-6 w-full max-w-game mx-auto px-4 py-8";
-  const buttonRowClass  = "flex items-center gap-2 w-full justify-center";
+  const buttonRowClass  = "flex items-center gap-5 w-full justify-center";
 
   return (
     <div data-testid="game-board" className={containerClass}>
@@ -293,26 +293,26 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
               <button
                 data-testid="btn-delete"
                 onClick={deleteLetter}
-                className={btnSquircle}
+                className={`${squircleBoxRow} ${btnSquircle}`}
                 aria-label="Διαγραφή"
               >
-                <DeleteMark />
+                <DeleteMark size={ICON_PX_ROW} />
               </button>
               <button
                 data-testid="btn-clear"
                 onClick={clearInput}
-                className={btnSquircle}
+                className={`${squircleBoxRow} ${btnSquircle}`}
                 aria-label="Καθαρισμός"
               >
-                <ClearMark />
+                <ClearMark size={ICON_PX_ROW} />
               </button>
               <button
                 data-testid="btn-shuffle"
                 onClick={shuffleLetters}
-                className={btnSquircle}
+                className={`${squircleBoxRow} ${btnSquircle}`}
                 aria-label="Ανακάτεμα"
               >
-                <ShuffleMark />
+                <ShuffleMark size={ICON_PX_ROW} />
               </button>
               {/* Second Καταχώρηση — mirrors the inline one; distinct test id because
                   two elements sharing btn-enter would make getByTestId throw. */}
@@ -320,10 +320,10 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
                 data-testid="btn-enter-row"
                 onClick={submitWord}
                 disabled={!canSubmit}
-                className={canSubmit ? btnSquircleGo : btnSquircleDisabled}
+                className={`${squircleBoxRow} ${canSubmit ? btnSquircleGo : btnSquircleDisabled}`}
                 aria-label="Καταχώρηση"
               >
-                <SubmitMark />
+                <SubmitMark size={ICON_PX_ROW} />
               </button>
             </div>
           )}

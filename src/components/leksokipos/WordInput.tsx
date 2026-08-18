@@ -7,7 +7,7 @@
 // word is long enough (canSubmit), muted and disabled below that.
 
 import { SubmitMark } from "./icons";
-import { btnSquircleDisabled, btnSquircleGo } from "./styles";
+import { btnSquircleDisabled, btnSquircleGo, squircleBox } from "./styles";
 
 interface WordInputProps {
   value:        string;
@@ -48,7 +48,7 @@ export function WordInput({ value, centerLetter, onSubmit, canSubmit = false }: 
           disabled={!canSubmit}
           data-testid="btn-enter"
           aria-label="Καταχώρηση"
-          className={`ml-3 ${canSubmit ? btnSquircleGo : btnSquircleDisabled}`}
+          className={`ml-3 ${squircleBox} ${canSubmit ? btnSquircleGo : btnSquircleDisabled}`}
         >
           <SubmitMark />
         </button>

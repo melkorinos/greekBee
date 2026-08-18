@@ -217,6 +217,11 @@
      btnSquircle recipe in src/components/leksokipos/styles.ts. */
   --radius-squircle-x: 16px;
   --radius-squircle-y: 13px;
+  /* The action ROW draws the same squircle 15% larger (thumbs, not cursors), so
+     its corner scales with its box — a shared radius would read as a different
+     shape at the larger size. */
+  --radius-squircle-row-x: 18px;
+  --radius-squircle-row-y: 15px;
   --shadow-card:    var(--shadow-sm);
 
   /* Platform column width → max-w-game. The single knob for every game page's
