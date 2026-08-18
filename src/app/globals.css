@@ -74,6 +74,18 @@
   --tier-chryso-soft:   #faf0cf;
   --tier-diamanti:      #4f9fbc;
   --tier-diamanti-soft: #e2f2f8;
+
+  /* Brand mark tiles (TICKET-10) — the three letter tiles of the fan, so the
+     header's DOM mark (BrandMark.tsx) is painted with the SAME colours the
+     favicon and share card are drawn with in `src/app/_brand/fan.tsx`. Raw hex
+     is correct here for the same reason the tiers above are: these are brand
+     identities, they are IDENTICAL in light and dark (a mark that recolours is
+     a different mark), and this file is where tokens are defined.
+     shareMetadata.test.ts fails if these drift from fan.tsx. */
+  --mark-omega:  #16a34a;
+  --mark-lambda: #facc15;
+  --mark-pi:     #0d9488;
+  --mark-ink:    #1c1917;
 }
 
 .dark {
@@ -182,6 +194,12 @@
   --color-tier-chryso-soft:   var(--tier-chryso-soft);
   --color-tier-diamanti:      var(--tier-diamanti);
   --color-tier-diamanti-soft: var(--tier-diamanti-soft);
+
+  /* Brand mark → bg-mark-omega / bg-mark-lambda / bg-mark-pi / text-mark-ink. */
+  --color-mark-omega:  var(--mark-omega);
+  --color-mark-lambda: var(--mark-lambda);
+  --color-mark-pi:     var(--mark-pi);
+  --color-mark-ink:    var(--mark-ink);
 
   /* Shared icon size for the leaderboard 🏆 — one place to resize it everywhere. */
   --text-trophy: 1.25rem;

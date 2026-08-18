@@ -7,6 +7,7 @@
 import { FEATURE_FLAGS } from "@/config/featureFlags";
 import { GAME_REGISTRY, type RegistryGameId } from "@/config/games";
 import { PLATFORM_NAME } from "@/config/platform";
+import { BrandMark } from "./BrandMark";
 import { FeedbackModal } from "./FeedbackModal";
 import { ProfileToggleButton } from "./ProfileToggleButton";
 import Link from "next/link";
@@ -101,12 +102,16 @@ export function Shell({ children }: ShellProps) {
       {/* ── Sticky header ─────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 w-full border-b border-border bg-surface px-4 py-3">
         <div className="flex items-center justify-between max-w-game mx-auto">
+          {/* The mark, then the wordmark — the same fan the tab icon and share
+              card draw (BrandMark). It replaced a 🎮 emoji, which rendered as a
+              different picture on every platform and matched nothing else. */}
           <Link
             href="/"
             onClick={guardNavigation()}
-            className="text-sm font-semibold text-foreground hover:opacity-80 transition-colors"
+            className="flex items-center gap-2 text-sm font-semibold text-foreground hover:opacity-80 transition-opacity"
           >
-            🎮 {PLATFORM_NAME}
+            <BrandMark />
+            {PLATFORM_NAME}
           </Link>
 
           <div className="flex items-center gap-1">

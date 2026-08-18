@@ -28,6 +28,7 @@ import { resolve } from "path";
 
 import { PLATFORM_NAME, PLATFORM_DESCRIPTION } from "@/config/platform";
 import { missingGlyphs } from "@/app/_brand/cmap";
+import { GREEN, INK, TEAL, YELLOW } from "@/app/_brand/fan";
 
 const ROOT = resolve(__dirname, "../../../");
 const layoutSource = readFileSync(resolve(ROOT, "src/app/layout.tsx"), "utf8");
@@ -134,6 +135,53 @@ describe("Share preview — the mark cannot drift between sizes", () => {
 
     // And it really is cut down: accented Greek is what a full face would carry.
     expect(missingGlyphs(new Uint8Array(font), "άέίόύ")).toHaveLength(5);
+  });
+});
+
+describe("Share preview — the header mark matches the drawn mark", () => {
+  // BrandMark.tsx redraws the fan in HTML because satori's output is a PNG and
+  // cannot be mounted in the React tree. Two drawings means two palettes unless
+  // something holds them together: the DOM one paints from the `--mark-*` tokens
+  // in globals.css, and this block is what makes those tokens equal fan.tsx.
+  // Without it the tab icon and the header two pixels below it drift apart, and
+  // nothing but looking at both at once would catch it.
+  const globals = readFileSync(resolve(ROOT, "src/app/globals.css"), "utf8");
+  const markSource = readFileSync(resolve(ROOT, "src/components/shared/BrandMark.tsx"), "utf8");
+
+  function token(name: string): string | undefined {
+    return globals.match(new RegExp("--" + name + ":\\s*(#[0-9a-f]{3,8})", "i"))?.[1];
+  }
+
+  it("every tile colour token equals the colour fan.tsx draws with", () => {
+    expect(token("mark-omega")).toBe(GREEN);
+    expect(token("mark-lambda")).toBe(YELLOW);
+    expect(token("mark-pi")).toBe(TEAL);
+    expect(token("mark-ink")).toBe(INK);
+  });
+
+  it("the tokens are exposed as utilities and the mark uses them", () => {
+    for (const name of ["mark-omega", "mark-lambda", "mark-pi", "mark-ink"]) {
+      expect(globals).toContain(`--color-${name}:`);
+    }
+    expect(markSource).toMatch(/bg-mark-omega/);
+    expect(markSource).toMatch(/bg-mark-lambda/);
+    expect(markSource).toMatch(/bg-mark-pi/);
+    expect(markSource).toMatch(/text-mark-ink/);
+  });
+
+  it("the mark carries no colour of its own", () => {
+    // A hex here is the drift this whole block exists to prevent: it would look
+    // right on the day it was typed and never follow fan.tsx again.
+    expect(markSource.match(/#[0-9a-f]{3,8}/i)).toBeNull();
+  });
+
+  it("the header draws the mark instead of an emoji", () => {
+    const shell = readFileSync(resolve(ROOT, "src/components/shared/Shell.tsx"), "utf8");
+    expect(shell).toContain("<BrandMark />");
+    // The emoji still appears in the comment explaining what replaced it, so
+    // the check runs over comment-stripped source (same trick as layoutCode).
+    const shellCode = shell.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    expect(shellCode).not.toContain("🎮");
   });
 });
 
