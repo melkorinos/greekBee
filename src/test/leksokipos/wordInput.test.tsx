@@ -1,10 +1,12 @@
 ﻿// wordInput.test.tsx — unit tests for the WordInput component.
 // Covers letter display, centre-letter highlighting, placeholder,
-// and the conditional inline submit button.
+// and the always-rendered inline submit button (TICKET-16: it is disabled below
+// the minimum word length rather than absent, so the player always has a target).
 
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
+import { LEKSOKIPOS } from "@/config/gameRules";
 import { WordInput } from "@/components/leksokipos/WordInput";
 import userEvent from "@testing-library/user-event";
 
@@ -42,9 +44,50 @@ describe("WordInput — letter display", () => {
 // ── Inline submit button ───────────────────────────────────────────────────────
 
 describe("WordInput — inline submit button", () => {
-  it("does NOT show the submit button when canSubmit is false", () => {
+  it("renders the submit button DISABLED when canSubmit is false", () => {
     render(<WordInput value="παι" centerLetter="α" onSubmit={vi.fn()} canSubmit={false} />);
-    expect(screen.queryByTestId("btn-enter")).toBeNull();
+    expect(screen.getByTestId("btn-enter")).toBeDisabled();
+  });
+
+  it("does not call onSubmit when the disabled button is clicked", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    // Below the minimum length — the button is present but must not fire.
+    render(
+      <WordInput
+        value={"α".repeat(LEKSOKIPOS.MIN_WORD_LENGTH - 1)}
+        centerLetter="α"
+        onSubmit={onSubmit}
+        canSubmit={false}
+      />,
+    );
+    await user.click(screen.getByTestId("btn-enter"));
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("renders the submit button ENABLED at exactly MIN_WORD_LENGTH", async () => {
+    const onSubmit = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <WordInput
+        value={"α".repeat(LEKSOKIPOS.MIN_WORD_LENGTH)}
+        centerLetter="α"
+        onSubmit={onSubmit}
+        canSubmit={true}
+      />,
+    );
+    const btn = screen.getByTestId("btn-enter");
+    expect(btn).toBeEnabled();
+    await user.click(btn);
+    expect(onSubmit).toHaveBeenCalledOnce();
+  });
+
+  it("draws the check as an svg, with no visible text in the button", () => {
+    render(<WordInput value="παιντ" centerLetter="α" onSubmit={vi.fn()} canSubmit={true} />);
+    const btn = screen.getByTestId("btn-enter");
+    expect(btn.querySelector("svg")).not.toBeNull();
+    expect(btn.textContent).toBe("");
+    expect(btn).toHaveAccessibleName("Καταχώρηση");
   });
 
   it("does NOT show the submit button when onSubmit is absent even if canSubmit is true", () => {

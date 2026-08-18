@@ -89,10 +89,10 @@ before "just add a list", ask whether a re-sync owns that directory.
   files, mostly where ids were *arbitrary valid strings*; grep is the only map and each hit needs
   judgement, never a `sed`. **When a fixture stops compiling against reality, ask whether the test
   still describes a possible world.**
-- **`coverageMap.md` covers 174 of 202 files (s163), and three entries once described tests that do
-  not exist (s157)**, claimed as covered for seven months. A gap makes you write a test you may
-  already have; a wrong entry makes you trust one that was never there. Re-count rather than trust
-  this line, and when the Dream updates the file, re-read the rows it touches — don't only append.
+- **`coverageMap.md` covers ~174 of 203 files, and three entries once described tests that do not
+  exist (s157)**, claimed as covered for seven months. A gap makes you write a test you may already
+  have; a wrong entry makes you trust one that was never there. Re-count rather than trust this
+  line; when the Dream updates the file, re-read the rows it touches instead of only appending.
 
 ## 🟡 Smaller live watches
 
@@ -104,8 +104,7 @@ before "just add a list", ask whether a re-sync owns that directory.
 - **Zero rows is the reason to look, not reassurance (s134).** `consumeApprovedPuzzle`'s two bugs were
   invisible because every queue held zero approved rows. Stavrolekso's `pending` row is one approval
   away, and the admin approves blind — a wrong schedule is fixable only by SQL.
-- **Sound Cue files: record each file's actual licence**, never the site's (Freesound hosts CC0,
-  CC-BY and CC-BY-NC side by side).
+- **Sound Cue files: record each file's own licence**, never the site's (Freesound mixes all three).
 - **ADR 0010's premise is dead and Offline Mode is PARKED.** `e2e/offlineMode.spec.ts` is
   skipped-and-failing on purpose as the acceptance test. Watch **dormant code rotting** — nothing
   exercises the offline branches now. Don't patch around it; see the memory.md row.

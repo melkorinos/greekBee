@@ -5,6 +5,35 @@
 
 ---
 
+## Session 167 — 2026-08-18: Λεξόκηπος trades three words for four marks
+
+`TICKET-16` shipped and deleted. The action row is now four icon-only squircles — Διαγραφή,
+Καθαρισμός, Ανακάτεμα and a **second** Καταχώρηση — and the inline `&#9166;` glyph is a drawn check.
+New `leksokipos/icons.tsx` (four `currentColor` marks, path data copied out of
+`.claude/aiHelper/html/leksokipos-icons.gen.js`, never redrawn by eye), three recipes in the game's
+`styles.ts`, and `--radius-squircle-x` / `-y` in `globals.css`.
+
+**The corner needed two tokens, not one.** `16px / 13px` is an *elliptical* radius and Tailwind's
+`rounded-*` emits a single value, so one token would have quietly rounded the buttons into pills.
+The pair is composed once, in `btnSquircle`, with an arbitrary-property utility — verified in the
+built CSS rather than assumed (`border-radius:var(--radius-squircle-x)/var(--radius-squircle-y)`).
+`h-8.5` compiles to the spec's 34 px on Tailwind v4's dynamic spacing scale.
+
+**Submit is now always rendered, disabled below `MIN_WORD_LENGTH`** — the point of the ticket: an
+appearing button gives a typing player no target. That inverted four existing tests which asserted
+its *absence*, and the two copies needed distinct ids (`btn-enter` stays on the inline one so
+`e2e/pages/LeksokiposPage.ts` keeps resolving; the row's is `btn-enter-row`). `GameBoard` no longer
+carries the literal `4`.
+
+**Two e2e failures were not mine, and the stash proved it.** `flows` and `privacy` both died on
+`/leksokipos` behind Next's overlay reading *Jest worker encountered 2 child process exceptions* —
+identical on a stashed clean tree. **Wiping `.next` made it worse** (cold compile, 12 of 15 timed
+out); the next warm run was 13 passed / 2 skipped with no code change. Recorded as a second
+signature on the existing cold-chunk row in `memory.md`. `.claude/**` added to the eslint ignores:
+the spec sheet's generator is a throwaway Node script and `require()` failed the lint gate.
+
+202 files / 2651 tests (no new test file — both suites extended per the coverage map), eslint 0, build 0, e2e 13 passed / 2 skipped.
+
 ## Session 166 — 2026-08-17: a migration meets real rows before production does
 
 `TICKET-13` built and deleted — `npm run db:rehearse`, the loop ADR 0024 chose over a second Supabase
@@ -34,49 +63,11 @@ the case-insensitive filesystem hides it. 202 files / 2638 tests, eslint 0, buil
 touched a page). Owed and now written into `ISSUE-01` §1: the archive has never been opened on another
 machine, and its password is `ADMIN_SECRET` reused.
 
-## Session 165 — 2026-08-17: the Games learn to end
-
-Operator wanted one feature for when a player finishes any Game: a prompt to share, plus a brief
-performance summary. `/grill-with-docs`, five batches, twenty-five decisions, **docs only** — ADR 0025,
-two `CONTEXT.md` entries, `TICKET-15`, one `launch-readiness.md` row. No code.
-
-**The framing fact was an absence.** Seven Games are live and **one ends with a share** (Τοποθεσίες);
-Λεξοδρομία and Λεξόπλεγμα already compute a full recap and offer no way to send it anywhere, and
-Λεξιαρχείο and Βρες τη Φράση end with a one-line banner. Worse: **no share text on the Platform
-carries a link**, so the emoji summaries that do exist are untraceable back to the site — and `TICKET-10`
-had shipped an og:card the day before with nothing posting a link for it to render. The two are one bet.
-
-**Λεξόκηπος has no terminal state**, which is what forced the vocabulary. `Round End` is deliberately
-**not one rule** — six Games, six triggers, list closed — and Λεξόκηπος's is reaching the top Rank, past
-which play continues, so it alone **pops** rather than rendering inline and its shared score is **live,
-not a snapshot**. The Platform turned out to have **five names for "the round is over"**
-(`won`/`lost`, `stage: "finished"`, `isFinished`, `gaveUp`, `isEndgame`) and no glossary entry for the
-concept; ADR 0020's own criterion then settled that this is **not a `GameCapability`** — it writes
-nothing to the shared database, exactly the Cues ruling.
-
-**Measured before recommending, and the recommendation lost:** only **7 of 35 Λεξιαρχείο player-days
-resolve all five Lengths (20%)**, so I proposed the looser trigger. The operator kept "all five" with
-that number on the table, so both artifacts now say **do not fix it by loosening** and to re-measure
-after launch, since it is beta data `launch-reset.sql` wipes.
-
-**The durable lesson is s143's, in a medium this list had never applied it to.** Four format questions
-were answered in prose, then drawn as six worked examples as a courtesy — and **three of the four
-answers changed on sight** (`3/6` fractions → one emoji per Length, spider-web cells → green blocks,
-and the platform name left the identity line entirely). That last one only because seeing
-`Leksarxeia · Leksiarxeio` adjacent made the collision obvious — a collision the operator had
-demonstrated a batch earlier by writing one name for the other. **A format is a visual decision wearing
-text's clothes**, and drawing it cost one code block.
-
-Dream note: `reflections.md` was at **602 against its 600 cap**, pushed over by s164's ledger row.
-Brought to 599 by archiving the s143 discharged-handoff tension, whose content is now soul.md's Dream
-step 5 — the Subtract step applied to this file rather than to a handoff. **s164 ran concurrently
-throughout** (`d44686c`, then the `TICKET-10` closure) and owes its own entry; staged explicit paths and
-left `goals.md`, `launch-readiness.md` and `trackerReferences.test.ts` to it.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 165 | 2026-08-17 | **The Games learn to end** — `/grill-with-docs`, twenty-five decisions, **docs only**: ADR 0025, two `CONTEXT.md` entries, `TICKET-15`. Seven live Games and **one** ended with a share, and **no share text carried a link**, so `TICKET-10`'s og:card had nothing posting a link to render it. `Round End` is deliberately **six triggers, not one rule**; Λεξόκηπος has no terminal state, so it alone **pops** and shares a **live** score. The Platform had **five names** for "the round is over" and no glossary entry. **Measured before recommending and the recommendation lost:** 7 of 35 Λεξιαρχείο player-days resolve all five Lengths, and the operator kept "all five" anyway, so both artifacts say do not loosen it. **s143's lesson in a new medium:** four format questions answered in prose, six worked examples drawn as a courtesy, **three of the four answers changed on sight** — a format is a visual decision wearing text's clothes. |
 | 163 | 2026-08-16 | **The Platform gets a face** — `TICKET-10`, blocked since s151 on one operator pick, made in two steps (card 18, then icon 1 off a second page). **One drawing, not three:** `src/app/_brand/fan.tsx` renders `opengraph-image`, `icon` and `apple-icon` at their own sizes, the only thing stopping a favicon drifting from a share card; satori paints in **emission order, not `z-index`**, so the centre tile is emitted last. **The durable lesson is s143's, one layer deeper:** the failure turned up *inside* a rendered preview — the candidates page drew marks `font-weight: 700` and CSS-scaled one 180 px master, and **neither survives `ImageResponse`**, which bundles a single-weight face. **A preview is only evidence about the renderer that drew it.** Fixed with a **12 KB** Inter Bold subset (Latin + Λ Ω λ μ π ω via the Google Fonts `text=` parameter) — the "~350 KB font" quoted since s151 had priced **full Greek coverage** and made a font look unaffordable for four sessions. `_brand/cmap.ts` + a test read the font's own glyph table, because **a glyph missing from a subset renders as nothing, not an error**. The guard test therefore **renders** rather than matching source, needing the `node` environment (sharp rejects satori's SVG under jsdom) — which exposed that `src/test/setup.ts` assumed a DOM for the whole suite. Filed `ISSUE-10`; this session's render tests were the obvious suspect and **were not the cause** — excluding them went green, but re-running at `HEAD` reproduced it anyway. 202 files / 2638 tests, e2e 13/2-skipped. |
 | 162 | 2026-08-16 | **A border the whole platform did not ask for.** Operator wanted Λεξιαρχείο's and Βρες τη Φράση's letter boxes "20% darker and 10% thicker" with consistency across the games; **every number in the ask was the wrong shape**, none of it visible without reading the components. **"Darker" inverts** — on the `stone-950` page a darker outline vanishes rather than sharpens, so the spec is *contrast against the page*: light `stone-200`→`stone-400`, dark `stone-700`→**lighter**, `stone-500`. **"10% thicker" has no pixel to land on** (2.2px, no Tailwind step, renders unevenly) → "unify at 2px", which was the consistency half anyway. And **only unfilled tiles have a visible border at all** — `correct`/`present`/`absent` set it equal to the fill — so the change lives entirely in the blank grid and the row being typed. **The token had to be new:** `--border` is the hairline for cards, inputs, secondary buttons and separators, so `--tile-border` keeps the two free to move apart (a card outline should be quiet; a letter box **is** the thing being read). Βρες τη Φράση's 1px was defended by a comment about pixels the letter loses — overruled deliberately, comment rewritten rather than deleted, and `phraseLayout.ts`'s packing maths left alone. **Scope reversed mid-grill** to all five games that draw a letter box, once the operator saw the other three would be left lighter than the two being fixed. Token **confirmed compiled out of the production bundle** (a missing `@theme` line renders no border while every test stays green — s144); `letterBoxBorder.test.ts` proven non-vacuous by reverting Λεξοδρομία. **The operator declined the render-and-look step**, so values were picked by arithmetic and an eye-check on a real phone is owed. 201 files / 2627 tests. Ran concurrently with s160 *and* s161; `HEAD` moved three commits mid-session. |
 | 161 | 2026-08-16 | **The letter goes to the word that owns it.** Operator sent a screenshot of the live Vres Tin Frasi board asking whether a purple tile was wrong. It was — and **the conclusion was right while the reason was inverted**, which is what made checking worth it: the operator reasoned "word 3 has no Α", but word 3 *is* ΔΙΔΑΣΚΩ and its Α is precisely why the purple appeared. **`evaluatePhraseGuess` enforced ADR 0004's yellow-over-purple priority per tile and never across the phrase** — pass 2 walked words in index order making both kinds of claim in one sweep, so word 0's cross-word claim consumed a letter word 2 owned and word 2's own tile fell to grey. **Word order, not information value, decided who got the letter**; it fired twice in the one screenshot. The answer phrase was recovered from `phrases-el.json` by word-shape *before* any theory (ΜΑΘΑΙΝΩ ΚΑΙ ΔΙΔΑΣΚΩ), so the probe reproduced the board tile for tile. **Blast radius measured, not estimated:** of 658 same-shape pairs in the corpus, 170 (26%) held a mis-coloured tile, and the only transitions are `purple→grey` (198) paired **1:1** with `grey→yellow` (198) plus `purple→yellow` (13) — the fix only ever moves a signal to the tile that earned it, which is the argument it is safe; a raw "170 boards change" would have read as risk. Fix = pass 2 split into two sweeps. Four tests, non-vacuous by restoring the old algorithm. **One test bug en route:** I typed final sigma `ς`, which `normalizeLetters` collapses before the function runs — the test fed input production cannot produce. Accepted: `RESTORE_STATE` replays stored tiles, so a round in progress at deploy keeps old colours until rotation. ADR 0004 amended. |

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { LEKSOKIPOS } from "@/config/gameRules";
 import { SOUND_CUES, SOUND_PREFERENCE_KEY } from "@/config/sound";
 import { GameBoard } from "@/components/leksokipos/GameBoard";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
@@ -56,21 +57,37 @@ describe("GameBoard rendering", () => {
     expect(screen.getByTestId("game-board")).toBeInTheDocument();
   });
 
-  it("renders Delete, Shuffle buttons (no submit button when input is empty)", () => {
+  it("renders four icon-only action buttons, each labelled with its Greek word", () => {
     setup();
-    expect(screen.getByTestId("btn-delete")).toBeInTheDocument();
-    expect(screen.getByTestId("btn-shuffle")).toBeInTheDocument();
-    expect(screen.queryByTestId("btn-enter")).toBeNull();
+    const row = [
+      ["btn-delete", "Διαγραφή"],
+      ["btn-clear", "Καθαρισμός"],
+      ["btn-shuffle", "Ανακάτεμα"],
+      ["btn-enter-row", "Καταχώρηση"],
+    ] as const;
+    for (const [testId, label] of row) {
+      const btn = screen.getByTestId(testId);
+      expect(btn).toHaveAccessibleName(label);
+      // The word is gone from the surface — the mark is an svg, the button has no text.
+      expect(btn.querySelector("svg")).not.toBeNull();
+      expect(btn.textContent).toBe("");
+    }
   });
 
-  it("shows the inline submit button once the input reaches 4 letters", async () => {
+  it("renders both submit buttons disabled while the input is below the minimum", async () => {
     const { user } = setup();
-    // Type 3 letters — button should still be absent
-    await user.keyboard("pai");
-    expect(screen.queryByTestId("btn-enter")).toBeNull();
-    // Type the 4th letter — button should appear
-    await user.keyboard("n");
-    expect(screen.getByTestId("btn-enter")).toBeInTheDocument();
+    expect(screen.getByTestId("btn-enter")).toBeDisabled();
+    expect(screen.getByTestId("btn-enter-row")).toBeDisabled();
+    await user.keyboard("pai".slice(0, LEKSOKIPOS.MIN_WORD_LENGTH - 1));
+    expect(screen.getByTestId("btn-enter")).toBeDisabled();
+    expect(screen.getByTestId("btn-enter-row")).toBeDisabled();
+  });
+
+  it("enables both submit buttons together once the input reaches the minimum", async () => {
+    const { user } = setup();
+    await user.keyboard("pain".slice(0, LEKSOKIPOS.MIN_WORD_LENGTH));
+    expect(screen.getByTestId("btn-enter")).toBeEnabled();
+    expect(screen.getByTestId("btn-enter-row")).toBeEnabled();
   });
 
   it("renders the score bar with the starting rank", () => {

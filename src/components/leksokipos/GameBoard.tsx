@@ -23,7 +23,10 @@ import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
 import { ScoreBar } from "./ScoreBar";
 import { NominationModal } from "@/components/shared/NominationModal";
 import { WordInput } from "./WordInput";
-import { btnSecondary, chipWarning } from "@/styles/recipes";
+import { chipWarning } from "@/styles/recipes";
+import { ClearMark, DeleteMark, ShuffleMark, SubmitMark } from "./icons";
+import { btnSquircle, btnSquircleDisabled, btnSquircleGo } from "./styles";
+import { LEKSOKIPOS } from "@/config/gameRules";
 import { todayISO } from "@/lib/puzzleDate";
 import { useAchievementSync } from "@/games/leksokipos/hooks/useAchievementSync";
 import { FEATURE_FLAGS } from "@/config/featureFlags";
@@ -186,6 +189,9 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
     }
   });
 
+  // One rule for both Καταχώρηση buttons (inline + action row) so they can never disagree.
+  const canSubmit = currentInput.length >= LEKSOKIPOS.MIN_WORD_LENGTH;
+
   const containerClass = "flex flex-col items-center gap-6 w-full max-w-game mx-auto px-4 py-8";
   const buttonRowClass  = "flex items-center gap-2 w-full justify-center";
 
@@ -247,7 +253,7 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
                 value={currentInput}
                 centerLetter={activePuzzle.centerLetter}
                 onSubmit={submitWord}
-                canSubmit={currentInput.length >= 4}
+                canSubmit={canSubmit}
               />
 
               {lastSubmission && (
@@ -282,27 +288,42 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
 
           {!allWordsFound && (
             <div className={buttonRowClass}>
+              {/* Icons only — each button carries the Greek word it used to show as
+                  its aria-label, so nothing is lost to a screen reader. */}
               <button
                 data-testid="btn-delete"
                 onClick={deleteLetter}
-                className={btnSecondary}
+                className={btnSquircle}
+                aria-label="Διαγραφή"
               >
-                Διαγραφή
+                <DeleteMark />
               </button>
               <button
                 data-testid="btn-clear"
                 onClick={clearInput}
-                className={btnSecondary}
-                aria-label="Clear input"
+                className={btnSquircle}
+                aria-label="Καθαρισμός"
               >
-                Καθαρισμός
+                <ClearMark />
               </button>
               <button
                 data-testid="btn-shuffle"
                 onClick={shuffleLetters}
-                className={btnSecondary}
+                className={btnSquircle}
+                aria-label="Ανακάτεμα"
               >
-                Ανακάτεμα
+                <ShuffleMark />
+              </button>
+              {/* Second Καταχώρηση — mirrors the inline one; distinct test id because
+                  two elements sharing btn-enter would make getByTestId throw. */}
+              <button
+                data-testid="btn-enter-row"
+                onClick={submitWord}
+                disabled={!canSubmit}
+                className={canSubmit ? btnSquircleGo : btnSquircleDisabled}
+                aria-label="Καταχώρηση"
+              >
+                <SubmitMark />
               </button>
             </div>
           )}

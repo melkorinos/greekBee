@@ -211,6 +211,12 @@
      shadow-card from the --radius-* / --shadow-* namespaces. */
   --radius-card:    1rem;
   --radius-control: 0.75rem;
+  /* The Leksokipos action-button squircle is an ELLIPTICAL corner (16px / 13px),
+     which one radius value cannot express — a single token would round it into a
+     pill. So it is two tokens, x and y, composed as `16px / 13px` by the
+     btnSquircle recipe in src/components/leksokipos/styles.ts. */
+  --radius-squircle-x: 16px;
+  --radius-squircle-y: 13px;
   --shadow-card:    var(--shadow-sm);
 
   /* Platform column width → max-w-game. The single knob for every game page's

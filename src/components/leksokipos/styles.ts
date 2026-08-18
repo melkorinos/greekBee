@@ -70,3 +70,30 @@ export const scoreBarFill =
 /** Give-up button — small, destructive tone, shown inline next to word count */
 export const btnGiveUp =
   "text-xs font-medium text-danger border border-danger/40 rounded-full px-3 py-1 hover:bg-danger/10 active:bg-danger/20 transition-colors";
+
+// ── Action-button squircle (TICKET-16) ────────────────────────────────────────
+//
+// The four action buttons (Διαγραφή, Καθαρισμός, Ανακάτεμα, Καταχώρηση) share one
+// box: 44 × 34 with an ELLIPTICAL corner, so it reads as a stretched key rather
+// than a pill or a circle. The corner needs two radii, which is why globals.css
+// carries --radius-squircle-x / -y rather than a single --radius-squircle; they
+// are composed here with an arbitrary-property utility because Tailwind's
+// rounded-* utilities only ever emit one radius.
+
+/** Shared box: size, elliptical corner, 1px token border. Colour comes below. */
+const squircleBox =
+  "inline-flex items-center justify-center flex-none w-11 h-8.5 border " +
+  "[border-radius:var(--radius-squircle-x)/var(--radius-squircle-y)] transition-colors";
+
+/** The three neutral action buttons — outline only, icon in the text colour. */
+export const btnSquircle =
+  `${squircleBox} border-border bg-transparent text-foreground ` +
+  "hover:bg-surface-raised active:bg-surface-raised";
+
+/** Καταχώρηση, submittable — solid green fill, white mark. */
+export const btnSquircleGo =
+  `${squircleBox} border-correct bg-correct text-white hover:opacity-90`;
+
+/** Καταχώρηση, below the minimum word length — visible, muted, and disabled. */
+export const btnSquircleDisabled =
+  `${squircleBox} border-border bg-surface-raised text-muted cursor-not-allowed`;
