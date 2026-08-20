@@ -48,7 +48,7 @@ never stage and keep working.**
   wrong peel rules shipped through it clean; what caught both was reading the generator's own
   diagnostic numbers (ADR 0018).
 
-The inverse also happens, twice on the same gate: `ISSUE-05` blocked a `DROP COLUMN` behind a backup
+The inverse also happens, twice on the same gate: a `DROP COLUMN` was once blocked behind a backup
 protecting rows `launch-reset.sql` deletes one step earlier; then the freeze on
 `supabase/migrations/` outlived what it bought — one moment of DDL against an empty `game_scores` —
 because s172 dropped a dead column early anyway, **spending** the guarantee rather than deferring it
@@ -68,9 +68,9 @@ skill entry is about to decide something, **spend the one command**, and **date 
 The live-DB tests talk to Postgres directly — no deployed app code runs — so they go green the moment
 a migration lands, whether the deploy succeeded, failed or never started: **a green suite actively
 reassuring the operator while every write 500s**. Any migration window needs one check hitting the
-**deployed route** (release day does this at runbook step 2). **Live as of s173:** `TICKET-24` drops
-two tables whose last writer is **committed, not deployed** — an ordering resting on a fact no test
-here can observe. Check the deployed commit, never the green suite.
+**deployed route** (release day does this at runbook step 2). **Live as of s174:** the migration dropping two community tables is **written and committed but
+not applied**, and the code that stopped writing them is committed but **not deployed** — an
+ordering resting on a fact no test here can observe. Check the deployed commit, never the green suite.
 
 ## 🟡 Authored content vs derived word lists — the s133 class of bug
 

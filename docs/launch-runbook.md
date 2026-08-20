@@ -30,7 +30,7 @@ Delete this file once the launch has happened and the first week's error checks 
    merge commit (`ISSUE-03` — the gate is the existing suite green, not a bigger one), plus the
    operator's preview play-through of `dev`, which is a habit rather than a tracked task (ruling
    2026-08-15). Re-measure the merge before planning the window: `git rev-list --count origin/dev..dev`.
-4. **Release day** — the six steps below, in that order.
+4. **Release day** — the five steps below, in that order.
 5. **The first week after** — `npx vercel logs --environment production --level error --since 24h`,
    daily for a week, then weekly (ADR 0023; there is no third-party error SDK, and the Vercel MCP
    connector 403s on project-scoped calls, so the CLI is the only working surface).
@@ -64,41 +64,23 @@ the machine; nobody has made that call).
    so the remaining risk is human: **the upload is manual and nothing enforces it.** A dump still
    sitting on the machine at step 4 means the wipe has no undo.
 4. **`supabase/scripts/launch-reset.sql`**, by hand in the dashboard.
-5. **One migration, three statements.** The table is empty as of step 4, so this is the one moment
-   the DDL cannot cost anything. Do not compose it on the day:
-
-   ```sql
-   -- supabase/migrations/<YYYYMMDD>120000_drop_is_perfect_from_game_scores.sql
-   alter table public.game_scores drop column if exists is_perfect;
-
-   -- ISSUE-01 §3: GET /api/nominations/lookup matches no index and scans the table
-   -- on every nomination-modal open. ~2 MB at 50,000 rows. Needs no empty table and
-   -- no types regeneration — nominations survives step 4.
-   create index if not exists nominations_word_direction_status_idx
-     on public.nominations (word, direction, status);
-
-   -- ISSUE-01 §3: the one non-normalised row in 191. Final sigma, so a re-proposal
-   -- normalises to ιουνιοσ and its prior-rejection warning can never fire.
-   update public.nominations set word = 'ιουνιοσ'
-    where word = 'ιουνιος' and direction = 'remove';
-   ```
-
-   **`npm run db:rehearse` first** — it replays the queue against the archive taken at step 3, the
-   only rehearsal this project's highest-stakes migration will get — then `npx supabase db push`, then
-   regenerate `src/lib/database.types.ts` and commit both together (ADR 0017: the generated types are
-   trusted, so they cannot keep offering a column that is gone). **Nothing may enter
-   `supabase/migrations/` before this step** — a committed-but-unpushed migration fires on the next
-   unrelated `db push`, the same trap that keeps `launch-reset.sql` out of that folder. Verify with
-   `select count(*) from information_schema.columns where table_schema='public' and
-   table_name='game_scores' and column_name='is_perfect'` — must return 0. **This step does not gate
-   the announce.** If the push fails, announce anyway and re-file; the column has never been read.
-   Amend **ADR 0013** once the drop lands — its line stating the column is *kept* stops being true.
-6. **Announce.**
+5. **Announce.**
 
 Steps 3 and 4 are why the order matters. The reset empties `game_scores`, `game_state`,
 `player_achievements` and `player_milestones` on a **Free-plan project with no PITR** — that archive
 is the only undo that will exist. And it must follow the deploy: run it while the old code is live
 and badges re-earn against the retired emoji glyphs, because `BadgeMark` is on `dev` only.
+
+**There is no longer a schema step here, and that is deliberate.** Everything the schema was owed —
+both dropped community queues, `game_scores.data`, `is_perfect`, and `ISSUE-01` §3’s index and sigma
+fix — ships **before** release day in
+`supabase/migrations/20260820120000_drop_two_community_queues_and_dead_score_columns.sql`
+(ADR 0027 §5). That step existed only because `supabase/migrations/` was frozen to buy one thing: DDL
+against an empty `game_scores`. Dropping the now-dead `data` column **spends** that guarantee, so
+running DDL twice buys nothing, and the risk is answered by mechanism instead of timing —
+`npm run db:backup` then `npm run db:rehearse` (ADR 0024), which replays the pending queue against a
+real restored archive. The one ordering rule that survives is outside this list: the migration must
+not run until the code that stopped writing those tables is **live in production**.
 
 **The dump never enters a git repository** — settled 2026-08-15. This repo is public,
 `scripts/backup-db.ps1` writes to `db-backups/`, and `.gitignore` line 46 already reads *"local DB
@@ -111,7 +93,7 @@ copies beat one, so an external disk is worth the trouble.
 
 ## References
 
-- `.claude/tracker/tickets/` — **no ticket files on disk as of 2026-08-20**, so the folder itself is gone until the next one is written. No agent work is open against the launch; read the folder, never a list here.
-- [`ISSUE-01`](../.claude/tracker/issues/ISSUE-01-no-disaster-recovery-backups.md) · [`ISSUE-03`](../.claude/tracker/issues/ISSUE-03-thin-e2e-coverage.md) · [`ISSUE-05`](../.claude/tracker/issues/ISSUE-05-dead-is-perfect-column-launch.md) — deferred, and step 5's DROP.
+- `.claude/tracker/tickets/` — read the folder, never a list here. The folder is the state: a file on disk is open work, a deleted file is done.
+- [`ISSUE-01`](../.claude/tracker/issues/ISSUE-01-no-disaster-recovery-backups.md) · [`ISSUE-03`](../.claude/tracker/issues/ISSUE-03-thin-e2e-coverage.md) — the two deferred problems this run deliberately does not close.
 - [`docs/disaster-recovery.md`](disaster-recovery.md) — the backup and restore procedure step 3 depends on.
 - ADRs [0022](adr/0022-hidden-is-not-wip.md) (hidden Games), [0023](adr/0023-error-monitoring-is-vercel-only.md) (error checks), [0024](adr/0024-no-dev-prod-split-migration-safety-is-local.md) (no split), [0025](adr/0025-round-end-result-panel-and-share.md) (Round End + share, built 2026-08-20).

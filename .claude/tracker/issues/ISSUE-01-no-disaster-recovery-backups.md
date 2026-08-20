@@ -12,8 +12,8 @@ keep theirs, because ADR 0011, ADR 0026 and `TICKET-13` all cite them.
 
 **Consolidated 2026-08-16** from `ISSUE-06` (profile scans) and `ISSUE-07` (nominations growth), at
 the operator's request — one DB file instead of several. The `is_perfect` DROP stayed out on
-purpose: it is no longer a deferred problem but **scheduled work**, owned by
-[`ISSUE-05`](ISSUE-05-dead-is-perfect-column-launch.md) and executed at release-day runbook step 5.
+purpose — it was scheduled work rather than a deferred problem, and it **shipped 2026-08-20** in the
+one migration ADR 0027 §5 called for, which also carried this section’s index and sigma fix.
 
 **These sections share a subject, not a cause.** The consolidation originally claimed a common
 blocker — one Free-plan project with no scratch copy, said to be why section 2 could not be
@@ -119,12 +119,11 @@ primary key and the partial unique on `(word, direction) WHERE status = 'pending
 and `accepted` counts in `GET /api/nominations/lookup` match no index at all, and it grows in
 exactly the rows nothing prunes.
 
-**The index earns its place — measured 2026-08-17, `TICKET-14`.** A local probe at 191 / 5,000 /
+**The index shipped 2026-08-20** in `20260820120000_drop_two_community_queues_and_dead_score_columns.sql`, and it earned its place — **measured 2026-08-17, `TICKET-14`.** A local probe at 191 / 5,000 /
 50,000 rows seeded at the live status mix: without `(word, direction, status)` the lookup counts
 sequentially scan at every scale, reading 1,064 buffers and 2.77 ms at 50,000 rows; with it the
 planner chooses an index-only scan **at every scale including today's 191**, at 3 buffers and
-0.04 ms. The index costs about 2 MB at 50,000 rows. Its body is written into **runbook step 5**,
-beside the `is_perfect` DROP, because `supabase/migrations/` is frozen until then.
+0.04 ms. The index costs about 2 MB at 50,000 rows.
 
 The same probe qualifies this section's attribution of the sequential scans. The listing GET does
 **not** stay unindexed as the table grows — the existing partial unique on `(word, direction) WHERE
@@ -157,12 +156,12 @@ was the next file anyone would open, and shipped on 2026-08-17 without answering
    verdict, so what is left here — no bulk-reject in `/leksikastirio`, and stranger-authored
    `word`/`note` free text rendered in an admin UI — is a review-workflow problem with nothing to do
    with the database. If it leaves, it takes the next free issue number.
-**The one non-normalised row is scheduled, not open** (2026-08-20): `ιουνιος` (`direction` `remove`,
-rejected 2026-07-15) ends in a final sigma, so `normalizeLetters` turns a re-proposal into `ιουνιοσ`
-and its prior-rejection warning can never fire. It is the only such row in 191, and `isBlockedWord`
-does not cover it because that only runs on `add`. The `UPDATE` now rides **runbook step 5** in
-`docs/launch-runbook.md` alongside the DROP and the index — one hand-run migration instead of three
-separate visits to the dashboard. Do not also do it by hand; the statement is written out there.
+**The one non-normalised row is fixed** (2026-08-20): `ιουνιος` (`direction` `remove`, rejected
+2026-07-15) ended in a final sigma, so `normalizeLetters` turned a re-proposal into `ιουνιοσ` and its
+prior-rejection warning could never fire. It was the only such row in 191, and `isBlockedWord` does
+not cover it because that only runs on `add`. The `UPDATE` rode the same migration as the index. It was
+legacy residue, not a live hole: `POST /api/nominations` writes `normalizeLetters(word).trim()`
+([route.ts:119](../../../src/app/api/nominations/route.ts#L119)), so no new row can arrive that way.
 
 ---
 
@@ -173,7 +172,6 @@ separate visits to the dashboard. Do not also do it by hand; the statement is wr
 - Supabase Database Backups — https://supabase.com/docs/guides/platform/backups (free-tier `db dump` guidance).
 - `TICKET-11` — the encrypted dump. Shipped 2026-08-15, closed 2026-08-20; the file is deleted and git history is the archive.
 - [`scripts/rehearse-migration.ps1`](../../../scripts/rehearse-migration.ps1) — the local rehearsal loop ADR 0024 chose instead of a split, shipped 2026-08-17.
-- [`ISSUE-05`](ISSUE-05-dead-is-perfect-column-launch.md) — the `is_perfect` DROP, scheduled to runbook step 5 rather than deferred here.
 - [`src/app/api/cleanup-scores/route.ts`](../../../src/app/api/cleanup-scores/route.ts) + [`src/config/retention.ts`](../../../src/config/retention.ts) — the prune and what it deliberately skips.
 - `.claude/skills/project-mcp/SKILL.md` — the advisor baseline explaining why the always-true INSERT policy is intended.
 - The `supabase` CLI is an approved devDependency; `db push` works without Docker.
