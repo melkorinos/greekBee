@@ -132,3 +132,40 @@ describe("Vres Tin Frasi phrase corpus — every phrase is solvable", () => {
     expect(outOfBounds).toEqual([]);
   });
 });
+
+// ─── Rotation variety ─────────────────────────────────────────────────────────
+//
+// The static fallback serves phrases[dateToIndex(date)] — a sequential walk, one
+// entry per day — so FILE ORDER IS PLAY ORDER. The corpus was authored in
+// thematic blocks, which put 42 consecutive "X και Y" phrases at indices 106–147:
+// six straight weeks of the same shape, with runs of 13 and 9 elsewhere. Nothing
+// in the loader can fix that; only the order can. `scripts/spread-vrestifrasi-
+// phrases.mjs` deals the και/κι phrases onto a fixed stride, and these tests are
+// what stops a later batch of phrases being appended back into a block.
+describe("Vres Tin Frasi phrase corpus — rotation variety", () => {
+  const isJoined = (phrase: string) => /(^|\s)(και|κι)(\s|$)/i.test(phrase);
+
+  it("never serves the same phrase twice in a rotation", () => {
+    expect(new Set(CORPUS).size).toBe(CORPUS.length);
+  });
+
+  // Cyclic, because the rotation wraps from the last index straight back to 0.
+  it("never serves two και/κι phrases on consecutive days", () => {
+    const backToBack = CORPUS.filter(
+      (phrase, i) => isJoined(phrase) && isJoined(CORPUS[(i + 1) % CORPUS.length]),
+    );
+
+    expect(backToBack).toEqual([]);
+  });
+
+  // A weaker guard than the one above, but the one that states the intent: a
+  // player's week should not be dominated by one sentence shape.
+  it("keeps και/κι phrases under half of every seven-day window", () => {
+    const crowded = CORPUS.map((_, start) => {
+      const week = Array.from({ length: 7 }, (_, d) => CORPUS[(start + d) % CORPUS.length]);
+      return { start, joined: week.filter(isJoined).length };
+    }).filter(({ joined }) => joined > 3);
+
+    expect(crowded).toEqual([]);
+  });
+});
