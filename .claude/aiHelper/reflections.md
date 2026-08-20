@@ -14,31 +14,32 @@ every narrator has been wrong: external APIs, type signatures, tools, named test
 own issue files, my own memory, my own probe, the operator. Closed to routine appends — add a row
 only for a **new narrator class**.
 
-## 🔴 Two sessions can share one working tree, and only git will tell you (s156, s159)
+## 🔴 Two sessions can share one working tree, and only git will tell you (s156, s159, s170)
 
 The session-start `git status` is a **photograph, not a feed**. s156 found `HEAD` moved twice and a
 file modified by nobody in the session. Hazards: parallel tool calls race the other session's writes;
 **`git stash` is not read-only** (use `git stash create`, or read the diff); a test can fail for a
 reason true for seconds. Rule: **re-run `git log --oneline -3` and `git status` immediately before
 staging, and stage explicit paths, never `-A`.** Still open — no lock, no branch-per-session
-convention, and the Dream itself writes four shared files. s159 had two sessions grilling **the same
-file**, relayed through the operator in prose because neither could see the other: folding four
-issues into one file bought fewer places to look and cost the concurrency four files were quietly
-providing. **When consolidating, ask what concurrency the split was buying.**
+convention, and the Dream itself writes four shared files. s159: two sessions grilled the same file,
+relayed through the operator because neither could see the other — **when consolidating, ask what
+concurrency the split was buying.** s170 lost it the other way: a staged `git rm` and three edited
+docs were swept into **another session's commit**, under a message about something else. Explicit
+paths do not save you when the *other* session stages `-A`. **Commit the moment a change is
+coherent; never stage and keep working.**
 
 ## 🟠 Gates whose entire enforcement is a human reading a line
 
 Counted together, because each one alone looks acceptable:
 
-- **The backup never leaves the machine.** `db:backup` makes an AES-256 `.7z`; the half that
-  constitutes a backup is a human carrying it to Drive and **nothing checks that happened** — the
-  runbook dumps at step 3 and runs the wipe it is the only undo for at step 4. Deliberately manual,
-  so an accepted risk. s159 measured the predicted failure already live: **no archive existed at
-  all**, three sessions after destination, encryption and cadence were each written up. **Work that
-  ships as a script is not work that has run** — s166 ran it, and one archive now exists, **which
-  has still never been opened on another machine and whose password is `ADMIN_SECRET` reused**.
-  Setup order is in the memory.md Backup-order row; **current measured state is `ISSUE-01` §1 —
-  read it, never a copy here.**
+- **Nothing schedules the backup, and nothing checks the upload.** `db:backup` makes an AES-256
+  `.7z`; carrying it to Drive is a human act **nothing verifies** — the runbook dumps at step 3 and
+  runs the wipe it is the only undo for at step 4. Deliberately manual, an accepted risk. s159
+  measured the predicted failure live: **no archive existed at all**, three sessions after
+  destination, encryption and cadence were each written up. **A script that ships is not a script
+  that has run** — s166 ran it, s170 got one into Drive. What that did *not* buy: the weekly task is
+  **still unregistered**, so every backup so far is one a human remembered, and nothing has opened
+  the archive off this machine. **Measured state is `ISSUE-01` §1 — never a copy here.**
 - **Four operator checks on a real device are owed and none has happened:** Trophy Case + leaderboard
   chip in both themes (s144), Shell header at four buttons (jsdom has no layout), letter-box grid
   legibility (s162), and **the native share sheet** (s169 — a mock of `navigator.share` is a claim
@@ -100,7 +101,7 @@ before "just add a list", ask whether a re-sync owns that directory.
 - **The Maker page has no rendering test (s152)** — its editing rules are pure and 44 tests deep, but
   a dropped `useEffect` listener would pass every one of them. One Playwright spec closes it.
 - **Deferring a threshold on a live-capture counter destroys data (s139).** "Lower is safe, raise is
-  impossible" is about **earned** rows, not **unwritten** ones — any counter added ahead of the badge
+  impossible" is about **earned** rows, not **unwritten** ones — a counter added ahead of the badge
   reading it owes: **what is not being recorded in the gap?**
 - **Zero rows is the reason to look, not reassurance (s134).** `consumeApprovedPuzzle`'s two bugs were
   invisible because every queue held zero approved rows. Stavrolekso's `pending` row is one approval
@@ -114,7 +115,7 @@ before "just add a list", ask whether a re-sync owns that directory.
   «Λέξεις ανά μήκος» reads near-empty. Lever: `achievementTuning.wordLengthBadges`.
 - **Λογοπαίγνιο's bottleneck is curation, not sourcing** — 144 assets staged, **0 approved**, many
   still carrying the wordmark; do not bank 144 as progress toward 150. Ship-anyway on trademarks is
-  the decided risk, and the note must land in CONTEXT/ADR at the wip→live flip. **Πόσο κάνει; needs
-  real content and nothing tracks it** — file a ticket first; flip `wip:false` only after content.
+  the decided risk; the note lands in CONTEXT/ADR at the wip→live flip. **Πόσο κάνει; needs real
+  content and nothing tracks it** — ticket first, flip `wip:false` only after.
 - **Two accepted UX gaps, unfiled:** Leksindeseis never shows *which* group is one away, and
   `/leksokipos/[center]/[outer]` warns below 5 valid words but has no 404 floor.
