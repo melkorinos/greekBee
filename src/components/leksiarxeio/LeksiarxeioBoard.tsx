@@ -15,6 +15,12 @@ import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { GuessGrid } from "./GuessGrid";
 import { Keyboard } from "./Keyboard";
 import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
+import { ShareResultPanel } from "@/components/shared/ShareResultPanel";
+import {
+  buildShareText,
+  scoreLeksiarxeioDay,
+  type LeksiarxeioLengthRound,
+} from "@/games/leksiarxeio/lib/shareText";
 import { normalizeLetters } from "@/lib/normalize";
 import { todayISO } from "@/lib/puzzleDate";
 import { useLeksiarxeioScoreSubmission } from "@/hooks/useLeksiarxeioScoreSubmission";
@@ -48,6 +54,8 @@ interface LengthPanelProps {
   onPrev:        () => void;
   onNext:        () => void;
   onGameEnd:     (length: LeksiarxeioLength, attempts: number, won: boolean) => void;
+  /** Reports this Length's round upward on every change — see the board's `rounds`. */
+  onRoundChange: (round: LeksiarxeioLengthRound) => void;
 }
 
 function LengthPanel({
@@ -58,6 +66,7 @@ function LengthPanel({
   onPrev,
   onNext,
   onGameEnd,
+  onRoundChange,
 }: LengthPanelProps) {
   const handleGameEnd = useCallback(
     (attempts: number, won: boolean) => onGameEnd(puzzle.length as LeksiarxeioLength, attempts, won),
@@ -91,6 +100,13 @@ function LengthPanel({
     const t = setTimeout(clearMessage, 2000);
     return () => clearTimeout(t);
   }, [lastMessage, clearMessage, status]);
+
+  // Report this Length's round upward. Every panel stays mounted, so the board
+  // learns all five — including the ones restored from persistence, whose state
+  // arrives after mount and never passes through onGameEnd.
+  useEffect(() => {
+    onRoundChange({ length: puzzle.length as LeksiarxeioLength, guesses, status });
+  }, [onRoundChange, puzzle.length, guesses, status]);
 
   if (!isActive) return null;
 
@@ -237,16 +253,29 @@ export function LeksiarxeioBoard({
           }
         }
 
-        if (next) {
-          setActiveLength(next);
-        } else {
-          // All lengths finished — surface the leaderboard.
-          onOpenLeaderboard();
-        }
+        // No unfinished Length left is Round End, and Round End renders the
+        // Result Panel below — it does NOT open the leaderboard over it. An
+        // auto-opening modal was rejected (ADR 0025): a player would have to
+        // dismiss a box to see their own summary underneath it.
+        if (next) setActiveLength(next);
       }, 1500);
     },
-    [postLeksiarxeioScore, onOpenLeaderboard]
+    [postLeksiarxeioScore]
   );
+
+  // Every Length's round, live: each panel reports its own on change, so this
+  // covers restored Sessions as well as ones finished in front of us.
+  const [rounds, setRounds] = useState<Partial<Record<LeksiarxeioLength, LeksiarxeioLengthRound>>>({});
+  const handleRoundChange = useCallback((round: LeksiarxeioLengthRound) => {
+    setRounds((prev) => ({ ...prev, [round.length]: round }));
+  }, []);
+
+  // Round End: all five Lengths RESOLVED — won or lost. Not "all won", which a
+  // single lost Length would block for the rest of the day.
+  const resolvedRounds = LENGTHS
+    .map((length) => rounds[length])
+    .filter((r): r is LeksiarxeioLengthRound => r !== undefined && r.status !== "playing");
+  const isRoundEnd = resolvedRounds.length === LENGTHS.length;
 
   // Length switcher — wraps around
   function prevLength() {
@@ -279,8 +308,23 @@ export function LeksiarxeioBoard({
           onPrev={prevLength}
           onNext={nextLength}
           onGameEnd={handleGameEnd}
+          onRoundChange={handleRoundChange}
         />
       ))}
+
+      {/* ── Result Panel (Round End: all five Lengths resolved) ───────────── */}
+      {isRoundEnd && (
+        <ShareResultPanel
+          testId="leksiarxeio-result"
+          score={scoreLeksiarxeioDay(resolvedRounds)}
+          shareText={buildShareText(resolvedRounds, today)}
+          onOpenLeaderboard={onOpenLeaderboard}
+        >
+          <p className="text-center text-muted text-sm">
+            {`Ολοκλήρωσες και τα ${LENGTHS.length} μήκη`}
+          </p>
+        </ShareResultPanel>
+      )}
 
       {/* ── Leaderboard modal ─────────────────────────────────────────────── */}
       <GameLeaderboardModal

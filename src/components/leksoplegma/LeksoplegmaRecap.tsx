@@ -11,20 +11,19 @@ interface LeksoplegmaRecapProps {
   /** Extra words found — flat points each, never needed to finish. */
   foundBonus:    string[];
   hintsUsed:     string[];
-  totalScore:    number;
 }
+
+// The score heading lived here until ADR 0025: this recap is now the Result
+// Panel's children, and the panel prints the score above it. Two headings meant
+// the same number twice on one screen.
 
 export function LeksoplegmaRecap({
   foundRequired,
   foundBonus,
   hintsUsed,
-  totalScore,
 }: LeksoplegmaRecapProps) {
   return (
     <div data-testid="round-recap" className="w-full max-w-game flex flex-col gap-2">
-      <h2 className="text-lg font-bold text-foreground text-center">
-        Το πλέγμα λύθηκε! 🕸️ {totalScore} πόντοι
-      </h2>
       <ul className="flex flex-col gap-1">
         {foundRequired.map((word) => (
           <li

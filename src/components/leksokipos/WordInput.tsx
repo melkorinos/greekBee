@@ -2,15 +2,19 @@
 
 // WordInput — shows the letters the player has typed so far.
 // The centre letter is highlighted so it's clear it's present.
-// When canSubmit is true (word >=4 letters), a green submit button appears
-// inline so players can submit without needing a separate button row.
+// The submit button sits inline beside the letters and is ALWAYS rendered, so the
+// player has a fixed target to aim at while typing: green and clickable once the
+// word is long enough (canSubmit), muted and disabled below that.
+
+import { SubmitMark } from "./icons";
+import { btnSquircleDisabled, btnSquircleGo, squircleBox } from "./styles";
 
 interface WordInputProps {
   value:        string;
   centerLetter: string;
   /** Called when the inline submit button is tapped */
   onSubmit?:    () => void;
-  /** When true the green submit button is shown */
+  /** When true the submit button is green and enabled; otherwise muted + disabled */
   canSubmit?:   boolean;
 }
 
@@ -38,14 +42,15 @@ export function WordInput({ value, centerLetter, onSubmit, canSubmit = false }: 
         ))
       )}
 
-      {canSubmit && onSubmit && (
+      {onSubmit && (
         <button
           onClick={onSubmit}
+          disabled={!canSubmit}
           data-testid="btn-enter"
-          aria-label="Submission"
-          className="ml-3 flex items-center justify-center w-9 h-9 rounded-full bg-correct text-white text-lg font-bold shadow-sm hover:opacity-90 transition-opacity"
+          aria-label="Καταχώρηση"
+          className={`ml-3 ${squircleBox} ${canSubmit ? btnSquircleGo : btnSquircleDisabled}`}
         >
-          &#9166;
+          <SubmitMark />
         </button>
       )}
     </div>

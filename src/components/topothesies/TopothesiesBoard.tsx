@@ -127,7 +127,6 @@ export function TopothesiesBoard({
     isFinished: state.stage === "finished",
     hasLiveActed,
     post:       postScore,
-    onFinish:   onOpenLeaderboard,
   });
 
   const nameById = useMemo(() => new Map(answers.map((a) => [a.id, a.name])), [answers]);
@@ -283,7 +282,7 @@ export function TopothesiesBoard({
         <TopothesiesResult
           target={target}
           score={score}
-          shareText={buildShareText(state)}
+          shareText={buildShareText(state, today)}
           onOpenLeaderboard={onOpenLeaderboard}
         />
       )}

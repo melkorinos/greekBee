@@ -265,3 +265,46 @@ describe("LeksoplegmaPageClient", () => {
     expect(screen.queryByText(/χρονόμετρο|δευτερόλεπτ/i)).toBeNull();
   });
 });
+
+// ── Round End / Result Panel (ADR 0025) ───────────────────────────────────────
+// Round End is every Required Word found. The recap becomes the shared Result
+// Panel's children and gives up its own score heading, so the score is printed
+// once per screen.
+
+describe("LeksoplegmaBoard — Round End", () => {
+  function restoreFinishedRound() {
+    localStorage.setItem("wordgames:state", JSON.stringify({
+      leksoplegma: {
+        [TODAY]: {
+          puzzleId:      TODAY,
+          foundRequired: Object.keys(PUZZLE.paths),
+          foundBonus:    ["βγδ"],
+          hintsUsed:     [],
+          status:        "finished",
+        },
+      },
+    }));
+  }
+
+  it("wraps the recap in the shared Result Panel", () => {
+    restoreFinishedRound();
+    renderBoard();
+
+    const panel = screen.getByTestId("leksoplegma-result");
+    expect(panel).toContainElement(screen.getByTestId("round-recap"));
+    expect(screen.getByTestId("btn-share-result")).toBeDefined();
+  });
+
+  it("prints the score once — the recap dropped its own heading", () => {
+    restoreFinishedRound();
+    renderBoard();
+
+    const panel = screen.getByTestId("leksoplegma-result");
+    expect(panel.textContent?.match(/πόντοι/g) ?? []).toHaveLength(1);
+  });
+
+  it("shows no Result Panel mid-round", () => {
+    renderBoard();
+    expect(screen.queryByTestId("leksoplegma-result")).toBeNull();
+  });
+});

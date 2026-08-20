@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { LEKSOKIPOS } from "@/config/gameRules";
 import { SOUND_CUES, SOUND_PREFERENCE_KEY } from "@/config/sound";
 import { GameBoard } from "@/components/leksokipos/GameBoard";
 import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
@@ -56,21 +57,37 @@ describe("GameBoard rendering", () => {
     expect(screen.getByTestId("game-board")).toBeInTheDocument();
   });
 
-  it("renders Delete, Shuffle buttons (no submit button when input is empty)", () => {
+  it("renders four icon-only action buttons, each labelled with its Greek word", () => {
     setup();
-    expect(screen.getByTestId("btn-delete")).toBeInTheDocument();
-    expect(screen.getByTestId("btn-shuffle")).toBeInTheDocument();
-    expect(screen.queryByTestId("btn-enter")).toBeNull();
+    const row = [
+      ["btn-delete", "Διαγραφή"],
+      ["btn-clear", "Καθαρισμός"],
+      ["btn-shuffle", "Ανακάτεμα"],
+      ["btn-enter-row", "Καταχώρηση"],
+    ] as const;
+    for (const [testId, label] of row) {
+      const btn = screen.getByTestId(testId);
+      expect(btn).toHaveAccessibleName(label);
+      // The word is gone from the surface — the mark is an svg, the button has no text.
+      expect(btn.querySelector("svg")).not.toBeNull();
+      expect(btn.textContent).toBe("");
+    }
   });
 
-  it("shows the inline submit button once the input reaches 4 letters", async () => {
+  it("renders both submit buttons disabled while the input is below the minimum", async () => {
     const { user } = setup();
-    // Type 3 letters — button should still be absent
-    await user.keyboard("pai");
-    expect(screen.queryByTestId("btn-enter")).toBeNull();
-    // Type the 4th letter — button should appear
-    await user.keyboard("n");
-    expect(screen.getByTestId("btn-enter")).toBeInTheDocument();
+    expect(screen.getByTestId("btn-enter")).toBeDisabled();
+    expect(screen.getByTestId("btn-enter-row")).toBeDisabled();
+    await user.keyboard("pai".slice(0, LEKSOKIPOS.MIN_WORD_LENGTH - 1));
+    expect(screen.getByTestId("btn-enter")).toBeDisabled();
+    expect(screen.getByTestId("btn-enter-row")).toBeDisabled();
+  });
+
+  it("enables both submit buttons together once the input reaches the minimum", async () => {
+    const { user } = setup();
+    await user.keyboard("pain".slice(0, LEKSOKIPOS.MIN_WORD_LENGTH));
+    expect(screen.getByTestId("btn-enter")).toBeEnabled();
+    expect(screen.getByTestId("btn-enter-row")).toBeEnabled();
   });
 
   it("renders the score bar with the starting rank", () => {
@@ -604,13 +621,44 @@ describe("GameBoard — day changed while Offline Mode is active", () => {
 
 describe("Sound Cues", () => {
   let playSpy: ReturnType<typeof vi.spyOn>;
+  /** Oscillators started — the only observable a synth Cue leaves behind. */
+  let blips: number;
 
   beforeEach(() => {
     playSpy = vi.spyOn(HTMLMediaElement.prototype, "play");
+
+    // wordFound is synthesized rather than a file, and jsdom has no AudioContext
+    // at all (probed, not assumed), so stub the slice the hook calls and count
+    // oscillators. As everywhere else here: this pins WHICH moment makes a noise,
+    // never that the noise is audible.
+    blips = 0;
+    const noop = () => {};
+    vi.stubGlobal("AudioContext", class {
+      state = "running";
+      currentTime = 0;
+      destination = {};
+      resume() { return Promise.resolve(); }
+      createOscillator() {
+        return {
+          type: "", frequency: { setValueAtTime: noop }, connect: noop,
+          start: () => { blips += 1; }, stop: noop,
+        };
+      }
+      createGain() {
+        return {
+          gain: {
+            setValueAtTime: noop, linearRampToValueAtTime: noop,
+            exponentialRampToValueAtTime: noop,
+          },
+          connect: noop,
+        };
+      }
+    });
   });
 
   afterEach(() => {
     playSpy.mockRestore();
+    vi.unstubAllGlobals();
   });
 
   /** The src of every Audio element play() was called on, in order. */
@@ -630,7 +678,8 @@ describe("Sound Cues", () => {
     const played = playedSources();
     expect(played).toHaveLength(1);
     expect(played[0]).toContain(SOUND_CUES.pangram.src);
-    expect(played[0]).not.toContain(SOUND_CUES.wordFound.src);
+    // Never the rooster layered over the word blip — that sounds like a bug.
+    expect(blips).toBe(0);
   });
 
   it("plays the word-found Cue on a valid non-pangram", async () => {
@@ -638,7 +687,8 @@ describe("Sound Cues", () => {
     const { user } = setup();
     await user.keyboard("paint{Enter}");
 
-    expect(playedSources()).toEqual([expect.stringContaining(SOUND_CUES.wordFound.src)]);
+    expect(blips).toBe(1);
+    expect(playSpy).not.toHaveBeenCalled(); // synthesized: no file is fetched
   });
 
   it("plays the missing-centre Cue when the centre letter is forgotten", async () => {
@@ -656,6 +706,7 @@ describe("Sound Cues", () => {
     await user.keyboard("ant{Enter}");   // too_short
 
     expect(playSpy).not.toHaveBeenCalled();
+    expect(blips).toBe(0);
   });
 
   it("stays silent for every Cue while the preference is off", async () => {
@@ -666,6 +717,19 @@ describe("Sound Cues", () => {
     await user.keyboard("paint{Enter}");
     await user.keyboard("pint{Enter}");
 
+    expect(playSpy).not.toHaveBeenCalled();
+    expect(blips).toBe(0);
+  });
+
+  it("stays silent while typing — entering letters is not a Cue", async () => {
+    // Considered and rejected: a per-keystroke tick reads as keyboard feedback,
+    // and the Cues are for outcomes. Nothing sounds until a word is submitted.
+    enableSound();
+    const { user } = setup();
+    await user.keyboard("paint");
+    await user.click(screen.getByRole("button", { name: "Letter P" }));
+
+    expect(blips).toBe(0);
     expect(playSpy).not.toHaveBeenCalled();
   });
 });

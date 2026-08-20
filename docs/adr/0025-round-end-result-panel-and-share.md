@@ -1,6 +1,8 @@
 # ADR 0025 — Round End, the Result Panel, and what a shared summary carries
 
-**Status:** accepted (2026-08-17) · **not built** — the work is [TICKET-15](../../.claude/tracker/tickets/TICKET-15-round-end-result-panel-launch.md)
+**Status:** accepted (2026-08-17) · **BUILT 2026-08-20** — six Games reach a Result Panel, the ticket
+that built it is spent and deleted. One thing this decision names is still owed and cannot be tested:
+the native `navigator.share` sheet needs an operator check on a real phone.
 **Supersedes nothing.** Extends `ShareResultPanel`, which shipped for Τοποθεσίες and the two hidden slot-fill Games.
 
 ## Context

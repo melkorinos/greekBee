@@ -70,3 +70,42 @@ export const scoreBarFill =
 /** Give-up button — small, destructive tone, shown inline next to word count */
 export const btnGiveUp =
   "text-xs font-medium text-danger border border-danger/40 rounded-full px-3 py-1 hover:bg-danger/10 active:bg-danger/20 transition-colors";
+
+// ── Action-button squircle (TICKET-16) ────────────────────────────────────────
+//
+// The four action buttons (Διαγραφή, Καθαρισμός, Ανακάτεμα, Καταχώρηση) share one
+// SHAPE — an ELLIPTICAL corner, so the box reads as a stretched key rather than a
+// pill or a circle — in two sizes: the authored 44 × 34 beside the typed letters,
+// and 15% larger in the action row, where a thumb has to hit it. The corner needs
+// two radii, which is why globals.css carries --radius-squircle-x / -y (and the
+// -row- pair) rather than a single --radius-squircle; they are composed here with
+// an arbitrary-property utility because Tailwind's rounded-* only emits one radius.
+
+// Size and colour are separate strings because the two Καταχώρηση buttons share a
+// colour rule and NOT a size: the inline one sits beside 3rem letters, while the
+// row is thumb-sized. Compose one box with one skin at the call site.
+
+const squircleShared =
+  "inline-flex items-center justify-center flex-none border transition-colors";
+
+/** Box beside the typed letters: the authored 44 × 34. */
+export const squircleBox =
+  `${squircleShared} w-11 h-8.5 ` +
+  "[border-radius:var(--radius-squircle-x)/var(--radius-squircle-y)]";
+
+/** Box in the action row: the same squircle 15% larger, 50 × 39. */
+export const squircleBoxRow =
+  `${squircleShared} w-12.5 h-9.75 ` +
+  "[border-radius:var(--radius-squircle-row-x)/var(--radius-squircle-row-y)]";
+
+/** The three neutral action buttons — outline only, icon in the text colour. */
+export const btnSquircle =
+  "border-border bg-transparent text-foreground hover:bg-surface-raised active:bg-surface-raised";
+
+/** Καταχώρηση, submittable — solid green fill, white mark. */
+export const btnSquircleGo =
+  "border-correct bg-correct text-white hover:opacity-90";
+
+/** Καταχώρηση, below the minimum word length — visible, muted, and disabled. */
+export const btnSquircleDisabled =
+  "border-border bg-surface-raised text-muted cursor-not-allowed";

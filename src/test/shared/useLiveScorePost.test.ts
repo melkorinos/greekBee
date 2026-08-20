@@ -1,46 +1,44 @@
-// useLiveScorePost.test.ts — the shared continuous-posting policy for the
-// round games (Leksodromia, Leksoplegma). Verifies the three rules the two
-// Boards used to copy verbatim: restored-untouched rounds never post, live
-// scores post on every render (dedup lives in useScoreSubmission), and the
-// leaderboard opens exactly once — after a delay — when the round finishes.
+// useLiveScorePost.test.ts — the shared continuous-posting policy for the round
+// games (Topothesies, Leksodromia, Leksoplegma). Verifies the two rules the
+// Boards used to copy verbatim: a restored-untouched round never posts, and a
+// live score posts on every change (dedup lives in useScoreSubmission).
+//
+// A THIRD rule was removed on 2026-08-20: the hook used to open the leaderboard
+// 1.5 s after the round finished. Round End now renders the Result Panel there
+// (ADR 0025), and a modal sliding over it is exactly the shape that decision
+// rejected — so the hook posts scores and does nothing else. There is no
+// `onFinish` and no delay to test any more; a reinstated one would have to
+// answer why the leaderboard should cover the summary.
 
-import { act, renderHook } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { renderHook } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { useLiveScorePost } from "@/hooks/useLiveScorePost";
 
 const acted = () => true;
 const notActed = () => false;
 
-beforeEach(() => { vi.useFakeTimers(); });
-afterEach(() => { vi.useRealTimers(); });
-
 describe("useLiveScorePost", () => {
   it("never posts when the player has not acted this session (restored round)", () => {
     const post = vi.fn();
-    const onFinish = vi.fn();
     renderHook(() =>
-      useLiveScorePost({ score: 120, isFinished: false, hasLiveActed: notActed, post, onFinish }),
+      useLiveScorePost({ score: 120, isFinished: false, hasLiveActed: notActed, post }),
     );
     expect(post).not.toHaveBeenCalled();
-    expect(onFinish).not.toHaveBeenCalled();
   });
 
-  it("never opens the leaderboard for a restored, finished round", () => {
+  it("never posts a restored, finished round either", () => {
     const post = vi.fn();
-    const onFinish = vi.fn();
     renderHook(() =>
-      useLiveScorePost({ score: 120, isFinished: true, hasLiveActed: notActed, post, onFinish }),
+      useLiveScorePost({ score: 120, isFinished: true, hasLiveActed: notActed, post }),
     );
-    act(() => { vi.advanceTimersByTime(5_000); });
     expect(post).not.toHaveBeenCalled();
-    expect(onFinish).not.toHaveBeenCalled();
   });
 
   it("posts the live score once the player has acted", () => {
     const post = vi.fn();
     renderHook(() =>
-      useLiveScorePost({ score: 55, isFinished: false, hasLiveActed: acted, post, onFinish: vi.fn() }),
+      useLiveScorePost({ score: 55, isFinished: false, hasLiveActed: acted, post }),
     );
     expect(post).toHaveBeenCalledWith(55);
   });
@@ -48,8 +46,7 @@ describe("useLiveScorePost", () => {
   it("re-posts whenever the score changes (dedup is the poster's job)", () => {
     const post = vi.fn();
     const { rerender } = renderHook(
-      ({ score }) =>
-        useLiveScorePost({ score, isFinished: false, hasLiveActed: acted, post, onFinish: vi.fn() }),
+      ({ score }) => useLiveScorePost({ score, isFinished: false, hasLiveActed: acted, post }),
       { initialProps: { score: 55 } },
     );
     rerender({ score: 110 });
@@ -57,44 +54,14 @@ describe("useLiveScorePost", () => {
     expect(post).toHaveBeenNthCalledWith(2, 110);
   });
 
-  it("opens the leaderboard once, after the delay, when the round finishes", () => {
-    const onFinish = vi.fn();
+  it("keeps posting after the round finishes, and opens nothing", () => {
+    const post = vi.fn();
     const { rerender } = renderHook(
-      ({ isFinished }) =>
-        useLiveScorePost({ score: 80, isFinished, hasLiveActed: acted, post: vi.fn(), onFinish }),
+      ({ isFinished }) => useLiveScorePost({ score: 80, isFinished, hasLiveActed: acted, post }),
       { initialProps: { isFinished: false } },
     );
-    expect(onFinish).not.toHaveBeenCalled();
-
     rerender({ isFinished: true });
-    expect(onFinish).not.toHaveBeenCalled(); // waits out the delay
-    act(() => { vi.advanceTimersByTime(1_500); });
-    expect(onFinish).toHaveBeenCalledTimes(1);
-  });
 
-  it("does not re-open the leaderboard on renders after the finish is handled", () => {
-    const onFinish = vi.fn();
-    const { rerender } = renderHook(
-      ({ score }) =>
-        useLiveScorePost({ score, isFinished: true, hasLiveActed: acted, post: vi.fn(), onFinish }),
-      { initialProps: { score: 80 } },
-    );
-    act(() => { vi.advanceTimersByTime(1_500); });
-    expect(onFinish).toHaveBeenCalledTimes(1);
-
-    rerender({ score: 90 }); // a later change must not schedule a second open
-    act(() => { vi.advanceTimersByTime(5_000); });
-    expect(onFinish).toHaveBeenCalledTimes(1);
-  });
-
-  it("honours a custom delay", () => {
-    const onFinish = vi.fn();
-    renderHook(() =>
-      useLiveScorePost({ score: 10, isFinished: true, hasLiveActed: acted, post: vi.fn(), onFinish, delayMs: 3_000 }),
-    );
-    act(() => { vi.advanceTimersByTime(1_500); });
-    expect(onFinish).not.toHaveBeenCalled();
-    act(() => { vi.advanceTimersByTime(1_500); });
-    expect(onFinish).toHaveBeenCalledTimes(1);
+    expect(post).toHaveBeenLastCalledWith(80);
   });
 });

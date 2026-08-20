@@ -19,11 +19,14 @@ import { GiveUpModal } from "./GiveUpModal";
 import { GodModeOverlay } from "./GodModeOverlay";
 import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { MissedWordsList } from "./MissedWordsList";
-import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
+import type { LeksokiposPuzzle, RankName } from "@/games/leksokipos/types";
 import { ScoreBar } from "./ScoreBar";
 import { NominationModal } from "@/components/shared/NominationModal";
 import { WordInput } from "./WordInput";
-import { btnSecondary, chipWarning } from "@/styles/recipes";
+import { chipWarning } from "@/styles/recipes";
+import { ClearMark, DeleteMark, ICON_PX_ROW, ShuffleMark, SubmitMark } from "./icons";
+import { btnSquircle, btnSquircleDisabled, btnSquircleGo, squircleBoxRow } from "./styles";
+import { LEKSOKIPOS } from "@/config/gameRules";
 import { todayISO } from "@/lib/puzzleDate";
 import { useAchievementSync } from "@/games/leksokipos/hooks/useAchievementSync";
 import { FEATURE_FLAGS } from "@/config/featureFlags";
@@ -38,12 +41,26 @@ import { useSoundCue } from "@/hooks/useSoundCue";
 import { selectSoundCue } from "@/games/leksokipos/lib/soundCue";
 import { computeEndgameInfo, getRemainingWords, isDailyPuzzle, isPangram, TOP_RANK } from "@/games/leksokipos/lib";
 
+/** What the header and the Result Panel need to know about Round End. */
+export interface LeksokiposResult {
+  rank:  RankName;
+  /** LIVE, not a snapshot — play continues past Round End (ADR 0025). */
+  score: number;
+  date:  string;
+}
+
 interface GameBoardProps {
   puzzle: LeksokiposPuzzle;
   variant?: "pie" | "flower";
+  /**
+   * Called with the current Round End result, or null while there is none.
+   * The Result Panel lives in the layout because the header ShareButton opens it,
+   * and the board is the only place that knows the Rank and the live score.
+   */
+  onResultChange?: (result: LeksokiposResult | null) => void;
 }
 
-export function GameBoard({ puzzle, variant }: GameBoardProps) {
+export function GameBoard({ puzzle, variant, onResultChange }: GameBoardProps) {
   const {
     puzzle: activePuzzle,
     currentInput,
@@ -91,6 +108,12 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
     () => foundWords.filter((w) => isPangram(w, activePuzzle)),
     [foundWords, activePuzzle],
   );
+
+  // Report Round End upward on every score change, so a re-share an hour later
+  // carries the higher number rather than the one frozen when the pop appeared.
+  useEffect(() => {
+    onResultChange?.(isEndgame ? { rank: currentRank, score, date: activePuzzle.date } : null);
+  }, [onResultChange, isEndgame, currentRank, score, activePuzzle.date]);
 
   const endgameInfo = useMemo(
     () => isEndgame ? computeEndgameInfo(activePuzzle, remainingWords) : undefined,
@@ -186,8 +209,11 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
     }
   });
 
+  // One rule for both Καταχώρηση buttons (inline + action row) so they can never disagree.
+  const canSubmit = currentInput.length >= LEKSOKIPOS.MIN_WORD_LENGTH;
+
   const containerClass = "flex flex-col items-center gap-6 w-full max-w-game mx-auto px-4 py-8";
-  const buttonRowClass  = "flex items-center gap-2 w-full justify-center";
+  const buttonRowClass  = "flex items-center gap-5 w-full justify-center";
 
   return (
     <div data-testid="game-board" className={containerClass}>
@@ -247,7 +273,7 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
                 value={currentInput}
                 centerLetter={activePuzzle.centerLetter}
                 onSubmit={submitWord}
-                canSubmit={currentInput.length >= 4}
+                canSubmit={canSubmit}
               />
 
               {lastSubmission && (
@@ -282,27 +308,42 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
 
           {!allWordsFound && (
             <div className={buttonRowClass}>
+              {/* Icons only — each button carries the Greek word it used to show as
+                  its aria-label, so nothing is lost to a screen reader. */}
               <button
                 data-testid="btn-delete"
                 onClick={deleteLetter}
-                className={btnSecondary}
+                className={`${squircleBoxRow} ${btnSquircle}`}
+                aria-label="Διαγραφή"
               >
-                Διαγραφή
+                <DeleteMark size={ICON_PX_ROW} />
               </button>
               <button
                 data-testid="btn-clear"
                 onClick={clearInput}
-                className={btnSecondary}
-                aria-label="Clear input"
+                className={`${squircleBoxRow} ${btnSquircle}`}
+                aria-label="Καθαρισμός"
               >
-                Καθαρισμός
+                <ClearMark size={ICON_PX_ROW} />
               </button>
               <button
                 data-testid="btn-shuffle"
                 onClick={shuffleLetters}
-                className={btnSecondary}
+                className={`${squircleBoxRow} ${btnSquircle}`}
+                aria-label="Ανακάτεμα"
               >
-                Ανακάτεμα
+                <ShuffleMark size={ICON_PX_ROW} />
+              </button>
+              {/* Second Καταχώρηση — mirrors the inline one; distinct test id because
+                  two elements sharing btn-enter would make getByTestId throw. */}
+              <button
+                data-testid="btn-enter-row"
+                onClick={submitWord}
+                disabled={!canSubmit}
+                className={`${squircleBoxRow} ${canSubmit ? btnSquircleGo : btnSquircleDisabled}`}
+                aria-label="Καταχώρηση"
+              >
+                <SubmitMark size={ICON_PX_ROW} />
               </button>
             </div>
           )}

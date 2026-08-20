@@ -88,7 +88,7 @@ export function LogopaignioBoard({ target, today }: LogopaignioBoardProps) {
           target={target}
           solved={state.solved}
           score={score}
-          shareText={buildShareText(state)}
+          shareText={buildShareText(state, today)}
         />
       )}
 

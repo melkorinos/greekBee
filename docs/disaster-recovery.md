@@ -94,7 +94,8 @@ supabase db dump --db-url "$SUPABASE_DB_URL" -f "backup-$(date +%Y%m%d).sql"
 ### Where it goes
 
 **A private Google Drive folder.** Decided 2026-08-15; `TICKET-11` built the
-encryption half.
+encryption half and closed on 2026-08-20, when the folder was created (owner
+only, no link sharing) and the first real archive was uploaded to it.
 
 - **Never a git repository — not even a private one.** This repo is public,
   `db-backups/` is in `.gitignore` (line 46, *"local DB backups — never commit"*),

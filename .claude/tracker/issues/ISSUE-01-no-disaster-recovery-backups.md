@@ -25,9 +25,10 @@ database. Read the section you came for; the other will not tell you anything ab
 
 ---
 
-## 1. No disaster-recovery backups — and right now, no backup at all
+## 1. Backups exist, but nothing schedules them and nothing enforces the upload
 
-**Revisit when:** before the public launch, or the moment a risky migration is queued.
+**Revisit when:** now — registering the weekly task is the next action. Also the moment a risky
+migration is queued, or the day a restore is wanted from a week nobody remembered to back up.
 
 The Free plan has **no automatic backups and no PITR** — those are Pro+ only. Verified against the
 Supabase Database Backups guide: free projects are told to self-export via the CLI. So if the DB is
@@ -42,28 +43,39 @@ production dump would put a second permanent copy of every player's email in the
 safety is bought locally instead — the rehearsal loop that promotion called for **shipped
 2026-08-17** as `npm run db:rehearse`.
 
-The "somewhere to put the dumps" question is **answered** — an encrypted 7-Zip archive in a private
-Google Drive folder, never a git repository (the repo is public and `pg_dump` carries `auth.users`).
-[`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup-launch.md) shipped the encryption half of
-`scripts/backup-db.ps1` on 2026-08-15.
+The "somewhere to put the dumps" question is **answered and executed** — an encrypted 7-Zip archive
+in a private Google Drive folder, never a git repository (the repo is public and `pg_dump` carries
+`auth.users`). `TICKET-11` shipped the encryption half of `scripts/backup-db.ps1` on 2026-08-15 and
+was **closed 2026-08-20** once the operator half ran: the folder exists and is private (owner only,
+no link sharing, verified), and `db-backups/20260820-112045.7z` was uploaded to it.
 
-### What is actually owed — all of it operator-only, re-measured 2026-08-17
+### What is actually owed — re-measured 2026-08-20, after `TICKET-11` closed
 
-- `BACKUP_ARCHIVE_PASSWORD` is **set**, and `npm run db:backup` has run: `db-backups/` holds one
-  encrypted archive taken 2026-08-17 alongside its folder. The Rehearsal restores it end to end,
-  which is a real proof the archive opens — **on this machine only**.
-- **The archive has never been opened anywhere else.** That is the remaining half of the test that
-  matters: a `.7z` that exists is the response, a `.7z` that extracts on a different machine with
-  the password from a password manager is the artifact.
-- **The password is `ADMIN_SECRET` reused.** Fine for a placeholder, weak for the one secret that
-  stands between a lost laptop and every player's email address. Change it before the archive goes
-  to Drive, and store the new one in a password manager rather than only in `.env.local`.
-- The weekly task **is not registered** (`Get-ScheduledTask GreekWordGames-DB-Backup` → not found).
+- **The backups are not scheduled, and that is now the largest gap here.**
+  `npm run db:backup:schedule-weekly` exists; `Get-ScheduledTask GreekWordGames-DB-Backup` still
+  returns not-found. So **every backup this project has ever taken is one a human remembered to
+  take.** The release-day dump undoes the release-day wipe and nothing after it: from launch onward
+  players write scores daily against a Free plan with no automatic backups and no PITR, so an
+  incident three weeks in costs three weeks. The constraint that used to hold this back is
+  discharged — see the spent ordering rule below. **Register it.**
+- **A scheduled backup is still only half a backup.** The task writes an encrypted `.7z` into
+  `db-backups/` on the keep-2 rule and stops there; if the machine dies, those archives die with it.
+  That is the same "nothing enforces the upload" gap below, which a schedule makes *more* frequent
+  rather than less. Worth registering regardless — a local encrypted copy costs nothing.
+- **The archive has never been opened on another machine.** The Rehearsal restores it end to end,
+  which is real proof it opens **on this machine only**. A `.7z` that exists is the response; a
+  `.7z` that extracts elsewhere, with the password taken from the password manager rather than from
+  `.env.local`, is the artifact. `TICKET-11` was closed without this box ticked, by operator ruling.
+- **The password is seven lowercase-and-digit characters**, chosen 2026-08-20 and stored in a
+  password manager. It is the one secret between a lost laptop and every player's email address, and
+  the archive now sits in cloud storage where it can be ground offline for as long as an attacker
+  cares to. Lengthening it costs one `db:backup` run and one re-upload.
 
-The order matters, and it is not the order the runbook implies. Registering the scheduled task
-first would create a job that fails every Sunday at 02:00 unattended — **worse than no job, because
-it looks like coverage.** Confirm the archive opens on another machine first, *then* register the
-task.
+**The ordering rule that governed all of this is spent.** It read: never register the scheduled task
+before the password is set, because a job that throws every Sunday at 02:00 unattended is worse than
+no job — *it looks like coverage*. The password is set and a real archive exists, so the rule has
+nothing left to hold back. It is recorded here because it explains why the task is not registered
+yet, not because it still applies.
 
 The one thing that stays deferred after that is **nothing enforces the upload**. The dump lands in
 `db-backups/` and a human has to move it to Drive; a dump still sitting on the machine at runbook
@@ -138,19 +150,19 @@ admin UI. *Rate limiting* stays with the platform-wide accepted risk and is not 
 would need a throttle key that is not the spoofable `device_id`, meaning edge IP limiting or a
 Postgres counter table, with cost implications either way.
 
-**Two operator decisions are open, and they outlived `TICKET-14`** — that ticket carried them only
-because it was the next file anyone would open, and it shipped on 2026-08-17 without answering
-either:
+**One operator decision is still open.** It outlived `TICKET-14`, which carried it only because that
+was the next file anyone would open, and shipped on 2026-08-17 without answering it:
 
 1. **Does the moderation half leave as its own issue?** Retention is affirmed and the index has a
    verdict, so what is left here — no bulk-reject in `/leksikastirio`, and stranger-authored
    `word`/`note` free text rendered in an admin UI — is a review-workflow problem with nothing to do
    with the database. If it leaves, it takes the next free issue number.
-2. **When does the one non-normalised row get fixed?** `ιουνιος` (`direction` `remove`, rejected
-   2026-07-15) ends in a final sigma, so `normalizeLetters` turns a re-proposal into `ιουνιοσ` and
-   its prior-rejection warning can never fire. It is the only such row in 191, and `isBlockedWord`
-   does not cover it because that only runs on `add`. It is a data `UPDATE`, not DDL, so the
-   migrations freeze does not reach it — runbook step 5, or the dashboard at any time.
+**The one non-normalised row is scheduled, not open** (2026-08-20): `ιουνιος` (`direction` `remove`,
+rejected 2026-07-15) ends in a final sigma, so `normalizeLetters` turns a re-proposal into `ιουνιοσ`
+and its prior-rejection warning can never fire. It is the only such row in 191, and `isBlockedWord`
+does not cover it because that only runs on `add`. The `UPDATE` now rides **runbook step 5** in
+`docs/launch-runbook.md` alongside the DROP and the index — one hand-run migration instead of three
+separate visits to the dashboard. Do not also do it by hand; the statement is written out there.
 
 ---
 
@@ -159,7 +171,7 @@ either:
 - [ADR 0024](../../../docs/adr/0024-no-dev-prod-split-migration-safety-is-local.md) — why there is no dev/prod split, and what replaced it. Read before re-proposing a second project.
 - [`docs/disaster-recovery.md`](../../../docs/disaster-recovery.md) — the runbook section 1 tracks the open work for.
 - Supabase Database Backups — https://supabase.com/docs/guides/platform/backups (free-tier `db dump` guidance).
-- [`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup-launch.md) — the encrypted dump; agent half shipped, operator half owed.
+- `TICKET-11` — the encrypted dump. Shipped 2026-08-15, closed 2026-08-20; the file is deleted and git history is the archive.
 - [`scripts/rehearse-migration.ps1`](../../../scripts/rehearse-migration.ps1) — the local rehearsal loop ADR 0024 chose instead of a split, shipped 2026-08-17.
 - [`ISSUE-05`](ISSUE-05-dead-is-perfect-column-launch.md) — the `is_perfect` DROP, scheduled to runbook step 5 rather than deferred here.
 - [`src/app/api/cleanup-scores/route.ts`](../../../src/app/api/cleanup-scores/route.ts) + [`src/config/retention.ts`](../../../src/config/retention.ts) — the prune and what it deliberately skips.

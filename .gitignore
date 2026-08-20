@@ -81,3 +81,9 @@ public/logopaignio/_raw/
 # Operator-supplied images (drop zone for import-logopaignio-manual.mjs). Same
 # staging status as _raw/ — the importer copies them into _raw/ on the way in.
 public/logopaignio/_manual/
+
+# --- Sound Cue raw audio (added 2026-08-17, TICKET-05) ---
+# Operator drop zone for downloaded WAVs. Only the converted MP3s in
+# public/sounds/ ship; the sources are staging, same as logopaignio/_raw.
+public/sounds/_raw/*
+!public/sounds/_raw/README.md

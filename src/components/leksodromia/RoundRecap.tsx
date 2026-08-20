@@ -4,21 +4,21 @@
 
 import type { LeksodromiaWordResult } from "@/games/leksodromia/types";
 
+// The score heading lived here until ADR 0025: this recap is now the Result
+// Panel's children, and the panel prints the score above it. Two headings meant
+// the same number twice on one screen.
+
 interface RoundRecapProps {
-  results:    LeksodromiaWordResult[];
-  totalScore: number;
+  results: LeksodromiaWordResult[];
 }
 
 function formatSeconds(ms: number): string {
   return `${(ms / 1000).toFixed(1)}″`;
 }
 
-export function RoundRecap({ results, totalScore }: RoundRecapProps) {
+export function RoundRecap({ results }: RoundRecapProps) {
   return (
     <div data-testid="round-recap" className="w-full max-w-game flex flex-col gap-2">
-      <h2 className="text-lg font-bold text-foreground text-center">
-        Τέλος! 🏁 {totalScore} πόντοι
-      </h2>
       <ul className="flex flex-col gap-1">
         {results.map((r, i) => (
           <li

@@ -73,6 +73,23 @@ const SPENT: Record<string, string> = {
   // step 5. The two operator decisions it was parking moved back into §3.
   "TICKET-13": "migration rehearsal loop — shipped 2026-08-17, npm run db:rehearse",
   "TICKET-14": "index crossover probe — measured 2026-08-17, ISSUE-01 §2 discharged",
+  // Both MP3s committed, provenance recorded, FEATURE_FLAGS.soundCues flipped on
+  // 2026-08-17. What was left when the file was deleted is the operator's own ear
+  // check on a phone plus the 320 px header look — a live watch, already carried by
+  // reflections.md, not work an agent can hold a ticket open for.
+  "TICKET-05": "Sound Cue assets — shipped 2026-08-17, closed 2026-08-18",
+  "TICKET-16": "Leksokipos button icons — shipped 2026-08-18",
+  // Six Games reach a Result Panel and every share carries a link. What the file
+  // could not close is the native navigator.share sheet: it is browser behaviour,
+  // no unit test can hold it, and it needs one operator check on a phone —
+  // recorded in ADR 0025 and reflections.md rather than keeping a ticket open.
+  "TICKET-15": "Round End Result Panel + share — shipped 2026-08-20",
+  // Agent half shipped 2026-08-15 (encrypted archive in backup-db.ps1); operator half ran
+  // 2026-08-20 — private Drive folder, fresh archive under a password-manager password,
+  // uploaded. Closed with one done-when unticked by operator ruling: the archive has still
+  // never been extracted on a second machine. That, and the unregistered weekly task, moved
+  // to ISSUE-01 §1 rather than holding the file open.
+  "TICKET-11": "offsite encrypted backup — shipped 2026-08-15, closed 2026-08-20",
 };
 
 /**

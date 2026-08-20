@@ -9,6 +9,8 @@ import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { Keyboard } from "./Keyboard";
 import { PhraseGrid } from "./PhraseGrid";
 import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
+import { ShareResultPanel } from "@/components/shared/ShareResultPanel";
+import { buildShareText } from "@/games/vrestifrasi/lib/shareText";
 import { normalizeLetters } from "@/lib/normalize";
 import { todayISO } from "@/lib/puzzleDate";
 import { scoreVresTinFrasi } from "@/games/vrestifrasi/lib/scoring";
@@ -50,9 +52,10 @@ export function VresTinFrasiBoard({
       // win, 0 for a loss) — same scale as Leksiarxeio. The leaderboard sorts
       // desc like every other game (ADR 0014); no lower-is-better boards.
       postScore(scoreVresTinFrasi(attempts, won));
-      setTimeout(() => onOpenLeaderboard(), 1500);
+      // The Result Panel renders below the grid at Round End; the leaderboard is
+      // a link inside it and no longer opens itself over the summary (ADR 0025).
     },
-    [postScore, onOpenLeaderboard],
+    [postScore],
   );
 
   const {
@@ -115,6 +118,22 @@ export function VresTinFrasiBoard({
             />
           </div>
         </div>
+
+        {/* ── Result Panel (Round End: status leaves "playing", won or lost) ── */}
+        {status !== "playing" && (
+          <ShareResultPanel
+            testId="vrestifrasi-result"
+            score={scoreVresTinFrasi(guesses.length, status === "won")}
+            shareText={buildShareText({ puzzle, guesses, status }, today)}
+            onOpenLeaderboard={onOpenLeaderboard}
+          >
+            {/* The phrase is revealed HERE and only here — it stays on screen and
+                never enters the shared text. */}
+            <p className="text-center text-sm text-muted">
+              <span className="font-semibold text-foreground">{puzzle.phrase}</span>
+            </p>
+          </ShareResultPanel>
+        )}
       </div>
 
       <GameLeaderboardModal

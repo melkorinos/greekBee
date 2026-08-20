@@ -17,12 +17,21 @@ interface ShareButtonProps {
    * If omitted, falls back to `window.location.href` (e.g. for non-custom pages).
    */
   canonicalPath?: string;
+  /**
+   * Round End reached: the button opens the Result Panel instead of copying the
+   * board's URL (ADR 0025). Absent — which is every Custom Puzzle, always, and
+   * every Daily Puzzle before the top Rank — the URL copy below stands, because
+   * on a Custom Puzzle sharing the board IS the point.
+   */
+  onShare?: () => void;
 }
 
-export function ShareButton({ canonicalPath }: ShareButtonProps) {
+export function ShareButton({ canonicalPath, onShare }: ShareButtonProps) {
   const [copyState, setCopyState] = useState<CopyState>("idle");
 
   const handleClick = useCallback(async () => {
+    if (onShare) return onShare();
+
     // Build an absolute URL from the canonical accent-free path.
     // Falling back to window.location.href is safe for non-custom pages.
     const target = canonicalPath
@@ -36,7 +45,7 @@ export function ShareButton({ canonicalPath }: ShareButtonProps) {
       setCopyState("error");
       setTimeout(() => setCopyState("idle"), 2000);
     }
-  }, [canonicalPath]);
+  }, [canonicalPath, onShare]);
 
   const tooltip: Record<CopyState, string> = {
     idle:   "Κοινοποίηση",

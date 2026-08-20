@@ -4,6 +4,8 @@
 // the score. Accent-free by construction (only emoji, arrows, digits, and the
 // accent-free label "Σκορ").
 
+import { composeShareText } from "@/lib/shareText";
+
 import type { TopothesiesState } from "../types";
 
 import { computeScore } from "./scoring";
@@ -23,17 +25,20 @@ function capitalRow(guesses: { correct: boolean }[]): string {
   return guesses.map((g) => (g.correct ? "🟩" : "⬛")).join(" ");
 }
 
-/** Shareable, spoiler-free summary of the round. */
-export function buildShareText(state: TopothesiesState): string {
-  const lines: string[] = [MAP];
+/** Shareable, spoiler-free summary of the round.
+ *
+ *  TWO rows, and that is the one deliberate exception to ADR 0025's one row per
+ *  Game: the shape stage and the capital stage are separate rounds, and the
+ *  direction arrows carry information no other Game has an equivalent of. */
+export function buildShareText(state: TopothesiesState, date: string): string {
+  const rows: string[] = [];
 
   if (state.shapeGuesses.length > 0) {
-    lines.push(shapeRow(state.shapeGuesses));
+    rows.push(`${MAP} ${shapeRow(state.shapeGuesses)}`);
   }
   if (state.capitalGuesses.length > 0) {
-    lines.push(`${CAPITAL} ${capitalRow(state.capitalGuesses)}`);
+    rows.push(`${CAPITAL} ${capitalRow(state.capitalGuesses)}`);
   }
 
-  lines.push(`Σκορ: ${computeScore(state)}`);
-  return lines.join("\n");
+  return composeShareText({ gameId: "topothesies", date, rows, score: computeScore(state) });
 }

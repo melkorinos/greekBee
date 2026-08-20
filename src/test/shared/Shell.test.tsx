@@ -269,9 +269,10 @@ describe("Theme toggle", () => {
 // know which Games make noise. Off by default: unexpected audio is the most
 // complained-about behaviour on the web, and mobile blocks the first play anyway.
 //
-// TICKET-05 Part A put the whole button behind FEATURE_FLAGS.soundCues, which ships
-// FALSE while `public/sounds/` is empty. These tests describe the flag-on world and
-// therefore turn it on themselves; the block below them owns the shipped default.
+// TICKET-05 Part A put the whole button behind FEATURE_FLAGS.soundCues, which shipped
+// FALSE while `public/sounds/` was empty and is TRUE since 2026-08-17, when the audio
+// landed. These tests set the flag on themselves rather than leaning on that default;
+// the block below them owns the flag-off half, which is now the gate's fallback.
 
 describe("Sound toggle — flag on", () => {
   beforeEach(() => { flags.soundCues = true;  });
@@ -311,12 +312,13 @@ describe("Sound toggle — flag on", () => {
   });
 });
 
-// The shipped state until the three MP3s land (TICKET-05 Part B). Asserting the
-// absence is the whole point: with `public/sounds/` empty, a rendered toggle would
-// switch between silence and silence, and nothing else in the suite would notice —
-// no test in this stack can hear anything.
+// The state the gate exists to produce: with `public/sounds/` empty, a rendered toggle
+// would switch between silence and silence, and nothing else in the suite would
+// notice — no test in this stack can hear anything. It shipped that way until the
+// MP3s landed on 2026-08-17, and this block keeps the off half honest in case a
+// future Cue change needs the flag turned back down.
 
-describe("Sound toggle — flag off (the shipped default)", () => {
+describe("Sound toggle — flag off (the gate's fallback)", () => {
   it("renders no sound button at all", () => {
     setup();
     expect(screen.queryByRole("button", { name: /turn sound on/i })).toBeNull();

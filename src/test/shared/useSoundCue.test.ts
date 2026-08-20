@@ -48,7 +48,7 @@ describe("useSoundCue", () => {
     // The whole point of opt-in: a player who never turns sound on never
     // downloads a byte of audio.
     const { result } = renderHook(() => useSoundCue());
-    act(() => { result.current.play("wordFound"); });
+    act(() => { result.current.play("missingCenter"); });
 
     expect(created).toHaveLength(0);
     expect(playSpy).not.toHaveBeenCalled();
@@ -66,12 +66,12 @@ describe("useSoundCue", () => {
   });
 
   it("reuses one Audio per Cue and restarts it instead of stacking", () => {
-    // Three fast finds must restart the click, not layer three of them.
+    // Three fast rejections must restart the slow clap, not layer three of them.
     enableSound();
     const { result } = renderHook(() => useSoundCue());
-    act(() => { result.current.play("wordFound"); });
+    act(() => { result.current.play("missingCenter"); });
     created[0].currentTime = 5; // pretend it is mid-playback
-    act(() => { result.current.play("wordFound"); });
+    act(() => { result.current.play("missingCenter"); });
 
     expect(created).toHaveLength(1);
     expect(created[0].currentTime).toBe(0);
@@ -81,7 +81,7 @@ describe("useSoundCue", () => {
   it("keeps a separate Audio per Cue", () => {
     enableSound();
     const { result } = renderHook(() => useSoundCue());
-    act(() => { result.current.play("wordFound"); });
+    act(() => { result.current.play("missingCenter"); });
     act(() => { result.current.play("pangram"); });
 
     expect(created).toHaveLength(2);
@@ -107,5 +107,96 @@ describe("useSoundCue", () => {
     const { result } = renderHook(() => useSoundCue());
 
     expect(() => act(() => { result.current.play("pangram"); })).not.toThrow();
+  });
+});
+
+// ── Synth Cues ───────────────────────────────────────────────────────────────
+//
+// `wordFound` has no file: the hook builds it from an oscillator (src/config/sound.ts,
+// `CueSound`). Unlike Audio above there is NO real object to subclass — a probe
+// confirmed jsdom defines neither `AudioContext` nor `webkitAudioContext`, so these
+// tests stub an absent API rather than tracking a real one. That is a weaker
+// position and the assertions are written to match it: they pin the WIRING the hook
+// controls (nothing constructed while off, one context reused, start/stop bracket
+// the configured duration) and claim nothing about the sound, which is unhearable
+// here for the same reason every other Cue's is (ADR 0021).
+
+/** Minimal stand-in for the slice of Web Audio the hook actually calls. */
+function stubAudioContext() {
+  const started: number[] = [];
+  const stopped: number[] = [];
+  let constructed = 0;
+
+  class StubAudioContext {
+    state = "running";
+    currentTime = 0;
+    destination = {};
+    constructor() { constructed += 1; }
+    resume() { return Promise.resolve(); }
+    createOscillator() {
+      return {
+        type: "", frequency: { setValueAtTime: vi.fn() }, connect: vi.fn(),
+        start: (t: number) => { started.push(t); },
+        stop:  (t: number) => { stopped.push(t); },
+      };
+    }
+    createGain() {
+      return {
+        gain: {
+          setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(),
+          exponentialRampToValueAtTime: vi.fn(),
+        },
+        connect: vi.fn(),
+      };
+    }
+  }
+
+  vi.stubGlobal("AudioContext", StubAudioContext);
+  return { started, stopped, count: () => constructed };
+}
+
+describe("useSoundCue — synth Cues", () => {
+  it("constructs no AudioContext while the preference is off", () => {
+    const ctx = stubAudioContext();
+    const { result } = renderHook(() => useSoundCue());
+    act(() => { result.current.play("wordFound"); });
+
+    expect(ctx.count()).toBe(0);
+  });
+
+  it("does not throw where Web Audio is missing entirely", () => {
+    // The shipped state under jsdom, and the state on any engine without an
+    // AudioContext. A Cue is decoration; it must never throw into a round.
+    enableSound();
+    expect(globalThis.AudioContext).toBeUndefined();
+    const { result } = renderHook(() => useSoundCue());
+
+    expect(() => act(() => { result.current.play("wordFound"); })).not.toThrow();
+  });
+
+  it("plays a synth Cue for its configured duration and constructs no Audio", () => {
+    enableSound();
+    const ctx = stubAudioContext();
+    const { result } = renderHook(() => useSoundCue());
+    act(() => { result.current.play("wordFound"); });
+
+    const cue = SOUND_CUES.wordFound;
+    expect(ctx.started).toEqual([0]);
+    expect(ctx.stopped).toEqual([cue.duration]);
+    // The whole point of a synth Cue: no asset is fetched for it, ever.
+    expect(created).toHaveLength(0);
+    expect(playSpy).not.toHaveBeenCalled();
+  });
+
+  it("reuses one AudioContext across plays — browsers cap how many a page may open", () => {
+    enableSound();
+    const ctx = stubAudioContext();
+    const { result } = renderHook(() => useSoundCue());
+    act(() => { result.current.play("wordFound"); });
+    act(() => { result.current.play("wordFound"); });
+    act(() => { result.current.play("wordFound"); });
+
+    expect(ctx.count()).toBe(1);
+    expect(ctx.started).toHaveLength(3);
   });
 });

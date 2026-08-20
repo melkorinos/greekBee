@@ -23,15 +23,16 @@ export interface FeatureFlags {
    * it, exactly as Offline Mode is parked — this flag hides one control, it does
    * not dismantle the machine.
    *
-   * Off because `public/sounds/` is empty (TICKET-05 Part B): every Cue resolves to
-   * a missing file, so the toggle would switch between silence and silence. Do NOT
-   * flip this on until the three MP3s are committed — a visible control that does
-   * nothing is worse than an absent one.
+   * ON since 2026-08-17: the condition this flag waited on is met. All three Cues
+   * now make a sound — `pangram` and `missingCenter` are committed MP3s in
+   * `public/sounds/`, `wordFound` is synthesized — so the toggle no longer switches
+   * between silence and silence. TICKET-05 is closed; what it left behind is the
+   * operator's ear check on a phone, which needs this button visible to happen.
    */
   soundCues: boolean;
 }
 
 export const FEATURE_FLAGS: FeatureFlags = {
   achievements: true,
-  soundCues:    false,
+  soundCues:    true,
 };

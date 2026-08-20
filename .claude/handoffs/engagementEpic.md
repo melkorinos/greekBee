@@ -44,7 +44,7 @@ Durable identity  (PREREQUISITE — ✅ DONE 2026-07-03, ADR 0012; handoff delet
 
 **Decided:** identity comes first (achievements are worthless if losable). **✅ Satisfied 2026-07-03:** Sign-in Restore / Disconnect / `identity_audit` all shipped; merge semantics live in **ADR 0012** (auth account = anchor, device adopts canonical `device_uuid`, best score per puzzle wins). The identity handoff is deleted — cite ADR 0012.
 
-**Display surface — ✅ SHIPPED 2026-07-03 (Profile Page epic; its handoff `profilePageAndAchievements.md` is retired):** `/profile` is live — identity header, three entry points, a **v1 lifetime-stats strip**, and the **Trophy Case**. The Trophy Case renders the Leksokipos catalog (`src/games/leksokipos/lib/achievements.ts`) and lights earned badges. *(The B1/B2 manual prod smoke-check this line used to point at was tracked as `11-pangram-tier-prod-smoke-check.md`, an issue file deleted with the 2026-08-06 tracker redesign. What is still owed is the broader operator play-through in `.claude/handoffs/launch-readiness.md`, which subsumes it.)*
+**Display surface — ✅ SHIPPED 2026-07-03 (Profile Page epic; its handoff `profilePageAndAchievements.md` is retired):** `/profile` is live — identity header, three entry points, a **v1 lifetime-stats strip**, and the **Trophy Case**. The Trophy Case renders the Leksokipos catalog (`src/games/leksokipos/lib/achievements.ts`) and lights earned badges. *(The B1/B2 manual prod smoke-check this line used to point at was tracked as `11-pangram-tier-prod-smoke-check.md`, an issue file deleted with the 2026-08-06 tracker redesign. What is still owed is the broader operator play-through in `docs/launch-runbook.md`, which subsumes it.)*
 
 ---
 

@@ -5,78 +5,79 @@
 
 ---
 
-## Session 166 — 2026-08-17: a migration meets real rows before production does
+## Session 170 — 2026-08-20: the backup leaves the machine, and the box it cannot tick moves house
 
-`TICKET-13` built and deleted — `npm run db:rehearse`, the loop ADR 0024 chose over a second Supabase
-project. **The blocker went first:** the operator supplied the archive password, so `db:backup` ran for
-the first time and `db-backups/20260817-123332.7z` exists. Everything else was unblocked by that one
-line in `.env.local`, which had been the stated blocker across three sessions.
+`TICKET-11`'s operator half, run live. The Drive folder was **verified private through the Drive MCP**
+(owner only, no link sharing) rather than taken on trust; `20260820-112045.7z` produced and uploaded.
+Ticket closed, deleted, number `SPENT`.
 
-**The ticket's own acceptance test could not have failed.** Its done-when named `player_profiles
-.display_name SET NOT NULL` against "a dump that has nulls there" — the restored dump has **0 nulls in
-47 rows**, so the poison would have passed and reported the rehearsal working. Swapped for
-`selected_badge_id` (**42 of 47 null**) plus a unique index on `game_scores.device_id` (**35 duplicated
-values**), which covers both failure shapes the ticket exists to catch. **An acceptance test written
-from an assumed data shape is not an acceptance test** — ADR 0026's class, narrator being the ticket.
+**Closing a ticket is not deleting a file.** Two done-whens were never ticked, and deleting the file
+would have deleted the only record of them — the weekly task is unregistered, and the archive has
+still never been extracted on a second machine. Both moved into `ISSUE-01` §1, which was **rewritten**:
+its heading read *"right now, no backup at all"*, which had stopped being true.
 
-**The restore is selective, not tolerant.** The dump carries `auth`, `storage`, `realtime` and
-Supabase-only extensions a stock PostgreSQL cannot run; blocks are filtered by the schema in pg_dump's
-own object headers and applied with `ON_ERROR_STOP`, because **a restore that prints expected errors
-hides unexpected ones**. Only the 8 `auth.users` **ids** are loaded — enough for the foreign keys, and
-the emails never reach the scratch database. The shim measured at ADR 0024's fifteen lines and needed
-no growth. `supabase/migrations/` is frozen (`ISSUE-05`), so the pending path was proven with a
-throwaway probe migration created and deleted inside one command.
+**The ordering rule outlived its own purpose.** *Never register the scheduler before the password
+exists* was the spine of the ticket; both preconditions now hold, so it guards nothing. Recorded in
+`ISSUE-01` as **spent** rather than deleted, because it is still the answer to "why is the task not
+registered yet?" — delete it and the next session re-derives it from scratch.
 
-**Windows trap, caught by a guard test:** editing `TICKET-11-…-launch.md` through a path spelled
-`-LAUNCH.md` **renamed the file on disk**, and `trackerReferences.test.ts`'s lowercase-slug regex then
-failed two tests — including making every `TICKET-11` reference read as dangling. Git reports nothing;
-the case-insensitive filesystem hides it. 202 files / 2638 tests, eslint 0, build 0; no e2e (nothing
-touched a page). Owed and now written into `ISSUE-01` §1: the archive has never been opened on another
-machine, and its password is `ADMIN_SECRET` reused.
+**`7z t` locally proves less than it looks.** It confirms the archive matches `.env.local`, not the
+password manager. That distinction *is* the open done-when, which is why the box moved rather than
+closed. The operator chose a seven-character password and, told once why that is thin for an artifact
+carrying `auth.users` into cloud storage, kept it — recorded as a measured weakness, not re-argued.
 
-## Session 165 — 2026-08-17: the Games learn to end
+**A commit landed underneath the session** — 48 files, sweeping up four of this session's seven
+including a staged `git rm`, so half this work is committed under a message about the Result Panel.
+Third instance of the shared-tree hazard; `reflections.md` now says commit when a change is coherent
+rather than staging and continuing.
 
-Operator wanted one feature for when a player finishes any Game: a prompt to share, plus a brief
-performance summary. `/grill-with-docs`, five batches, twenty-five decisions, **docs only** — ADR 0025,
-two `CONTEXT.md` entries, `TICKET-15`, one `launch-readiness.md` row. No code.
+213 files / 2710 tests, eslint 0, build 0. No test added — the artifact is a `.7z`, not a function.
 
-**The framing fact was an absence.** Seven Games are live and **one ends with a share** (Τοποθεσίες);
-Λεξοδρομία and Λεξόπλεγμα already compute a full recap and offer no way to send it anywhere, and
-Λεξιαρχείο and Βρες τη Φράση end with a one-line banner. Worse: **no share text on the Platform
-carries a link**, so the emoji summaries that do exist are untraceable back to the site — and `TICKET-10`
-had shipped an og:card the day before with nothing posting a link for it to render. The two are one bet.
+## Session 169 — 2026-08-20: every Game learns to end, and the ending carries a link
 
-**Λεξόκηπος has no terminal state**, which is what forced the vocabulary. `Round End` is deliberately
-**not one rule** — six Games, six triggers, list closed — and Λεξόκηπος's is reaching the top Rank, past
-which play continues, so it alone **pops** rather than rendering inline and its shared score is **live,
-not a snapshot**. The Platform turned out to have **five names for "the round is over"**
-(`won`/`lost`, `stage: "finished"`, `isFinished`, `gaveUp`, `isEndgame`) and no glossary entry for the
-concept; ADR 0020's own criterion then settled that this is **not a `GameCapability`** — it writes
-nothing to the shared database, exactly the Cues ruling.
+`TICKET-15` shipped and deleted, `/tdd`, five slices. Six Games reach a Result Panel; every share is
+four lines and the fourth is a link — the half of `TICKET-10`'s bet never placed. **Two seams and
+deliberately no third:** `src/lib/shareText.ts` owns the identity line, the score line and the link
+for every Game — hidden ones included, which is how Πόσο κάνει; and Λογοπαίγνιο inherited the spine
+with no line of their own authored — and each
+`games/*/lib/shareText.ts` returns only its own row. `ShareResultPanel` is the one surface, now
+sharing through `navigator.share` with the clipboard as fallback.
 
-**Measured before recommending, and the recommendation lost:** only **7 of 35 Λεξιαρχείο player-days
-resolve all five Lengths (20%)**, so I proposed the looser trigger. The operator kept "all five" with
-that number on the table, so both artifacts now say **do not fix it by loosening** and to re-measure
-after launch, since it is beta data `launch-reset.sql` wipes.
+**`AbortError` is the whole `navigator.share` design.** A cancelled sheet rejects, so cancel is a
+silent no-op while any other rejection falls through to the clipboard — copying a summary the player
+just declined to send is worse than doing nothing. The native path is **not covered and cannot be**;
+the phone check is written into ADR 0025, the runbook and the SPENT ledger rather than left in a reply.
 
-**The durable lesson is s143's, in a medium this list had never applied it to.** Four format questions
-were answered in prose, then drawn as six worked examples as a courtesy — and **three of the four
-answers changed on sight** (`3/6` fractions → one emoji per Length, spider-web cells → green blocks,
-and the platform name left the identity line entirely). That last one only because seeing
-`Leksarxeia · Leksiarxeio` adjacent made the collision obvious — a collision the operator had
-demonstrated a batch earlier by writing one name for the other. **A format is a visual decision wearing
-text's clothes**, and drawing it cost one code block.
+**Λεξιαρχείο's Round End had no owner.** The board tracked *which* Lengths were done and never their
+rounds, and a restored Session reaches the panel through persistence, never `onGameEnd` — so each
+LengthPanel now reports its own round upward on change, which works only because all five stay mounted.
 
-Dream note: `reflections.md` was at **602 against its 600 cap**, pushed over by s164's ledger row.
-Brought to 599 by archiving the s143 discharged-handoff tension, whose content is now soul.md's Dream
-step 5 — the Subtract step applied to this file rather than to a handoff. **s164 ran concurrently
-throughout** (`d44686c`, then the `TICKET-10` closure) and owes its own entry; staged explicit paths and
-left `goals.md`, `launch-readiness.md` and `trackerReferences.test.ts` to it.
+**Five auto-opening leaderboards, and the ticket knew about none of them.** ADR 0025 rejected the
+auto-opening modal (dismiss a box to see your own recap underneath) not knowing the Platform already
+did it everywhere. Λεξιαρχείο and Βρες τη Φράση had their own `setTimeout`, removed with the panel.
+**The operator played it and found the other three** — Τοποθεσίες, Λεξοδρομία and Λεξόπλεγμα open it
+from `useLiveScorePost`'s `onFinish`, a seam the ticket never named, so half the Platform still slid
+a modal over the new surface. `onFinish`, its 1.5 s delay and its once-only latch are **deleted from
+the hook**, not unwired at three call sites: it posts scores and does nothing
+else, and reinstating it is a type error. Τοποθεσίες also gained a restored-round test — the panel
+must survive a reload for its own day; past days restore their own Session by date.
+
+**Λεξόκηπος's panel lives in the layout, not the board.** Its header `ShareButton` is the way back
+after a dismissal and only the layout sees both that button and the board's live score; the pop fires
+once per mount, like the ScoreBar endgame cue beside it, so a reload at top Rank pops again —
+accepted. Each builder's spoiler test was **proven non-vacuous by making the builder leak**.
+
+213 files / 2709 tests (+58), eslint 0, build 0, e2e 13 passed / 2 skipped. Ran concurrently with the
+session logged above; `HEAD` and four shared docs moved underneath.
 
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 168 | 2026-08-20 | **The launch question closes and its handoff dies.** Docs only. Question 2 answered — the run is the offsite backup, then the Result Panel, then the `dev → main` merge with its play-through, then release day, then a week of daily Vercel error checks; target **on or about 27 August 2026**, the operator's date and not hard. `launch-readiness.md` deleted, `docs/launch-runbook.md` replaces it: **a handoff whose last question is answered is not a document**, and eleven files pointed at it. It ran to 281 lines because resolved work had been *rewritten in place instead of deleted* — the Question 1 section, the decisions ledger and the tracked-elsewhere prose were history, and `log.md` and the ADRs own history. Cut to 147, then to 110 as a runbook. The operator saw it before the agent did: *"we should have knocked out most items from it right?"* — the file said everything was decided and still read as if nothing was. `TICKET-11`'s operator half was four unordered bullets for work **whose order is the whole point**, rewritten as seven steps (password first, scheduler last). Runbook step 5 absorbed a third statement: the one non-normalised nominations row had been an open decision reading "step 5, or the dashboard at any time", which is not a schedule. One hand-run migration, three statements, one rehearsal. |
+| 167 | 2026-08-18 | **Λεξόκηπος trades three words for four marks** — `TICKET-16`: the action row became four icon-only squircles plus a **second** Καταχώρηση, always rendered and disabled below `MIN_WORD_LENGTH` (an appearing button gives a typing player no target), inverting four tests that asserted its absence. **The corner needed two tokens, not one** — `16px / 13px` is an *elliptical* radius and Tailwind's `rounded-*` emits one value, so a single token would have quietly made pills; verified in the built CSS. Then the operator sized it by eye and the two Καταχώρηση stopped being one button, so the recipe **splits box from skin** (appending a second `w-` fails: Tailwind resolves size in stylesheet order, not class order). **Two e2e failures were not mine and a stash proved it** — Next's overlay reading *Jest worker encountered 2 child process exceptions*, identical on a clean tree, and **wiping `.next` made it worse**. `TICKET-05` closed the same day, falsifying five claims elsewhere, all rewritten and none annotated. 202 files / 2651 tests. |
+| 166 | 2026-08-17 | **A migration meets real rows before production does** — `TICKET-13` shipped `npm run db:rehearse`, the loop ADR 0024 chose over a second Supabase project; the operator supplying `BACKUP_ARCHIVE_PASSWORD` unblocked three sessions of stated blocker in one line. **The ticket's own acceptance test could not have failed** — its poison migration was `display_name SET NOT NULL` against a dump with **0 nulls in 47 rows**; swapped for `selected_badge_id` (42 of 47 null) and a unique index on `game_scores.device_id` (35 duplicates), covering both failure shapes. ADR 0026's class, narrator being the ticket. **The restore is selective, not tolerant:** blocks filtered by pg_dump's own schema headers and applied with `ON_ERROR_STOP`, because a restore that prints expected errors hides unexpected ones; only the 8 `auth.users` **ids** load, so emails never reach the scratch DB. `supabase/migrations/` is frozen, so the pending path was proven with a throwaway probe created and deleted in one command. **Windows trap caught by a guard test:** editing the ticket through a path spelled `-LAUNCH.md` renamed the file on disk and made every `TICKET-11` reference read as dangling — git reports nothing, the case-insensitive filesystem hides it. 202 files / 2638 tests. |
+| 165 | 2026-08-17 | **The Games learn to end** — `/grill-with-docs`, twenty-five decisions, **docs only**: ADR 0025, two `CONTEXT.md` entries, `TICKET-15`. Seven live Games and **one** ended with a share, and **no share text carried a link**, so `TICKET-10`'s og:card had nothing posting a link to render it. `Round End` is deliberately **six triggers, not one rule**; Λεξόκηπος has no terminal state, so it alone **pops** and shares a **live** score. The Platform had **five names** for "the round is over" and no glossary entry. **Measured before recommending and the recommendation lost:** 7 of 35 Λεξιαρχείο player-days resolve all five Lengths, and the operator kept "all five" anyway, so both artifacts say do not loosen it. **s143's lesson in a new medium:** four format questions answered in prose, six worked examples drawn as a courtesy, **three of the four answers changed on sight** — a format is a visual decision wearing text's clothes. |
 | 163 | 2026-08-16 | **The Platform gets a face** — `TICKET-10`, blocked since s151 on one operator pick, made in two steps (card 18, then icon 1 off a second page). **One drawing, not three:** `src/app/_brand/fan.tsx` renders `opengraph-image`, `icon` and `apple-icon` at their own sizes, the only thing stopping a favicon drifting from a share card; satori paints in **emission order, not `z-index`**, so the centre tile is emitted last. **The durable lesson is s143's, one layer deeper:** the failure turned up *inside* a rendered preview — the candidates page drew marks `font-weight: 700` and CSS-scaled one 180 px master, and **neither survives `ImageResponse`**, which bundles a single-weight face. **A preview is only evidence about the renderer that drew it.** Fixed with a **12 KB** Inter Bold subset (Latin + Λ Ω λ μ π ω via the Google Fonts `text=` parameter) — the "~350 KB font" quoted since s151 had priced **full Greek coverage** and made a font look unaffordable for four sessions. `_brand/cmap.ts` + a test read the font's own glyph table, because **a glyph missing from a subset renders as nothing, not an error**. The guard test therefore **renders** rather than matching source, needing the `node` environment (sharp rejects satori's SVG under jsdom) — which exposed that `src/test/setup.ts` assumed a DOM for the whole suite. Filed `ISSUE-10`; this session's render tests were the obvious suspect and **were not the cause** — excluding them went green, but re-running at `HEAD` reproduced it anyway. 202 files / 2638 tests, e2e 13/2-skipped. |
 | 162 | 2026-08-16 | **A border the whole platform did not ask for.** Operator wanted Λεξιαρχείο's and Βρες τη Φράση's letter boxes "20% darker and 10% thicker" with consistency across the games; **every number in the ask was the wrong shape**, none of it visible without reading the components. **"Darker" inverts** — on the `stone-950` page a darker outline vanishes rather than sharpens, so the spec is *contrast against the page*: light `stone-200`→`stone-400`, dark `stone-700`→**lighter**, `stone-500`. **"10% thicker" has no pixel to land on** (2.2px, no Tailwind step, renders unevenly) → "unify at 2px", which was the consistency half anyway. And **only unfilled tiles have a visible border at all** — `correct`/`present`/`absent` set it equal to the fill — so the change lives entirely in the blank grid and the row being typed. **The token had to be new:** `--border` is the hairline for cards, inputs, secondary buttons and separators, so `--tile-border` keeps the two free to move apart (a card outline should be quiet; a letter box **is** the thing being read). Βρες τη Φράση's 1px was defended by a comment about pixels the letter loses — overruled deliberately, comment rewritten rather than deleted, and `phraseLayout.ts`'s packing maths left alone. **Scope reversed mid-grill** to all five games that draw a letter box, once the operator saw the other three would be left lighter than the two being fixed. Token **confirmed compiled out of the production bundle** (a missing `@theme` line renders no border while every test stays green — s144); `letterBoxBorder.test.ts` proven non-vacuous by reverting Λεξοδρομία. **The operator declined the render-and-look step**, so values were picked by arithmetic and an eye-check on a real phone is owed. 201 files / 2627 tests. Ran concurrently with s160 *and* s161; `HEAD` moved three commits mid-session. |
 | 161 | 2026-08-16 | **The letter goes to the word that owns it.** Operator sent a screenshot of the live Vres Tin Frasi board asking whether a purple tile was wrong. It was — and **the conclusion was right while the reason was inverted**, which is what made checking worth it: the operator reasoned "word 3 has no Α", but word 3 *is* ΔΙΔΑΣΚΩ and its Α is precisely why the purple appeared. **`evaluatePhraseGuess` enforced ADR 0004's yellow-over-purple priority per tile and never across the phrase** — pass 2 walked words in index order making both kinds of claim in one sweep, so word 0's cross-word claim consumed a letter word 2 owned and word 2's own tile fell to grey. **Word order, not information value, decided who got the letter**; it fired twice in the one screenshot. The answer phrase was recovered from `phrases-el.json` by word-shape *before* any theory (ΜΑΘΑΙΝΩ ΚΑΙ ΔΙΔΑΣΚΩ), so the probe reproduced the board tile for tile. **Blast radius measured, not estimated:** of 658 same-shape pairs in the corpus, 170 (26%) held a mis-coloured tile, and the only transitions are `purple→grey` (198) paired **1:1** with `grey→yellow` (198) plus `purple→yellow` (13) — the fix only ever moves a signal to the tile that earned it, which is the argument it is safe; a raw "170 boards change" would have read as risk. Fix = pass 2 split into two sweeps. Four tests, non-vacuous by restoring the old algorithm. **One test bug en route:** I typed final sigma `ς`, which `normalizeLetters` collapses before the function runs — the test fed input production cannot produce. Accepted: `RESTORE_STATE` replays stored tiles, so a round in progress at deploy keeps old colours until rotation. ADR 0004 amended. |

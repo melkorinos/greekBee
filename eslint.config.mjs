@@ -14,6 +14,9 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Playwright E2E files — not React code, React hooks rules don't apply
     "e2e/**",
+    // Design spec sheets under .claude/aiHelper/html — throwaway Node scripts and
+    // their generated HTML, never shipped and never imported by the app.
+    ".claude/**",
   ]),
 ]);
 

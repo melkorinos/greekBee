@@ -1,19 +1,33 @@
 "use client";
 
-// ShareResultPanel — the platform's end-of-round summary panel.
+// ShareResultPanel — the Platform's Result Panel: the surface every Game's Round
+// End renders (ADR 0025).
 //
-// Every daily round game (Topothesies, Πόσο κάνει;, Λογοπαίγνιο) ends the same
-// way: a big score heading, a game-specific reveal line, a copy-to-clipboard
-// share button, and a leaderboard link. This owns everything the three share:
-// the score heading, the identical clipboard logic, the Κοινοποίηση button, and
-// the leaderboard link. The caller supplies only the reveal (the one part that
-// differs per game) as children, plus a `testId` so each game keeps its own
-// stable test hook.
+// Every Game ends the same way: a big score heading, a game-specific reveal line,
+// the share action, and a leaderboard link. This owns everything they share: the
+// score heading, the sharing itself, and the leaderboard link. The caller supplies
+// only the reveal (the one part that differs per game) as children, plus a
+// `testId` so each game keeps its own stable test hook. The four-line summary the
+// share sends is assembled by `composeShareText` (src/lib/shareText.ts) — no Game
+// hand-rolls that layout, and this panel never inspects it.
 //
 // Graduated to shared/ when the third near-identical copy (Λογοπαίγνιο) landed —
 // three genuine consumers, per the shared-component rule (CLAUDE.md). The share
-// summary is text + a copy button, a different concern from FramedMedia (the
+// summary is text + a share button, a different concern from FramedMedia (the
 // media panel), so it stays its own component.
+//
+// SHARING IS TWO PATHS, and the order matters on a phone. `navigator.share` opens
+// the OS sheet, which is how a Greek mobile audience reaches Viber and Messenger;
+// where it does not exist (every desktop browser but Safari) the clipboard copy
+// that shipped first is the fallback. Three details, each a shipped-bug shape:
+//
+//   - Feature-detect, never assume. `router.prefetch` returning `void` and jsdom's
+//     `play()` returning `undefined` both cost this repo a release.
+//   - `share()` REJECTS when the player backs out of the sheet. A cancel is not an
+//     error and not a reason to copy something they did not ask for — it must read
+//     as nothing happening.
+//   - Any OTHER rejection is a genuine failure, so it falls through to the
+//     clipboard rather than losing the summary.
 //
 // The accent-fill share button is the known recipe debt (memory Topothesies row):
 // there is no recipe for accent fills yet, so the string is hand-rolled here — but
@@ -56,6 +70,19 @@ export function ShareResultPanel({
     }
   };
 
+  const share = async () => {
+    if (typeof navigator.share !== "function") return copy();
+    try {
+      await navigator.share({ text: shareText });
+    } catch (err) {
+      // The player backed out of the sheet: nothing happened, and nothing should
+      // be reported. Anything else is a real failure — keep the summary reachable
+      // by copying it instead.
+      if ((err as Error)?.name === "AbortError") return;
+      await copy();
+    }
+  };
+
   return (
     <div data-testid={testId} className="w-full flex flex-col items-center gap-3 py-2">
       <h2 className="text-3xl font-bold text-foreground text-center">
@@ -64,9 +91,13 @@ export function ShareResultPanel({
 
       {children}
 
+      {/* The primary affordance of the whole panel: full width of the game column,
+          directly under the recap, so the thing we want a player to do is the
+          biggest target on the screen rather than a chip beside a link. */}
       <button
-        onClick={copy}
-        className="px-4 py-2 rounded-control bg-game-accent text-game-accent-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
+        data-testid="btn-share-result"
+        onClick={share}
+        className="w-full max-w-game px-6 py-3 rounded-control bg-game-accent text-game-accent-foreground text-base font-bold hover:opacity-90 transition-opacity"
       >
         {copied ? "Αντιγράφηκε" : "Κοινοποίηση"}
       </button>

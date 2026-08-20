@@ -7,6 +7,7 @@
 // player saw as a hint, minus the actual number.
 
 import { POSOKANEI } from "@/config/gameRules";
+import { composeShareText } from "@/lib/shareText";
 
 import type { PosokaneiState } from "../types";
 
@@ -21,12 +22,16 @@ function guessSquare(g: { correct: boolean; direction: string; proximityPct: num
   return `${tier}${arrow}`;
 }
 
-/** Shareable, spoiler-free summary of the round. */
-export function buildShareText(state: PosokaneiState): string {
-  const lines: string[] = [CART];
+/** Shareable, spoiler-free summary of the round.
+ *
+ *  The rows are unchanged from the day this Game was built; what they now go
+ *  through is the shared spine (`composeShareText`, ADR 0025), which adds the
+ *  identity line and the link. This Game is `hidden` and its content is a
+ *  placeholder, so it inherits the spine and nothing was redesigned here. */
+export function buildShareText(state: PosokaneiState, date: string): string {
+  const rows: string[] = [CART];
   if (state.guesses.length > 0) {
-    lines.push(state.guesses.map(guessSquare).join(" "));
+    rows.push(state.guesses.map(guessSquare).join(" "));
   }
-  lines.push(`Σκορ: ${computeScore(state)}`);
-  return lines.join("\n");
+  return composeShareText({ gameId: "posokanei", date, rows, score: computeScore(state) });
 }

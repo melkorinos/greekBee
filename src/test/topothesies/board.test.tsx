@@ -170,3 +170,45 @@ describe("TopothesiesBoard", () => {
     expect(result).toHaveTextContent("Πρωτη");  // and its capital
   });
 });
+
+// ── Round End persists across a reload (ADR 0025) ─────────────────────────────
+// The Result Panel is what Round End renders, so it has to survive a refresh on
+// the same day — a player who finishes in the morning and comes back at lunch
+// still has something to share. Past days are explicitly not a concern: the
+// Session is keyed by the Puzzle's date, so an archive date restores its own.
+
+describe("TopothesiesBoard — a finished round restored from persistence", () => {
+  function seedFinishedRound(date: string) {
+    localStorage.setItem("wordgames:state", JSON.stringify({
+      topothesies: {
+        [date]: {
+          puzzleId:       TARGET.id,
+          shapeGuesses:   [{ id: TARGET.id, correct: true, hint: null }],
+          capitalGuesses: [{ text: TARGET.capitalNormalized, correct: true }],
+          gaveUp:         false,
+        },
+      },
+    }));
+  }
+
+  it("still shows the Result Panel, with no leaderboard over it", () => {
+    seedFinishedRound("2026-07-21");
+    const onOpenLeaderboard = vi.fn();
+    render(
+      <TopothesiesBoard
+        answers={ANSWERS}
+        target={TARGET}
+        shape={SHAPE}
+        today="2026-07-21"
+        maxKm={500}
+        isLeaderboardOpen={false}
+        onOpenLeaderboard={onOpenLeaderboard}
+        onCloseLeaderboard={() => {}}
+      />,
+    );
+
+    expect(screen.getByTestId("topothesies-result")).toBeInTheDocument();
+    expect(screen.getByTestId("btn-share-result")).toBeInTheDocument();
+    expect(onOpenLeaderboard).not.toHaveBeenCalled();
+  });
+});
