@@ -5,6 +5,41 @@
 
 ---
 
+## Session 171 — 2026-08-20: the e2e gap gets measured, and two of five tickets die within the hour
+
+Docs only, no source change beyond one `SPENT` row. `ISSUE-03` asked for an analysis of what the
+browser actually guarantees; the answer is in `.claude/aiHelper/e2e-coverage/analysis.md`.
+
+**The issue was its own worst narrator, in both directions.** It said ten tests across four specs —
+it is **15 across five** (13 run, 2 skipped on purpose), `privacy.spec.ts` having landed since.
+And it priced expansion at "eight specs each needing a stable selector strategy", when **every
+testid a happy path needs already exists** in `src/games` / `src/components`. What is missing is page
+objects, not instrumentation. Both halves came from `--list` and a grep, not from the file. This is
+the ADR 0026 pattern with the tracker as narrator, which that ADR already names — no new row.
+
+**The real number: 6 of 11 routes are never loaded by any browser test, and only 2 of 11 Games have
+a turn played.** End of round — the Result Panel, share, leaderboard, achievement toast — is
+browser-untested for **every** Game, one session after s169 built it.
+
+**Two determinism rules, now in memory and in every ticket.** Every daily Game takes `?puzzle=`, so a
+spec pins a past date instead of racing the morning's rotation; and **no spec may finish a round**,
+because round end writes to the shared production `game_scores`.
+
+**Five tickets written, two deleted the same hour.** The operator cut Topothesies and Leksikastirio
+as low priority after they were already on disk. `TICKET-18` and `TICKET-21` are `SPENT`-and-withdrawn
+— the first ids retired without ever being started. **The lesson is order:** the analysis was worth
+writing before the tickets, but the *priority call* also belonged before them. Their content went
+back into `ISSUE-03` rather than vanishing, including the ban on a Leksikastirio spec ever casting a
+vote — that is a real write that shapes the dictionary.
+
+**The issue was NOT deleted when the tickets appeared.** Asked whether it could be, the answer is no:
+it still holds three happy paths, mobile viewport, end-of-round, profile-against-real-API and dark
+mode. A tracker file is deleted when it is empty, not when it is smaller.
+
+Shipped: `TICKET-17` (Vres Tin Frasi), `TICKET-19` (Λεξοδρομία), `TICKET-20` (Λεξόπλεγμα) ready to
+pick up, in that order — 20 last because the pointer drag is the flakiest input. eslint 0, tracker
+guard 4/4. No new test; the artifact is a set of documents.
+
 ## Session 170 — 2026-08-20: the backup leaves the machine, and the box it cannot tick moves house
 
 `TICKET-11`'s operator half, run live. The Drive folder was **verified private through the Drive MCP**
@@ -33,47 +68,11 @@ rather than staging and continuing.
 
 213 files / 2710 tests, eslint 0, build 0. No test added — the artifact is a `.7z`, not a function.
 
-## Session 169 — 2026-08-20: every Game learns to end, and the ending carries a link
-
-`TICKET-15` shipped and deleted, `/tdd`, five slices. Six Games reach a Result Panel; every share is
-four lines and the fourth is a link — the half of `TICKET-10`'s bet never placed. **Two seams and
-deliberately no third:** `src/lib/shareText.ts` owns the identity line, the score line and the link
-for every Game — hidden ones included, which is how Πόσο κάνει; and Λογοπαίγνιο inherited the spine
-with no line of their own authored — and each
-`games/*/lib/shareText.ts` returns only its own row. `ShareResultPanel` is the one surface, now
-sharing through `navigator.share` with the clipboard as fallback.
-
-**`AbortError` is the whole `navigator.share` design.** A cancelled sheet rejects, so cancel is a
-silent no-op while any other rejection falls through to the clipboard — copying a summary the player
-just declined to send is worse than doing nothing. The native path is **not covered and cannot be**;
-the phone check is written into ADR 0025, the runbook and the SPENT ledger rather than left in a reply.
-
-**Λεξιαρχείο's Round End had no owner.** The board tracked *which* Lengths were done and never their
-rounds, and a restored Session reaches the panel through persistence, never `onGameEnd` — so each
-LengthPanel now reports its own round upward on change, which works only because all five stay mounted.
-
-**Five auto-opening leaderboards, and the ticket knew about none of them.** ADR 0025 rejected the
-auto-opening modal (dismiss a box to see your own recap underneath) not knowing the Platform already
-did it everywhere. Λεξιαρχείο and Βρες τη Φράση had their own `setTimeout`, removed with the panel.
-**The operator played it and found the other three** — Τοποθεσίες, Λεξοδρομία and Λεξόπλεγμα open it
-from `useLiveScorePost`'s `onFinish`, a seam the ticket never named, so half the Platform still slid
-a modal over the new surface. `onFinish`, its 1.5 s delay and its once-only latch are **deleted from
-the hook**, not unwired at three call sites: it posts scores and does nothing
-else, and reinstating it is a type error. Τοποθεσίες also gained a restored-round test — the panel
-must survive a reload for its own day; past days restore their own Session by date.
-
-**Λεξόκηπος's panel lives in the layout, not the board.** Its header `ShareButton` is the way back
-after a dismissal and only the layout sees both that button and the board's live score; the pop fires
-once per mount, like the ScoreBar endgame cue beside it, so a reload at top Rank pops again —
-accepted. Each builder's spoiler test was **proven non-vacuous by making the builder leak**.
-
-213 files / 2709 tests (+58), eslint 0, build 0, e2e 13 passed / 2 skipped. Ran concurrently with the
-session logged above; `HEAD` and four shared docs moved underneath.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 169 | 2026-08-20 | **Every Game learns to end, and the ending carries a link.** `TICKET-15` shipped and deleted, `/tdd`, five slices: six Games reach a Result Panel and every share is four lines whose fourth is a link — the half of `TICKET-10`'s bet never placed. Two seams, deliberately no third: `src/lib/shareText.ts` owns identity/score/link. **Five auto-opening leaderboards and the ticket knew of none of them** — two had their own `setTimeout`, three more came through `useLiveScorePost`'s `onFinish`, found only by the operator playing it; `onFinish` was deleted from the hook rather than unwired at three call sites, so reinstating it is a type error. Λεξόκηπος's panel lives in the layout, not the board. Each builder's spoiler test proven non-vacuous by making the builder leak. 213 files / 2709 tests (+58), e2e 13 passed / 2 skipped. |
 | 168 | 2026-08-20 | **The launch question closes and its handoff dies.** Docs only. Question 2 answered — the run is the offsite backup, then the Result Panel, then the `dev → main` merge with its play-through, then release day, then a week of daily Vercel error checks; target **on or about 27 August 2026**, the operator's date and not hard. `launch-readiness.md` deleted, `docs/launch-runbook.md` replaces it: **a handoff whose last question is answered is not a document**, and eleven files pointed at it. It ran to 281 lines because resolved work had been *rewritten in place instead of deleted* — the Question 1 section, the decisions ledger and the tracked-elsewhere prose were history, and `log.md` and the ADRs own history. Cut to 147, then to 110 as a runbook. The operator saw it before the agent did: *"we should have knocked out most items from it right?"* — the file said everything was decided and still read as if nothing was. `TICKET-11`'s operator half was four unordered bullets for work **whose order is the whole point**, rewritten as seven steps (password first, scheduler last). Runbook step 5 absorbed a third statement: the one non-normalised nominations row had been an open decision reading "step 5, or the dashboard at any time", which is not a schedule. One hand-run migration, three statements, one rehearsal. |
 | 167 | 2026-08-18 | **Λεξόκηπος trades three words for four marks** — `TICKET-16`: the action row became four icon-only squircles plus a **second** Καταχώρηση, always rendered and disabled below `MIN_WORD_LENGTH` (an appearing button gives a typing player no target), inverting four tests that asserted its absence. **The corner needed two tokens, not one** — `16px / 13px` is an *elliptical* radius and Tailwind's `rounded-*` emits one value, so a single token would have quietly made pills; verified in the built CSS. Then the operator sized it by eye and the two Καταχώρηση stopped being one button, so the recipe **splits box from skin** (appending a second `w-` fails: Tailwind resolves size in stylesheet order, not class order). **Two e2e failures were not mine and a stash proved it** — Next's overlay reading *Jest worker encountered 2 child process exceptions*, identical on a clean tree, and **wiping `.next` made it worse**. `TICKET-05` closed the same day, falsifying five claims elsewhere, all rewritten and none annotated. 202 files / 2651 tests. |
 | 166 | 2026-08-17 | **A migration meets real rows before production does** — `TICKET-13` shipped `npm run db:rehearse`, the loop ADR 0024 chose over a second Supabase project; the operator supplying `BACKUP_ARCHIVE_PASSWORD` unblocked three sessions of stated blocker in one line. **The ticket's own acceptance test could not have failed** — its poison migration was `display_name SET NOT NULL` against a dump with **0 nulls in 47 rows**; swapped for `selected_badge_id` (42 of 47 null) and a unique index on `game_scores.device_id` (35 duplicates), covering both failure shapes. ADR 0026's class, narrator being the ticket. **The restore is selective, not tolerant:** blocks filtered by pg_dump's own schema headers and applied with `ON_ERROR_STOP`, because a restore that prints expected errors hides unexpected ones; only the 8 `auth.users` **ids** load, so emails never reach the scratch DB. `supabase/migrations/` is frozen, so the pending path was proven with a throwaway probe created and deleted in one command. **Windows trap caught by a guard test:** editing the ticket through a path spelled `-LAUNCH.md` renamed the file on disk and made every `TICKET-11` reference read as dangling — git reports nothing, the case-insensitive filesystem hides it. 202 files / 2638 tests. |

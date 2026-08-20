@@ -95,8 +95,8 @@ can be **regenerated empty** — before "just add a list", ask whether a re-sync
 
 ## 🟡 Smaller live watches
 
-- **The Maker page has no rendering test (s152)** — its editing rules are pure and 44 tests deep, but
-  a dropped `useEffect` listener would pass every one of them. One Playwright spec closes it.
+- **Five routes have no browser test at all (s152, widened s171)** — all three Stavrolekso routes plus
+  Topothesies and Leksikastirio. Pure logic is tests-deep; a dropped listener passes it all. `ISSUE-03`.
 - **Deferring a threshold on a live-capture counter destroys data (s139).** "Lower is safe, raise is
   impossible" is about **earned** rows, not **unwritten** ones — ask what the gap is not recording.
 - **Zero rows is the reason to look, not reassurance (s134).** `consumeApprovedPuzzle`'s two bugs were

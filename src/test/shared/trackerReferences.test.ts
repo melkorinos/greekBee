@@ -90,6 +90,11 @@ const SPENT: Record<string, string> = {
   // never been extracted on a second machine. That, and the unregistered weekly task, moved
   // to ISSUE-01 §1 rather than holding the file open.
   "TICKET-11": "offsite encrypted backup — shipped 2026-08-15, closed 2026-08-20",
+  // Written and withdrawn the same day, 2026-08-20, by operator ruling: both are
+  // low priority next to the other three e2e happy paths. Never started. The work
+  // itself is not gone — it went back to ISSUE-03's deferred list.
+  "TICKET-18": "e2e happy path, Topothesies — withdrawn 2026-08-20, back to ISSUE-03",
+  "TICKET-21": "e2e happy path, Leksikastirio — withdrawn 2026-08-20, back to ISSUE-03",
 };
 
 /**
