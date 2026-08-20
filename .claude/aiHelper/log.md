@@ -7,25 +7,20 @@
 
 ## Session 167 — 2026-08-18: Λεξόκηπος trades three words for four marks
 
-`TICKET-16` shipped and deleted. The action row is now four icon-only squircles — Διαγραφή,
-Καθαρισμός, Ανακάτεμα and a **second** Καταχώρηση — and the inline `&#9166;` glyph is a drawn check.
-New `leksokipos/icons.tsx` (four `currentColor` marks, path data copied out of
-`.claude/aiHelper/html/leksokipos-icons.gen.js`, never redrawn by eye), three recipes in the game's
-`styles.ts`, and `--radius-squircle-x` / `-y` in `globals.css`.
+`TICKET-16` shipped and deleted. The action row is four icon-only squircles — Διαγραφή, Καθαρισμός,
+Ανακάτεμα and a **second** Καταχώρηση — and the inline `&#9166;` glyph is a drawn check. New
+`leksokipos/icons.tsx` (four `currentColor` marks, path data copied out of the spec's generator,
+never redrawn by eye), recipes in the game's `styles.ts`, shape tokens in `globals.css`.
 
 **The corner needed two tokens, not one.** `16px / 13px` is an *elliptical* radius and Tailwind's
 `rounded-*` emits a single value, so one token would have quietly rounded the buttons into pills.
-The pair is composed once, in `btnSquircle`, with an arbitrary-property utility — verified in the
-built CSS rather than assumed (`border-radius:var(--radius-squircle-x)/var(--radius-squircle-y)`).
-`h-8.5` compiles to the spec's 34 px on Tailwind v4's dynamic spacing scale.
+Composed with an arbitrary-property utility and **verified in the built CSS rather than assumed**.
 
-**Then the operator sized it by eye, and the two Καταχώρηση stopped being one button.** The row
-gap went `gap-2`→`gap-5` and the row's buttons grew **15%** (50 × 39, marks at 25 px, corner
-`18px / 15px`) while the inline one kept the authored 44 × 34 — it sits beside 3 rem letters,
-the row is hit with a thumb. So the recipe **splits box from skin**: `squircleBox` /
-`squircleBoxRow` carry size and shape, `btnSquircle` / `-Go` / `-Disabled` carry only colour,
-composed at the call site. Overriding a size by appending a second `w-` class does not work —
-Tailwind resolves that in stylesheet order, not class order.
+**Then the operator sized it by eye, and the two Καταχώρηση stopped being one button.** The row gap
+went `gap-2`→`gap-5` and its buttons grew **15%** (50 × 39, marks 25 px, corner `18px / 15px`)
+while the inline one kept 44 × 34 — it sits beside 3 rem letters, the row is hit with a thumb. So
+the recipe **splits box from skin**, composed at the call site: appending a second `w-` class would
+not have worked, because Tailwind resolves size in stylesheet order, not class order.
 
 **Submit is now always rendered, disabled below `MIN_WORD_LENGTH`** — the point of the ticket: an
 appearing button gives a typing player no target. That inverted four existing tests which asserted
@@ -33,12 +28,17 @@ its *absence*, and the two copies needed distinct ids (`btn-enter` stays on the 
 `e2e/pages/LeksokiposPage.ts` keeps resolving; the row's is `btn-enter-row`). `GameBoard` no longer
 carries the literal `4`.
 
-**Two e2e failures were not mine, and the stash proved it.** `flows` and `privacy` both died on
+**Two e2e failures were not mine, and the stash proved it.** `flows` and `privacy` died on
 `/leksokipos` behind Next's overlay reading *Jest worker encountered 2 child process exceptions* —
 identical on a stashed clean tree. **Wiping `.next` made it worse** (cold compile, 12 of 15 timed
-out); the next warm run was 13 passed / 2 skipped with no code change. Recorded as a second
-signature on the existing cold-chunk row in `memory.md`. `.claude/**` added to the eslint ignores:
-the spec sheet's generator is a throwaway Node script and `require()` failed the lint gate.
+out); the next warm run was clean. Second signature on the cold-chunk row in `memory.md`.
+`.claude/**` joined the eslint ignores — the spec sheet's generator is a throwaway Node script.
+
+**`TICKET-05` closed and deleted too.** Every agent half was already done — two MP3s with
+provenance, `wordFound` synthesized, the flag flipped on 2026-08-17 — leaving only the operator's
+ear check and the 320 px header look, which `reflections.md` already holds as a live watch.
+Deleting it falsified five claims elsewhere (goals item 3, the handoff's ticket row, ADR 0021's
+pointer, two comments still calling `public/sounds/` empty), **all rewritten, none annotated**.
 
 202 files / 2651 tests (no new test file — both suites extended per the coverage map), eslint 0, build 0, e2e 13 passed / 2 skipped.
 

@@ -73,6 +73,11 @@ const SPENT: Record<string, string> = {
   // step 5. The two operator decisions it was parking moved back into §3.
   "TICKET-13": "migration rehearsal loop — shipped 2026-08-17, npm run db:rehearse",
   "TICKET-14": "index crossover probe — measured 2026-08-17, ISSUE-01 §2 discharged",
+  // Both MP3s committed, provenance recorded, FEATURE_FLAGS.soundCues flipped on
+  // 2026-08-17. What was left when the file was deleted is the operator's own ear
+  // check on a phone plus the 320 px header look — a live watch, already carried by
+  // reflections.md, not work an agent can hold a ticket open for.
+  "TICKET-05": "Sound Cue assets — shipped 2026-08-17, closed 2026-08-18",
   "TICKET-16": "Leksokipos button icons — shipped 2026-08-18",
 };
 

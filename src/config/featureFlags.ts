@@ -26,8 +26,8 @@ export interface FeatureFlags {
    * ON since 2026-08-17: the condition this flag waited on is met. All three Cues
    * now make a sound — `pangram` and `missingCenter` are committed MP3s in
    * `public/sounds/`, `wordFound` is synthesized — so the toggle no longer switches
-   * between silence and silence. The last open item on TICKET-05 is the operator's
-   * ear check on a phone, which needs this button visible in order to happen.
+   * between silence and silence. TICKET-05 is closed; what it left behind is the
+   * operator's ear check on a phone, which needs this button visible to happen.
    */
   soundCues: boolean;
 }

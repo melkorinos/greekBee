@@ -133,11 +133,12 @@ export function Shell({ children }: ShellProps) {
                 Written inline exactly like the theme toggle rather than extracted:
                 the two are siblings and should read as one pair.
 
-                Gated on FEATURE_FLAGS.soundCues (TICKET-05 Part A): `public/sounds/`
-                is empty, so with the flag off this button would toggle silence
-                against silence. Only the button is gated — useSoundEnabled above
-                still runs and still persists the preference, so flipping the flag
-                back on restores the player's stored choice rather than resetting it. */}
+                Gated on FEATURE_FLAGS.soundCues, ON since 2026-08-17 — the gate
+                exists because the button used to toggle silence against silence
+                while `public/sounds/` was empty. Only the button is gated —
+                useSoundEnabled above still runs and still persists the preference, so
+                turning the flag off and on again restores the player's stored choice
+                rather than resetting it. */}
             {FEATURE_FLAGS.soundCues && (
               <button
                 onClick={toggleSound}

@@ -1,7 +1,7 @@
 # ADR 0021 — Sound Cues
 
 **Status:** accepted (2026-08-10) · **built 2026-08-11, not deployed** — see the 2026-08-11 amendment
-**Tickets:** [TICKET-05-sound-cue-assets.md](../../.claude/tracker/tickets/TICKET-05-sound-cue-assets.md) (open — two MP3s, down from three; see the 2026-08-17 amendment). `TICKET-04` (the primitive) shipped 2026-08-11 and its file is deleted per the tracker rule; git history is the archive.
+**Tickets:** both are spent and both files are deleted per the tracker rule — `TICKET-04` (the primitive) shipped 2026-08-11, `TICKET-05` (the gate, then the assets) shipped 2026-08-17 and was closed 2026-08-18. Git history is the archive. The amendments below are dated and stay as written; where one says the ticket is open, read it as the state on its own date.
 
 ## Context
 

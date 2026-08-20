@@ -30,7 +30,6 @@ Audited against the filesystem and git on 2026-08-14, re-cut against the operato
 
 | Ticket | What is left | Owner |
 |---|---|---|
-| `TICKET-05` | **Split, and no longer a deploy blocker. Part A shipped 2026-08-15** — the 🔊 toggle is behind `FEATURE_FLAGS.soundCues`, off, with the machine wired and inert beneath it. What is left is Part B: the three MP3s, **post-launch and optional**, ending in the flag flip | operator, no date |
 | `TICKET-11` | **New 2026-08-15, agent half shipped the same day.** `npm run db:backup` now emits an AES-256 `.7z` and refuses to run unprotected; `docs/disaster-recovery.md` carries the restore order. What is left is **operator-only**: create the private Drive folder, set and safely store `BACKUP_ARCHIVE_PASSWORD`, and prove one archive extracts on another machine. Must be done **before** runbook step 3 is executed | operator |
 | `TICKET-15` | **New 2026-08-17, nothing built.** Every Game gets a Result Panel at its Round End, sharing a four-line summary and a link (**ADR 0025**). This is the other half of `TICKET-10`: that card renders when a link is posted and nothing on the Platform posts one today. The only launch item that makes the launch *spread* rather than merely not fail — so it is a real input to question 2's ordering, not a nice-to-have appended after it | agent, `/tdd` |
 
