@@ -138,19 +138,19 @@ admin UI. *Rate limiting* stays with the platform-wide accepted risk and is not 
 would need a throttle key that is not the spoofable `device_id`, meaning edge IP limiting or a
 Postgres counter table, with cost implications either way.
 
-**Two operator decisions are open, and they outlived `TICKET-14`** — that ticket carried them only
-because it was the next file anyone would open, and it shipped on 2026-08-17 without answering
-either:
+**One operator decision is still open.** It outlived `TICKET-14`, which carried it only because that
+was the next file anyone would open, and shipped on 2026-08-17 without answering it:
 
 1. **Does the moderation half leave as its own issue?** Retention is affirmed and the index has a
    verdict, so what is left here — no bulk-reject in `/leksikastirio`, and stranger-authored
    `word`/`note` free text rendered in an admin UI — is a review-workflow problem with nothing to do
    with the database. If it leaves, it takes the next free issue number.
-2. **When does the one non-normalised row get fixed?** `ιουνιος` (`direction` `remove`, rejected
-   2026-07-15) ends in a final sigma, so `normalizeLetters` turns a re-proposal into `ιουνιοσ` and
-   its prior-rejection warning can never fire. It is the only such row in 191, and `isBlockedWord`
-   does not cover it because that only runs on `add`. It is a data `UPDATE`, not DDL, so the
-   migrations freeze does not reach it — runbook step 5, or the dashboard at any time.
+**The one non-normalised row is scheduled, not open** (2026-08-20): `ιουνιος` (`direction` `remove`,
+rejected 2026-07-15) ends in a final sigma, so `normalizeLetters` turns a re-proposal into `ιουνιοσ`
+and its prior-rejection warning can never fire. It is the only such row in 191, and `isBlockedWord`
+does not cover it because that only runs on `add`. The `UPDATE` now rides **runbook step 5** in
+`launch-readiness.md` alongside the DROP and the index — one hand-run migration instead of three
+separate visits to the dashboard. Do not also do it by hand; the statement is written out there.
 
 ---
 

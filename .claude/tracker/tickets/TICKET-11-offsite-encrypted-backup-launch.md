@@ -83,14 +83,37 @@ order. eslint and build clean; no test — see the last done-when.
 
 ## Operator half — cannot be done by an agent
 
-- [ ] Create the Drive folder and keep it **private** — not "anyone with the link".
-- [ ] Choose the archive password and **store it somewhere that is not the machine being backed
-      up and not `.env.local` alone** (a password manager). An encrypted archive whose password
-      died with the laptop is a brick. **As of 2026-08-17 it is `ADMIN_SECRET` reused** — enough to
-      unblock the rehearsal, not enough for the artifact that guards every player's email. Replace
-      it before the first upload.
-- [ ] Consider a second copy on an external disk. A cloud account you can lose access to is one
-      point of failure wearing a different hat.
+**This is pre-launch work, not launch-day work.** Runbook step 3 uploads an archive; it does not set
+any of this up. An untested password discovered on the day is the wipe's only undo failing at the
+moment it is needed. Do it in this order — the order is the point, and it is not the order the
+runbook implies.
+
+1. [ ] **Choose a new archive password and put it in a password manager.** As of 2026-08-17 it is
+       `ADMIN_SECRET` reused — enough to unblock the rehearsal, not enough for the artifact that
+       guards every player's email address. It must live somewhere that is **not the machine being
+       backed up and not `.env.local` alone**: an encrypted archive whose password died with the
+       laptop is a brick. Then set `BACKUP_ARCHIVE_PASSWORD` in `.env.local` to the new value.
+2. [ ] **Create the Drive folder, private** — not "anyone with the link". A link-shared folder holding
+       `auth.users` is the same leak as committing the dump, with fewer witnesses.
+3. [ ] **`npm run db:backup`** to produce a fresh archive under the new password. The old
+       `20260817-*.7z` was made with the placeholder and is not the artifact this ticket is about.
+4. [ ] **Upload that `.7z` to the folder** — the archive, never the folder of plaintext dumps.
+5. [ ] **Extract it on a different machine**, with the password taken from the password manager
+       rather than from memory or `.env.local`. `7z x <timestamp>.7z`, then confirm `roles.sql`,
+       `schema.sql` and `data.sql` are all there and non-empty. Restore steps are
+       [`docs/disaster-recovery.md`](../../../docs/disaster-recovery.md) §"Extract the archive".
+       **This step is the ticket.** A `.7z` that exists is the response; a `.7z` that opens elsewhere
+       is the artifact.
+6. [ ] **Only now, register the weekly task** — `npm run db:backup:schedule-weekly`. Registering it
+       before step 1 creates a job that throws every Sunday at 02:00 unattended, which is **worse than
+       no job, because it looks like coverage.** Confirm with `Get-ScheduledTask
+       GreekWordGames-DB-Backup`; as of 2026-08-17 it is not found.
+7. [ ] Optional, and worth it: **a second copy on an external disk.** A cloud account you can lose
+       access to is one point of failure wearing a different hat.
+
+**What stays deferred after all of this:** nothing enforces the upload. The dump lands in
+`db-backups/` and a human moves it. Automating that needs a Drive credential on the machine — a
+decision nobody has made, and not this ticket's to make.
 
 ## Done when
 
@@ -101,6 +124,7 @@ order. eslint and build clean; no test — see the last done-when.
 - [ ] The archive has been opened once from Drive **on a different machine** and the password
       worked. Measure the artifact, not the response: a `.7z` that exists is the response, a `.7z`
       that extracts elsewhere is the artifact.
-- [ ] `docs/disaster-recovery.md` carries the extract-and-restore steps.
+- [x] `docs/disaster-recovery.md` carries the extract-and-restore steps. **Shipped 2026-08-15** — see
+      its "Extract the archive" section and the `roles.sql` → `schema.sql` → `data.sql` order.
 - [ ] `npx eslint .` and `npm run build` clean. No test is expected — this is a PowerShell script
       outside the suite's reach, which is exactly why the done-when above is a manual extraction.

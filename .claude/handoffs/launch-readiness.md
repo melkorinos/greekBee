@@ -1,184 +1,113 @@
 # Launch readiness — what is left between here and a go/no-go
 
-**Created:** 2026-07-31 · **Question 1 resolved:** 2026-08-11 · **Last audit:** 2026-08-15
+**Created:** 2026-07-31 · **Question 1 resolved:** 2026-08-11 · **Cut to current state:** 2026-08-20
 **Driver:** Dimitrios
 
-One question is left. Everything else on this document has either shipped, been consciously
-accepted, or moved somewhere with a better home. When question 2 closes, delete this handoff.
+One question is left. Everything else has shipped, been consciously accepted, or moved somewhere with
+a better home; the resolved history that used to live here is in `log.md` and the ADRs, which own it.
+When question 2 closes, delete this handoff.
 
-## Destination
+**Destination:** nothing open stands between here and pressing the button. Reaching it does not
+require the launch to have happened. The date stays the operator's.
 
-**Nothing is blocking a launch decision.** Reaching it does not require the launch to have
-happened — only that no open question stands between here and pressing the button. The date stays
-the operator's.
-
-## How to work this document
-
-- Read `CLAUDE.md`, then `soul.md`, `memory.md`, `goals.md`, `reflections.md`, `log.md`.
-- **This document plans; it does not build.** `/to-tickets` turns a resolved question into slices;
-  `/tdd` builds them. `/project-mcp` before any Supabase or Vercel MCP call.
-- **Never `git push`.** Standing rule — sessions stop after committing.
+**How to work this document:** read `CLAUDE.md`, then `soul.md`, `memory.md`, `goals.md`,
+`reflections.md`, `log.md`. **This document plans; it does not build** — `/to-tickets` turns a
+resolved question into slices, `/tdd` builds them, `/project-mcp` comes before any Supabase or Vercel
+MCP call. **Never `git push`.**
 
 ---
 
-## Everything still pending, in one place
+## Everything still pending
 
-Audited against the filesystem and git on 2026-08-14, re-cut against the operator's rulings of
-2026-08-15. Nothing else is open.
-
-### Open tickets — `.claude/tracker/tickets/`
-
-| Ticket | What is left | Owner |
+| Item | What is left | Owner |
 |---|---|---|
-| `TICKET-11` | **New 2026-08-15, agent half shipped the same day.** `npm run db:backup` now emits an AES-256 `.7z` and refuses to run unprotected; `docs/disaster-recovery.md` carries the restore order. What is left is **operator-only**: create the private Drive folder, set and safely store `BACKUP_ARCHIVE_PASSWORD`, and prove one archive extracts on another machine. Must be done **before** runbook step 3 is executed | operator |
-| `TICKET-15` | **New 2026-08-17, nothing built.** Every Game gets a Result Panel at its Round End, sharing a four-line summary and a link (**ADR 0025**). This is the other half of `TICKET-10`: that card renders when a link is posted and nothing on the Platform posts one today. The only launch item that makes the launch *spread* rather than merely not fail — so it is a real input to question 2's ordering, not a nice-to-have appended after it | agent, `/tdd` |
+| `TICKET-11` | Backup setup — Drive folder, a real password in a password manager, and one archive proven to extract **on another machine**. The agent half shipped 2026-08-15. **The setup is pre-launch work, not launch-day work**: runbook step 3 depends on it, and an untested password is the wipe's only undo | operator |
+| `TICKET-15` | Round-End Result Panel across six Games (**ADR 0025**) — the other half of `TICKET-10`, and the only launch item that makes the launch *spread* rather than merely not fail. **In progress in a separate session as of 2026-08-20** | agent, `/tdd` |
+| The runbook | Below. The only owed item that is not a tracker file | operator |
 
-### Owed, and not tickets
-
-- **The release-day runbook** below. It is the only owed item left.
-
-The preview play-through is **no longer tracked here** (operator ruling, 2026-08-15): the operator
-tests every branch on preview as a matter of course, so writing it down was bookkeeping of a habit
-rather than a piece of pending work. The `TICKET-03` visual eye-checks ride along with that habit.
+Nothing else is open. There is **no agent work left that can be done before launch** beyond
+`TICKET-15`: runbook step 5's migration is written out already and `supabase/migrations/` is frozen
+until that step, and every other pending act is an operator one.
 
 ### Deferred, correctly, and not launch work
 
-`ISSUE-01` (**the DB file** — backups, plus profile scans and nominations growth folded in on
-2026-08-16; the dev/prod split is no longer among them, decided against in **ADR 0024** on the same
-day, and the unread score metadata was fixed rather than folded; reduced here to one runbook line),
-`ISSUE-03`
-(thin E2E coverage), Offline Mode's manual device pass (`offlineFeature-handoff.md`), and the hidden
-Games' content supply. **`ISSUE-05` is not in this list** — it is scheduled, at runbook step 5.
+`ISSUE-01` (the DB file — backups, profile scans, nominations growth; reduced here to one runbook
+line), `ISSUE-03` (thin E2E coverage), and the hidden Games' content supply. **`ISSUE-05` is not in
+this list** — it is scheduled, at runbook step 5. **Offline Mode is not launch work** — removed here
+2026-08-20 by operator ruling; it stays parked in **ADR 0010** with its own handoff, and its manual
+device pass is not a launch item. Do not re-file either of them here.
+
+### Accepted as-is — do not re-open without new evidence
+
+Terms of service (no payments, no lockable accounts, no user-to-user messaging — revisit if money or
+public user-generated content enters) · E2E coverage (the gate is `npm run test -- --run` and
+`npm run test:e2e` green on the merge commit, not a bigger suite) · API rate limiting (the accepted
+risk in `CONTEXT.md`, *Persistence decisions*) · content supply for the three hidden Games ·
+Λογοπαίγνιο's trademark question, moot while the Game is hidden.
 
 ### Tracked elsewhere — do not re-file here
 
-- **UI redesign** — operator-driven in separate sessions. Untracked by design.
-- **Game icons** — `.claude/handoffs/game-icon-system.md` + `goals.md` item 5. Nothing designed;
-  that handoff exists to make a grill productive and is expected to produce a ticket.
-- **Platform logo and share card** — **done, and no longer pending anywhere.** The logo was folded
-  into `TICKET-10` on 2026-08-15 on the ruling that the icon the operator picks *is* the mark; the
-  operator picked icon 1 the next day and it shipped as `src/app/_brand/fan.tsx`, with the card,
-  favicon and apple-icon rendered from that same drawing. `TICKET-10` was **closed 2026-08-17** with
-  its code complete and its only remaining act — looking at the card in a real scraper — moved into
-  runbook step 2. There was never a separate logo project and there is no placeholder to revisit. Do
-  not re-file either of them here.
+**UI redesign** — operator-driven in separate sessions, untracked by design, and explicitly **not an
+input** to question 2. **Game icons** — `.claude/handoffs/game-icon-system.md` + `goals.md` item 5.
+**Platform logo and share card** — done; the mark is `src/app/_brand/fan.tsx` and there was never a
+separate logo project. **Monetization and the engagement epic** — off the launch path entirely.
 
 ---
 
 ## The release-day runbook — order is load-bearing
 
 1. Merge `dev → main` and deploy.
-2. **Verify production is serving the merge commit.** Not the migration, the deploy —
-   `reflections.md` records that live-DB tests go green on a migration alone and are blind to
-   whether the deploy happened. **Then look at the share preview on the same deploy** — request
-   `/favicon.ico` (browsers and several scrapers ask for that path whatever the `<link>` tag says),
-   check the tab icon, and post the production link into Messenger or Viber and look at the card.
-   This is all that was left of `TICKET-10`, which is why that ticket is gone rather than open: it
-   cannot be done before this step and it is not worth a file of its own. A preview deploy cannot
-   substitute — previews are SSO-protected and answer 302, so Facebook's and Viber's scrapers, which
-   carry no session, fetch the login page or nothing.
+2. **Verify production is serving the merge commit** — the deploy, not the migration; `reflections.md`
+   records that live-DB tests go green on a migration alone. **Then look at the share preview on the
+   same deploy**: request `/favicon.ico` (scrapers ask for that path whatever the `<link>` tag says),
+   check the tab icon, and post the production link into Messenger or Viber and look at the card. This
+   is all that was left of `TICKET-10`. A preview deploy cannot substitute — previews are
+   SSO-protected and answer 302, so scrapers carrying no session fetch the login page or nothing.
 3. `npm run db:backup`, then upload `db-backups/<timestamp>.7z` — the **encrypted archive**, not the
-   folder — to the private Google Drive backup folder. The script builds the archive as of
-   2026-08-15 (`TICKET-11`) and refuses to run without `BACKUP_ARCHIVE_PASSWORD`, so the remaining
-   risk is human: **the upload is manual and nothing enforces it.** A dump still sitting on the
-   machine at step 4 means the wipe has no undo.
+   folder — to the private Drive folder. The script refuses to run without `BACKUP_ARCHIVE_PASSWORD`,
+   so the remaining risk is human: **the upload is manual and nothing enforces it.** A dump still on
+   the machine at step 4 means the wipe has no undo.
 4. `supabase/scripts/launch-reset.sql`, by hand in the dashboard.
-5. **Drop the dead `game_scores.is_perfect` column** — `ISSUE-05`, which is scheduled here and
-   nowhere else. The table is empty as of step 4, so this is the one moment the DDL cannot cost
-   anything. Do not compose it on the day; the body is written out already:
+5. **Drop the dead `game_scores.is_perfect` column** — `ISSUE-05`, scheduled here and nowhere else.
+   The table is empty as of step 4, so this is the one moment the DDL cannot cost anything. Do not
+   compose it on the day:
 
    ```sql
    -- supabase/migrations/<YYYYMMDD>120000_drop_is_perfect_from_game_scores.sql
    alter table public.game_scores drop column if exists is_perfect;
-   ```
 
-   Copy that into a new file under `supabase/migrations/`, **`npm run db:rehearse` first** — it
-   replays the whole queue against the archive taken at step 3, which is the only rehearsal this
-   project's highest-stakes migration afternoon will get — then `npx supabase db push`, then regenerate
-   `src/lib/database.types.ts` and commit both together (ADR 0017 — the generated types are trusted,
-   so they cannot keep offering a column that is gone). **Nothing may enter `supabase/migrations/`
-   before this step** — a committed-but-unpushed migration fires on the next unrelated `db push`,
-   which is the same trap that keeps `launch-reset.sql` out of that folder. The types commit needs no
-   deploy of its own; it rides whatever deploy comes next, since nothing selects the column.
-
-   ```sql
-   -- verify: must return 0
-   select count(*) from information_schema.columns
-    where table_schema = 'public' and table_name = 'game_scores'
-      and column_name = 'is_perfect';
-   ```
-
-   **In the same migration, add the nominations lookup index** — `ISSUE-01` §3, measured on
-   2026-08-17 rather than argued. `GET /api/nominations/lookup` counts prior `rejected` and
-   `accepted` rows for a word and matches no existing index, so it sequentially scans the table on
-   every nomination-modal open; a local probe showed the planner taking this index at every row
-   count tested, including today's 191. It costs ~2 MB at 50,000 rows. It is here rather than in
-   `supabase/migrations/` for the same reason the DROP is — the folder is frozen until this step:
-
-   ```sql
+   -- ISSUE-01 §3: GET /api/nominations/lookup matches no index and scans the table
+   -- on every nomination-modal open. ~2 MB at 50,000 rows. Needs no empty table and
+   -- no types regeneration — nominations survives step 4.
    create index if not exists nominations_word_direction_status_idx
      on public.nominations (word, direction, status);
+
+   -- ISSUE-01 §3: the one non-normalised row in 191. Final sigma, so a re-proposal
+   -- normalises to ιουνιοσ and its prior-rejection warning can never fire.
+   update public.nominations set word = 'ιουνιοσ'
+    where word = 'ιουνιος' and direction = 'remove';
    ```
 
-   Unlike the DROP, this one does **not** care that the table is empty — `nominations` survives
-   step 4's reset, and building the index on 191 rows is instant. It also needs no types
-   regeneration, since an index is not a column.
-
-   **This step does not gate the announce.** If the push fails, announce anyway and re-file — the
-   column has never been read, so leaving it costs exactly what it costs today. Amend ADR 0013 once
-   the drop lands: its line stating the column is *kept* stops being true here.
+   **`npm run db:rehearse` first** — it replays the queue against the archive from step 3, the only
+   rehearsal this project's highest-stakes migration will get — then `npx supabase db push`, then
+   regenerate `src/lib/database.types.ts` and commit both together (**ADR 0017**). **Nothing may enter
+   `supabase/migrations/` before this step**: a committed-but-unpushed migration fires on the next
+   unrelated `db push`. Verify with `select count(*) from information_schema.columns where
+   table_schema='public' and table_name='game_scores' and column_name='is_perfect'` — must return 0.
+   **This step does not gate the announce.** If the push fails, announce anyway and re-file. Amend
+   **ADR 0013** once the drop lands — its line stating the column is *kept* stops being true here.
 6. Announce.
 
 Steps 3 and 4 are why the order matters. The reset empties `game_scores`, `game_state`,
-`player_achievements` and `player_milestones` on a **Free-plan project with no PITR** — that dump is
-the only undo that will exist. And it must follow the deploy: run it while the old code is live and
-badges re-earn against the retired emoji glyphs, because `BadgeMark` is on `dev` only.
+`player_achievements` and `player_milestones` on a **Free-plan project with no PITR** — that archive
+is the only undo that will exist. And it must follow the deploy: run it while the old code is live
+and badges re-earn against the retired emoji glyphs, because `BadgeMark` is on `dev` only.
 
-**Where the dump goes — settled 2026-08-15, and the answer is not the repo.** Committing it to a
-second private repository was considered and rejected: **this repository is public**, `scripts/backup-db.ps1`
-already writes to `db-backups/`, and `.gitignore` line 46 already reads *"local DB backups — never
-commit"*. `pg_dump` without a schema filter carries `auth.users` alongside gameplay, so a committed
-dump would publish account identifiers, device UUIDs and display names permanently — git history
-keeps them after a delete. The destination is any private store that is not GitHub: cloud drive,
-external disk, encrypted archive. Two copies beat one. **The `db-backups/` ignore rule is
-load-bearing — never remove it**, and never override it with `git add -f`.
-
----
-
-## ✅ Question 1 — RESOLVED 2026-08-11: what "launch-ready" requires
-
-**Launch is a soft launch** — a wider circle, no broadcast. The site is already publicly deployed,
-so launch is an act of promotion, not a change in exposure; that framing is what made the checklist
-finite. The full blocking/accepted split produced five tickets. Three have shipped:
-
-- **`TICKET-06`** 2026-08-12 — the three unlaunched Games are hidden behind a **`hidden` registry
-  state, orthogonal to `wip`**; hidden routes stay live and unlinked. **ADR 0022.**
-- **`TICKET-07`** 2026-08-12 — `/privacy` in Greek, one drawer link, and the Feedback payload cut to
-  two fields (FormSubmit was already an unmentioned third-party processor).
-- **`TICKET-08`** 2026-08-12 — **ADR 0023**: no third-party error SDK. The check is
-  `npx vercel logs --environment production --level error --since 24h`, daily for the first week
-  then weekly, proven against a real induced error. Two of that ticket's own claims failed
-  measurement — the Vercel **MCP connector 403s on every project-scoped call** so the CLI is the
-  only working surface, and **previews are SSO-protected** so the proof had to run read-only
-  against production.
-
-### Accepted as-is — do not re-open without new evidence
-
-- **Terms of service** — not written. No payments, no lockable accounts, no user-to-user messaging.
-  Revisit if money or public user-generated content enters.
-- **E2E coverage** — the gate is `npm run test -- --run` and `npm run test:e2e` both green on the
-  merge commit, not a bigger suite. `ISSUE-03`.
-- **Disaster-recovery backups** — `ISSUE-01`. The dev/prod split is **decided against** (ADR 0024,
-  2026-08-16); migration safety is the local rehearsal, which shipped 2026-08-17 as
-  `npm run db:rehearse` and is now part of runbook step 5. Runbook step 3 **can run** as of
-  2026-08-17 — the archive password is set and one encrypted archive exists. What is still owed is
-  `TICKET-11`'s operator half, already listed above: opening that archive on a different machine,
-  and the upload itself, which nothing enforces.
-- **Content supply for the three hidden Games** — moot while they are hidden. Leksindeseis's static
-  fallback is **one** puzzle rotating over a single-item array; Πόσο κάνει; and Λογοπαίγνιο hold one
-  placeholder each.
-- **API rate limiting** — the accepted risk in `CONTEXT.md` (*Persistence decisions*) stands.
-- **Λογοπαίγνιο's trademark question** — the Game is hidden, so nothing visible needs an answer.
+**The dump never enters a git repository** — settled 2026-08-15. This repo is public,
+`scripts/backup-db.ps1` writes to `db-backups/`, and `.gitignore` line 46 already reads *"local DB
+backups — never commit"*. `pg_dump` without a schema filter carries `auth.users`, so a committed dump
+would publish account identifiers and display names permanently. **That ignore rule is load-bearing —
+never remove it, never `git add -f` around it.** Two copies beat one.
 
 ---
 
@@ -186,35 +115,28 @@ finite. The full blocking/accepted split produced five tickets. Three have shipp
 
 Given everything above, what is the committed order of work to the go/no-go, and the honest calendar
 estimate? Asked by the operator on 2026-07-31: *"set an order for tasks, create tickets ready for
-agent pickup."*
+agent pickup."* **When this closes, the destination is reached** — the rest is execution against a
+known list and the go/no-go becomes a scheduling call.
 
-**When this closes, the destination is reached** — the remaining work is execution against a known
-list and the go/no-go is a scheduling call.
+It has shrunk to a scheduling call with no unknowns left to stress-test. Two inputs are still owed by
+the operator: **the target date shape**, and **whether the merge waits for `TICKET-15`**.
 
 ### Inputs
 
-- The pending inventory at the top of this document — three tickets, one owed item
-- **The calendar estimate is the operator's: roughly 3–4 weeks from 2026-08-15**, putting the
-  go/no-go around **4–11 September 2026**. The date is explicitly **not hard** — it is a shape for
-  planning, not a commitment, and slipping it costs nothing. What the estimate does settle is that
-  no item on this document is allowed to grow into a multi-month project without a new decision
-- `dev` is **1 commit ahead** of `origin/dev`, `main` and `origin/main` (measured 2026-08-14; it was
-  15 on 2026-08-12 and the backlog has since been pushed). **Re-measure before planning the window
-  rather than reading this line** — `git rev-list --count origin/dev..dev`. The merge is still a real
-  build, but it is no longer a large backlog
-- **No ordering constraints survive between the tickets at all**, as of 2026-08-15. The
-  `TICKET-08`-before-`TICKET-07` coupling was withdrawn once the no-SDK ruling made it moot; both
-  shipped. The last one, **platform logo → `TICKET-10`**, dissolved when the logo moved *inside*
-  `TICKET-10`, which then shipped and was closed. **As of 2026-08-16 only one operator act gates
-  anything at all** — `TICKET-11`'s backup setup, which runbook step 3 depends on
-- The UI redesign runs in parallel on operator sessions and is deliberately **not an input** — it
-  cannot block this, and if it turns out to, that is a new decision rather than a known one
+- The table above — two tickets and the runbook. **No ordering constraints survive between the
+  tickets**; the last one dissolved 2026-08-15. Only `TICKET-11`'s operator half gates anything, and
+  what it gates is runbook step 3.
+- **The calendar estimate is the operator's: roughly 3–4 weeks from 2026-08-15**, so a go/no-go around
+  **4–11 September 2026**. Explicitly **not hard** — a shape for planning, and slipping costs nothing.
+  What it does settle is that nothing here may grow into a multi-month project without a new decision.
+- **Re-measure the merge before planning the window** rather than reading a stale count:
+  `git rev-list --count origin/dev..dev`.
 
 ### Output
 
 1. **An ordered list**, each item pointing at the decision that authorised it.
 2. **The `dev → main` merge** placed explicitly, with its play-through.
-3. **What is consciously *not* being done before launch**, written down, so it does not silently
+3. **What is consciously *not* being done before launch**, written down, so it cannot silently
    resurface as a blocker.
 
 ### Then
@@ -223,58 +145,3 @@ Update `goals.md` — the North Star gets a launch phase and "Current Focus" nam
 handoff. **`logopaignio-content-pool.md`, `engagementEpic.md`, `HANDOFF-monetization.md`,
 `offlineFeature-handoff.md` and `game-icon-system.md` all stay** — deferred, parked or out of scope,
 none of them done.
-
----
-
-## Out of scope
-
-- **The UI question** — tweaks vs redesign, and the three deferred UI decisions (full-bleed vs padded
-  headers, real accents for stavrolekso/leksikastirio, tokenising `FeedbackBanner`). Operator-driven.
-- **Λογοπαίγνιο content pool** and **Πόσο κάνει; content** — both Games are hidden.
-- **The engagement epic** and **monetization entirely**.
-
----
-
-## Decisions already made
-
-Launch-relevant only. Everything else this document once carried has landed in an ADR and was
-removed on 2026-08-12 — the achievement-catalog rebuild is **ADR 0013**, the Topothesies answer-set
-work is **ADR 0018's Amendments**, and Offline Mode's park is **ADR 0010** plus its own handoff.
-
-- **2026-08-15 — Sound Cues are post-launch and optional; the toggle is flag-gated instead.**
-  `TICKET-05` no longer blocks a deploy. The agent hides the 🔊 button behind
-  `FEATURE_FLAGS.soundCues`; the MP3s land whenever they land and flip it on. Reversing this means
-  the launch waits on three audio files again.
-- **2026-08-16 — The mark is card 18 and icon 1: three letter tiles fanned out, Ω Λ π.** Chosen by
-  the operator from the round-two candidates page and shipped the same session, with a **12 KB
-  subset of Inter Bold committed** (`src/app/_brand/Inter-Bold-subset.ttf`) once the first render
-  showed the mark coming out regular rather than bold — `ImageResponse` bundles a single-weight
-  face. The **~350 KB font price this document had been quoting was for full Greek coverage** and
-  made a font look unaffordable; the mark needs the Latin alphabet plus six Greek glyphs, which the
-  Google Fonts `text=` parameter cuts to a twenty-eighth of that. A missing glyph in a subset renders
-  as nothing, so a test reads the font's `cmap` and fails rather than shipping a gap.
-- **2026-08-15 — The platform logo is `TICKET-10`'s icon pick, not a project.** Removes the last
-  cross-item dependency on this document. **Discharged 2026-08-16** by the ruling above.
-- **2026-08-15 — The preview play-through leaves this document.** The operator tests every branch on
-  preview by habit; tracking it here recorded a routine rather than a task.
-- **2026-08-15 — The release-day dump never enters a git repository.** The repo is public and
-  `db-backups/` is already ignored; the dump carries `auth.users`. The destination is an encrypted
-  7-Zip archive in a **private Google Drive folder** — `TICKET-11`, which also closes half of
-  `ISSUE-01`. The dump keeps the email addresses rather than stripping the `auth` schema: a
-  public-schema-only dump restores rows whose `auth_user_id` points at accounts that no longer
-  exist, which is not a restore. Encryption protects them, deletion would break them.
-- **2026-08-12 — Error monitoring is Vercel-only, no SDK** (`ADR 0023`). Dissolved the privacy-page
-  coupling rather than reordering around it. Reversing the ruling means revising `/privacy` in the
-  same branch.
-- **2026-08-12 — `hidden` is a second presentation state, not a synonym for `wip`** (`ADR 0022`).
-  `wip` = unfinished; `hidden` = deliberately not shown. Hidden routes stay live.
-- **2026-08-12 — The alert the rate-limiting decision assumed cannot be built.** Supabase tracks no
-  row-count metric on any plan, and Free has no configurable threshold alert at all. Substitution is
-  one SQL read folded into the ADR 0023 habit; the binding constraint is **database size**, because
-  Free goes READ-ONLY above 500 MB with no grace period. Measured: 13 MB of 500, 8 auth MAU of
-  50 000, 22 of 60 connections idle.
-- **2026-08-11 — Question 1 resolved.** Soft launch. Two facts the grill measured rather than
-  assumed: Leksindeseis's "thin" fallback pool is a **single** placeholder puzzle, and the Platform
-  had **no legal surface and no monitoring of any kind**.
-- **2026-08-06 — Monetization is off the launch path, nothing built.** Blocked on human work and
-  gates no go/no-go. No code ever existed.
