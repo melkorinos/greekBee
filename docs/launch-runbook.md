@@ -14,16 +14,18 @@ Delete this file once the launch has happened and the first week's error checks 
 
 ## The run — in order
 
-1. **`TICKET-11`, operator half — first, and not on the day.** Password into a password manager,
-   private Drive folder, fresh archive, upload, **extract it on a different machine**, then register
-   the weekly task. The ticket carries the seven steps and why that order. This gates release-day
-   step 3, and an untested password is the wipe's only undo failing at the moment it is needed.
-2. **`TICKET-15` — the Round-End Result Panel** (ADR 0025), in progress in a separate session. It is
-   the only remaining agent work and the only item that makes the launch *spread*: `TICKET-10`
-   shipped the share card, and nothing on the Platform posts a link for it to render. **It does not
-   gate the date.** If it is not green by the target, launch without it — it costs reach, not
-   stability, and its slice 5 (Λεξόκηπος) is deliberately ordered last so the other five ship whole.
-3. **The `dev → main` merge**, once `TICKET-15` is in or consciously dropped. Gate:
+1. **The offsite backup — DONE 2026-08-20** (`TICKET-11`, closed, file deleted). The password is in
+   a password manager, the Drive folder exists and is private, and `20260820-112045.7z` is uploaded
+   to it. Two things survive into [`ISSUE-01`](../.claude/tracker/issues/ISSUE-01-no-disaster-recovery-backups.md)
+   §1 rather than holding this step open: **the weekly task is still unregistered**
+   (`npm run db:backup:schedule-weekly` — nothing to block it any more, so do it), and the archive
+   has **never been extracted on a different machine**, which is the only test that proves the
+   stored password opens it. Neither gates release-day step 3, which takes a fresh dump anyway.
+2. **The Round-End Result Panel — DONE 2026-08-20** (ADR 0025). Six Games now end with a Result Panel
+   and every share carries a link, which is what `TICKET-10`'s share card was waiting for. One thing
+   is owed and no test can hold it: **open a Game's Result Panel on a real phone and press
+   Κοινοποίηση**, to see the native share sheet rather than a clipboard copy.
+3. **The `dev → main` merge**. Gate:
    `npm run test -- --run`, `npx eslint .`, `npm run build` and `npm run test:e2e` all green on the
    merge commit (`ISSUE-03` — the gate is the existing suite green, not a bigger one), plus the
    operator's preview play-through of `dev`, which is a habit rather than a tracked task (ruling
@@ -109,7 +111,7 @@ copies beat one, so an external disk is worth the trouble.
 
 ## References
 
-- [`TICKET-11`](../.claude/tracker/tickets/TICKET-11-offsite-encrypted-backup-launch.md) · [`TICKET-15`](../.claude/tracker/tickets/TICKET-15-round-end-result-panel-launch.md) — the two open tickets.
+- `.claude/tracker/tickets/` — **no ticket files on disk as of 2026-08-20**, so the folder itself is gone until the next one is written. No agent work is open against the launch; read the folder, never a list here.
 - [`ISSUE-01`](../.claude/tracker/issues/ISSUE-01-no-disaster-recovery-backups.md) · [`ISSUE-03`](../.claude/tracker/issues/ISSUE-03-thin-e2e-coverage.md) · [`ISSUE-05`](../.claude/tracker/issues/ISSUE-05-dead-is-perfect-column-launch.md) — deferred, and step 5's DROP.
 - [`docs/disaster-recovery.md`](disaster-recovery.md) — the backup and restore procedure step 3 depends on.
-- ADRs [0022](adr/0022-hidden-is-not-wip.md) (hidden Games), [0023](adr/0023-error-monitoring-is-vercel-only.md) (error checks), [0024](adr/0024-no-dev-prod-split-migration-safety-is-local.md) (no split), [0025](adr/0025-round-end-result-panel-and-share.md) (`TICKET-15`).
+- ADRs [0022](adr/0022-hidden-is-not-wip.md) (hidden Games), [0023](adr/0023-error-monitoring-is-vercel-only.md) (error checks), [0024](adr/0024-no-dev-prod-split-migration-safety-is-local.md) (no split), [0025](adr/0025-round-end-result-panel-and-share.md) (Round End + share, built 2026-08-20).

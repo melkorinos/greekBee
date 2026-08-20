@@ -13,6 +13,7 @@ import {
 } from "@/games/topothesies/lib/topothesiesReducer";
 
 const MAX_KM = 500;
+const DATE = "2026-08-17";
 
 function mk(partial: Partial<TopothesiesAnswer> & { id: string }): TopothesiesAnswer {
   return {
@@ -60,7 +61,7 @@ describe("buildShareText", () => {
     let s = topothesiesReducer(init(), { type: "GUESS_SHAPE", text: "Μήλος" });
     s = topothesiesReducer(s, { type: "GUESS_SHAPE", text: "Νάξος" });
     s = topothesiesReducer(s, { type: "GUESS_CAPITAL", text: "Χώρα" });
-    const text = buildShareText(s);
+    const text = buildShareText(s, DATE);
     expect(text).not.toContain("naxos");
     expect(text).not.toContain("Νάξος");
     expect(text).not.toContain("Χώρα");
@@ -72,13 +73,13 @@ describe("buildShareText", () => {
     s = topothesiesReducer(s, { type: "GUESS_SHAPE", text: "Νάξος" });
     s = topothesiesReducer(s, { type: "GUESS_CAPITAL", text: "Πλάκα" });
     s = topothesiesReducer(s, { type: "GUESS_CAPITAL", text: "Χώρα" });
-    expect(hasNoAccents(buildShareText(s))).toBe(true);
+    expect(hasNoAccents(buildShareText(s, DATE))).toBe(true);
   });
 
   it("shows one square per shape guess and a green square on the solve", () => {
     let s = topothesiesReducer(init(), { type: "GUESS_SHAPE", text: "Μήλος" });
     s = topothesiesReducer(s, { type: "GUESS_SHAPE", text: "Νάξος" }); // solved 2nd
-    const text = buildShareText(s);
+    const text = buildShareText(s, DATE);
     const squares = (text.match(/🟩|⬛/gu) ?? []).length;
     expect(squares).toBeGreaterThanOrEqual(2); // ≥ the 2 shape guesses
     expect(text).toContain("🟩");
@@ -87,7 +88,7 @@ describe("buildShareText", () => {
   it("marks a failed shape stage with only dark squares (no green) on the shape line", () => {
     let s = init();
     for (let i = 0; i < 4; i++) s = topothesiesReducer(s, { type: "GUESS_SHAPE", text: "Μήλος" });
-    const shapeLine = buildShareText(s).split("\n").find((l) => /⬛|🟩/u.test(l))!;
+    const shapeLine = buildShareText(s, DATE).split("\n").find((l) => /⬛|🟩/u.test(l))!;
     expect(shapeLine).toContain("⬛");
     expect(shapeLine).not.toContain("🟩");
   });
@@ -96,7 +97,7 @@ describe("buildShareText", () => {
     let s = topothesiesReducer(init(), { type: "GUESS_SHAPE", text: "Νάξος" }); // solve shape
     s = topothesiesReducer(s, { type: "GUESS_CAPITAL", text: "Πλάκα" }); // wrong-but-known capital
     s = topothesiesReducer(s, { type: "GUESS_CAPITAL", text: "Χώρα" }); // correct capital
-    const capitalLine = buildShareText(s).split("\n").find((l) => l.startsWith("🏛️"))!;
+    const capitalLine = buildShareText(s, DATE).split("\n").find((l) => l.startsWith("🏛️"))!;
     expect(capitalLine).toMatch(/⬛/u); // has the wrong-guess square
     expect(capitalLine).not.toMatch(/[↑↗→↘↓↙←↖]/u); // but no arrow
   });
@@ -104,6 +105,36 @@ describe("buildShareText", () => {
   it("includes the numeric score", () => {
     let s = topothesiesReducer(init(), { type: "GUESS_SHAPE", text: "Νάξος" });
     s = topothesiesReducer(s, { type: "GUESS_CAPITAL", text: "Χώρα" });
-    expect(buildShareText(s)).toContain(String(computeScore(s)));
+    expect(buildShareText(s, DATE)).toContain(String(computeScore(s)));
+  });
+});
+
+// ── The shared four-line spine (ADR 0025) ─────────────────────────────────────
+// Topothesies was the only Game already sharing anything, and it keeps both its
+// rows and its direction arrows — the one deliberate exception to one row per
+// Game. What it GAINS is the identity line and the link.
+
+describe("buildShareText — the shared spine", () => {
+
+  it("opens with the Game's name and the date, and closes with the bare link", () => {
+    let s = topothesiesReducer(init(), { type: "GUESS_SHAPE", text: "Νάξος" });
+    s = topothesiesReducer(s, { type: "GUESS_CAPITAL", text: "Χώρα" });
+    const lines = buildShareText(s, DATE).split("\n");
+
+    expect(lines[0]).toBe("Topothesies 17/08");
+    expect(lines[lines.length - 1]).toMatch(/^https?:\/\/.+\/topothesies$/);
+    expect(lines[lines.length - 1]).not.toContain("?puzzle=");
+  });
+
+  it("keeps both rows and their direction arrows", () => {
+    let s = topothesiesReducer(init(), { type: "GUESS_SHAPE", text: "Μήλος" });
+    s = topothesiesReducer(s, { type: "GUESS_SHAPE", text: "Νάξος" });
+    s = topothesiesReducer(s, { type: "GUESS_CAPITAL", text: "Χώρα" });
+    const lines = buildShareText(s, DATE).split("\n");
+
+    expect(lines).toHaveLength(5);
+    expect(lines[1]).toMatch(/^🗺️/u);
+    expect(lines[1]).toMatch(/[↑↗→↘↓↙←↖]/u);
+    expect(lines[2]).toMatch(/^🏛️/u);
   });
 });

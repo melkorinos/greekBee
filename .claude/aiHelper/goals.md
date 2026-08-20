@@ -55,14 +55,15 @@ question closed. The order of work, the release-day steps and the explicit not-d
 is the operator's and is not hard.
 
 1. **Both launch questions are answered.** Question 1 (2026-08-11): launch is a **soft launch**, which
-   is what made the checklist finite. Question 2 (2026-08-20): the run is `TICKET-11`'s operator half →
-   `TICKET-15` → the `dev → main` merge with its play-through → release day → a week of daily Vercel
-   error checks (ADR 0023). `.claude/handoffs/launch-readiness.md` is deleted; the runbook replaced it.
-2. **The launch tickets.** Two are left and **what is open is read from `.claude/tracker/`, never from
-   here** — this file kept a per-ticket status table until it went stale twice. The shape: five tickets
-   came out of question 1 and the shipped ones are deleted per the standing rule; **no ordering
-   constraints remain between any of them.** `TICKET-15` (Round-End Result Panel, ADR 0025) is the only
-   agent work left and does **not** gate the date — it costs reach, not stability.
+   is what made the checklist finite. Question 2 (2026-08-20): the run is the `dev → main` merge with
+   its play-through → release day → a week of daily Vercel error checks (ADR 0023). Both tickets that
+   came before it closed on 2026-08-20 — the Round-End Result Panel, and `TICKET-11`'s offsite backup
+   (what survives of it is two unscheduled items in `ISSUE-01` §1, neither gating the date). `.claude/handoffs/launch-readiness.md` is deleted; the runbook replaced it.
+2. **The launch tickets.** **What is open is read from `.claude/tracker/`, never from here** — this
+   file kept a per-ticket status table until it went stale twice. The shape: five tickets came out of
+   question 1 and the shipped ones are deleted per the standing rule; **no ordering constraints remain
+   between any of them.** The last piece of agent work, the Round-End Result Panel, shipped
+   2026-08-20 (ADR 0025); what is left of it is an operator check of the native share sheet on a phone.
 3. **Sound Cues are DONE (2026-08-17).** `TICKET-04` built the primitive (ADR 0021), `TICKET-05` gated it and then landed the audio: two committed MP3s plus a synthesized `wordFound`, provenance recorded, and `FEATURE_FLAGS.soundCues` flipped **on**. Both ticket files are deleted. What survives is an operator ear check on a phone — and, because the flag is on, the Shell header is four buttons wide again at 320 px with nothing guarding it (`reflections.md`).
 4. **Operator-driven work that is deliberately outside the launch sequence** — the **UI redesign**, run in separate sessions. The **platform logo** stopped being a separate thread in s154: the icon picked from the candidates page *is* the mark, so it lived inside `TICKET-10` — which shipped it and was closed 2026-08-17, leaving nothing to track. Πόσο κάνει; and Λογοπαίγνιο content are **no longer pending** — both Games are `hidden` (ADR 0022), so their content is out of scope until unhiding is considered.
 5. **Game icons (`.claude/handoffs/game-icon-system.md`, 2026-08-10)** — replace the eight live games' emoji with drawn, **coloured** icons, the way `TICKET-03` did for badges. Nothing designed yet; the handoff carries the scope, the code findings and the open questions for a grill. Settled already: scope is the eight `wip:false` rows, the six-petal flower stays with the Τζιμάνι *badge* so Leksokipos needs a different image, and **colour is unconstrained** — which means it does **not** settle item 2's placeholder accents for stavrolekso/leksikastirio, and the three neighbouring blues (`blue-700`/`sky-600`/`indigo-600`) become the icons' own problem to separate.

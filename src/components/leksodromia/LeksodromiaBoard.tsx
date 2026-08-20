@@ -33,6 +33,8 @@ import { todayISO } from "@/lib/puzzleDate";
 
 import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { RoundRecap } from "./RoundRecap";
+import { ShareResultPanel } from "@/components/shared/ShareResultPanel";
+import { buildShareText } from "@/games/leksodromia/lib/shareText";
 
 const GREEK_LETTER = /^[α-ωά-ώςΑ-ΩΆ-Ώ]$/;
 
@@ -162,10 +164,18 @@ export function LeksodromiaBoard({
   if (state.status === "finished") {
     return (
       <div className="flex flex-col items-center gap-4 py-4 w-full">
-        <RoundRecap results={state.results} totalScore={totalScore} />
-        <button onClick={onOpenLeaderboard} className="text-sm text-muted underline hover:text-foreground transition-colors">
-          🏆 Δες τον πίνακα σκορ
-        </button>
+        {/* Round End: all ten words resolved. The recap becomes the shared
+            Result Panel's children (ADR 0025) — it keeps the per-word detail and
+            gives up its score heading and its own leaderboard link, both of which
+            the panel already owns. */}
+        <ShareResultPanel
+          testId="leksodromia-result"
+          score={totalScore}
+          shareText={buildShareText(state, today)}
+          onOpenLeaderboard={onOpenLeaderboard}
+        >
+          <RoundRecap results={state.results} />
+        </ShareResultPanel>
         <GameLeaderboardModal
           gameId="leksodromia"
           isOpen={isLeaderboardOpen}

@@ -39,10 +39,11 @@ Counted together, because each one alone looks acceptable:
   has still never been opened on another machine and whose password is `ADMIN_SECRET` reused**.
   Setup order is in the memory.md Backup-order row; **current measured state is `ISSUE-01` §1 —
   read it, never a copy here.**
-- **Three operator eye-checks are owed and none has happened:** Trophy Case + leaderboard chip in
-  both themes (s144), Shell header at four buttons (jsdom has no layout — no test can cover it), and
-  letter-box grid legibility (s162; `letterBoxBorder.test.ts` says so in its own header). Watch
-  whether "flagged it in the reply" is becoming this repo's substitute for a gate.
+- **Four operator checks on a real device are owed and none has happened:** Trophy Case + leaderboard
+  chip in both themes (s144), Shell header at four buttons (jsdom has no layout), letter-box grid
+  legibility (s162), and **the native share sheet** (s169 — a mock of `navigator.share` is a claim
+  about someone else's contract, so pressing Κοινοποίηση on a phone is the only proof). Watch whether
+  "flagged it in the reply" is becoming this repo's substitute for a gate.
 - **The 180-day horizon test** in `dailyPuzzleSelection.test.ts` is the only thing between Λεξόκηπος
   and a silent year of replayed boards past the calendar's end. Corpus runs to 2028-03-26, warning
   fires ~Sept 2027, and any prune moves the warning closer without moving the date anyone has in mind.
@@ -104,7 +105,6 @@ before "just add a list", ask whether a re-sync owns that directory.
 - **Zero rows is the reason to look, not reassurance (s134).** `consumeApprovedPuzzle`'s two bugs were
   invisible because every queue held zero approved rows. Stavrolekso's `pending` row is one approval
   away, and the admin approves blind — a wrong schedule is fixable only by SQL.
-- **Sound Cue files: record each file's own licence**, never the site's (Freesound mixes all three).
 - **ADR 0010's premise is dead and Offline Mode is PARKED.** `e2e/offlineMode.spec.ts` is
   skipped-and-failing on purpose as the acceptance test. Watch **dormant code rotting** — nothing
   exercises the offline branches now. Don't patch around it; see the memory.md row.

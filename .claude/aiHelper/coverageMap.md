@@ -181,3 +181,20 @@
 | `logopaignio/logopaignioReducer.test.ts` | State machine — wrong guess stays guessing, accepted-spelling solve→finished, blank/whitespace no-op, MAX_GUESSES exhaustion→failed, finished inert, `GIVE_UP` forces failed, `RESTORE_STATE` replay (incl. given-up round) |
 | `logopaignio/blur.test.ts` | `blurRadiusForReveal` — first (hardest) radius pre-guess, one ladder step per wrong guess, monotone non-increasing, clamps past-end/negative, 0 once revealed (gameRules `BLUR_STEP_RADII_PX`) |
 | `logopaignio/board.test.tsx` | `LogopaignioBoard` — framed mark + sector render, blur steps down after a wrong guess, wrong-guess history row (no finish), blank/whitespace no-burn, play-through to scored result with revealed brand (Latin accept spelling), give-up reveals brand + 0 πόντοι |
+
+## Round End & the shared share text (ADR 0025, s168)
+
+| File | Covers |
+|------|--------|
+| `shared/shareText.test.ts` | `composeShareText` — the four-line spine: registry `title` + `DD/MM` identity line, the Game's rows in order (Topothesies' two survive), `Σκορ: N`, `PLATFORM_ORIGIN` + `href`. Pins the two rulings that cost a decision each: **no `?puzzle=` date in the link** and **the Platform's name never appears** |
+| `shared/shareResultPanel.test.tsx` | `ShareResultPanel` — clipboard fallback when `navigator.share` is absent, native sheet used (and no copy) when present, **`AbortError` = nothing happened** (no error state, no unasked-for copy), any other rejection falls through to the clipboard, leaderboard link only when the Game passes `onOpenLeaderboard`. **The native sheet itself is NOT covered and cannot be** — browser behaviour; one operator check on a phone is owed |
+| `leksiarxeio/shareText.test.ts` | `buildShareText` + `scoreLeksiarxeioDay` — five cells (one per Length, 🟩 solved / ⬛ not), no `n/6` fraction, day score = sum of the five, a lost Length scores 0 and still shares, spoiler-free (the rounds carry every guess, the winning one being the answer) |
+| `vrestifrasi/shareText.test.ts` | `buildShareText` — one cell per guess made, 🟩 on the solving one, **not a letter grid** (three guesses over a 17-letter phrase stay three cells), lost round all-dark, score by guesses used, spoiler-free (phrase + words in, nothing out) |
+| `leksodromia/shareText.test.ts` | `buildShareText` — ten cells ✅ solved / ⏭️ skipped in resolution order, score = sum of the round's points, spoiler-free against all ten answers |
+| `leksoplegma/shareText.test.ts` | `buildShareText` — one 🟩 per Required Word + ` +N` extras (suffix dropped at zero), **no `n/n` fraction and no web emoji**, score includes hint costs, spoiler-free against required *and* extra words |
+| `leksokipos/shareText.test.ts` | `buildShareText` — Rank name with the Game's mark, **exactly one number in the body** (the score; no word or pangram count), shares whatever score it is handed so a re-share is higher, link is the bare route never a Custom Puzzle URL |
+| `leksiarxeio/roundEnd.test.tsx` | The trigger: no panel while a Length is unresolved, panel once all five are, **and on a lost Length too** — resolved is not won |
+| `vrestifrasi/roundEnd.test.tsx` | Panel on won *and* lost, none mid-round, and the phrase revealed on screen while staying out of the shared text |
+| `leksokipos/roundEnd.test.tsx` | `GameBoard` reports Round End upward — nothing below the top Rank, `{rank,score,date}` at it, **score keeps moving as play continues**, and never on a Custom Puzzle |
+| `leksokipos/resultPanelPop.test.tsx` | `LeksokiposLayout` — the pop fires once, is dismissible, does **not** re-pop as the live score moves, the header `ShareButton` reopens it carrying the newer score, and with no Round End that same button still copies the board URL |
+| `leksodromia/board.test.tsx` + `leksoplegma/board.test.tsx` (Round End sections) | The recap becomes the panel's children and the score is printed **once** — the recaps' own score headings are gone |

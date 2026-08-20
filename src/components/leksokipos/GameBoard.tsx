@@ -19,7 +19,7 @@ import { GiveUpModal } from "./GiveUpModal";
 import { GodModeOverlay } from "./GodModeOverlay";
 import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { MissedWordsList } from "./MissedWordsList";
-import type { LeksokiposPuzzle } from "@/games/leksokipos/types";
+import type { LeksokiposPuzzle, RankName } from "@/games/leksokipos/types";
 import { ScoreBar } from "./ScoreBar";
 import { NominationModal } from "@/components/shared/NominationModal";
 import { WordInput } from "./WordInput";
@@ -41,12 +41,26 @@ import { useSoundCue } from "@/hooks/useSoundCue";
 import { selectSoundCue } from "@/games/leksokipos/lib/soundCue";
 import { computeEndgameInfo, getRemainingWords, isDailyPuzzle, isPangram, TOP_RANK } from "@/games/leksokipos/lib";
 
+/** What the header and the Result Panel need to know about Round End. */
+export interface LeksokiposResult {
+  rank:  RankName;
+  /** LIVE, not a snapshot — play continues past Round End (ADR 0025). */
+  score: number;
+  date:  string;
+}
+
 interface GameBoardProps {
   puzzle: LeksokiposPuzzle;
   variant?: "pie" | "flower";
+  /**
+   * Called with the current Round End result, or null while there is none.
+   * The Result Panel lives in the layout because the header ShareButton opens it,
+   * and the board is the only place that knows the Rank and the live score.
+   */
+  onResultChange?: (result: LeksokiposResult | null) => void;
 }
 
-export function GameBoard({ puzzle, variant }: GameBoardProps) {
+export function GameBoard({ puzzle, variant, onResultChange }: GameBoardProps) {
   const {
     puzzle: activePuzzle,
     currentInput,
@@ -94,6 +108,12 @@ export function GameBoard({ puzzle, variant }: GameBoardProps) {
     () => foundWords.filter((w) => isPangram(w, activePuzzle)),
     [foundWords, activePuzzle],
   );
+
+  // Report Round End upward on every score change, so a re-share an hour later
+  // carries the higher number rather than the one frozen when the pop appeared.
+  useEffect(() => {
+    onResultChange?.(isEndgame ? { rank: currentRank, score, date: activePuzzle.date } : null);
+  }, [onResultChange, isEndgame, currentRank, score, activePuzzle.date]);
 
   const endgameInfo = useMemo(
     () => isEndgame ? computeEndgameInfo(activePuzzle, remainingWords) : undefined,

@@ -258,3 +258,53 @@ describe("LeksodromiaPageClient", () => {
     expect(screen.getAllByText(/χρόνο/i).length).toBeGreaterThan(0);
   });
 });
+
+// ── Round End / Result Panel (ADR 0025) ───────────────────────────────────────
+// The recap does not become a share surface of its own: it becomes the shared
+// Result Panel's children and gives up its own score heading, so the score is
+// printed once per screen.
+
+describe("LeksodromiaBoard — Round End", () => {
+  function restoreFinishedRound() {
+    localStorage.setItem("wordgames:state", JSON.stringify({
+      leksodromia: {
+        [PUZZLE.date]: {
+          puzzleId: PUZZLE.date,
+          wordIndex: 10,
+          currentElapsedMs: 0,
+          currentHintsUsed: 0,
+          results: WORDS.map((word, i) => ({
+            word,
+            status:    i === 3 ? "skipped" : "solved",
+            elapsedMs: 1_000,
+            hintsUsed: 0,
+            points:    i === 3 ? 0 : 50,
+          })),
+        },
+      },
+    }));
+  }
+
+  it("wraps the recap in the shared Result Panel", () => {
+    restoreFinishedRound();
+    renderBoard();
+
+    const panel = screen.getByTestId("leksodromia-result");
+    expect(panel).toBeDefined();
+    expect(panel).toContainElement(screen.getByTestId("round-recap"));
+    expect(screen.getByTestId("btn-share-result")).toBeDefined();
+  });
+
+  it("prints the score once — the recap dropped its own heading", () => {
+    restoreFinishedRound();
+    renderBoard();
+
+    const panel = screen.getByTestId("leksodromia-result");
+    expect(panel.textContent?.match(/πόντοι/g) ?? []).toHaveLength(1);
+  });
+
+  it("shows no Result Panel mid-round", () => {
+    renderBoard();
+    expect(screen.queryByTestId("leksodromia-result")).toBeNull();
+  });
+});

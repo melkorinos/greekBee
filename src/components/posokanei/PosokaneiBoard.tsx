@@ -113,7 +113,7 @@ export function PosokaneiBoard({ target, today }: PosokaneiBoardProps) {
         <PosokaneiResult
           target={target}
           score={score}
-          shareText={buildShareText(state)}
+          shareText={buildShareText(state, today)}
         />
       )}
 

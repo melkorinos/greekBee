@@ -283,7 +283,7 @@ export function TopothesiesBoard({
         <TopothesiesResult
           target={target}
           score={score}
-          shareText={buildShareText(state)}
+          shareText={buildShareText(state, today)}
           onOpenLeaderboard={onOpenLeaderboard}
         />
       )}
