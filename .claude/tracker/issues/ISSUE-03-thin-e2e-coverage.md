@@ -47,6 +47,13 @@ into tickets. Those are no longer deferred and are not described here any more:
 
 TICKET-17 (Vres Tin Frasi), TICKET-19 (Leksodromia), TICKET-20 (Leksoplegma).
 
+**TICKET-17 was rewritten on 2026-08-20** against ADR 0027, which revokes Vres Tin Frasi's `scores`
+and `leaderboard` capabilities. Its old shape turned on avoiding a write to production `game_scores`
+by stopping after one guess; with no write to avoid, the spec now plays a full round and asserts the
+Result Panel — so it also becomes this file's first piece of end-of-round browser coverage. It is
+blocked by TICKET-22 until that surface actually changes. TICKET-19 and TICKET-20 are unaffected:
+Leksodromia and Leksoplegma keep both capabilities, and their stop-after-one-word constraint holds.
+
 Topothesies and Leksikastirio were ticketed the same day and withdrawn within the hour
 as low priority — TICKET-18 and TICKET-21 are retired in the `SPENT` ledger and must
 never be reused. Their work is back in the deferred list below.
