@@ -36,37 +36,39 @@ rather than staging and continuing.
 ## Session 169 — 2026-08-20: every Game learns to end, and the ending carries a link
 
 `TICKET-15` shipped and deleted, `/tdd`, five slices. Six Games reach a Result Panel; every share is
-four lines and the fourth is a link, which is the half of `TICKET-10`'s bet that had never been
-placed. **Two seams and deliberately no third:** `src/lib/shareText.ts` owns the identity line, the
-score line and the link for every Game — hidden ones included, which is how Πόσο κάνει; and
-Λογοπαίγνιο inherited the spine without a line of their own being authored — and each
+four lines and the fourth is a link — the half of `TICKET-10`'s bet never placed. **Two seams and
+deliberately no third:** `src/lib/shareText.ts` owns the identity line, the score line and the link
+for every Game — hidden ones included, which is how Πόσο κάνει; and Λογοπαίγνιο inherited the spine
+with no line of their own authored — and each
 `games/*/lib/shareText.ts` returns only its own row. `ShareResultPanel` is the one surface, now
 sharing through `navigator.share` with the clipboard as fallback.
 
 **`AbortError` is the whole `navigator.share` design.** A cancelled sheet rejects, so cancel is a
-silent no-op while any other rejection falls through to the clipboard — copying the summary a player
-just declined to send would be worse than doing nothing. The native path is **not covered and cannot
-be**; a phone check is owed, and it is written into ADR 0025, the runbook and the SPENT ledger rather
-than left in a reply.
+silent no-op while any other rejection falls through to the clipboard — copying a summary the player
+just declined to send is worse than doing nothing. The native path is **not covered and cannot be**;
+the phone check is written into ADR 0025, the runbook and the SPENT ledger rather than left in a reply.
 
 **Λεξιαρχείο's Round End had no owner.** The board tracked *which* Lengths were done and never their
-rounds, and a restored Session reaches the panel through persistence, never through `onGameEnd` — so
-each LengthPanel now reports its own round upward on change. The panels are all mounted already,
-which is the only reason that works.
+rounds, and a restored Session reaches the panel through persistence, never `onGameEnd` — so each
+LengthPanel now reports its own round upward on change, which works only because all five stay mounted.
 
-**Two auto-opening leaderboards were removed, not moved.** Λεξιαρχείο and Βρες τη Φράση each opened
-the leaderboard modal 1.5 s after the round ended — directly over the surface this ticket adds. ADR
-0025 had rejected exactly that shape (dismiss a box to see your own recap underneath) without knowing
-two Games already did it.
+**Five auto-opening leaderboards, and the ticket knew about none of them.** ADR 0025 rejected the
+auto-opening modal (dismiss a box to see your own recap underneath) not knowing the Platform already
+did it everywhere. Λεξιαρχείο and Βρες τη Φράση had their own `setTimeout`, removed with the panel.
+**The operator played it and found the other three** — Τοποθεσίες, Λεξοδρομία and Λεξόπλεγμα open it
+from `useLiveScorePost`'s `onFinish`, a seam the ticket never named, so half the Platform still slid
+a modal over the new surface. `onFinish`, its 1.5 s delay and its once-only latch are **deleted from
+the hook**, not unwired at three call sites: it posts scores and does nothing
+else, and reinstating it is a type error. Τοποθεσίες also gained a restored-round test — the panel
+must survive a reload for its own day; past days restore their own Session by date.
 
 **Λεξόκηπος's panel lives in the layout, not the board.** Its header `ShareButton` is the way back
-after a dismissal, and only the layout sees both that button and the board's live score; the pop
-fires once per mount, like the ScoreBar endgame cue beside it, so a reload at top Rank pops again —
-accepted, not missed. Each new builder's spoiler test was **proven non-vacuous by making the builder
-leak**, one at a time.
+after a dismissal and only the layout sees both that button and the board's live score; the pop fires
+once per mount, like the ScoreBar endgame cue beside it, so a reload at top Rank pops again —
+accepted. Each builder's spoiler test was **proven non-vacuous by making the builder leak**.
 
-213 files / 2710 tests (+59), eslint 0, build 0, e2e 13 passed / 2 skipped. Ran concurrently with the
-session that wrote 168 above; `HEAD` and four shared docs moved underneath.
+213 files / 2709 tests (+58), eslint 0, build 0, e2e 13 passed / 2 skipped. Ran concurrently with the
+session logged above; `HEAD` and four shared docs moved underneath.
 
 ## Older Sessions
 
