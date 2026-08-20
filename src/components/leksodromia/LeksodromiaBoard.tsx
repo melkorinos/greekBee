@@ -76,14 +76,14 @@ export function LeksodromiaBoard({
   // them, so no wordIndex effect is needed.
   const [skipArmed, setSkipArmed] = useState(false);
 
-  // Continuous posting + finish-once leaderboard open live in the shared policy
-  // hook; the spine's hasLiveActed keeps restored rounds from posting.
+  // Continuous posting lives in the shared policy hook; the spine's hasLiveActed
+  // keeps restored rounds from posting. It opens NOTHING on finish — Round End
+  // renders the Result Panel below, and a modal over it is what ADR 0025 rejected.
   useLiveScorePost({
     score:        getTotalScore(state),
     isFinished:   state.status === "finished",
     hasLiveActed,
     post:         postFinalScore,
-    onFinish:     onOpenLeaderboard,
   });
 
   // ── Input handlers ──────────────────────────────────────────────────────────

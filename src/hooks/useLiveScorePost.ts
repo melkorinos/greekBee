@@ -1,8 +1,8 @@
 "use client";
 
 // useLiveScorePost — the platform's continuous-score-posting policy for the
-// round-based games (Leksodromia, Leksoplegma). It owns the effect that both
-// Boards used to copy verbatim; the Board keeps zero posting logic.
+// round-based games (Topothesies, Leksodromia, Leksoplegma). It owns the effect
+// that those Boards used to copy verbatim; the Board keeps zero posting logic.
 //
 // Policy (single source of truth):
 //   - post the current score on every increase — useScoreSubmission's
@@ -10,27 +10,26 @@
 //     leaderboard without ever double-posting;
 //   - never post from a restored round the player has not touched this session
 //     (`hasLiveActed` — the round spine flips it on the first live dispatch and
-//     never on its own RESTORE_STATE);
-//   - once, when the round finishes, open the leaderboard after a short delay.
+//     never on its own RESTORE_STATE).
 //
-// The Board hands over the live score, the finished flag, the spine's
-// `hasLiveActed` getter, the post fn, and the open-leaderboard fn.
+// It used to do a third thing: open the leaderboard 1.5 s after the round
+// finished. That was removed on 2026-08-20, because Round End now renders the
+// Result Panel in that spot and a modal sliding over the player's own summary is
+// the shape ADR 0025 rejected. Every Game ends the same way now — the panel,
+// with the leaderboard one tap away inside it — so the delay, the once-only
+// latch and the `onFinish` callback are all gone rather than merely unused.
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 
 interface UseLiveScorePostOptions {
   /** Current live round score. */
   score:        number;
-  /** True once the round has finished. */
+  /** True once the round has finished. Kept for the posting effect's deps. */
   isFinished:   boolean;
   /** Reads whether the player has made a live (non-restored) action this session. */
   hasLiveActed: () => boolean;
   /** Posts the score (dedups strictly-increasing internally). */
   post:         (score: number) => void;
-  /** Opens the leaderboard — fired once, `delayMs` after the round finishes. */
-  onFinish:     () => void;
-  /** Delay before the leaderboard opens on finish. Default 1500 ms. */
-  delayMs?:     number;
 }
 
 export function useLiveScorePost({
@@ -38,16 +37,9 @@ export function useLiveScorePost({
   isFinished,
   hasLiveActed,
   post,
-  onFinish,
-  delayMs = 1500,
 }: UseLiveScorePostOptions): void {
-  const finishedHandledRef = useRef(false);
   useEffect(() => {
     if (!hasLiveActed()) return; // a restored, untouched round never posts
     post(score); // dedup: only strictly-increasing scores actually go out
-    if (!isFinished || finishedHandledRef.current) return;
-    finishedHandledRef.current = true;
-    const t = setTimeout(onFinish, delayMs);
-    return () => clearTimeout(t);
-  }, [score, isFinished, hasLiveActed, post, onFinish, delayMs]);
+  }, [score, isFinished, hasLiveActed, post]);
 }
