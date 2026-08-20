@@ -149,7 +149,7 @@ was the next file anyone would open, and shipped on 2026-08-17 without answering
 rejected 2026-07-15) ends in a final sigma, so `normalizeLetters` turns a re-proposal into `ιουνιοσ`
 and its prior-rejection warning can never fire. It is the only such row in 191, and `isBlockedWord`
 does not cover it because that only runs on `add`. The `UPDATE` now rides **runbook step 5** in
-`launch-readiness.md` alongside the DROP and the index — one hand-run migration instead of three
+`docs/launch-runbook.md` alongside the DROP and the index — one hand-run migration instead of three
 separate visits to the dashboard. Do not also do it by hand; the statement is written out there.
 
 ---

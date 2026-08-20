@@ -99,7 +99,7 @@ inside the UI redesign, and `memory.md`'s Theming row says the same.
 
 **Colour being unconstrained (settled item 5) resolves this by cutting it loose, not by answering it.** An
 accent-derived icon set would have picked those two accents as a side effect; a free palette does not, so
-they stay open and go back to open question 2 of `launch-readiness.md`. **Two consequences to carry into the
+they stay open and go back to open question 2 of `docs/launch-runbook.md`. **Two consequences to carry into the
 grill:** the three-blues problem is now the *icons'* problem to solve on their own, since it can no longer be
 fixed by retuning the accents; and the ticket has to say out loud that the placeholders remain unresolved, or
 a future session will assume this work settled them.
@@ -135,7 +135,7 @@ settle:
   both ways rather than reasoning about.
 - **Does this leave the two placeholder accents unsettled?** `sky-600` and `indigo-600` were going to be
   decided by an accent-derived icon set. With colour unconstrained they are **not** decided, and go back to
-  open question 2 of `launch-readiness.md`. Say so explicitly in the ticket, or they get lost.
+  open question 2 of `docs/launch-runbook.md`. Say so explicitly in the ticket, or they get lost.
 
 **And bring the Leksiarxeio case here, because it constrains freedom in the other direction.** Its guess
 tiles are already coloured by `--correct` / `--present` / `--absent`, solid fills *identical in light and
@@ -245,4 +245,4 @@ Numbers are never reused. Concretely:
 - **Must not change a game's identity, route, or registry id.** Renames are UI strings only, forever.
 - **Must not quietly repaint a game's pages.** Deciding an icon colour that disagrees with `--game-accent`
   is allowed; changing `--game-accent` itself is a redesign decision that belongs to open question 2 of
-  `launch-readiness.md`, and if this grill wants to make it, it should say so out loud.
+  `docs/launch-runbook.md`, and if this grill wants to make it, it should say so out loud.

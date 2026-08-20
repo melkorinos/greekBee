@@ -1,7 +1,7 @@
 # [LAUNCH] Get the release-day dump off the machine — encrypted, into Google Drive
 
 **Status:** ready
-**Spec:** [.claude/handoffs/launch-readiness.md](../../handoffs/launch-readiness.md) — the release-day
+**Spec:** [docs/launch-runbook.md](../../../docs/launch-runbook.md) — the release-day
 runbook, step 3 · [docs/disaster-recovery.md](../../../docs/disaster-recovery.md) ·
 [ISSUE-01](../issues/ISSUE-01-no-disaster-recovery-backups.md)
 
@@ -65,7 +65,7 @@ order. eslint and build clean; no test — see the last done-when.
 - [x] **Document the restore** in `docs/disaster-recovery.md`: how to extract the archive, and the
       order the three files go back in (`roles.sql`, `schema.sql`, `data.sql`). A backup nobody has
       read the restore procedure for is a guess.
-- [x] **Update the runbook** step 3 in `launch-readiness.md` to name the archive and the upload as
+- [x] **Update the runbook** step 3 in `docs/launch-runbook.md` to name the archive and the upload as
       part of the step rather than as an implied "move it off the machine".
 
 ## Not in scope — deliberately

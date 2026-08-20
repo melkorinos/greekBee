@@ -2,7 +2,7 @@
 
 **Deferred:** 2026-08-15
 **Scheduled:** release day — **step 5 of the runbook** in
-[`.claude/handoffs/launch-readiness.md`](../../handoffs/launch-readiness.md), between
+[`docs/launch-runbook.md`](../../../docs/launch-runbook.md), between
 `launch-reset.sql` and the announce. That step carries the exact migration body, the verify query
 and the failure rule; this file carries the reasoning. Do not duplicate one into the other.
 **Revisit when:** the runbook step executes, or launch slips far enough that the schedule needs
@@ -71,7 +71,7 @@ entries already record the retired-versus-current fork, so the glossary needs no
 
 - ADR 0013 — retired the perfect-round concept in favour of the `tzimani` milestone lane; **amend it when the drop lands**.
 - ADR 0017 — generated Supabase types are compiler-enforced; regenerate them with the migration.
-- [`.claude/handoffs/launch-readiness.md`](../../handoffs/launch-readiness.md) — runbook step 5, which owns the *when* and the exact SQL.
+- [`docs/launch-runbook.md`](../../../docs/launch-runbook.md) — runbook step 5, which owns the *when* and the exact SQL.
 - ISSUE-01 — the missing backups this used to be gated on. (The dev/prod split is no longer there: decided against in ADR 0024, 2026-08-16.)
 - [`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup-launch.md) — the encrypted dump. Still owed before runbook step 3, but no longer a gate on this.
 - [`ISSUE-01`](ISSUE-01-no-disaster-recovery-backups.md) §4 — the other half of the original ISSUE-05, decided separately.

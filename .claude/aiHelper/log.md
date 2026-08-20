@@ -5,6 +5,31 @@
 
 ---
 
+## Session 168 — 2026-08-20: the launch question closes and its handoff dies
+
+Docs only. **Question 2 answered** — the run is `TICKET-11`'s operator half, then `TICKET-15`, then
+the `dev → main` merge with its play-through, then release day, then a week of daily Vercel error
+checks; target **on or about 27 August 2026**, the operator's date and explicitly not hard.
+`launch-readiness.md` is deleted and `docs/launch-runbook.md` replaces it — a handoff whose last
+question is answered is not a document, and eleven files pointed at it.
+
+**The handoff was 281 lines because resolved work had been rewritten in place instead of deleted.**
+The Question 1 section, the decisions ledger and the tracked-elsewhere prose were history, and
+`log.md` and the ADRs own history. Cut to 147, then to 110 as a runbook. The operator saw it first:
+*"we should have knocked out most items from it right?"* — the file said everything was decided and
+still read as if nothing was.
+
+**`TICKET-11`'s operator half was four unordered bullets for work whose order is the whole point.**
+Now seven steps: password into a password manager **first**, scheduled task **last**, because
+registering the task before the password exists creates a job that throws every Sunday while looking
+like coverage. Marked pre-launch — the runbook's step 3 uploads an archive, it does not set one up,
+and an untested password discovered on the day is the only undo failing when it is needed.
+
+**Runbook step 5 absorbed a third statement.** The `is_perfect` DROP and the nominations index were
+already there; the one non-normalised nominations row was an open `ISSUE-01` decision reading
+"step 5, or the dashboard at any time" — which is not a schedule. One hand-run migration, three
+statements, one rehearsal. Offline Mode left the launch documents entirely on the operator's ruling.
+
 ## Session 167 — 2026-08-18: Λεξόκηπος trades three words for four marks
 
 `TICKET-16` shipped and deleted. The action row is four icon-only squircles — Διαγραφή, Καθαρισμός,
@@ -42,39 +67,11 @@ pointer, two comments still calling `public/sounds/` empty), **all rewritten, no
 
 202 files / 2651 tests (no new test file — both suites extended per the coverage map), eslint 0, build 0, e2e 13 passed / 2 skipped.
 
-## Session 166 — 2026-08-17: a migration meets real rows before production does
-
-`TICKET-13` built and deleted — `npm run db:rehearse`, the loop ADR 0024 chose over a second Supabase
-project. **The blocker went first:** the operator supplied the archive password, so `db:backup` ran for
-the first time and `db-backups/20260817-123332.7z` exists. Everything else was unblocked by that one
-line in `.env.local`, which had been the stated blocker across three sessions.
-
-**The ticket's own acceptance test could not have failed.** Its done-when named `player_profiles
-.display_name SET NOT NULL` against "a dump that has nulls there" — the restored dump has **0 nulls in
-47 rows**, so the poison would have passed and reported the rehearsal working. Swapped for
-`selected_badge_id` (**42 of 47 null**) plus a unique index on `game_scores.device_id` (**35 duplicated
-values**), which covers both failure shapes the ticket exists to catch. **An acceptance test written
-from an assumed data shape is not an acceptance test** — ADR 0026's class, narrator being the ticket.
-
-**The restore is selective, not tolerant.** The dump carries `auth`, `storage`, `realtime` and
-Supabase-only extensions a stock PostgreSQL cannot run; blocks are filtered by the schema in pg_dump's
-own object headers and applied with `ON_ERROR_STOP`, because **a restore that prints expected errors
-hides unexpected ones**. Only the 8 `auth.users` **ids** are loaded — enough for the foreign keys, and
-the emails never reach the scratch database. The shim measured at ADR 0024's fifteen lines and needed
-no growth. `supabase/migrations/` is frozen (`ISSUE-05`), so the pending path was proven with a
-throwaway probe migration created and deleted inside one command.
-
-**Windows trap, caught by a guard test:** editing `TICKET-11-…-launch.md` through a path spelled
-`-LAUNCH.md` **renamed the file on disk**, and `trackerReferences.test.ts`'s lowercase-slug regex then
-failed two tests — including making every `TICKET-11` reference read as dangling. Git reports nothing;
-the case-insensitive filesystem hides it. 202 files / 2638 tests, eslint 0, build 0; no e2e (nothing
-touched a page). Owed and now written into `ISSUE-01` §1: the archive has never been opened on another
-machine, and its password is `ADMIN_SECRET` reused.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 166 | 2026-08-17 | **A migration meets real rows before production does** — `TICKET-13` shipped `npm run db:rehearse`, the loop ADR 0024 chose over a second Supabase project; the operator supplying `BACKUP_ARCHIVE_PASSWORD` unblocked three sessions of stated blocker in one line. **The ticket's own acceptance test could not have failed** — its poison migration was `display_name SET NOT NULL` against a dump with **0 nulls in 47 rows**; swapped for `selected_badge_id` (42 of 47 null) and a unique index on `game_scores.device_id` (35 duplicates), covering both failure shapes. ADR 0026's class, narrator being the ticket. **The restore is selective, not tolerant:** blocks filtered by pg_dump's own schema headers and applied with `ON_ERROR_STOP`, because a restore that prints expected errors hides unexpected ones; only the 8 `auth.users` **ids** load, so emails never reach the scratch DB. `supabase/migrations/` is frozen, so the pending path was proven with a throwaway probe created and deleted in one command. **Windows trap caught by a guard test:** editing the ticket through a path spelled `-LAUNCH.md` renamed the file on disk and made every `TICKET-11` reference read as dangling — git reports nothing, the case-insensitive filesystem hides it. 202 files / 2638 tests. |
 | 165 | 2026-08-17 | **The Games learn to end** — `/grill-with-docs`, twenty-five decisions, **docs only**: ADR 0025, two `CONTEXT.md` entries, `TICKET-15`. Seven live Games and **one** ended with a share, and **no share text carried a link**, so `TICKET-10`'s og:card had nothing posting a link to render it. `Round End` is deliberately **six triggers, not one rule**; Λεξόκηπος has no terminal state, so it alone **pops** and shares a **live** score. The Platform had **five names** for "the round is over" and no glossary entry. **Measured before recommending and the recommendation lost:** 7 of 35 Λεξιαρχείο player-days resolve all five Lengths, and the operator kept "all five" anyway, so both artifacts say do not loosen it. **s143's lesson in a new medium:** four format questions answered in prose, six worked examples drawn as a courtesy, **three of the four answers changed on sight** — a format is a visual decision wearing text's clothes. |
 | 163 | 2026-08-16 | **The Platform gets a face** — `TICKET-10`, blocked since s151 on one operator pick, made in two steps (card 18, then icon 1 off a second page). **One drawing, not three:** `src/app/_brand/fan.tsx` renders `opengraph-image`, `icon` and `apple-icon` at their own sizes, the only thing stopping a favicon drifting from a share card; satori paints in **emission order, not `z-index`**, so the centre tile is emitted last. **The durable lesson is s143's, one layer deeper:** the failure turned up *inside* a rendered preview — the candidates page drew marks `font-weight: 700` and CSS-scaled one 180 px master, and **neither survives `ImageResponse`**, which bundles a single-weight face. **A preview is only evidence about the renderer that drew it.** Fixed with a **12 KB** Inter Bold subset (Latin + Λ Ω λ μ π ω via the Google Fonts `text=` parameter) — the "~350 KB font" quoted since s151 had priced **full Greek coverage** and made a font look unaffordable for four sessions. `_brand/cmap.ts` + a test read the font's own glyph table, because **a glyph missing from a subset renders as nothing, not an error**. The guard test therefore **renders** rather than matching source, needing the `node` environment (sharp rejects satori's SVG under jsdom) — which exposed that `src/test/setup.ts` assumed a DOM for the whole suite. Filed `ISSUE-10`; this session's render tests were the obvious suspect and **were not the cause** — excluding them went green, but re-running at `HEAD` reproduced it anyway. 202 files / 2638 tests, e2e 13/2-skipped. |
 | 162 | 2026-08-16 | **A border the whole platform did not ask for.** Operator wanted Λεξιαρχείο's and Βρες τη Φράση's letter boxes "20% darker and 10% thicker" with consistency across the games; **every number in the ask was the wrong shape**, none of it visible without reading the components. **"Darker" inverts** — on the `stone-950` page a darker outline vanishes rather than sharpens, so the spec is *contrast against the page*: light `stone-200`→`stone-400`, dark `stone-700`→**lighter**, `stone-500`. **"10% thicker" has no pixel to land on** (2.2px, no Tailwind step, renders unevenly) → "unify at 2px", which was the consistency half anyway. And **only unfilled tiles have a visible border at all** — `correct`/`present`/`absent` set it equal to the fill — so the change lives entirely in the blank grid and the row being typed. **The token had to be new:** `--border` is the hairline for cards, inputs, secondary buttons and separators, so `--tile-border` keeps the two free to move apart (a card outline should be quiet; a letter box **is** the thing being read). Βρες τη Φράση's 1px was defended by a comment about pixels the letter loses — overruled deliberately, comment rewritten rather than deleted, and `phraseLayout.ts`'s packing maths left alone. **Scope reversed mid-grill** to all five games that draw a letter box, once the operator saw the other three would be left lighter than the two being fixed. Token **confirmed compiled out of the production bundle** (a missing `@theme` line renders no border while every test stays green — s144); `letterBoxBorder.test.ts` proven non-vacuous by reverting Λεξοδρομία. **The operator declined the render-and-look step**, so values were picked by arithmetic and an eye-check on a real phone is owed. 201 files / 2627 tests. Ran concurrently with s160 *and* s161; `HEAD` moved three commits mid-session. |

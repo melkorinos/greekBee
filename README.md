@@ -238,7 +238,7 @@ is split or closed.
 
 ### Open questions
 
-Questions that must be answered before work can be ticketed are **not** tracker items — they live in [`.claude/handoffs/launch-readiness.md`](.claude/handoffs/launch-readiness.md), which now holds exactly one: sequencing the launch run. Resolving one produces an ADR or a `CONTEXT.md` entry plus, usually, tickets. The **UI redesign** is deliberately not tracked there — the operator drives it in separate sessions.
+Questions that must be answered before work can be ticketed are **not** tracker items — they live in `.claude/handoffs/`. **As of 2026-08-20 there are none open** — the last one, sequencing the launch run, was answered into [`docs/launch-runbook.md`](docs/launch-runbook.md), which now owns the order of work and release day itself. Resolving one produces an ADR or a `CONTEXT.md` entry plus, usually, tickets. The **UI redesign** is deliberately not tracked there — the operator drives it in separate sessions.
 
 ---
 
