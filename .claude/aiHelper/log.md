@@ -5,6 +5,39 @@
 
 ---
 
+## Session 173 — 2026-08-20: submission comes off two Games, and their tables are left standing on purpose
+
+`TICKET-23` implemented end to end — ADR 0027 §4, the second of the three pieces that ADR owes.
+Λεξιαρχείο and Βρες τη Φράση no longer accept player-submitted puzzles: both submit modals, both
+submit routes and their review routes, both `validateSubmission` adapters, both loaders' community
+read. `/leksikastirio` drops to two review tabs. 2653 tests, eslint 0, build 0, **13 e2e passing**.
+
+**Verifying the ticket before starting it was worth the ten minutes.** Every file it named existed
+and every claim held, but three pointers had drifted: four `CONTEXT.md` line numbers were 4–6 off,
+and `rlsInvariantsLiveDb.test.ts` asserts only the Stavrolekso table — that checklist box was a
+no-op. A ticket's *line numbers* are the part that rots first; its *claims* survived four days.
+
+**The removal changed no puzzle, and the tests now prove it.** Both loaders already owned a
+deterministic static fallback, so the same date returns what it always did. Rather than deleting the
+community-path coverage, both loader tests now mock Supabase to **return** a row on purpose: a
+served row would mean the read came back. `communityPuzzleScheduling.test.ts` goes further and
+asserts `consumeApprovedPuzzle` is **never called** by either loader.
+
+**Deleting a doc row would have been the wrong kind of tidy.** The two tables still exist —
+`TICKET-24` drops them, and must not run until this deploys. So `CONTEXT.md`'s rows were rewritten
+to *"Orphaned, 0 rows … TICKET-24 drops it"*, not removed; a cold session reading the schema needs
+to know why a table with no code is still there. Same for `launch-reset.sql`, whose KEPT block
+called community puzzles "the expensive, irreplaceable half of the beta" — true of the two queues
+that have rows, false of the two that never did.
+
+**`ScheduledPuzzleTable` narrowed itself.** It is `Exclude<CommunityPuzzleTable, stavrolekso>` and
+`CommunityPuzzleTable` derives from `TableName`, so nothing was hand-edited — only the comments that
+counted "four tables" and "three consuming loaders" out loud. Derived types age; prose that
+restates them does not.
+
+Follow-on state: `TICKET-24` updated (blocked on **deploy**, not merge — both halves are committed
+to `dev` and neither is live), `TICKET-23` deleted with a `SPENT` row. Commit `a0c4590`.
+
 ## Session 172 — 2026-08-20: two Games lose their scoreboard, and the migrations folder unfreezes
 
 Docs only. `/grill-with-docs` on the operator's pre-launch subtraction pass: Λεξιαρχείο and Βρες τη
@@ -33,45 +66,12 @@ replacing the empty table as the safety mechanism.
 by stopping after one guess; with no write to avoid it plays a full round and becomes the
 end-of-round browser coverage `ISSUE-03` keeps asking for. Three days old and already stale. Tracker
 guard 4/4; no source change — the artifact is an ADR and four tickets.
-## Session 171 — 2026-08-20: the e2e gap gets measured, and two of five tickets die within the hour
-
-Docs only, no source change beyond one `SPENT` row. `ISSUE-03` asked for an analysis of what the
-browser actually guarantees; the answer is in `.claude/aiHelper/e2e-coverage/analysis.md`.
-
-**The issue was its own worst narrator, in both directions.** It said ten tests across four specs —
-it is **15 across five** (13 run, 2 skipped on purpose), `privacy.spec.ts` having landed since.
-And it priced expansion at "eight specs each needing a stable selector strategy", when **every
-testid a happy path needs already exists** in `src/games` / `src/components`. What is missing is page
-objects, not instrumentation. Both halves came from `--list` and a grep, not from the file. This is
-the ADR 0026 pattern with the tracker as narrator, which that ADR already names — no new row.
-
-**The real number: 6 of 11 routes are never loaded by any browser test, and only 2 of 11 Games have
-a turn played.** End of round — the Result Panel, share, leaderboard, achievement toast — is
-browser-untested for **every** Game, one session after s169 built it.
-
-**Two determinism rules, now in memory and in every ticket.** Every daily Game takes `?puzzle=`, so a
-spec pins a past date instead of racing the morning's rotation; and **no spec may finish a round**,
-because round end writes to the shared production `game_scores`.
-
-**Five tickets written, two deleted the same hour.** The operator cut Topothesies and Leksikastirio
-as low priority after they were already on disk. `TICKET-18` and `TICKET-21` are `SPENT`-and-withdrawn
-— the first ids retired without ever being started. **The lesson is order:** the analysis was worth
-writing before the tickets, but the *priority call* also belonged before them. Their content went
-back into `ISSUE-03` rather than vanishing, including the ban on a Leksikastirio spec ever casting a
-vote — that is a real write that shapes the dictionary.
-
-**The issue was NOT deleted when the tickets appeared.** Asked whether it could be, the answer is no:
-it still holds three happy paths, mobile viewport, end-of-round, profile-against-real-API and dark
-mode. A tracker file is deleted when it is empty, not when it is smaller.
-
-Shipped: `TICKET-17` (Vres Tin Frasi), `TICKET-19` (Λεξοδρομία), `TICKET-20` (Λεξόπλεγμα) ready to
-pick up, in that order — 20 last because the pointer drag is the flakiest input. eslint 0, tracker
-guard 4/4. No new test; the artifact is a set of documents.
 
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 171 | 2026-08-20 | **The e2e gap gets measured, and two of five tickets die within the hour.** `ISSUE-03` asked what the browser actually guarantees; the answer is `.claude/aiHelper/e2e-coverage/analysis.md`. **The issue was its own worst narrator in both directions** — 15 tests across five specs, not ten across four, and every testid a happy path needs already exists (what is missing is page objects, not instrumentation). The real number: **6 of 11 routes never loaded by any browser test, only 2 of 11 Games with a turn played**, and end-of-round browser-untested for every Game one session after it was built. Two determinism rules now in memory and in every e2e ticket: pin a past date with `?puzzle=`, and **no spec may finish a round** (round end writes to the shared production `game_scores`). Five tickets written, two deleted the same hour by operator priority call — `TICKET-18`/`TICKET-21` are the first ids retired without ever being started, their content returned to `ISSUE-03`. **The lesson is order:** the priority call belonged before the tickets, not after. A tracker file is deleted when it is empty, not when it is smaller. |
 | 170 | 2026-08-20 | **The backup leaves the machine, and the box it cannot tick moves house.** `TICKET-11`'s operator half, run live; Drive folder **verified private through the Drive MCP** rather than taken on trust, `20260820-112045.7z` uploaded, ticket closed and `SPENT`. **Closing a ticket is not deleting a file** — two done-whens were never ticked (weekly task unregistered; archive never extracted on a second machine) and moved into `ISSUE-01` §1, which was rewritten because its heading *"right now, no backup at all"* had stopped being true. The ticket's spine — *never register the scheduler before the password exists* — now guards nothing and is recorded as **spent rather than deleted**, because it is still the answer to "why is the task not registered yet?". **`7z t` locally proves the archive matches `.env.local`, not the password manager**; that gap *is* the open done-when. Seven-character password kept after one warning, recorded as a measured weakness. A commit landed underneath the session (48 files, third instance of the shared-tree hazard) — `reflections.md` now says commit when a change is coherent. 213 files / 2710 tests, eslint 0, build 0. |
 | 169 | 2026-08-20 | **Every Game learns to end, and the ending carries a link.** `TICKET-15` shipped and deleted, `/tdd`, five slices: six Games reach a Result Panel and every share is four lines whose fourth is a link — the half of `TICKET-10`'s bet never placed. Two seams, deliberately no third: `src/lib/shareText.ts` owns identity/score/link. **Five auto-opening leaderboards and the ticket knew of none of them** — two had their own `setTimeout`, three more came through `useLiveScorePost`'s `onFinish`, found only by the operator playing it; `onFinish` was deleted from the hook rather than unwired at three call sites, so reinstating it is a type error. Λεξόκηπος's panel lives in the layout, not the board. Each builder's spoiler test proven non-vacuous by making the builder leak. 213 files / 2709 tests (+58), e2e 13 passed / 2 skipped. |
 | 168 | 2026-08-20 | **The launch question closes and its handoff dies.** Docs only. Question 2 answered — the run is the offsite backup, then the Result Panel, then the `dev → main` merge with its play-through, then release day, then a week of daily Vercel error checks; target **on or about 27 August 2026**, the operator's date and not hard. `launch-readiness.md` deleted, `docs/launch-runbook.md` replaces it: **a handoff whose last question is answered is not a document**, and eleven files pointed at it. It ran to 281 lines because resolved work had been *rewritten in place instead of deleted* — the Question 1 section, the decisions ledger and the tracked-elsewhere prose were history, and `log.md` and the ADRs own history. Cut to 147, then to 110 as a runbook. The operator saw it before the agent did: *"we should have knocked out most items from it right?"* — the file said everything was decided and still read as if nothing was. `TICKET-11`'s operator half was four unordered bullets for work **whose order is the whole point**, rewritten as seven steps (password first, scheduler last). Runbook step 5 absorbed a third statement: the one non-normalised nominations row had been an open decision reading "step 5, or the dashboard at any time", which is not a schedule. One hand-run migration, three statements, one rehearsal. |

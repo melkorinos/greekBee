@@ -22,11 +22,10 @@ reason true for seconds. Rule: **re-run `git log --oneline -3` and `git status` 
 staging, and stage explicit paths, never `-A`.** Still open — no lock, no branch-per-session
 convention, and the Dream itself writes four shared files. s159: two sessions grilled the same file,
 relayed through the operator because neither could see the other — **when consolidating, ask what
-concurrency the split was buying.** s170 lost it the other way: a staged `git rm` and three edited
-docs were swept into **another session's commit**, under a message about something else. The
-mechanism is not `-A`: that session staged explicit paths and then ran a bare `git commit`, which
-commits **the whole index, including entries the other session staged**. So: `git commit -- <paths>`,
-or read `git status` for foreign staged entries first. **Commit the moment a change is coherent;
+concurrency the split was buying.** s170 lost it the other way: a staged `git rm` and three edited docs
+were swept into **another session's commit**. The mechanism is not `-A` — that session staged explicit
+paths, then ran a bare `git commit`, which commits **the whole index**. So `git commit -- <paths>`, or
+read `git status` for foreign staged entries first. **Commit the moment a change is coherent;
 never stage and keep working.**
 
 ## 🟠 Gates whose entire enforcement is a human reading a line
@@ -69,7 +68,9 @@ skill entry is about to decide something, **spend the one command**, and **date 
 The live-DB tests talk to Postgres directly — no deployed app code runs — so they go green the moment
 a migration lands, whether the deploy succeeded, failed or never started: **a green suite actively
 reassuring the operator while every write 500s**. Any migration window needs one check hitting the
-**deployed route** (release day does this at runbook step 2).
+**deployed route** (release day does this at runbook step 2). **Live as of s173:** `TICKET-24` drops
+two tables whose last writer is **committed, not deployed** — an ordering resting on a fact no test
+here can observe. Check the deployed commit, never the green suite.
 
 ## 🟡 Authored content vs derived word lists — the s133 class of bug
 
@@ -96,8 +97,7 @@ can be **regenerated empty** — before "just add a list", ask whether a re-sync
 
 ## 🟡 Smaller live watches
 
-- **Five routes have no browser test at all (s152, widened s171)** — all three Stavrolekso routes plus
-  Topothesies and Leksikastirio. Pure logic is tests-deep; a dropped listener passes it all. `ISSUE-03`.
+- **Most routes have no browser test at all (s152, widened s171)** — measured state lives in `ISSUE-03`; pure logic is tests-deep, and a dropped listener passes all of it.
 - **Deferring a threshold on a live-capture counter destroys data (s139).** "Lower is safe, raise is
   impossible" is about **earned** rows, not **unwritten** ones — ask what the gap is not recording.
 - **Zero rows is the reason to look, not reassurance (s134).** `consumeApprovedPuzzle`'s two bugs were
