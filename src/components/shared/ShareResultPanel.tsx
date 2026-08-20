@@ -3,13 +3,20 @@
 // ShareResultPanel — the Platform's Result Panel: the surface every Game's Round
 // End renders (ADR 0025).
 //
-// Every Game ends the same way: a big score heading, a game-specific reveal line,
+// Most Games end the same way: a big score heading, a game-specific reveal line,
 // the share action, and a leaderboard link. This owns everything they share: the
 // score heading, the sharing itself, and the leaderboard link. The caller supplies
 // only the reveal (the one part that differs per game) as children, plus a
-// `testId` so each game keeps its own stable test hook. The four-line summary the
-// share sends is assembled by `composeShareText` (src/lib/shareText.ts) — no Game
+// `testId` so each game keeps its own stable test hook. The summary the share
+// sends is assembled by `composeShareText` (src/lib/shareText.ts) — no Game
 // hand-rolls that layout, and this panel never inspects it.
+//
+// BOTH the score heading and the leaderboard link are optional, and for the same
+// reason: a Game whose registry row grants neither capability has no number to
+// show and no board to open (ADR 0027). With no score the heading is not rendered
+// at all — an empty `0 πόντοι` would be a lie — and the Game's own reveal becomes
+// the panel's leading line, which is why the two scoreless Games style theirs as
+// a heading rather than as muted body text.
 //
 // Graduated to shared/ when the third near-identical copy (Λογοπαίγνιο) landed —
 // three genuine consumers, per the shared-component rule (CLAUDE.md). The share
@@ -38,7 +45,11 @@ import { useState, type ReactNode } from "react";
 interface ShareResultPanelProps {
   /** Stable test hook for the panel root (e.g. "topothesies-result"). */
   testId:            string;
-  score:             number;
+  /**
+   * The round's points. Omitted by a Game that has no scoring at all — the
+   * heading is then not rendered, rather than rendered as zero.
+   */
+  score?:            number;
   /** Spoiler-free emoji summary copied to the clipboard on share. */
   shareText:         string;
   /**
@@ -85,9 +96,11 @@ export function ShareResultPanel({
 
   return (
     <div data-testid={testId} className="w-full flex flex-col items-center gap-3 py-2">
-      <h2 className="text-3xl font-bold text-foreground text-center">
-        {score} πόντοι
-      </h2>
+      {score !== undefined && (
+        <h2 className="text-3xl font-bold text-foreground text-center">
+          {score} πόντοι
+        </h2>
+      )}
 
       {children}
 

@@ -2,28 +2,23 @@
 
 // Top-level Leksiarxeio board — assembles GuessGrid + Keyboard + feedback message.
 // Manages the active word length (4–8) with a - N + switcher.
-// Wires physical keyboard events and leaderboard score submission.
+// Wires physical keyboard events and auto-advance between lengths.
 
 import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
 import { LEKSIARXEIO } from "@/config/gameRules";
 import { readSlice } from "@/hooks/useGameStore";
 import { usePhysicalKeyboard } from "@/hooks/usePhysicalKeyboard";
-import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { GuessGrid } from "./GuessGrid";
 import { Keyboard } from "./Keyboard";
-import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { ShareResultPanel } from "@/components/shared/ShareResultPanel";
 import {
   buildShareText,
-  scoreLeksiarxeioDay,
   type LeksiarxeioLengthRound,
 } from "@/games/leksiarxeio/lib/shareText";
 import { normalizeLetters } from "@/lib/normalize";
-import { todayISO } from "@/lib/puzzleDate";
-import { useLeksiarxeioScoreSubmission } from "@/hooks/useLeksiarxeioScoreSubmission";
 import { useLeksiarxeioState } from "@/games/leksiarxeio/hooks/useLeksiarxeioState";
 
 // Greek letter regex (covers the Greek alphabet range)
@@ -34,12 +29,9 @@ const LENGTHS: LeksiarxeioLength[] = [...LEKSIARXEIO.LENGTHS];
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface LeksiarxeioBoardProps {
-  puzzles:             LeksiarxeioPuzzle[];                      // one per length 4–8, server-provided
-  wordLists:           Record<LeksiarxeioLength, string[]>;
-  today:               string;                                   // YYYY-MM-DD
-  isLeaderboardOpen:   boolean;
-  onOpenLeaderboard:   () => void;
-  onCloseLeaderboard:  () => void;
+  puzzles:   LeksiarxeioPuzzle[];                      // one per length 4–8, server-provided
+  wordLists: Record<LeksiarxeioLength, string[]>;
+  today:     string;                                   // YYYY-MM-DD
 }
 
 // ── Inner game panel — one per length ────────────────────────────────────────
@@ -53,7 +45,7 @@ interface LengthPanelProps {
   activeLength:  LeksiarxeioLength;
   onPrev:        () => void;
   onNext:        () => void;
-  onGameEnd:     (length: LeksiarxeioLength, attempts: number, won: boolean) => void;
+  onGameEnd:     (length: LeksiarxeioLength) => void;
   /** Reports this Length's round upward on every change — see the board's `rounds`. */
   onRoundChange: (round: LeksiarxeioLengthRound) => void;
 }
@@ -69,7 +61,7 @@ function LengthPanel({
   onRoundChange,
 }: LengthPanelProps) {
   const handleGameEnd = useCallback(
-    (attempts: number, won: boolean) => onGameEnd(puzzle.length as LeksiarxeioLength, attempts, won),
+    () => onGameEnd(puzzle.length as LeksiarxeioLength),
     [onGameEnd, puzzle.length]
   );
 
@@ -178,16 +170,8 @@ export function LeksiarxeioBoard({
   puzzles,
   wordLists,
   today,
-  isLeaderboardOpen,
-  onOpenLeaderboard,
-  onCloseLeaderboard,
 }: LeksiarxeioBoardProps) {
   const [activeLength, setActiveLength] = useState<LeksiarxeioLength>(4);
-
-  // usePlayerIdentity runs the legacy-identity migration before reading the device
-  // id, then assembles device + profile + auth (see its doc comment).
-  const identity = usePlayerIdentity();
-  const { deviceId, displayName } = identity;
 
   // Track which lengths are finished (won or lost) so auto-advance can skip them.
   // A ref is used alongside state to avoid stale-closure issues inside setTimeout.
@@ -213,14 +197,7 @@ export function LeksiarxeioBoard({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Score submission -- all posting logic lives in the hook.
-  const { submitLength: postLeksiarxeioScore } = useLeksiarxeioScoreSubmission({
-    puzzleDate: today,
-    deviceId,
-    displayName,
-  });
-
-  // Score submission + auto-advance: called by each LengthPanel when its game ends.
+  // Auto-advance: called by each LengthPanel when its game ends.
   //
   // Auto-advance design:
   //   1. Mark this length as completed in the ref immediately (avoids stale closure
@@ -229,11 +206,12 @@ export function LeksiarxeioBoard({
   //   2. After 1.5 s, search forward (wrapping) for the first unfinished length.
   //      "Skip already-completed" means the player goes straight to their next
   //      unsolved word instead of revisiting finished rounds.
-  //   3. If everything is done (or this was the last round): open the leaderboard.
+  //   3. If everything is done, stay put — Round End renders the Result Panel.
+  //
+  // `attempts` and `won` are unused: nothing is posted any more (ADR 0027), and
+  // the panel reads every Length's round from `rounds` instead.
   const handleGameEnd = useCallback(
-    (length: LeksiarxeioLength, attempts: number, won: boolean) => {
-      postLeksiarxeioScore(length, attempts, won);
-
+    (length: LeksiarxeioLength) => {
       // Update the ref first so the timeout closure sees the fresh set.
       const newCompleted = new Set([...completedRef.current, length]);
       completedRef.current = newCompleted;
@@ -260,7 +238,7 @@ export function LeksiarxeioBoard({
         if (next) setActiveLength(next);
       }, 1500);
     },
-    [postLeksiarxeioScore]
+    []
   );
 
   // Every Length's round, live: each panel reports its own on change, so this
@@ -316,25 +294,15 @@ export function LeksiarxeioBoard({
       {isRoundEnd && (
         <ShareResultPanel
           testId="leksiarxeio-result"
-          score={scoreLeksiarxeioDay(resolvedRounds)}
           shareText={buildShareText(resolvedRounds, today)}
-          onOpenLeaderboard={onOpenLeaderboard}
         >
-          <p className="text-center text-muted text-sm">
+          {/* With no score heading above it (ADR 0027) this line IS the panel's
+              heading, so it carries the size. */}
+          <h2 className="text-2xl font-bold text-foreground text-center">
             {`Ολοκλήρωσες και τα ${LENGTHS.length} μήκη`}
-          </p>
+          </h2>
         </ShareResultPanel>
       )}
-
-      {/* ── Leaderboard modal ─────────────────────────────────────────────── */}
-      <GameLeaderboardModal
-        gameId="leksiarxeio"
-        isOpen={isLeaderboardOpen}
-        today={todayISO()}
-        defaultDate={today}
-        onClose={onCloseLeaderboard}
-        {...identity.leaderboardProps}
-      />
     </>
   );
 }

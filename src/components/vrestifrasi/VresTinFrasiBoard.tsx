@@ -2,62 +2,29 @@
 
 import type { VresTinFrasiPuzzle } from "@/games/vrestifrasi/types";
 import { usePhysicalKeyboard } from "@/hooks/usePhysicalKeyboard";
-import { usePlayerIdentity } from "@/hooks/usePlayerIdentity";
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 
 import { FeedbackBanner } from "@/components/shared/FeedbackBanner";
 import { Keyboard } from "./Keyboard";
 import { PhraseGrid } from "./PhraseGrid";
-import { GameLeaderboardModal } from "@/components/shared/GameLeaderboardModal";
 import { ShareResultPanel } from "@/components/shared/ShareResultPanel";
 import { buildShareText } from "@/games/vrestifrasi/lib/shareText";
 import { normalizeLetters } from "@/lib/normalize";
-import { todayISO } from "@/lib/puzzleDate";
-import { scoreVresTinFrasi } from "@/games/vrestifrasi/lib/scoring";
-import { useScoreSubmission } from "@/hooks/useScoreSubmission";
 import { useVresTinFrasiState } from "@/games/vrestifrasi/hooks/useVresTinFrasiState";
 
 const GREEK_LETTER = /^[α-ωά-ώΑ-ΩΆ-Ώ]$/i;
 
 interface VresTinFrasiBoardProps {
-  puzzle:              VresTinFrasiPuzzle;
-  validWords:          string[];
-  today:               string;
-  isLeaderboardOpen:   boolean;
-  onOpenLeaderboard:   () => void;
-  onCloseLeaderboard:  () => void;
+  puzzle:     VresTinFrasiPuzzle;
+  validWords: string[];
+  today:      string;
 }
 
 export function VresTinFrasiBoard({
   puzzle,
   validWords,
   today,
-  isLeaderboardOpen,
-  onOpenLeaderboard,
-  onCloseLeaderboard,
 }: VresTinFrasiBoardProps) {
-  const identity = usePlayerIdentity();
-  const { deviceId, displayName } = identity;
-
-  const { submit: postScore } = useScoreSubmission({
-    gameId:     "vrestifrasi",
-    puzzleDate: today,
-    deviceId,
-    displayName,
-  });
-
-  const handleGameEnd = useCallback(
-    (attempts: number, won: boolean) => {
-      // Post points, higher-is-better (6 for a 1-guess win → 1 for a 6-guess
-      // win, 0 for a loss) — same scale as Leksiarxeio. The leaderboard sorts
-      // desc like every other game (ADR 0014); no lower-is-better boards.
-      postScore(scoreVresTinFrasi(attempts, won));
-      // The Result Panel renders below the grid at Round End; the leaderboard is
-      // a link inside it and no longer opens itself over the summary (ADR 0025).
-    },
-    [postScore],
-  );
-
   const {
     guesses,
     currentWords,
@@ -70,7 +37,7 @@ export function VresTinFrasiBoard({
     deleteLetter,
     submitGuess,
     clearMessage,
-  } = useVresTinFrasiState(puzzle, validWords, handleGameEnd);
+  } = useVresTinFrasiState(puzzle, validWords);
 
   usePhysicalKeyboard((e) => {
     if (e.key === "Enter")     return submitGuess();
@@ -86,8 +53,7 @@ export function VresTinFrasiBoard({
   }, [lastMessage, clearMessage, status]);
 
   return (
-    <>
-      <div className="flex flex-col items-center gap-4 py-4 w-full">
+    <div className="flex flex-col items-center gap-4 py-4 w-full">
         <div className="h-8">
           <FeedbackBanner
             message={lastMessage}
@@ -123,27 +89,16 @@ export function VresTinFrasiBoard({
         {status !== "playing" && (
           <ShareResultPanel
             testId="vrestifrasi-result"
-            score={scoreVresTinFrasi(guesses.length, status === "won")}
             shareText={buildShareText({ puzzle, guesses, status }, today)}
-            onOpenLeaderboard={onOpenLeaderboard}
           >
             {/* The phrase is revealed HERE and only here — it stays on screen and
-                never enters the shared text. */}
-            <p className="text-center text-sm text-muted">
-              <span className="font-semibold text-foreground">{puzzle.phrase}</span>
-            </p>
+                never enters the shared text. With no score heading above it (ADR
+                0027) this reveal IS the panel's heading, so it carries the size. */}
+            <h2 className="text-2xl font-bold text-foreground text-center">
+              {puzzle.phrase}
+            </h2>
           </ShareResultPanel>
-        )}
-      </div>
-
-      <GameLeaderboardModal
-        gameId="vrestifrasi"
-        isOpen={isLeaderboardOpen}
-        today={todayISO()}
-        defaultDate={today}
-        onClose={onCloseLeaderboard}
-        {...identity.leaderboardProps}
-      />
-    </>
+      )}
+    </div>
   );
 }

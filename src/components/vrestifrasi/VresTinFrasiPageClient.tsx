@@ -25,14 +25,14 @@ export function VresTinFrasiPageClient({
     <GamePageChrome
       title="💬 Vres Tin Frasi"
       sessionKey={puzzle.id}
+      hasLeaderboard={false}
       howToPlay={(props) => <HowToPlayModal {...props} />}
     >
-      {({ leaderboard }) => (
+      {() => (
         <VresTinFrasiBoard
           puzzle={puzzle}
           validWords={validWords}
           today={today}
-          {...leaderboard}
         />
       )}
     </GamePageChrome>

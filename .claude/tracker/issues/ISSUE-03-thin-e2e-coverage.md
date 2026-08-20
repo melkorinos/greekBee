@@ -15,8 +15,10 @@ that sit 213 unit/component test files.
 The full breakdown of what those 13 tests do and do not guarantee is in
 `.claude/aiHelper/e2e-coverage/analysis.md`, measured 2026-08-20. The headline facts:
 
-- **6 of 11 registered routes are never loaded by any browser test**, five of them
-  launched and capability-bearing.
+- **6 of 11 registered routes are never loaded by any browser test.** All six are
+  launched and unhidden; three of them still write to the shared database
+  (Λεξοδρομία, Λεξόπλεγμα, Τοποθεσίες) — Βρες τη Φράση stopped being
+  capability-bearing on 2026-08-20 (ADR 0027) without becoming any less launched.
 - **Only 2 of 11 Games have a turn played in a browser** (Leksokipos, Leksiarxeio).
 - **End of round is browser-untested for every Game** — the result panel, share panel,
   leaderboard modal and achievement toast are never opened by anything.
@@ -50,8 +52,8 @@ TICKET-17 (Vres Tin Frasi), TICKET-19 (Leksodromia), TICKET-20 (Leksoplegma).
 **TICKET-17 was rewritten on 2026-08-20** against ADR 0027, which revokes Vres Tin Frasi's `scores`
 and `leaderboard` capabilities. Its old shape turned on avoiding a write to production `game_scores`
 by stopping after one guess; with no write to avoid, the spec now plays a full round and asserts the
-Result Panel — so it also becomes this file's first piece of end-of-round browser coverage. It is
-blocked by TICKET-22 until that surface actually changes. TICKET-19 and TICKET-20 are unaffected:
+Result Panel — so it also becomes this file's first piece of end-of-round browser coverage. That
+removal shipped the same day, so nothing blocks it. TICKET-19 and TICKET-20 are unaffected:
 Leksodromia and Leksoplegma keep both capabilities, and their stop-after-one-word constraint holds.
 
 Topothesies and Leksikastirio were ticketed the same day and withdrawn within the hour

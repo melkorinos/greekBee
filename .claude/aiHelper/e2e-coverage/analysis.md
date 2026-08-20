@@ -35,8 +35,11 @@ guaranteed only by jsdom, which has no layout engine, no CSS, and no real routin
 `/vres-tin-frasi`, `/leksodromia`, `/leksoplegma`, `/topothesies`, `/stavrolekso`
 (plus `/stavrolekso/[id]` and `/stavrolekso/maker`), `/leksikastirio`.
 
-Five of those six are **launched, unhidden, capability-bearing Games**. A build that
-renders a blank page or throws on hydration for any of them ships green.
+All six are **launched and unhidden**; three of them are capability-bearing —
+Λεξοδρομία, Λεξόπλεγμα, Τοποθεσίες. (Stavrolekso and Λεξικαστήριο never declared a
+capability, and Βρες τη Φράση lost both on 2026-08-20, ADR 0027 — after this file was
+measured.) A build that renders a blank page or throws on hydration for any of the six
+ships green, capability or not.
 
 ### 3.2 Gameplay never exercised in a browser — 9 of 11 Games
 

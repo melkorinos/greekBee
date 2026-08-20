@@ -169,3 +169,19 @@ ever pays off through posted links; this is what posts them.
 - **A dated deep link**, **a Leaderboard position**, and **a per-length letter grid** — reasons above.
 - **Λεξόκηπος getting an invented terminal state** so it could match the other five. Reaching top
   Rank is a real moment in that Game; ending it artificially is not.
+
+## Amendment (2026-08-20, ADR 0027)
+
+**`ShareResultPanel.score` and `composeShareText`'s `score` are optional**, one day after this ADR
+shipped them as required. Λεξιαρχείο and Βρες τη Φράση lost their scoring outright, and they are the
+two Games whose Result Panel therefore has no number to head it.
+
+Two rulings, both narrower than they look:
+
+- **The heading is omitted, not zeroed.** `0 πόντοι` reads as a bad round, not as no round. With no
+  score the panel renders no heading element at all, and the Game's own reveal line — the phrase, or
+  «Ολοκλήρωσες και τα 5 μήκη» — carries the heading's weight instead. The share text loses its
+  `Σκορ:` line the same way and is three lines rather than four.
+- **The other six Games are unchanged.** The prop is optional, not removed; every Game that passes a
+  score renders exactly what it rendered before, which is pinned by a guard in
+  `shareResultPanel.test.tsx` asserting both halves.

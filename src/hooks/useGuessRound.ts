@@ -2,7 +2,7 @@
 
 // useGuessRound — shared wiring spine for the Wordle-family guess games
 // (Leksiarxeio, Vres Tin Frasi). It owns the identical reducer → persistence →
-// end-callback → score plumbing those games had copied verbatim. Each game keeps
+// end-callback plumbing those games had copied verbatim. Each game keeps
 // only what genuinely differs: its action wrappers, its keyboard letter-state
 // map, and the fields it exposes to the UI.
 //
@@ -41,8 +41,6 @@ export interface UseGuessRoundOptions<S extends GuessRoundState<G>, A, G, P> {
   makeInitialState: (puzzle: P) => S;
   /** Builds the game's RESTORE_STATE action from a persisted snapshot. */
   makeRestoreAction: (snapshot: GuessRoundSnapshot<G>) => A;
-  /** attempts + won → points. Evaluated only once the game has ended. */
-  scoreFn:          (attempts: number, won: boolean) => number;
   /** Called once when the game ends, with the attempts used. */
   onGameEnd?:       (attempts: number, won: boolean) => void;
 }
@@ -50,8 +48,6 @@ export interface UseGuessRoundOptions<S extends GuessRoundState<G>, A, G, P> {
 export interface UseGuessRoundReturn<S, A> {
   state:    S;
   dispatch: Dispatch<A>;
-  /** 0 while playing; scoreFn(attempts, won) once the game ends. */
-  score:    number;
 }
 
 export function useGuessRound<S extends GuessRoundState<G>, A, G, P>({
@@ -61,7 +57,6 @@ export function useGuessRound<S extends GuessRoundState<G>, A, G, P>({
   reducer,
   makeInitialState,
   makeRestoreAction,
-  scoreFn,
   onGameEnd,
 }: UseGuessRoundOptions<S, A, G, P>): UseGuessRoundReturn<S, A> {
   const [state, dispatch] = useReducer(reducer, puzzle, makeInitialState);
@@ -84,13 +79,5 @@ export function useGuessRound<S extends GuessRoundState<G>, A, G, P>({
 
   useGameEndCallback(state.status, state.guesses.length, onGameEnd);
 
-  const score = useMemo(
-    () =>
-      state.status !== "playing"
-        ? scoreFn(state.guesses.length, state.status === "won")
-        : 0,
-    [state.guesses.length, state.status, scoreFn],
-  );
-
-  return { state, dispatch, score };
+  return { state, dispatch };
 }

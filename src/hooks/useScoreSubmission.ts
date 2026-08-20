@@ -1,8 +1,8 @@
 "use client";
 
-// useScoreSubmission — score-posting hook for Leksokipos, Leksindeseis,
-// Vres Tin Frasi, and Leksodromia.
-// For Leksiarxeio use useLeksiarxeioScoreSubmission instead.
+// useScoreSubmission — the Platform's one score-posting hook. Its `gameId` is
+// `ScoreSubmissionGameId`, so exactly the Games declaring the `scores` capability
+// can call it and the list never needs restating here.
 //
 // Hides:
 //   - "only POST when score strictly increases" dedup guard (submit)
@@ -14,8 +14,8 @@
 // A Score is the whole payload: no game may ride per-round metadata along into
 // game_scores.data. Leksokipos posted { words, pangrams } there until 2026-08-16
 // with no reader, and the Offline Outbox flush dropped them anyway — see the
-// commit and CONTEXT.md's game_scores row. Leksiarxeio's per-length jsonb is
-// written server-side by mergeLengthScore and never travels through here.
+// commit and CONTEXT.md's game_scores row. Nothing writes `game_scores.data` at
+// all since ADR 0027 removed Λεξιαρχείο's server-side per-length fold.
 
 import { useCallback, useEffect, useRef } from "react";
 

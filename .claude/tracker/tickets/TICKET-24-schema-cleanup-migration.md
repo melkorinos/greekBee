@@ -1,8 +1,9 @@
 # One migration: drop both community tables, `game_scores.data`, `is_perfect`, and land ISSUE-01 §3
 
 **Status:** ready
-**Blocked by:** TICKET-22 and TICKET-23 — **both must be deployed to production**, not merely
-merged. Also blocked on the **operator**: `npx supabase db push` and `npm run db:rehearse` have both
+**Blocked by:** the ADR 0027 code removals — **both halves must be deployed to production**, not
+merely merged. §1-§3 (scoring + leaderboard) shipped to the branch on 2026-08-20; §4 (community
+submission) is TICKET-23 and is still open. Also blocked on the **operator**: `npx supabase db push` and `npm run db:rehearse` have both
 been pre-blocked by the permission classifier before (project-mcp skill, trap 3). The operator has
 offered to run them; hand over the exact command rather than fighting the block.
 **Spec:** [ADR 0027](../../../docs/adr/0027-two-games-lose-scoring-and-community-submission.md) §5
@@ -31,7 +32,7 @@ The freeze's risk is answered by mechanism instead of timing: `npm run db:backup
       project backs dev and prod; there is no PITR on the free tier and this is the only undo.
 - [ ] `npm run db:rehearse` — restores the newest archive locally and applies the pending migration
       against real rows. This is the rehearsal the release-day slot would have provided.
-- [ ] Confirm TICKET-22 and TICKET-23 are **live on production**, not just merged. `reflections.md`
+- [ ] Confirm the scoring removal and TICKET-23 are **live on production**, not just merged. `reflections.md`
       records that live-DB tests go green on a migration alone and are blind to whether the deploy
       happened — check the deployed commit, not the test result.
 - [ ] Re-measure both queues immediately before dropping. They were 0/0 on 2026-08-20, but the drop
@@ -45,12 +46,12 @@ The freeze's risk is answered by mechanism instead of timing: `npm run db:backup
 
 ```sql
 -- ADR 0027 §4 — both queues measured empty; the submitting code is gone as of
--- TICKET-22/23. An empty table left in the schema reads as a live feature.
+-- ADR 0027. An empty table left in the schema reads as a live feature.
 drop table if exists public.community_leksiarxeio_puzzles;
 drop table if exists public.community_vrestifrasi_puzzles;
 
 -- ADR 0027 §5 — Leksiarxeio's per-length fold was `data`'s only writer and nothing
--- ever read it back. Dead as of TICKET-22.
+-- ever read it back. Dead since the scoring removal shipped on 2026-08-20.
 alter table public.game_scores drop column if exists data;
 
 -- ISSUE-05 — dead since ADR 0013 retired the perfect-round concept. 0 rows true,
@@ -109,7 +110,7 @@ update public.nominations set word = 'ιουνιοσ'
       is only the still-deferred moderation half; do not leave "its body is written into runbook
       step 5" pointing at a step that no longer exists.
 - [ ] `CONTEXT.md` — the `game_scores` row's `data` jsonb sentence, and the two dropped table rows
-      (shared with TICKET-22/23; whichever ticket runs last owns the final state).
+      (the scoring removal already rewrote the `data` sentence; this ticket owns the final state).
 - [ ] `CONTEXT.md` line 281 — the migrations-hardening paragraph names the community `status` enum
       across four tables. Verify it still reads true at two.
 - [ ] `.claude/aiHelper/memory.md` — **The launch reset** row states that `game_scores` DDL should

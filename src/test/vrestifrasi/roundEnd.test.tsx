@@ -5,22 +5,10 @@
 // when the player won reads as bragging rather than playing.
 
 import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
 import { VresTinFrasiBoard } from "@/components/vrestifrasi/VresTinFrasiBoard";
 import type { VresTinFrasiPuzzle } from "@/games/vrestifrasi/types";
-
-vi.mock("@/hooks/usePlayerIdentity", () => ({
-  usePlayerIdentity: () => ({
-    deviceId:         "dev-1",
-    displayName:      "Tester",
-    leaderboardProps: { deviceId: "dev-1", displayName: "Tester" },
-  }),
-}));
-
-vi.mock("@/hooks/useScoreSubmission", () => ({
-  useScoreSubmission: () => ({ submit: vi.fn(), submitWithName: vi.fn() }),
-}));
 
 const TODAY = "2026-08-17";
 const PHRASE = "Κάθε ζωή έχει νόημα";
@@ -53,9 +41,6 @@ function renderBoard() {
       puzzle={PUZZLE}
       validWords={WORDS}
       today={TODAY}
-      isLeaderboardOpen={false}
-      onOpenLeaderboard={() => {}}
-      onCloseLeaderboard={() => {}}
     />,
   );
 }
@@ -87,5 +72,16 @@ describe("Vres Tin Frasi Round End", () => {
     renderBoard();
 
     expect(screen.getByTestId("vrestifrasi-result")).toHaveTextContent(PHRASE);
+  });
+
+  // ADR 0027: the Game has no scoring and no leaderboard, so the panel it renders
+  // has neither the πόντοι heading nor the link — and no 🏆 anywhere on the page.
+  it("shows no score heading and no leaderboard link", () => {
+    seedSession("won");
+    renderBoard();
+
+    const panel = screen.getByTestId("vrestifrasi-result");
+    expect(panel).not.toHaveTextContent(/πόντοι/i);
+    expect(screen.queryByRole("button", { name: /πίνακα σκορ/i })).not.toBeInTheDocument();
   });
 });

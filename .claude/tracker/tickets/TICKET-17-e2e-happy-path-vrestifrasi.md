@@ -1,8 +1,8 @@
 # Browser happy path for Vres Tin Frasi
 
 **Status:** ready
-**Blocked by:** TICKET-22 — this spec must be written against the post-removal surface. Writing it
-first means writing assertions about a leaderboard and a score that are being deleted.
+**Blocked by:** nothing. ADR 0027 §1-§3 shipped on 2026-08-20, so the post-removal surface this
+spec asserts against now exists in the branch.
 **Spec:** `.claude/aiHelper/e2e-coverage/analysis.md` §5 Tier A (A1), ISSUE-03,
 [ADR 0027](../../../docs/adr/0027-two-games-lose-scoring-and-community-submission.md)
 
@@ -19,7 +19,7 @@ a fixture entry, and a pinned `?puzzle=` date.
 
 **Rewritten 2026-08-20.** This ticket previously turned on a constraint that no longer exists: it
 required the test to stop after a single guess, because finishing the round fired `useScoreSubmission`
-and wrote a real row to the shared production `game_scores`. TICKET-22 revokes the Game's `scores`
+and wrote a real row to the shared production `game_scores`. ADR 0027 §1 revoked the Game's `scores`
 capability, so **there is no write to avoid** — and the surface the spec asserts against changes
 shape. That makes this ticket cheaper and its coverage better: a full round is now the natural test.
 
@@ -44,8 +44,8 @@ shape. That makes this ticket cheaper and its coverage better: a full round is n
 - [ ] **Play the round to completion** and assert the Round-End Result Panel appears. This is new
       scope, unlocked by the capability removal — ISSUE-03 records that end-of-round is
       browser-untested for *every* Game, and this is the cheapest place to start closing that.
-- [ ] **Assert the two removed surfaces are absent**, so this spec is also the regression guard for
-      TICKET-22 and TICKET-23: no 🏆 leaderboard control on the page or in the Result Panel, and no
+- [ ] **Assert the two removed surfaces are absent**, so this spec is also the browser-level
+      regression guard for ADR 0027: no 🏆 leaderboard control on the page or in the Result Panel, and no
       ➕ «Υποβολή Παζλ» button on the picker card for this Game. A browser test is the right place
       for this — a re-added button would be visible here and invisible to jsdom.
 - [ ] Assert the Result Panel shows **no `πόντοι` heading** for this Game (ADR 0027 §3), and confirm

@@ -95,6 +95,9 @@ const SPENT: Record<string, string> = {
   // itself is not gone — it went back to ISSUE-03's deferred list.
   "TICKET-18": "e2e happy path, Topothesies — withdrawn 2026-08-20, back to ISSUE-03",
   "TICKET-21": "e2e happy path, Leksikastirio — withdrawn 2026-08-20, back to ISSUE-03",
+  // ADR 0027 §1–§3 only. §4 (community submission) and §5 (the schema migration)
+  // are TICKET-23 and TICKET-24 and are still on disk.
+  "TICKET-22": "scoring + leaderboard off two Games — shipped 2026-08-20",
 };
 
 /**
