@@ -95,9 +95,11 @@ const SPENT: Record<string, string> = {
   // itself is not gone — it went back to ISSUE-03's deferred list.
   "TICKET-18": "e2e happy path, Topothesies — withdrawn 2026-08-20, back to ISSUE-03",
   "TICKET-21": "e2e happy path, Leksikastirio — withdrawn 2026-08-20, back to ISSUE-03",
-  // ADR 0027 §1–§3 only. §4 (community submission) and §5 (the schema migration)
-  // are TICKET-23 and TICKET-24 and are still on disk.
+  // ADR 0027 §1–§3 only. §5 (the schema migration) is TICKET-24 and is still on disk.
   "TICKET-22": "scoring + leaderboard off two Games — shipped 2026-08-20",
+  // ADR 0027 §4. Both queues were 0 rows, so removing the community read changed no
+  // served puzzle. The tables themselves survive until TICKET-24 drops them.
+  "TICKET-23": "community submission off two Games — shipped 2026-08-20",
 };
 
 /**

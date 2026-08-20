@@ -176,14 +176,14 @@ function hasLeaderboard(id: RegistryGameId): id is GameIdWith<"leaderboard"> {
 //
 // The 🏆 button is DERIVED from the `leaderboard` capability, not hand-typed:
 // this list is how the two placeholder-content games came to advertise a board on
-// the picker. The community-puzzle buttons stay explicit — "accepts player
+// the picker. The community-puzzle button stays explicit — "accepts player
 // submissions" is a genuine per-game fact with no capability behind it yet.
 function submitButtonFor(id: RegistryGameId): React.ReactNode {
   if (id === "stavrolekso") return <StavroleksoMakerButton />;
 
   const trophy = hasLeaderboard(id) ? <HomeTrophyButton gameId={id} /> : undefined;
 
-  if (id === "leksiarxeio" || id === "leksindeseis" || id === "vrestifrasi") {
+  if (id === "leksindeseis") {
     return <><SubmitPuzzleButton game={id} />{trophy}</>;
   }
   return trophy;

@@ -30,15 +30,18 @@ import {
 } from "@/lib/supabase";
 
 /**
- * The four tables this module drives. Narrower than TableName on purpose: the
- * lifecycle only makes sense for the community_* queues, so pointing a config
- * at (say) game_scores is a compile error rather than a runtime surprise.
+ * Every community queue table, derived from TableName rather than listed — add
+ * or drop a `community_*_puzzles` table and this narrows on its own. Narrower
+ * than TableName on purpose: the lifecycle only makes sense for those queues, so
+ * pointing a config at (say) game_scores is a compile error rather than a
+ * runtime surprise.
  */
 export type CommunityPuzzleTable = Extract<TableName, `community_${string}_puzzles`>;
 
 /**
- * The three queues that actually serve a Daily Puzzle, and so carry a
- * `scheduled_date`. Stavrolekso is excluded structurally rather than by
+ * The queues that actually serve a Daily Puzzle, and so carry a
+ * `scheduled_date` — Λεξινδέσεις alone since Λεξιαρχείο and Βρες τη Φράση lost
+ * submission (ADR 0027). Stavrolekso is excluded structurally rather than by
  * convention: its rows are never consumed (players browse the whole approved
  * pool), it has no release date, and the column does not exist on its table —
  * so pointing the schedule-aware paths at it is a compile error.

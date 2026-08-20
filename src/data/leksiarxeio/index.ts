@@ -1,11 +1,10 @@
 // Leksiarxeio — data loader (runs server-side via Next.js App Router).
-// Primary source: the community puzzle scheduled for the requested date.
-// Fallback: deterministic word-pool rotation by date.
+// Source: deterministic word-pool rotation by date.
 //
-// One community puzzle row covers all 5 lengths, and is served — not consumed —
-// for the date it was scheduled for.
+// The Game accepted player-submitted puzzles until 2026-08-20 (ADR 0027). The
+// static rotation that was the fallback is now the only path, and the same date
+// returns the same puzzle it always did — the queue was empty when it was removed.
 
-import { consumeApprovedPuzzle } from "@/lib/communityPuzzleLifecycle";
 import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
 import { LEKSIARXEIO } from "@/config/gameRules";
 import { dateToIndex } from "@/lib/puzzleRotation";
@@ -49,33 +48,18 @@ function buildFallbackPuzzle(date: string, length: LeksiarxeioLength): Leksiarxe
 
 interface LeksiarxeioDaily {
   puzzles: LeksiarxeioPuzzle[];
-  submitter_name: string | null;
 }
 
 /**
- * Returns all 5 daily Leksiarxeio puzzles for `date`.
- * A community puzzle scheduled for that date wins; otherwise the static answer
- * pools' deterministic rotation. Both are stable across repeat calls.
+ * Returns all 5 daily Leksiarxeio puzzles for `date`, from the static answer
+ * pools' deterministic rotation. Stable across repeat calls.
+ *
+ * Stays `async` although nothing is awaited: every caller is a server component
+ * or a test that already awaits it, and the shape is what the archive navigation
+ * paths expect.
  */
 export async function getAllTodaysLeksiarxeioPuzzles(date: string): Promise<LeksiarxeioDaily> {
-  const consumed = await consumeApprovedPuzzle<Record<string, string>>(
-    "community_leksiarxeio_puzzles",
-    date,
-  );
-  if (consumed) {
-    const puzzles = LEKSIARXEIO_LENGTHS.map((len): LeksiarxeioPuzzle => ({
-      id:     `${date}-wordle-${len}`,
-      date,
-      answer: (consumed.data[String(len)] ?? "").toLowerCase(),
-      length: len,
-    }));
-    return { puzzles, submitter_name: consumed.submitter_name };
-  }
-
-  return {
-    puzzles: LEKSIARXEIO_LENGTHS.map((l) => buildFallbackPuzzle(date, l)),
-    submitter_name: null,
-  };
+  return { puzzles: LEKSIARXEIO_LENGTHS.map((l) => buildFallbackPuzzle(date, l)) };
 }
 
 /**

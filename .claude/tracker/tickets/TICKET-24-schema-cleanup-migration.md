@@ -2,8 +2,9 @@
 
 **Status:** ready
 **Blocked by:** the ADR 0027 code removals — **both halves must be deployed to production**, not
-merely merged. §1-§3 (scoring + leaderboard) shipped to the branch on 2026-08-20; §4 (community
-submission) is TICKET-23 and is still open. Also blocked on the **operator**: `npx supabase db push` and `npm run db:rehearse` have both
+merely merged. §1-§3 (scoring + leaderboard) and §4 (community submission, TICKET-23) are both
+**committed to `dev` on 2026-08-20 and neither is deployed**. Nothing here may run until they are
+live: an old deployed bundle POSTing to a dropped table is the failure mode the ordering prevents. Also blocked on the **operator**: `npx supabase db push` and `npm run db:rehearse` have both
 been pre-blocked by the permission classifier before (project-mcp skill, trap 3). The operator has
 offered to run them; hand over the exact command rather than fighting the block.
 **Spec:** [ADR 0027](../../../docs/adr/0027-two-games-lose-scoring-and-community-submission.md) §5
@@ -109,8 +110,12 @@ update public.nominations set word = 'ιουνιοσ'
 - [ ] **`ISSUE-01` §3** — the index and the sigma fix are done. Rewrite the section so what remains
       is only the still-deferred moderation half; do not leave "its body is written into runbook
       step 5" pointing at a step that no longer exists.
-- [ ] `CONTEXT.md` — the `game_scores` row's `data` jsonb sentence, and the two dropped table rows
-      (the scoring removal already rewrote the `data` sentence; this ticket owns the final state).
+- [ ] `CONTEXT.md` — the `game_scores` row's `data` jsonb sentence, and the two dropped table rows.
+      TICKET-23 rewrote both table rows to read **"Orphaned, 0 rows … TICKET-24 drops it"** rather
+      than deleting them, because the tables still existed when it shipped. **Delete both rows
+      outright here** — they are the last current-state doc claiming those tables exist.
+- [ ] `supabase/scripts/launch-reset.sql` — TICKET-23 rewrote its KEPT block to drop both tables
+      from the list and say why. Verify it still reads true once they are gone; no edit expected.
 - [ ] `CONTEXT.md` line 281 — the migrations-hardening paragraph names the community `status` enum
       across four tables. Verify it still reads true at two.
 - [ ] `.claude/aiHelper/memory.md` — **The launch reset** row states that `game_scores` DDL should

@@ -1,6 +1,7 @@
 // communityPuzzleScheduling.test.ts
-// The three data loaders that serve a Community Puzzle — Vres Tin Frasi,
-// Leksiarxeio, Leksindeseis — as seen from the page that calls them.
+// The data loader that serves a Community Puzzle — Leksindeseis — as seen from
+// the page that calls it, plus the two loaders that no longer read the queue at
+// all (Vres Tin Frasi and Leksiarxeio, ADR 0027).
 //
 // This is the regression surface for the scheduled-release defect (s134): the
 // loaders each take a `date` but used to call consumeApprovedPuzzle() with no
@@ -13,7 +14,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { dateToIndex } from "@/lib/puzzleRotation";
 
-// ── consumeApprovedPuzzle mock (the loaders' only DB dependency) ──────────────
+// ── consumeApprovedPuzzle mock (the loader's only DB dependency) ──────────────
 
 const consumeApprovedPuzzle = vi.fn();
 
@@ -47,24 +48,6 @@ beforeEach(() => {
 // ── The shared contract ───────────────────────────────────────────────────────
 
 describe("community puzzle loaders — the date reaches the query", () => {
-  it("Vres Tin Frasi asks for the date it was given, not today", async () => {
-    nothingScheduled();
-    await getTodaysVresTinFrasiPuzzle(ARCHIVE);
-    expect(consumeApprovedPuzzle).toHaveBeenCalledWith(
-      "community_vrestifrasi_puzzles",
-      ARCHIVE,
-    );
-  });
-
-  it("Leksiarxeio asks for the date it was given, not today", async () => {
-    nothingScheduled();
-    await getAllTodaysLeksiarxeioPuzzles(ARCHIVE);
-    expect(consumeApprovedPuzzle).toHaveBeenCalledWith(
-      "community_leksiarxeio_puzzles",
-      ARCHIVE,
-    );
-  });
-
   it("Leksindeseis asks for the date it was given, not today", async () => {
     nothingScheduled();
     await getTodaysLeksindeseisPuzzle(ARCHIVE);
@@ -75,36 +58,47 @@ describe("community puzzle loaders — the date reaches the query", () => {
   });
 });
 
+// ── The two loaders that no longer consult the queue ──────────────────────────
+// Λεξιαρχείο and Βρες τη Φράση lost Community Puzzle submission on 2026-08-20
+// (ADR 0027). A call to consumeApprovedPuzzle from either would mean the read
+// came back — and it would point at a table TICKET-24 drops.
+
+describe("loaders with no community read", () => {
+  it("Vres Tin Frasi never touches the queue", async () => {
+    scheduled({ phrase: "καλη χρονια" });
+    const { puzzle } = await getTodaysVresTinFrasiPuzzle(TODAY);
+
+    expect(consumeApprovedPuzzle).not.toHaveBeenCalled();
+    expect(puzzle.phrase).not.toBe("καλη χρονια");
+  });
+
+  it("Leksiarxeio never touches the queue", async () => {
+    scheduled({ "4": "γατα", "5": "νερου", "6": "σπιτια", "7": "θαλασσα", "8": "παραθυρο" });
+    const { puzzles } = await getAllTodaysLeksiarxeioPuzzles(TODAY);
+
+    expect(consumeApprovedPuzzle).not.toHaveBeenCalled();
+    expect(puzzles[0].answer).not.toBe("γατα");
+  });
+});
+
 // ── Vres Tin Frasi ────────────────────────────────────────────────────────────
 
 describe("getTodaysVresTinFrasiPuzzle", () => {
-  it("serves the phrase scheduled for that date, stamped with it", async () => {
-    scheduled({ phrase: "καλη χρονια" });
-    const { puzzle, submitter_name } = await getTodaysVresTinFrasiPuzzle(TODAY);
-
-    expect(puzzle.phrase).toBe("καλη χρονια");
-    expect(puzzle.date).toBe(TODAY);
-    expect(puzzle.id).toBe(`${TODAY}-vresi`);
-    expect(submitter_name).toBe("Νίκος");
-  });
-
-  it("falls through to the static rotation when nothing is scheduled", async () => {
-    nothingScheduled();
-    const { puzzle, submitter_name } = await getTodaysVresTinFrasiPuzzle(TODAY);
+  it("serves the static rotation, stamped with the date it was given", async () => {
+    const { puzzle } = await getTodaysVresTinFrasiPuzzle(TODAY);
 
     expect(puzzle.phrase).toBeTruthy();
-    expect(submitter_name).toBeNull();
+    expect(puzzle.date).toBe(TODAY);
+    expect(puzzle.id).toBe(`${TODAY}-vresi`);
   });
 
   it("serves the same static phrase on every call for one date", async () => {
-    nothingScheduled();
     const a = await getTodaysVresTinFrasiPuzzle(ARCHIVE);
     const b = await getTodaysVresTinFrasiPuzzle(ARCHIVE);
     expect(a.puzzle.phrase).toBe(b.puzzle.phrase);
   });
 
   it("gives two different dates their own static phrases", async () => {
-    nothingScheduled();
     const a = await getTodaysVresTinFrasiPuzzle("2026-08-05");
     const b = await getTodaysVresTinFrasiPuzzle("2026-08-06");
     expect(a.puzzle.phrase).not.toBe(b.puzzle.phrase);
@@ -114,33 +108,21 @@ describe("getTodaysVresTinFrasiPuzzle", () => {
 // ── Leksiarxeio ───────────────────────────────────────────────────────────────
 
 describe("getAllTodaysLeksiarxeioPuzzles", () => {
-  it("serves the scheduled answers across all lengths, stamped with the date", async () => {
-    scheduled({ "4": "ΓΑΤΑ", "5": "ΝΕΡΟΥ", "6": "ΣΠΙΤΙΑ", "7": "ΘΑΛΑΣΣΑ", "8": "ΠΑΡΑΘΥΡΟ" });
-    const { puzzles, submitter_name } = await getAllTodaysLeksiarxeioPuzzles(TODAY);
-
-    expect(puzzles).toHaveLength(LEKSIARXEIO_LENGTHS.length);
-    expect(puzzles[0].date).toBe(TODAY);
-    expect(puzzles[0].id).toBe(`${TODAY}-wordle-4`);
-    // The loader lowercases the submitted answers.
-    expect(puzzles[0].answer).toBe("γατα");
-    expect(submitter_name).toBe("Νίκος");
-  });
-
-  it("falls through to the static answer pools when nothing is scheduled", async () => {
-    nothingScheduled();
-    const { puzzles, submitter_name } = await getAllTodaysLeksiarxeioPuzzles(ARCHIVE);
+  it("serves the static answer pools across all lengths, stamped with the date", async () => {
+    const { puzzles } = await getAllTodaysLeksiarxeioPuzzles(ARCHIVE);
 
     // Independently recomputed from the pool the loader rotates over, not read
     // back from the loader's own arithmetic.
     const pool     = getAnswerPool(4);
     const expected = pool[dateToIndex(ARCHIVE, pool.length)];
 
+    expect(puzzles).toHaveLength(LEKSIARXEIO_LENGTHS.length);
+    expect(puzzles[0].date).toBe(ARCHIVE);
+    expect(puzzles[0].id).toBe(`${ARCHIVE}-wordle-4`);
     expect(puzzles[0].answer).toBe(expected);
-    expect(submitter_name).toBeNull();
   });
 
   it("serves the same static answers on every call for one date", async () => {
-    nothingScheduled();
     const a = await getAllTodaysLeksiarxeioPuzzles(ARCHIVE);
     const b = await getAllTodaysLeksiarxeioPuzzles(ARCHIVE);
     expect(a.puzzles.map((p) => p.answer)).toEqual(b.puzzles.map((p) => p.answer));

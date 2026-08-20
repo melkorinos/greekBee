@@ -20,7 +20,7 @@ interface VresTinFrasiPageProps {
 export default async function VresTinFrasiPage({ searchParams }: VresTinFrasiPageProps) {
   const { puzzle: puzzleParam } = await searchParams;
   const today = resolvePuzzleDateParam(puzzleParam, getTodayDateString());
-  const { puzzle, submitter_name } = await getTodaysVresTinFrasiPuzzle(today);
+  const { puzzle } = await getTodaysVresTinFrasiPuzzle(today);
 
   // Supply all word pools (1–8) to validate phrase guess words.
   // Short words (1–3 letters) cover the standalone articles «η»/«ο» plus the
@@ -40,11 +40,6 @@ export default async function VresTinFrasiPage({ searchParams }: VresTinFrasiPag
 
   return (
     <GamePageShell gameId="vrestifrasi">
-      {submitter_name && (
-        <p className="text-xs text-muted self-center">
-          Παζλ από {submitter_name}
-        </p>
-      )}
       <VresTinFrasiPageClient
         puzzle={puzzle}
         validWords={allWords}

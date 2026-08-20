@@ -32,9 +32,9 @@ type CommunityPuzzleGameConfig = import("@/lib/communityPuzzleLifecycle").Commun
 
 // A real community queue rather than a synthetic name: config.table is typed to
 // CommunityPuzzleTable now, so an invented table would not compile. The Supabase
-// client is mocked wholesale below, so which of the four this is has no bearing
-// on what these tests exercise — the module stays game-agnostic.
-const TABLE = "community_vrestifrasi_puzzles";
+// client is mocked wholesale below, so which queue this is has no bearing on
+// what these tests exercise — the module stays game-agnostic.
+const TABLE = "community_leksindeseis_puzzles";
 
 // Accepts { word: string }, rejects anything else with a 422.
 function validate(body: unknown): SubmissionValidation {
@@ -203,9 +203,8 @@ describe("createListHandler — publicApprovedList (Stavrolekso shape)", () => {
 // ── Consume ─────────────────────────────────────────────────────────────────────
 // The fourth lifecycle transition: a game's data loader reads the approved row
 // scheduled for the date being served and receives data + submitter_name. The row
-// stays put. The three game data loaders (Leksiarxeio, Vres Tin Frasi,
-// Leksindeseis) are thin mappers over this; their own date-passing and static
-// fallback live in communityPuzzleScheduling.test.ts.
+// stays put. The Leksindeseis data loader is a thin mapper over this; its own
+// date-passing and static fallback live in communityPuzzleScheduling.test.ts.
 
 describe("consumeApprovedPuzzle", () => {
   const DATE = "2026-08-10";

@@ -1,5 +1,5 @@
 // Tests for the admin review verb of the Community Puzzle Lifecycle — the one
-// CommunityQueueCard shell serving all four queues. The per-game part is the
+// CommunityQueueCard shell serving every queue. The per-game part is the
 // body; the wire (URL, X-Admin-Secret, PATCH body) is the shell's and is
 // asserted once per game here, since that wire is what ADR 0016 changed.
 
@@ -14,21 +14,13 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => ({ get: (k: string) => (k === "admin" ? "s3cret" : null) }),
 }));
 
-type CommunityTab = "leksiarxeio" | "leksindeseis" | "vrestifrasi" | "stavrolekso";
+type CommunityTab = "leksindeseis" | "stavrolekso";
 
 /** One pending row per queue, shaped as that game's API returns it. */
 const QUEUE: Record<CommunityTab, Record<string, unknown>> = {
-  leksiarxeio: {
-    id: 11, submitter_name: "Νίκος", created_at: "2026-01-01T00:00:00Z",
-    data: { "4": "ΑΓΑΠ", "5": "ΑΓΑΠΗ", "6": "ΑΓΑΠΗΣ", "7": "ΑΓΑΠΗΤΟ", "8": "ΑΓΑΠΗΤΟΣ" },
-  },
   leksindeseis: {
     id: 22, submitter_name: "Μαρία", created_at: "2026-01-01T00:00:00Z",
     data: [{ category: "ΧΡΩΜΑΤΑ", words: ["ΚΟΚΚΙΝΟ", "ΜΠΛΕ", "ΠΡΑΣΙΝΟ", "ΚΙΤΡΙΝΟ"], difficulty: 1 }],
-  },
-  vrestifrasi: {
-    id: 33, submitter_name: "Άννα", created_at: "2026-01-01T00:00:00Z",
-    data: { phrase: "ΚΑΛΗ ΤΥΧΗ" },
   },
   stavrolekso: {
     id: 44, submitter_name: "Πέτρος", title: "Πρωινό", created_at: "2026-01-01T00:00:00Z",
@@ -93,31 +85,15 @@ describe("CommunityQueueCard — the review wire", () => {
     await user.click(screen.getByTestId("community-approve"));
 
     await waitFor(() => expect(screen.queryByTestId("community-queue-card")).toBeNull());
-    // Vres Tin Frasi queues phrases, not παζλ — its empty state says so.
-    const emptyState = game === "vrestifrasi"
-      ? "Δεν υπάρχουν φράσεις σε αναμονή."
-      : "Δεν υπάρχουν παζλ σε αναμονή.";
-    expect(screen.getByText(emptyState)).toBeTruthy();
+    expect(screen.getByText("Δεν υπάρχουν παζλ σε αναμονή.")).toBeTruthy();
   });
 });
 
 describe("CommunityQueueCard — per-game bodies", () => {
-  it("leksiarxeio shows a word per configured length", async () => {
-    mockFetch();
-    const { card } = await openQueue("leksiarxeio");
-    expect(within(card).getByText("ΑΓΑΠΗΤΟΣ")).toBeTruthy();
-    expect(within(card).getByText("από Νίκος")).toBeTruthy();
-  });
-
-  it("vrestifrasi shows the phrase", async () => {
-    mockFetch();
-    const { card } = await openQueue("vrestifrasi");
-    expect(within(card).getByText("ΚΑΛΗ ΤΥΧΗ")).toBeTruthy();
-  });
-
   it("leksindeseis shows each group's category and words", async () => {
     mockFetch();
     const { card } = await openQueue("leksindeseis");
+    expect(within(card).getByText("από Μαρία")).toBeTruthy();
     expect(within(card).getByText("ΧΡΩΜΑΤΑ")).toBeTruthy();
     expect(within(card).getByText("ΚΟΚΚΙΝΟ, ΜΠΛΕ, ΠΡΑΣΙΝΟ, ΚΙΤΡΙΝΟ")).toBeTruthy();
   });

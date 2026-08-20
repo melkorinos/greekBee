@@ -1,19 +1,26 @@
 // Tests for the Leksiarxeio data loader.
-// Verifies: community queue consumption, static fallback, determinism, and multi-length support.
-// Supabase is mocked so tests cover both the community path and the static fallback path.
+// Verifies: the static rotation, determinism, and multi-length support.
+// Supabase is mocked to RETURN a row on purpose: the loader lost its community
+// read on 2026-08-20 (ADR 0027), and a served row would prove it came back.
 
 import { LEKSIARXEIO_LENGTHS, getAllTodaysLeksiarxeioPuzzles, getAnswerPool, getTodayDateString, getValidWords } from "@/data/leksiarxeio";
 import { describe, expect, it, vi } from "vitest";
 
-// ── Supabase mock (returns error → triggers static fallback by default) ────────
+// ── Supabase mock (returns a row — the loader must ignore it entirely) ────────
 
 import type { ChainResult } from "@/test/helpers/supabaseMock";
 
-let _mockResult: ChainResult = { data: null, error: { message: "no rows" } };
+const _mockResult: ChainResult = {
+  data: {
+    id: 1,
+    submitter_name: "Νίκος",
+    data: { "4": "αγαπ", "5": "αγαπη", "6": "αγαπαω", "7": "αγαπαμε", "8": "αγαπαστε" },
+  },
+  error: null,
+};
 
 vi.mock("@/lib/supabase", async () => {
   const { makeChain, tableShim } = await import("@/test/helpers/supabaseMock");
-  // consumeApprovedPuzzle uses the service-role client; point both at the mock.
   const client = { from: () => makeChain(_mockResult) };
   return {
     getSupabaseClient: () => client,
@@ -22,9 +29,9 @@ vi.mock("@/lib/supabase", async () => {
   };
 });
 
-// ── getAllTodaysLeksiarxeioPuzzles — static fallback ───────────────────────────
+// ── getAllTodaysLeksiarxeioPuzzles ────────────────────────────────────────────
 
-describe("getAllTodaysLeksiarxeioPuzzles — static fallback", () => {
+describe("getAllTodaysLeksiarxeioPuzzles", () => {
   it("returns 5 puzzles (lengths 4–8)", async () => {
     const { puzzles } = await getAllTodaysLeksiarxeioPuzzles("2026-01-01");
     expect(puzzles).toHaveLength(5);
@@ -67,58 +74,10 @@ describe("getAllTodaysLeksiarxeioPuzzles — static fallback", () => {
     }
   });
 
-  it("submitter_name is null on static fallback", async () => {
-    const { submitter_name } = await getAllTodaysLeksiarxeioPuzzles("2026-01-01");
-    expect(submitter_name).toBeNull();
-  });
-});
-
-// ── getAllTodaysLeksiarxeioPuzzles — community queue path ─────────────────────
-
-describe("getAllTodaysLeksiarxeioPuzzles — community queue", () => {
-  it("uses community puzzle words when a row is found", async () => {
-    _mockResult = {
-      data: {
-        id: 1,
-        submitter_name: "Νίκος",
-        data: { "4": "αγαπ", "5": "αγαπη", "6": "αγαπαω", "7": "αγαπαμε", "8": "αγαπαστε" },
-      },
-      error: null,
-    };
-    const { puzzles, submitter_name } = await getAllTodaysLeksiarxeioPuzzles("2026-06-01");
-    expect(puzzles[0].answer).toBe("αγαπ");
-    expect(puzzles[1].answer).toBe("αγαπη");
-    expect(submitter_name).toBe("Νίκος");
-    // Reset
-    _mockResult = { data: null, error: { message: "no rows" } };
-  });
-
-  it("puzzle ids still use the date format", async () => {
-    _mockResult = {
-      data: {
-        id: 2,
-        submitter_name: "",
-        data: { "4": "αγαπ", "5": "αγαπη", "6": "αγαπαω", "7": "αγαπαμε", "8": "αγαπαστε" },
-      },
-      error: null,
-    };
-    const { puzzles } = await getAllTodaysLeksiarxeioPuzzles("2026-06-02");
-    expect(puzzles[0].id).toBe("2026-06-02-wordle-4");
-    _mockResult = { data: null, error: { message: "no rows" } };
-  });
-
-  it("submitter_name is null when the row has an empty string", async () => {
-    _mockResult = {
-      data: {
-        id: 3,
-        submitter_name: "",
-        data: { "4": "αγαπ", "5": "αγαπη", "6": "αγαπαω", "7": "αγαπαμε", "8": "αγαπαστε" },
-      },
-      error: null,
-    };
-    const { submitter_name } = await getAllTodaysLeksiarxeioPuzzles("2026-06-03");
-    expect(submitter_name).toBeNull();
-    _mockResult = { data: null, error: { message: "no rows" } };
+  it("ignores a community row even when the queue returns one", async () => {
+    const { puzzles } = await getAllTodaysLeksiarxeioPuzzles("2026-06-01");
+    expect(puzzles.map((x) => x.answer)).not.toContain("αγαπ");
+    for (const x of puzzles) expect(getValidWords(x.length)).toContain(x.answer);
   });
 });
 
