@@ -73,5 +73,5 @@ entries already record the retired-versus-current fork, so the glossary needs no
 - ADR 0017 — generated Supabase types are compiler-enforced; regenerate them with the migration.
 - [`docs/launch-runbook.md`](../../../docs/launch-runbook.md) — runbook step 5, which owns the *when* and the exact SQL.
 - ISSUE-01 — the missing backups this used to be gated on. (The dev/prod split is no longer there: decided against in ADR 0024, 2026-08-16.)
-- [`TICKET-11`](../tickets/TICKET-11-offsite-encrypted-backup-launch.md) — the encrypted dump. Still owed before runbook step 3, but no longer a gate on this.
+- `TICKET-11` — the encrypted dump. Closed 2026-08-20 and its file deleted; it was never a gate on this.
 - [`ISSUE-01`](ISSUE-01-no-disaster-recovery-backups.md) §4 — the other half of the original ISSUE-05, decided separately.
