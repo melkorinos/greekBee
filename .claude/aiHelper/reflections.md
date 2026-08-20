@@ -31,11 +31,10 @@ never stage and keep working.**
 ## 🟠 Gates whose entire enforcement is a human reading a line
 
 - **Nothing schedules the backup, and nothing checks the upload.** Carrying the `.7z` to Drive is a
-  human act **nothing verifies**, and the runbook dumps at step 3 then runs at step 4 the wipe it is
-  the only undo for. **A script that ships is not a script that has run** — s159 found no archive at
-  all, three sessions after cadence was written up; s166 ran it, s170 got one into Drive. Still
-  unbought: the weekly task is **unregistered**, and nothing has opened the archive off this
-  machine. **Measured state is `ISSUE-01` §1 — never a copy here.**
+  human act **nothing verifies**, and the release-day dump is the only undo for the wipe one step
+  later. **A script that ships is not a script that has run** — s159 found no archive at all, three
+  sessions after the cadence was written up. Still unbought: the weekly task is **unregistered**, and
+  nothing has opened the archive off this machine. **Measured state is `ISSUE-01` §1 — never a copy here.**
 - **Four operator checks on a real device are owed and none has happened:** Trophy Case + leaderboard
   chip in both themes (s144), Shell header at four buttons (jsdom has no layout), letter-box grid
   legibility (s162), and **the native share sheet** (s169 — a mock of `navigator.share` is a claim
@@ -68,9 +67,10 @@ skill entry is about to decide something, **spend the one command**, and **date 
 The live-DB tests talk to Postgres directly — no deployed app code runs — so they go green the moment
 a migration lands, whether the deploy succeeded, failed or never started: **a green suite actively
 reassuring the operator while every write 500s**. Any migration window needs one check hitting the
-**deployed route** (release day does this at runbook step 2). **Live as of s174:** the migration dropping two community tables is **written and committed but
-not applied**, and the code that stopped writing them is committed but **not deployed** — an
-ordering resting on a fact no test here can observe. Check the deployed commit, never the green suite.
+**deployed route** (release day does this at runbook step 2). **Live as of s174:** the migration is
+committed but not applied and its removal code not deployed, while `CONTEXT.md` already describes the
+post-migration schema — docs ahead of the database, honest only while the branch stays unpushed.
+Check the deployed commit, never the green suite.
 
 ## 🟡 Authored content vs derived word lists — the s133 class of bug
 
