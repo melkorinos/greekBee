@@ -31,14 +31,12 @@ never stage and keep working.**
 
 ## 🟠 Gates whose entire enforcement is a human reading a line
 
-- **Nothing schedules the backup, and nothing checks the upload.** `db:backup` makes an AES-256
-  `.7z`; carrying it to Drive is a human act **nothing verifies** — the runbook dumps at step 3 and
-  runs the wipe it is the only undo for at step 4. Deliberately manual, an accepted risk. s159
-  measured the predicted failure live: **no archive existed at all**, three sessions after
-  destination, encryption and cadence were each written up. **A script that ships is not a script
-  that has run** — s166 ran it, s170 got one into Drive. What that did *not* buy: the weekly task is
-  **still unregistered**, so every backup so far is one a human remembered, and nothing has opened
-  the archive off this machine. **Measured state is `ISSUE-01` §1 — never a copy here.**
+- **Nothing schedules the backup, and nothing checks the upload.** Carrying the `.7z` to Drive is a
+  human act **nothing verifies**, and the runbook dumps at step 3 then runs at step 4 the wipe it is
+  the only undo for. **A script that ships is not a script that has run** — s159 found no archive at
+  all, three sessions after cadence was written up; s166 ran it, s170 got one into Drive. Still
+  unbought: the weekly task is **unregistered**, and nothing has opened the archive off this
+  machine. **Measured state is `ISSUE-01` §1 — never a copy here.**
 - **Four operator checks on a real device are owed and none has happened:** Trophy Case + leaderboard
   chip in both themes (s144), Shell header at four buttons (jsdom has no layout), letter-box grid
   legibility (s162), and **the native share sheet** (s169 — a mock of `navigator.share` is a claim
@@ -51,8 +49,12 @@ never stage and keep working.**
   wrong peel rules shipped through it clean; what caught both was reading the generator's own
   diagnostic numbers (ADR 0018).
 
-The inverse also happens: `ISSUE-05` blocked a `DROP COLUMN` behind a backup protecting rows
-`launch-reset.sql` deletes one step earlier. **A gate must cite a consequence, never a rule.**
+The inverse also happens, twice on the same gate: `ISSUE-05` blocked a `DROP COLUMN` behind a backup
+protecting rows `launch-reset.sql` deletes one step earlier; then the freeze on
+`supabase/migrations/` outlived what it bought — one moment of DDL against an empty `game_scores` —
+because s172 dropped a dead column early anyway, **spending** the guarantee rather than deferring it
+(ADR 0027 §5). **A gate must cite a consequence, never a rule** — and when the consequence is spent,
+say so out loud, because a rule with no live reason still reads as binding to a cold session.
 
 ## 🟠 A skill file is a cache, and a stale cache speaks with authority (s150)
 
@@ -88,10 +90,9 @@ can be **regenerated empty** — before "just add a list", ask whether a re-sync
   files, mostly where ids were *arbitrary valid strings*; grep is the only map and each hit needs
   judgement, never a `sed`. **When a fixture stops compiling against reality, ask whether the test
   still describes a possible world.**
-- **`coverageMap.md` does not cover every test file, and three entries once described tests that do
-  not exist (s157)** — claimed as covered for seven months. A gap makes you write a test you may
-  already have; a wrong entry makes you trust one that never existed. **Re-read the rows the Dream
-  touches instead of only appending**, and count against disk rather than any number written here.
+- **`coverageMap.md` misses files, and three entries once described tests that do not exist (s157)**
+  — claimed as covered for seven months. A gap makes you rewrite a test you have; a wrong entry makes
+  you trust one that never existed. **Re-read the rows the Dream touches**, and count against disk.
 
 ## 🟡 Smaller live watches
 
@@ -112,8 +113,7 @@ can be **regenerated empty** — before "just add a list", ask whether a re-sync
   still wearing the wordmark; do not bank 144 as progress toward 150. Ship-anyway on trademarks is
   the decided risk, noted in CONTEXT/ADR at the wip→live flip. **Πόσο κάνει; needs real content and
   nothing tracks it** — ticket first, flip `wip:false` only after.
-- **Two accepted UX gaps, unfiled:** Leksindeseis never shows *which* group is one away, and
-  `/leksokipos/[center]/[outer]` warns below 5 valid words but has no 404 floor.
+- **Two accepted UX gaps, unfiled:** Leksindeseis never shows *which* group is one away; `/leksokipos/[center]/[outer]` warns below 5 valid words but has no 404 floor.
 - **One behaviour, two seams — the ticket names one (s169).** ADR 0025 rejected the auto-opening
   leaderboard; two Games did it with their own `setTimeout`, three more through
   `useLiveScorePost`'s `onFinish`, so fixing the two the ticket listed left half the Platform still

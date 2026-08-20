@@ -5,6 +5,34 @@
 
 ---
 
+## Session 172 — 2026-08-20: two Games lose their scoreboard, and the migrations folder unfreezes
+
+Docs only. `/grill-with-docs` on the operator's pre-launch subtraction pass: Λεξιαρχείο and Βρες τη
+Φράση lose their leaderboards **and** their Community Puzzle submission. Output is **ADR 0027**,
+`TICKET-22` (scoring), `TICKET-23` (submission), `TICKET-24` (one migration), rewritten `TICKET-17`.
+
+**Measuring first changed three answers.** Both community queues are **empty — 0 rows each**, so the
+feature was never used once and "drop the tables" cost nothing to decide. The 50 orphan `game_scores`
+rows need no pruning decision either: runbook step 4 already wipes them — reading the runbook
+answered a question the grill was about to ask.
+
+**"Remove the leaderboard" was four decisions.** `scores` is a separate grant, and keeping it would
+leave rows accruing that nothing ranks. Following it through reached further than expected:
+`useGuessRound.scoreFn` (both callers are these Games, so it deletes cleanly) and
+`ShareResultPanel.score`, **optional one day after ADR 0025 shipped it** across eight boards.
+
+**The load-bearing find was in a doc, not the code.** `supabase/migrations/` is frozen until
+release-day step 5, and that freeze buys exactly one thing: DDL against an empty `game_scores`.
+Dropping the now-dead `data` column early **spends that guarantee** — so splitting the work in two
+pays the same risk twice. One migration takes all of it, including `ISSUE-05`'s `is_perfect` and
+`ISSUE-01` §3's index and sigma fix, which sat on release day *only* because the folder was locked
+(§3 says so in as many words). **Release day drops from six steps to five**, with `db:rehearse`
+replacing the empty table as the safety mechanism.
+
+**`TICKET-17` was rewritten, not left to drift.** Its whole shape was avoiding a `game_scores` write
+by stopping after one guess; with no write to avoid it plays a full round and becomes the
+end-of-round browser coverage `ISSUE-03` keeps asking for. Three days old and already stale. Tracker
+guard 4/4; no source change — the artifact is an ADR and four tickets.
 ## Session 171 — 2026-08-20: the e2e gap gets measured, and two of five tickets die within the hour
 
 Docs only, no source change beyond one `SPENT` row. `ISSUE-03` asked for an analysis of what the
@@ -40,38 +68,11 @@ Shipped: `TICKET-17` (Vres Tin Frasi), `TICKET-19` (Λεξοδρομία), `TICK
 pick up, in that order — 20 last because the pointer drag is the flakiest input. eslint 0, tracker
 guard 4/4. No new test; the artifact is a set of documents.
 
-## Session 170 — 2026-08-20: the backup leaves the machine, and the box it cannot tick moves house
-
-`TICKET-11`'s operator half, run live. The Drive folder was **verified private through the Drive MCP**
-(owner only, no link sharing) rather than taken on trust; `20260820-112045.7z` produced and uploaded.
-Ticket closed, deleted, number `SPENT`.
-
-**Closing a ticket is not deleting a file.** Two done-whens were never ticked, and deleting the file
-would have deleted the only record of them — the weekly task is unregistered, and the archive has
-still never been extracted on a second machine. Both moved into `ISSUE-01` §1, which was **rewritten**:
-its heading read *"right now, no backup at all"*, which had stopped being true.
-
-**The ordering rule outlived its own purpose.** *Never register the scheduler before the password
-exists* was the spine of the ticket; both preconditions now hold, so it guards nothing. Recorded in
-`ISSUE-01` as **spent** rather than deleted, because it is still the answer to "why is the task not
-registered yet?" — delete it and the next session re-derives it from scratch.
-
-**`7z t` locally proves less than it looks.** It confirms the archive matches `.env.local`, not the
-password manager. That distinction *is* the open done-when, which is why the box moved rather than
-closed. The operator chose a seven-character password and, told once why that is thin for an artifact
-carrying `auth.users` into cloud storage, kept it — recorded as a measured weakness, not re-argued.
-
-**A commit landed underneath the session** — 48 files, sweeping up four of this session's seven
-including a staged `git rm`, so half this work is committed under a message about the Result Panel.
-Third instance of the shared-tree hazard; `reflections.md` now says commit when a change is coherent
-rather than staging and continuing.
-
-213 files / 2710 tests, eslint 0, build 0. No test added — the artifact is a `.7z`, not a function.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 170 | 2026-08-20 | **The backup leaves the machine, and the box it cannot tick moves house.** `TICKET-11`'s operator half, run live; Drive folder **verified private through the Drive MCP** rather than taken on trust, `20260820-112045.7z` uploaded, ticket closed and `SPENT`. **Closing a ticket is not deleting a file** — two done-whens were never ticked (weekly task unregistered; archive never extracted on a second machine) and moved into `ISSUE-01` §1, which was rewritten because its heading *"right now, no backup at all"* had stopped being true. The ticket's spine — *never register the scheduler before the password exists* — now guards nothing and is recorded as **spent rather than deleted**, because it is still the answer to "why is the task not registered yet?". **`7z t` locally proves the archive matches `.env.local`, not the password manager**; that gap *is* the open done-when. Seven-character password kept after one warning, recorded as a measured weakness. A commit landed underneath the session (48 files, third instance of the shared-tree hazard) — `reflections.md` now says commit when a change is coherent. 213 files / 2710 tests, eslint 0, build 0. |
 | 169 | 2026-08-20 | **Every Game learns to end, and the ending carries a link.** `TICKET-15` shipped and deleted, `/tdd`, five slices: six Games reach a Result Panel and every share is four lines whose fourth is a link — the half of `TICKET-10`'s bet never placed. Two seams, deliberately no third: `src/lib/shareText.ts` owns identity/score/link. **Five auto-opening leaderboards and the ticket knew of none of them** — two had their own `setTimeout`, three more came through `useLiveScorePost`'s `onFinish`, found only by the operator playing it; `onFinish` was deleted from the hook rather than unwired at three call sites, so reinstating it is a type error. Λεξόκηπος's panel lives in the layout, not the board. Each builder's spoiler test proven non-vacuous by making the builder leak. 213 files / 2709 tests (+58), e2e 13 passed / 2 skipped. |
 | 168 | 2026-08-20 | **The launch question closes and its handoff dies.** Docs only. Question 2 answered — the run is the offsite backup, then the Result Panel, then the `dev → main` merge with its play-through, then release day, then a week of daily Vercel error checks; target **on or about 27 August 2026**, the operator's date and not hard. `launch-readiness.md` deleted, `docs/launch-runbook.md` replaces it: **a handoff whose last question is answered is not a document**, and eleven files pointed at it. It ran to 281 lines because resolved work had been *rewritten in place instead of deleted* — the Question 1 section, the decisions ledger and the tracked-elsewhere prose were history, and `log.md` and the ADRs own history. Cut to 147, then to 110 as a runbook. The operator saw it before the agent did: *"we should have knocked out most items from it right?"* — the file said everything was decided and still read as if nothing was. `TICKET-11`'s operator half was four unordered bullets for work **whose order is the whole point**, rewritten as seven steps (password first, scheduler last). Runbook step 5 absorbed a third statement: the one non-normalised nominations row had been an open decision reading "step 5, or the dashboard at any time", which is not a schedule. One hand-run migration, three statements, one rehearsal. |
 | 167 | 2026-08-18 | **Λεξόκηπος trades three words for four marks** — `TICKET-16`: the action row became four icon-only squircles plus a **second** Καταχώρηση, always rendered and disabled below `MIN_WORD_LENGTH` (an appearing button gives a typing player no target), inverting four tests that asserted its absence. **The corner needed two tokens, not one** — `16px / 13px` is an *elliptical* radius and Tailwind's `rounded-*` emits one value, so a single token would have quietly made pills; verified in the built CSS. Then the operator sized it by eye and the two Καταχώρηση stopped being one button, so the recipe **splits box from skin** (appending a second `w-` fails: Tailwind resolves size in stylesheet order, not class order). **Two e2e failures were not mine and a stash proved it** — Next's overlay reading *Jest worker encountered 2 child process exceptions*, identical on a clean tree, and **wiping `.next` made it worse**. `TICKET-05` closed the same day, falsifying five claims elsewhere, all rewritten and none annotated. 202 files / 2651 tests. |

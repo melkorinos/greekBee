@@ -97,6 +97,10 @@ update public.nominations set word = 'ιουνιοσ'
       `"ISSUE-05": "dead is_perfect column — shipped <date>, folded into TICKET-24"` to the `SPENT`
       map in `src/test/shared/trackerReferences.test.ts`. That test fails if any current-state doc
       names a tracker item with no file on disk, so this is not optional bookkeeping.
+- [ ] **`.claude/aiHelper/reflections.md` names `ISSUE-05` by id** — the "gates whose enforcement is
+      a human reading a line" section closes on it. Deleting the issue file breaks the tracker guard
+      from a file you will not think to look in. Rewrite that sentence in the same commit; the
+      *lesson* stays, the id goes.
 - [ ] **Amend ADR 0013** — its line "data stays, nothing reads it; an optional drop can ride a
       future migration" becomes false the moment this lands. ISSUE-05 flagged it as easy to forget
       and it is now one remove further from the thing that would have prompted it. Amend 0013; do
