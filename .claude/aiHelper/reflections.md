@@ -34,7 +34,7 @@ never stage and keep working.**
   human act **nothing verifies**, and the release-day dump is the only undo for the wipe one step
   later. **A script that ships is not a script that has run** — s159 found no archive at all, three
   sessions after the cadence was written up. Still unbought: the weekly task is **unregistered**, and
-  nothing has opened the archive off this machine. **Measured state is `ISSUE-01` §1 — never a copy here.**
+  nothing has opened the archive off this machine. **Measured state is `TICKET-25` — never a copy here.**
 - **Four operator checks on a real device are owed and none has happened:** Trophy Case + leaderboard
   chip in both themes (s144), Shell header at four buttons (jsdom has no layout), letter-box grid
   legibility (s162), and **the native share sheet** (s169 — a mock of `navigator.share` is a claim

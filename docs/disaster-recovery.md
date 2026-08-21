@@ -186,5 +186,6 @@ Google OAuth is per-project configuration and does **not** travel in the dump; s
 - CONTEXT.md → *Persistence decisions* — the append-forever guarantees this doc leans on.
 - [ADR 0024](adr/0024-no-dev-prod-split-migration-safety-is-local.md) — why there is only one
   project, and why the second free slot stays empty for the restore above.
-- Open work (the archive password, the first real dump, the upload) is tracked in the issue
-  tracker: `.claude/tracker/issues/ISSUE-01-no-disaster-recovery-backups.md` §1.
+- Open work (the unregistered weekly task, the un-uploaded archives, the off-machine extraction,
+  the password length) is tracked as
+  `.claude/tracker/tickets/TICKET-25-schedule-and-prove-the-backups.md`.

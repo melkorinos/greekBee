@@ -16,8 +16,8 @@ Delete this file once the launch has happened and the first week's error checks 
 
 1. **The offsite backup — DONE 2026-08-20** (`TICKET-11`, closed, file deleted). The password is in
    a password manager, the Drive folder exists and is private, and `20260820-112045.7z` is uploaded
-   to it. Two things survive into [`ISSUE-01`](../.claude/tracker/issues/ISSUE-01-no-disaster-recovery-backups.md)
-   §1 rather than holding this step open: **the weekly task is still unregistered**
+   to it. What survives into [`TICKET-25`](../.claude/tracker/tickets/TICKET-25-schedule-and-prove-the-backups.md)
+   rather than holding this step open: **the weekly task is still unregistered**
    (`npm run db:backup:schedule-weekly` — nothing to block it any more, so do it), and the archive
    has **never been extracted on a different machine**, which is the only test that proves the
    stored password opens it. Neither gates release-day step 3, which takes a fresh dump anyway.

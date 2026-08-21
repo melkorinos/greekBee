@@ -1,89 +1,26 @@
-# The database's deferred problems — two findings, two triggers
+# The database's deferred problem — nominations moderation
 
-**Deferred:** 2026-07-05 (backups); the rest 2026-08-15
-**Revisit when:** each section carries its own trigger — they do not share one, and no section
-gates another.
-
-**Section 2 is gone, discharged 2026-08-17** by `TICKET-14`'s local measurement: at 5,000 rows the
-planner switches to `player_profiles_device_uuid_key` for `resolveProfiles()` and to
-`player_profiles_auth_user_id_key` for `/api/auth/link`, exactly as the section predicted. The
-existing indexes are correct and nothing was owed. **The number is not reused** — sections 1 and 3
-keep theirs, because ADR 0011, ADR 0026 and `TICKET-13` all cite them.
+**Deferred:** 2026-08-15
+**Revisit when:** section 3 carries its own trigger, below.
 
 **Consolidated 2026-08-16** from `ISSUE-06` (profile scans) and `ISSUE-07` (nominations growth), at
-the operator's request — one DB file instead of several. The `is_perfect` DROP stayed out on
-purpose — it was scheduled work rather than a deferred problem, and it **shipped 2026-08-20** in the
-one migration ADR 0027 §5 called for, which also carried this section’s index and sigma fix.
+the operator's request — one DB file instead of several. Two of the three sections have since left,
+and **their numbers are not reused**, because ADR 0011, ADR 0024, ADR 0026 and `TICKET-13` all cite
+them:
 
-**These sections share a subject, not a cause.** The consolidation originally claimed a common
-blocker — one Free-plan project with no scratch copy, said to be why section 2 could not be
-*measured*. [ADR 0024](../../../docs/adr/0024-no-dev-prod-split-migration-safety-is-local.md)
-dissolved that on 2026-08-16: the dev/prod split was decided against, and section 2's verification
-turned out to need a local database rather than a hosted one — and once it was run, section 2 was
-discharged outright. What remains is two unrelated findings that happen to be about the same
-database. Read the section you came for; the other will not tell you anything about it.
+- **Section 1 (backups) was promoted to `TICKET-25` on 2026-08-21.** It stopped being a deferred
+  problem when `TICKET-11` closed: the encryption shipped, the private Drive folder exists, one
+  archive is uploaded, and the ordering rule that held the weekly task back is spent. What was owed
+  — register the schedule, upload what is on disk, extract an archive on a second machine, decide
+  the password length — is executable today, so it moved rather than sat here.
+- **Section 2 was discharged 2026-08-17** by `TICKET-14`'s local measurement: at 5,000 rows the
+  planner switches to `player_profiles_device_uuid_key` for `resolveProfiles()` and to
+  `player_profiles_auth_user_id_key` for `/api/auth/link`, exactly as the section predicted. The
+  existing indexes are correct and nothing was owed.
 
----
-
-## 1. Backups exist, but nothing schedules them and nothing enforces the upload
-
-**Revisit when:** now — registering the weekly task is the next action. Also the moment a risky
-migration is queued, or the day a restore is wanted from a week nobody remembered to back up.
-
-The Free plan has **no automatic backups and no PITR** — those are Pro+ only. Verified against the
-Supabase Database Backups guide: free projects are told to self-export via the CLI. So if the DB is
-deleted, corrupted, or wiped by a bad migration, everyone's scores and derived achievements are
-**unrecoverable**.
-
-**The split question is closed.**
-[ADR 0024](../../../docs/adr/0024-no-dev-prod-split-migration-safety-is-local.md) decided against a
-second Supabase project on 2026-08-16: the second free slot is reserved as the disaster-restore
-target, an empty staging database passes exactly the migrations that hurt, and seeding one from a
-production dump would put a second permanent copy of every player's email in the cloud. Migration
-safety is bought locally instead — the rehearsal loop that promotion called for **shipped
-2026-08-17** as `npm run db:rehearse`.
-
-The "somewhere to put the dumps" question is **answered and executed** — an encrypted 7-Zip archive
-in a private Google Drive folder, never a git repository (the repo is public and `pg_dump` carries
-`auth.users`). `TICKET-11` shipped the encryption half of `scripts/backup-db.ps1` on 2026-08-15 and
-was **closed 2026-08-20** once the operator half ran: the folder exists and is private (owner only,
-no link sharing, verified), and `db-backups/20260820-112045.7z` was uploaded to it.
-
-### What is actually owed — re-measured 2026-08-20, after `TICKET-11` closed
-
-- **The backups are not scheduled, and that is now the largest gap here.**
-  `npm run db:backup:schedule-weekly` exists; `Get-ScheduledTask GreekWordGames-DB-Backup` still
-  returns not-found. So **every backup this project has ever taken is one a human remembered to
-  take.** The release-day dump undoes the release-day wipe and nothing after it: from launch onward
-  players write scores daily against a Free plan with no automatic backups and no PITR, so an
-  incident three weeks in costs three weeks. The constraint that used to hold this back is
-  discharged — see the spent ordering rule below. **Register it.**
-- **A scheduled backup is still only half a backup.** The task writes an encrypted `.7z` into
-  `db-backups/` on the keep-2 rule and stops there; if the machine dies, those archives die with it.
-  That is the same "nothing enforces the upload" gap below, which a schedule makes *more* frequent
-  rather than less. Worth registering regardless — a local encrypted copy costs nothing.
-- **The archive has never been opened on another machine.** The Rehearsal restores it end to end,
-  which is real proof it opens **on this machine only**. A `.7z` that exists is the response; a
-  `.7z` that extracts elsewhere, with the password taken from the password manager rather than from
-  `.env.local`, is the artifact. `TICKET-11` was closed without this box ticked, by operator ruling.
-- **The password is seven lowercase-and-digit characters**, chosen 2026-08-20 and stored in a
-  password manager. It is the one secret between a lost laptop and every player's email address, and
-  the archive now sits in cloud storage where it can be ground offline for as long as an attacker
-  cares to. Lengthening it costs one `db:backup` run and one re-upload.
-
-**The ordering rule that governed all of this is spent.** It read: never register the scheduled task
-before the password is set, because a job that throws every Sunday at 02:00 unattended is worse than
-no job — *it looks like coverage*. The password is set and a real archive exists, so the rule has
-nothing left to hold back. It is recorded here because it explains why the task is not registered
-yet, not because it still applies.
-
-The one thing that stays deferred after that is **nothing enforces the upload**. The dump lands in
-`db-backups/` and a human has to move it to Drive; a dump still sitting on the machine at runbook
-step 4 means the launch wipe has no undo. Automating the upload needs a Drive credential on the
-machine, which is a decision nobody has made.
-
-Full context, the "what must survive" table and the restore procedure live in
-[`docs/disaster-recovery.md`](../../../docs/disaster-recovery.md).
+The `is_perfect` DROP stayed out of the consolidation on purpose — it was scheduled work rather than
+a deferred problem, and it **shipped 2026-08-21** in the one migration ADR 0027 §5 called for, which
+also carried section 3's index and sigma fix.
 
 ---
 
@@ -114,9 +51,9 @@ an independent leak.
 The exposure is not storage — a row is ~200 bytes. The real costs are the **review queue becoming
 unusable** (`/leksikastirio` lists pending nominations and there is no bulk-reject), **`word` and
 `note` being free text written by strangers and rendered in an admin UI** (a moderation problem, not
-a size one), and **the lookup already full-scanning the table** — `nominations` carries only the
+a size one), and **the lookup already full-scanning the table** — `nominations` carried only the
 primary key and the partial unique on `(word, direction) WHERE status = 'pending'`, so the `rejected`
-and `accepted` counts in `GET /api/nominations/lookup` match no index at all, and it grows in
+and `accepted` counts in `GET /api/nominations/lookup` matched no index at all, and it grows in
 exactly the rows nothing prunes.
 
 **The index shipped 2026-08-20** in `20260820120000_drop_two_community_queues_and_dead_score_columns.sql`, and it earned its place — **measured 2026-08-17, `TICKET-14`.** A local probe at 191 / 5,000 /
@@ -156,6 +93,7 @@ was the next file anyone would open, and shipped on 2026-08-17 without answering
    verdict, so what is left here — no bulk-reject in `/leksikastirio`, and stranger-authored
    `word`/`note` free text rendered in an admin UI — is a review-workflow problem with nothing to do
    with the database. If it leaves, it takes the next free issue number.
+
 **The one non-normalised row is fixed** (2026-08-20): `ιουνιος` (`direction` `remove`, rejected
 2026-07-15) ended in a final sigma, so `normalizeLetters` turned a re-proposal into `ιουνιοσ` and its
 prior-rejection warning could never fire. It was the only such row in 191, and `isBlockedWord` does
@@ -167,11 +105,7 @@ legacy residue, not a live hole: `POST /api/nominations` writes `normalizeLetter
 
 ## References
 
+- `TICKET-25` — the backup work this file held as section 1 until 2026-08-21.
 - [ADR 0024](../../../docs/adr/0024-no-dev-prod-split-migration-safety-is-local.md) — why there is no dev/prod split, and what replaced it. Read before re-proposing a second project.
-- [`docs/disaster-recovery.md`](../../../docs/disaster-recovery.md) — the runbook section 1 tracks the open work for.
-- Supabase Database Backups — https://supabase.com/docs/guides/platform/backups (free-tier `db dump` guidance).
-- `TICKET-11` — the encrypted dump. Shipped 2026-08-15, closed 2026-08-20; the file is deleted and git history is the archive.
-- [`scripts/rehearse-migration.ps1`](../../../scripts/rehearse-migration.ps1) — the local rehearsal loop ADR 0024 chose instead of a split, shipped 2026-08-17.
 - [`src/app/api/cleanup-scores/route.ts`](../../../src/app/api/cleanup-scores/route.ts) + [`src/config/retention.ts`](../../../src/config/retention.ts) — the prune and what it deliberately skips.
 - `.claude/skills/project-mcp/SKILL.md` — the advisor baseline explaining why the always-true INSERT policy is intended.
-- The `supabase` CLI is an approved devDependency; `db push` works without Docker.

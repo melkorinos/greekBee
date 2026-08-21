@@ -58,7 +58,7 @@ is the operator's and is not hard.
    is what made the checklist finite. Question 2 (2026-08-20): the run is the `dev → main` merge with
    its play-through → release day → a week of daily Vercel error checks (ADR 0023). Both tickets that
    came before it closed on 2026-08-20 — the Round-End Result Panel, and `TICKET-11`'s offsite backup
-   (what survives of it is two unscheduled items in `ISSUE-01` §1, neither gating the date). `.claude/handoffs/launch-readiness.md` is deleted; the runbook replaced it.
+   (what survives of it is `TICKET-25`, which does not gate the date). `.claude/handoffs/launch-readiness.md` is deleted; the runbook replaced it.
 2. **The launch tickets.** **What is open is read from `.claude/tracker/`, never from here** — this
    file kept a per-ticket status table until it went stale twice. The shape: five tickets came out of
    question 1 and the shipped ones are deleted per the standing rule; **no ordering constraints remain
