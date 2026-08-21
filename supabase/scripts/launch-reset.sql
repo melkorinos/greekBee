@@ -39,9 +39,9 @@
 --           community_leksindeseis_puzzles, community_stavrolekso_puzzles,
 --           identity_audit, transfer_codes
 --
---   The Leksiarxeio and Vres Tin Frasi queues are NOT in that list: both were
---   empty when ADR 0027 removed submission from those two Games on 2026-08-20,
---   and TICKET-24 drops the tables.
+--   The Leksiarxeio and Vres Tin Frasi queues are NOT in that list because they
+--   no longer exist: both were empty when ADR 0027 removed submission from those
+--   two Games on 2026-08-20, and the tables were dropped on 2026-08-21.
 --
 -- BEFORE RUNNING
 --   1. Take a backup (`npm run db:backup`). There is no undo.
