@@ -229,14 +229,14 @@
      the --container-* namespace to generate the max-w-* utility. */
   --container-game: 24rem;
 
-  /* Picker column width → max-w-picker. Deliberately WIDER than --container-game
-     and deliberately a separate knob: the picker is a list of cards, not a game
-     board, and its cards carry a one-line title plus a two-line description
-     beside an icon and a button rail. At the game column's 24rem two of the
-     descriptions wrapped to three lines and made their cards taller than the
-     rest. Widening the game column instead would have resized every board to
-     fix a list. */
-  --container-picker: 28rem;
+  /* Picker column width → max-w-picker. A separate knob from --container-game so
+     the list can be tuned without resizing every board — but held at the SAME
+     24rem, because 24rem is about a phone's content width and the picker is a
+     phone-first screen: anything wider only ever shows on desktop, where it made
+     the cards look stretched. The three-line wrap that first motivated widening
+     is fixed at the source instead (descriptions trimmed to fit two lines, and
+     GameCard reserves a two-line box), not by giving the list more room. */
+  --container-picker: 24rem;
 }
 
 body {

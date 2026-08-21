@@ -198,10 +198,15 @@ function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submit
           <p className="font-semibold text-foreground">
             {game.title}
           </p>
-          {/* Clamped to two lines so no description can push its card taller
-              than the others; the list's auto-rows-fr then levels the shorter
-              ones up to match. Two lines is the cap, not the height. */}
-          <p className="text-sm text-muted mt-0.5 line-clamp-2">{game.description}</p>
+          {/* Two lines is the BOX, not just the cap: min-h-10 (two text-sm lines
+              at leading-5) reserves the second line even for a one-line
+              description, so a short one no longer leaves a dead gap once
+              auto-rows-fr levels the row up to the tallest card. line-clamp-2
+              still caps the long ones. Deliberately NO text-balance: it shortens
+              both lines to even them out, which leaves a wide gutter on the
+              right and cost Leksiarxeio its last words to the clamp. The
+              descriptions are kept short enough to fit two full lines instead. */}
+          <p className="text-sm text-muted mt-0.5 line-clamp-2 min-h-10">{game.description}</p>
         </div>
       </Link>
       <div className="flex flex-col items-center justify-center gap-1 px-3 border-l border-border shrink-0">
