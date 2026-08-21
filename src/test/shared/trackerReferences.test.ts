@@ -110,6 +110,11 @@ const SPENT: Record<string, string> = {
   // 2026-08-20, applied 2026-08-21 once the removal code was live in production —
   // the ordering was the whole reason it waited. Release day lost step 5 with it.
   "TICKET-24": "schema cleanup migration — applied 2026-08-21, release day now five steps",
+  // The first Tier A e2e happy path, and the pattern the remaining two copy: a page
+  // object under e2e/pages/, a fixture entry, and a pinned ?puzzle= date. Its full
+  // round is the first browser proof that ANY Game reaches its Result Panel — only
+  // affordable because ADR 0027 left this Game with no score to post.
+  "TICKET-17": "e2e happy path, Vres Tin Frasi — shipped 2026-08-21",
 };
 
 /**

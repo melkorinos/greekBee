@@ -5,6 +5,41 @@
 
 ---
 
+## Session 175 — 2026-08-21: the first Game plays a whole round in a browser
+
+`TICKET-17` end to end, the first of `ISSUE-03`'s Tier A happy paths. `e2e/pages/VresTinFrasiPage.ts`
++ a fixture entry + `e2e/vrestifrasi.spec.ts` (3 tests): the page mounts, a key click reaches the
+reducer, the round is **played to completion** and the Result Panel renders, and the ADR 0027
+absences are guarded at browser level — no 🏆 in the header, no πόντοι heading, no board link, and
+neither ➕ nor 🏆 on its picker card. e2e **13 → 16 passed / 2 skipped**; 2653 tests, eslint 0, build 0.
+
+**The full round is the whole point, and it is only affordable here.** Memory's blanket rule was
+*never finish a round in a test* because Round End posts to the shared production `game_scores`.
+ADR 0027 revoked this Game's `scores` capability, so there is nothing to post — confirmed with a
+live count either side of the first run, 592/10 unchanged. The rule is now conditional on the
+registry row, not on the Game, which is what makes this the suite's only end-of-round coverage while
+`TICKET-19`/`20` still have to stop after one word.
+
+**Two of the ticket's own instructions were wrong, and reading the code first was what caught it.**
+It said to reuse `data-testid="guess-grid"` and to enter *one valid phrase word*. The phrase grid has
+neither — it is an ARIA grid with no per-row hook, so rows are addressed by `role`, which is the
+better locator anyway because the roles are what a screen reader reads. And a guess is the **whole
+phrase**: the reducer auto-advances the cursor at each word's length, so a phrase is typed as one
+unbroken run of clicks. Neither is a defect in the code; both were the ticket reasoning from the
+Λεξιαρχείο spec's shape. **A page object does not transfer between Games** even when the two sit in
+the same round-spine family.
+
+**The pin was chosen by search, not by taste.** 2026-05-22 is the shortest phrase in the whole
+rotation — «Εδώ και τώρα», 10 letters — so a full round is 20 clicks, and the probe guess
+`ενα ωρα καλη` was picked by driving the real evaluator over the real pools until one landed that
+produces **all four** tile states, including the cross-word purple no other Game has. Both are
+recorded in the spec as comments with why.
+
+**The by-eye box became an assertion.** The ticket asked to *confirm by eye* that a Game which still
+scores is unchanged — but a positive control that lives in a human's memory does not survive the
+session. Λεξοδρομία's picker card asserting a 🏆 is one line, and it proves the three removal
+assertions are not passing on a broken locator.
+
 ## Session 174 — 2026-08-20/21: the migration lands, and release day loses a step it can no longer justify
 
 `TICKET-24` end to end, ADR 0027 §5 — the last piece that ADR owed. One migration,
@@ -37,54 +72,19 @@ was reaching for a plausible general case to make a closed finding sound less fi
 instance of s173's lesson too: the ticket's line number was 6 off and its claim about the enum
 paragraph named four tables that paragraph never mentions.
 
-**Two checks that only exist because someone went looking.** The `data` drop was verified against
-both live-DB suites *before* the push — the box `ISSUE-05` ticked for `is_perfect` and explicitly
-not for `data`; both insert `(game_id, puzzle_date, device_id, display_name, score)` and both
-dropped columns carried the `NOT NULL DEFAULT` covering them. And `gen types` needs Docker, which
-this machine has none of, so the regeneration was hand-applied and then **read back against the
-generator's live output** — 11 tables, 2 functions, matching, everything untouched byte-identical.
-
-**The operator waived the offsite-upload gate**, on the grounds that the launch reset wipes most of
-this anyway. True of `game_scores`; **not** true of `nominations` or `player_profiles`, which survive
-step 4 and which the un-uploaded local archive was the only cover for. Their call, recorded.
-
-## Session 173 — 2026-08-20: submission comes off two Games, and their tables are left standing on purpose
-
-`TICKET-23` implemented end to end — ADR 0027 §4, the second of the three pieces that ADR owes.
-Λεξιαρχείο and Βρες τη Φράση no longer accept player-submitted puzzles: both submit modals, both
-submit routes and their review routes, both `validateSubmission` adapters, both loaders' community
-read. `/leksikastirio` drops to two review tabs. 2653 tests, eslint 0, build 0, **13 e2e passing**.
-
-**Verifying the ticket before starting it was worth the ten minutes.** Every file it named existed
-and every claim held, but three pointers had drifted: four `CONTEXT.md` line numbers were 4–6 off,
-and `rlsInvariantsLiveDb.test.ts` asserts only the Stavrolekso table — that checklist box was a
-no-op. A ticket's *line numbers* are the part that rots first; its *claims* survived four days.
-
-**The removal changed no puzzle, and the tests now prove it.** Both loaders already owned a
-deterministic static fallback, so the same date returns what it always did. Rather than deleting the
-community-path coverage, both loader tests now mock Supabase to **return** a row on purpose: a
-served row would mean the read came back. `communityPuzzleScheduling.test.ts` goes further and
-asserts `consumeApprovedPuzzle` is **never called** by either loader.
-
-**Deleting a doc row would have been the wrong kind of tidy.** The two tables still exist —
-`TICKET-24` drops them, and must not run until this deploys. So `CONTEXT.md`'s rows were rewritten
-to *"Orphaned, 0 rows … TICKET-24 drops it"*, not removed; a cold session reading the schema needs
-to know why a table with no code is still there. Same for `launch-reset.sql`, whose KEPT block
-called community puzzles "the expensive, irreplaceable half of the beta" — true of the two queues
-that have rows, false of the two that never did.
-
-**`ScheduledPuzzleTable` narrowed itself.** It is `Exclude<CommunityPuzzleTable, stavrolekso>` and
-`CommunityPuzzleTable` derives from `TableName`, so nothing was hand-edited — only the comments that
-counted "four tables" and "three consuming loaders" out loud. Derived types age; prose that
-restates them does not.
-
-Follow-on state: `TICKET-24` updated (blocked on **deploy**, not merge — both halves are committed
-to `dev` and neither is live), `TICKET-23` deleted with a `SPENT` row. Commit `a0c4590`.
+**Two checks that only exist because someone went looking**, plus one call recorded. The `data` drop
+was verified against both live-DB suites *before* the push — `ISSUE-05` ticked that box for
+`is_perfect` and explicitly not for `data`. `gen types` needs Docker this machine has none of, so the
+hand-applied regeneration was **read back against the generator's live output**, byte-identical. And
+the operator waived the offsite-upload gate on the grounds that the launch reset wipes most of this
+anyway — true of `game_scores`, **not** true of `nominations` or `player_profiles`, which survive
+step 4 and which the un-uploaded local archive was the only cover for.
 
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 173 | 2026-08-20 | **Submission comes off two Games, and their tables are left standing on purpose.** `TICKET-23` end to end (ADR 0027 §4): both submit modals, both submit and review routes, both `validateSubmission` adapters, both loaders' community read; `/leksikastirio` drops to two review tabs. **Verifying the ticket before starting it was worth ten minutes** — every file existed and every claim held, but four `CONTEXT.md` line numbers were 4–6 off and `rlsInvariantsLiveDb.test.ts` covers only the Stavrolekso table, so one checklist box was a no-op. A ticket's *line numbers* rot first; its *claims* survived four days. **The removal changed no puzzle, and the tests now prove it** — rather than deleting the community-path coverage, both loader tests mock Supabase to **return** a row on purpose (a served row would mean the read came back), and `communityPuzzleScheduling.test.ts` asserts `consumeApprovedPuzzle` is never called. **Deleting a doc row would have been the wrong tidy:** the two tables still existed, so `CONTEXT.md` was rewritten to *"Orphaned, 0 rows … TICKET-24 drops it"* — a cold session reading the schema needs to know why a table with no code is there. `ScheduledPuzzleTable` narrowed itself (derived types age; prose restating them does not). Commit `a0c4590`. |
 | 172 | 2026-08-20 | **Two Games lose their scoreboard, and the migrations folder unfreezes.** Docs only, `/grill-with-docs` on the operator's pre-launch subtraction pass: ADR 0027, `TICKET-22`/`23`/`24`, rewritten `TICKET-17`. Both community queues measured **0 rows**, so "drop the tables" cost nothing to decide, and runbook step 4 already wipes the 50 orphan `game_scores` rows — reading the runbook answered a question the grill was about to ask. **"Remove the leaderboard" was four decisions:** `scores` is a separate grant, so keeping it would leave rows accruing that nothing ranks, and following it through reached `useGuessRound.scoreFn` and `ShareResultPanel.score` — made optional **one day** after ADR 0025 shipped it across eight boards. **The load-bearing find was in a doc, not the code:** the freeze on `supabase/migrations/` bought exactly one thing, DDL against an empty `game_scores`, and dropping the now-dead `data` column early **spends** it — so one migration takes everything and release day drops from six steps to five. |
 | 171 | 2026-08-20 | **The e2e gap gets measured, and two of five tickets die within the hour.** `ISSUE-03` asked what the browser actually guarantees; the answer is `.claude/aiHelper/e2e-coverage/analysis.md`. **The issue was its own worst narrator in both directions** — 15 tests across five specs, not ten across four, and every testid a happy path needs already exists (what is missing is page objects, not instrumentation). The real number: **6 of 11 routes never loaded by any browser test, only 2 of 11 Games with a turn played**, and end-of-round browser-untested for every Game one session after it was built. Two determinism rules now in memory and in every e2e ticket: pin a past date with `?puzzle=`, and **no spec may finish a round** (round end writes to the shared production `game_scores`). Five tickets written, two deleted the same hour by operator priority call — `TICKET-18`/`TICKET-21` are the first ids retired without ever being started, their content returned to `ISSUE-03`. **The lesson is order:** the priority call belonged before the tickets, not after. A tracker file is deleted when it is empty, not when it is smaller. |
 | 170 | 2026-08-20 | **The backup leaves the machine, and the box it cannot tick moves house.** `TICKET-11`'s operator half, run live; Drive folder **verified private through the Drive MCP** rather than taken on trust, `20260820-112045.7z` uploaded, ticket closed and `SPENT`. **Closing a ticket is not deleting a file** — two done-whens were never ticked (weekly task unregistered; archive never extracted on a second machine) and moved into `ISSUE-01` §1, which was rewritten because its heading *"right now, no backup at all"* had stopped being true. The ticket's spine — *never register the scheduler before the password exists* — now guards nothing and is recorded as **spent rather than deleted**, because it is still the answer to "why is the task not registered yet?". **`7z t` locally proves the archive matches `.env.local`, not the password manager**; that gap *is* the open done-when. Seven-character password kept after one warning, recorded as a measured weakness. A commit landed underneath the session (48 files, third instance of the shared-tree hazard) — `reflections.md` now says commit when a change is coherent. 213 files / 2710 tests, eslint 0, build 0. |
