@@ -1,22 +1,25 @@
 // dataLoader.test.ts — unit tests for the Vres Tin Frasi data layer.
-// Verifies: community queue consumption, deterministic static fallback, and
-// buildPuzzle's multi-word normalisation (accents stripped, lengths derived).
-// Supabase is mocked; default returns error → static fallback path.
+// Verifies: the deterministic static rotation and buildPuzzle's multi-word
+// normalisation (accents stripped, lengths derived).
+// Supabase is mocked to RETURN a row on purpose: the loader lost its community
+// read on 2026-08-20 (ADR 0027), and a served row would prove it came back.
 
 import { describe, expect, it, vi } from "vitest";
 
 import { getTodayDateString, getTodaysVresTinFrasiPuzzle } from "@/data/vrestifrasi";
 import { normalizeLetters } from "@/lib/normalize";
 
-// ── Supabase mock (same chain shape as the Leksindeseis loader test) ──────────
+// ── Supabase mock (returns a row — the loader must ignore it entirely) ────────
 
 import type { ChainResult } from "@/test/helpers/supabaseMock";
 
-let _mockResult: ChainResult = { data: null, error: { message: "no rows" } };
+const _mockResult: ChainResult = {
+  data: { id: 10, submitter_name: "Μαρία", data: { phrase: "Καλή μέρα φίλε" } },
+  error: null,
+};
 
 vi.mock("@/lib/supabase", async () => {
   const { makeChain, tableShim } = await import("@/test/helpers/supabaseMock");
-  // consumeApprovedPuzzle uses the service-role client; point both at the mock.
   const client = { from: () => makeChain(_mockResult) };
   return {
     getSupabaseClient: () => client,
@@ -25,9 +28,9 @@ vi.mock("@/lib/supabase", async () => {
   };
 });
 
-// ── getTodaysVresTinFrasiPuzzle — static fallback ─────────────────────────────
+// ── getTodaysVresTinFrasiPuzzle ───────────────────────────────────────────────
 
-describe("getTodaysVresTinFrasiPuzzle — static fallback", () => {
+describe("getTodaysVresTinFrasiPuzzle", () => {
   it("returns a puzzle whose id is `${date}-vresi`", async () => {
     const { puzzle } = await getTodaysVresTinFrasiPuzzle("2026-05-12");
     expect(puzzle.id).toBe("2026-05-12-vresi");
@@ -51,11 +54,6 @@ describe("getTodaysVresTinFrasiPuzzle — static fallback", () => {
     expect(puzzle.wordLengths).toEqual(puzzle.normalizedWords.map((w) => w.length));
   });
 
-  it("submitter_name is null on static fallback", async () => {
-    const { submitter_name } = await getTodaysVresTinFrasiPuzzle("2026-05-12");
-    expect(submitter_name).toBeNull();
-  });
-
   it("returns a puzzle for any date (rotation never runs out)", async () => {
     const { puzzle } = await getTodaysVresTinFrasiPuzzle("1999-01-01");
     expect(puzzle.phrase.length).toBeGreaterThan(0);
@@ -63,41 +61,12 @@ describe("getTodaysVresTinFrasiPuzzle — static fallback", () => {
   });
 });
 
-// ── getTodaysVresTinFrasiPuzzle — community queue path ────────────────────────
+// ── The community read is gone ────────────────────────────────────────────────
 
-describe("getTodaysVresTinFrasiPuzzle — community queue", () => {
-  it("uses the community phrase and normalises its accented words", async () => {
-    _mockResult = {
-      data: { id: 10, submitter_name: "Μαρία", data: { phrase: "Καλή μέρα φίλε" } },
-      error: null,
-    };
-    const { puzzle, submitter_name } = await getTodaysVresTinFrasiPuzzle("2026-07-01");
-    expect(puzzle.phrase).toBe("Καλή μέρα φίλε");           // display keeps accents
-    expect(puzzle.normalizedWords).toEqual(["καλη", "μερα", "φιλε"]); // state is accent-free
-    expect(puzzle.wordLengths).toEqual([4, 4, 4]);
-    expect(submitter_name).toBe("Μαρία");
-    _mockResult = { data: null, error: { message: "no rows" } };
-  });
-
-  it("puzzle id and date are set to the requested date", async () => {
-    _mockResult = {
-      data: { id: 11, submitter_name: "", data: { phrase: "Ψωμί και νερό" } },
-      error: null,
-    };
-    const { puzzle } = await getTodaysVresTinFrasiPuzzle("2026-07-02");
-    expect(puzzle.id).toBe("2026-07-02-vresi");
-    expect(puzzle.date).toBe("2026-07-02");
-    _mockResult = { data: null, error: { message: "no rows" } };
-  });
-
-  it("submitter_name is null when the row has an empty string", async () => {
-    _mockResult = {
-      data: { id: 12, submitter_name: "", data: { phrase: "Ψωμί και νερό" } },
-      error: null,
-    };
-    const { submitter_name } = await getTodaysVresTinFrasiPuzzle("2026-07-03");
-    expect(submitter_name).toBeNull();
-    _mockResult = { data: null, error: { message: "no rows" } };
+describe("getTodaysVresTinFrasiPuzzle — community read removed", () => {
+  it("ignores a community row even when the queue returns one", async () => {
+    const { puzzle } = await getTodaysVresTinFrasiPuzzle("2026-07-01");
+    expect(puzzle.phrase).not.toBe("Καλή μέρα φίλε");
   });
 });
 

@@ -1,8 +1,10 @@
 // Vres Tin Frasi — data loader (runs server-side via Next.js App Router).
-// Primary source: the community phrase scheduled for the requested date.
-// Fallback: deterministic rotation through phrases-el.json by date.
+// Source: deterministic rotation through phrases-el.json by date.
+//
+// The Game accepted player-submitted phrases until 2026-08-20 (ADR 0027). The
+// static rotation that was the fallback is now the only path, and the same date
+// returns the same phrase it always did — the queue was empty when it was removed.
 
-import { consumeApprovedPuzzle } from "@/lib/communityPuzzleLifecycle";
 import type { VresTinFrasiPuzzle } from "@/games/vrestifrasi/types";
 import { normalizeLetters } from "@/lib/normalize";
 import { dateToIndex } from "@/lib/puzzleRotation";
@@ -31,33 +33,20 @@ function buildPuzzle(date: string, phraseDisplay: string): VresTinFrasiPuzzle {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 interface VresTinFrasiDaily {
-  puzzle:         VresTinFrasiPuzzle;
-  submitter_name: string | null;
+  puzzle: VresTinFrasiPuzzle;
 }
 
 /**
- * Returns the daily Vres Tin Frasi puzzle for `date`.
- * A community phrase scheduled for that date wins; otherwise the static phrase
- * pool's deterministic rotation. Both are stable across repeat calls, so every
- * player on a date sees the same phrase however many times the page reloads.
+ * Returns the daily Vres Tin Frasi puzzle for `date`, from the static phrase
+ * pool's deterministic rotation. Stable across repeat calls, so every player on
+ * a date sees the same phrase however many times the page reloads.
+ *
+ * Stays `async` although nothing is awaited: every caller is a server component
+ * or a test that already awaits it.
  */
 export async function getTodaysVresTinFrasiPuzzle(date: string): Promise<VresTinFrasiDaily> {
-  const consumed = await consumeApprovedPuzzle<{ phrase: string }>(
-    "community_vrestifrasi_puzzles",
-    date,
-  );
-  if (consumed) {
-    return {
-      puzzle:         buildPuzzle(date, consumed.data.phrase),
-      submitter_name: consumed.submitter_name,
-    };
-  }
-
   const entry = PHRASES[dateToIndex(date, PHRASES.length)];
-  return {
-    puzzle:         buildPuzzle(date, entry.phrase),
-    submitter_name: null,
-  };
+  return { puzzle: buildPuzzle(date, entry.phrase) };
 }
 
 /** Today's ISO date string (YYYY-MM-DD). Re-exported from `@/lib/puzzleDate`. */

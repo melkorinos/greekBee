@@ -1,7 +1,7 @@
 // useGuessRound.test.ts — the shared guess-game spine.
 // Tested through its interface with a synthetic reducer/state, so the contract
-// (persist { guesses, status }, score only on game end, end-callback once, save
-// guard) is verified independently of any one game.
+// (persist { guesses, status }, end-callback once, save guard) is verified
+// independently of any one game.
 
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -48,8 +48,6 @@ const makeRestoreAction = (snap: GuessRoundSnapshot<number>): TestAction => ({
   status:  snap.status,
 });
 
-const scoreFn = (attempts: number, won: boolean) => (won ? 10 - attempts : 0);
-
 function setup(onGameEnd?: (attempts: number, won: boolean) => void, puzzleId = "p1") {
   return renderHook(() =>
     useGuessRound<TestState, TestAction, number, { id: string }>({
@@ -59,7 +57,6 @@ function setup(onGameEnd?: (attempts: number, won: boolean) => void, puzzleId = 
       reducer,
       makeInitialState,
       makeRestoreAction,
-      scoreFn,
       onGameEnd,
     }),
   );
@@ -72,31 +69,6 @@ function readPersisted(gameId = "leksiarxeio") {
 
 beforeEach(() => {
   localStorage.clear();
-});
-
-// ── Score ───────────────────────────────────────────────────────────────────────
-
-describe("useGuessRound — score", () => {
-  it("is 0 while the game is still playing", () => {
-    const { result } = setup();
-    act(() => result.current.dispatch({ type: "ADD" }));
-    expect(result.current.score).toBe(0);
-  });
-
-  it("equals scoreFn(attempts, won) once the game is won", () => {
-    const { result } = setup();
-    act(() => result.current.dispatch({ type: "ADD" }));
-    act(() => result.current.dispatch({ type: "ADD" }));
-    act(() => result.current.dispatch({ type: "WIN" }));
-    expect(result.current.score).toBe(8); // 10 - 2 attempts
-  });
-
-  it("is 0 on a loss (scoreFn returns 0 for won=false)", () => {
-    const { result } = setup();
-    act(() => result.current.dispatch({ type: "ADD" }));
-    act(() => result.current.dispatch({ type: "LOSE" }));
-    expect(result.current.score).toBe(0);
-  });
 });
 
 // ── End callback ──────────────────────────────────────────────────────────────────

@@ -90,6 +90,20 @@ const SPENT: Record<string, string> = {
   // never been extracted on a second machine. That, and the unregistered weekly task, moved
   // to ISSUE-01 §1 rather than holding the file open.
   "TICKET-11": "offsite encrypted backup — shipped 2026-08-15, closed 2026-08-20",
+  // Written and withdrawn the same day, 2026-08-20, by operator ruling: both are
+  // low priority next to the other three e2e happy paths. Never started. The work
+  // itself is not gone — it went back to ISSUE-03's deferred list.
+  "TICKET-18": "e2e happy path, Topothesies — withdrawn 2026-08-20, back to ISSUE-03",
+  "TICKET-21": "e2e happy path, Leksikastirio — withdrawn 2026-08-20, back to ISSUE-03",
+  // ADR 0027 §1–§3 only. §5 (the schema migration) is TICKET-24 and is still on disk.
+  // Scheduled work rather than a deferred problem: the DROP rode the one migration
+  // ADR 0027 §5 called for instead of its own release-day step. ADR 0013's amendment
+  // now records the column as dropped, which is where a cold reader is already sent.
+  "ISSUE-05": "dead is_perfect column — shipped 2026-08-20 in TICKET-24's migration",
+  "TICKET-22": "scoring + leaderboard off two Games — shipped 2026-08-20",
+  // ADR 0027 §4. Both queues were 0 rows, so removing the community read changed no
+  // served puzzle. The tables themselves survive until TICKET-24 drops them.
+  "TICKET-23": "community submission off two Games — shipped 2026-08-20",
 };
 
 /**

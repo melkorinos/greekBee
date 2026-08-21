@@ -68,9 +68,10 @@ export const GAME_REGISTRY = {
     href:         "/leksiarxeio",
     wip:          false,
     hidden:       false,
-    // Posts through useLeksiarxeioScoreSubmission (a row per word length), not the
-    // generic hook — but "may write Scores" is the same capability either way.
-    capabilities: ["scores", "leaderboard"],
+    // Stripped of both capabilities before launch (ADR 0027): the leaderboard was
+    // removed, and a Score that nothing ranks is a write worth nothing. Scoring is
+    // gone whole — there is no πόντοι number left in the Game to post.
+    capabilities: [],
   },
   // Fully built and community-backed, but DELIBERATELY still wip:true — confirmed
   // by the operator on 2026-08-06, when a docs audit found every doc calling it
@@ -100,7 +101,9 @@ export const GAME_REGISTRY = {
     href:         "/vres-tin-frasi",
     wip:          false,
     hidden:       false,
-    capabilities: ["scores", "leaderboard"],
+    // Same pass as leksiarxeio (ADR 0027): leaderboard and Score both removed. The
+    // Game stays live and listed — revoking capabilities is not hiding it.
+    capabilities: [],
   },
   leksodromia: {
     label:       "🏁 Leksodromia",

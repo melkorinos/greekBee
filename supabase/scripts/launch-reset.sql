@@ -31,13 +31,17 @@
 -- WHAT SURVIVES, AND WHY
 --   Identity and community content. Nobody loses their display name, and no word
 --   ever submitted to or judged by Leksikastirio is touched — the word list and
---   community puzzles are the expensive, irreplaceable half of the beta, earned by
---   real review work rather than by playing. Only the scoreboard resets.
+--   the community puzzles that were actually submitted are the expensive,
+--   irreplaceable half of the beta, earned by real review work rather than by
+--   playing. Only the scoreboard resets.
 --
 --     KEPT: player_profiles (rows), nominations, nomination_votes,
---           community_leksiarxeio_puzzles, community_leksindeseis_puzzles,
---           community_stavrolekso_puzzles, community_vrestifrasi_puzzles,
+--           community_leksindeseis_puzzles, community_stavrolekso_puzzles,
 --           identity_audit, transfer_codes
+--
+--   The Leksiarxeio and Vres Tin Frasi queues are NOT in that list: both were
+--   empty when ADR 0027 removed submission from those two Games on 2026-08-20,
+--   and TICKET-24 drops the tables.
 --
 -- BEFORE RUNNING
 --   1. Take a backup (`npm run db:backup`). There is no undo.

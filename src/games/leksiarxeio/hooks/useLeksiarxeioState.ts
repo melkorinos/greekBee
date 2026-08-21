@@ -12,7 +12,6 @@ import {
 import { useCallback, useMemo } from "react";
 
 import { buildLetterStateMap } from "../lib/letterState";
-import { scoreLeksiarxeio } from "../lib/scoring";
 import { useGuessRound, type GuessRoundSnapshot } from "@/hooks/useGuessRound";
 import { LEKSIARXEIO } from "@/config/gameRules";
 
@@ -36,7 +35,6 @@ export interface UseLeksiarxeioStateReturn {
   lastMessage:  string | null;
   letterStates: ReturnType<typeof buildLetterStateMap>;
   maxGuesses:   number;
-  score:        number;
 
   addLetter:    (letter: string) => void;
   deleteLetter: () => void;
@@ -52,7 +50,7 @@ export function useLeksiarxeioState(
 ): UseLeksiarxeioStateReturn {
   const validSet = useMemo(() => new Set(validWords), [validWords]);
 
-  const { state, dispatch, score } = useGuessRound<
+  const { state, dispatch } = useGuessRound<
     LeksiarxeioState,
     LeksiarxeioAction,
     GuessResult,
@@ -64,7 +62,6 @@ export function useLeksiarxeioState(
     reducer:           leksiarxeioReducer,
     makeInitialState:  makeInitialLeksiarxeioState,
     makeRestoreAction: restoreLeksiarxeio,
-    scoreFn:           scoreLeksiarxeio,
     onGameEnd,
   });
 
@@ -99,7 +96,6 @@ export function useLeksiarxeioState(
     lastMessage:  state.lastMessage,
     letterStates,
     maxGuesses:   LEKSIARXEIO.MAX_GUESSES,
-    score,
     addLetter,
     deleteLetter,
     submitGuess,

@@ -1,13 +1,10 @@
 // POST /api/game-scores — upsert a player's score for any game that uses game_scores
 // GET  /api/game-scores?game_id=&puzzle_date=&deviceId= — top 20 + pinned player row
 //
-// Covers:
-//   Leksokipos   (score = points, higher is better)
-//   Leksindeseis (score = mistakesRemaining 1–4, higher is better)
-//   Leksiarxeio  (score = sum of per-length in-game points 0–30, higher is better)
-//                 POST carries word_length + points; the route reads the day's row,
-//                 folds the length in via mergeLengthScore (pure — that fold is
-//                 tested directly, not through a faked request), and writes it back.
+// Covers every Game whose registry row declares the `scores` capability — one
+// code path, `score` as posted. Leksiarxeio's read-fold-write branch, the only
+// caller that ever wrote the `data` column, was removed with its scoring
+// (ADR 0027); the column is dropped by its own migration.
 //
 // RLS: anon INSERT + anon SELECT + anon UPDATE (open leaderboard).
 // Score de-duplication: unique constraint on (game_id, device_id, puzzle_date).
@@ -17,8 +14,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseClient, table, type Insert } from "@/lib/supabase";
 import { upsertAndClean } from "@/lib/supabasePost";
 import { jsonError, jsonMessage, parseJson } from "@/lib/apiRoute";
-import { LEKSIARXEIO } from "@/config/gameRules";
-import { mergeLengthScore } from "@/lib/scoreMerge";
 import { isISODate, normalizePuzzleDate } from "@/lib/puzzleDate";
 import { sanitizeDisplayName } from "@/lib/postScore";
 import {
@@ -29,11 +24,9 @@ import {
 
 export const runtime = "edge";
 
-const VALID_WORD_LENGTHS = new Set<number>(LEKSIARXEIO.LENGTHS);
-
 // ── POST ──────────────────────────────────────────────────────────────────────
 
-interface StandardScorePayload {
+interface ScorePayload {
   game_id:      string;
   puzzle_date:  string;
   device_id:    string;
@@ -41,23 +34,9 @@ interface StandardScorePayload {
   score:        number;
 }
 
-interface LeksiarxeioScorePayload {
-  game_id:      "leksiarxeio";
-  puzzle_date:  string;
-  word_length:  number;
-  device_id:    string;
-  display_name: string;
-  points:       number;
-}
-
-type ScorePayload = StandardScorePayload | LeksiarxeioScorePayload;
-
-// `data` is written by the Leksiarxeio branch below and by nothing else. A standard
-// game's POST cannot reach the column at all: the body is destructured field by
-// field, so a client sending `data` — a stale bundle, or anyone with the anon key —
-// has it ignored rather than sanitized. Leksokipos posted { words, pangrams } here
-// until 2026-08-16; nothing ever read them back and the Offline Outbox flush omitted
-// them, so the counts were a lossy record of a question no one was asking.
+// Nothing writes the `data` column any more. A POST cannot reach it at all: the
+// body is destructured field by field, so a client sending `data` — a stale
+// bundle, or anyone with the anon key — has it ignored rather than sanitized.
 export async function POST(req: NextRequest) {
   const parsed = await parseJson<ScorePayload>(req);
   if (!parsed.ok) return parsed.response;
@@ -76,43 +55,7 @@ export async function POST(req: NextRequest) {
 
   const name = sanitizeDisplayName(display_name);
 
-  // ── Leksiarxeio: read → fold → write, one length at a time ──────────────────
-  if (game_id === "leksiarxeio") {
-    const { word_length, points } = body as LeksiarxeioScorePayload;
-    if (!VALID_WORD_LENGTHS.has(word_length)) {
-      return jsonMessage("Invalid word_length");
-    }
-    if (typeof points !== "number" || points < 0 || points > 6) {
-      return jsonMessage("points must be 0–6");
-    }
-
-    const supabase = getSupabaseClient();
-    const { data: existing } = await table(supabase, "game_scores")
-      .select("data")
-      .eq("game_id", "leksiarxeio")
-      .eq("device_id", device_id)
-      .eq("puzzle_date", puzzle_date)
-      .single();
-
-    // The fold is pure and lives in scoreMerge — no row yet, or a length posting
-    // twice, are decided there and tested there.
-    const merged = mergeLengthScore(
-      (existing as { data: Record<string, number> } | null)?.data,
-      word_length,
-      points,
-    );
-
-    const err = await upsertAndClean(
-      "game_scores",
-      "game_id,device_id,puzzle_date",
-      { game_id, puzzle_date, device_id, display_name: name, score: merged.score, data: merged.data },
-    );
-    if (err) return jsonError("db_error", err);
-    return NextResponse.json({ ok: true });
-  }
-
-  // ── Standard games ──────────────────────────────────────────────────────────
-  const { score } = body as StandardScorePayload;
+  const { score } = body;
   if (typeof score !== "number") {
     return jsonMessage("Missing required fields");
   }

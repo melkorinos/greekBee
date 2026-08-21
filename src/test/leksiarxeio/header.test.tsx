@@ -1,6 +1,8 @@
 // header.test.tsx
-// Tests for LeksiarxeioPageClient: header layout, 🏆 leaderboard button presence,
-// and scoring note in the rules modal.
+// Tests for LeksiarxeioPageClient: header layout, and the two things ADR 0027
+// removed — the 🏆 leaderboard trigger and the scoring note in the rules modal.
+// Both are asserted ABSENT here, because this header is hand-wired rather than
+// GamePageChrome's, so nothing derives them from the (now empty) capabilities.
 
 import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
 import { describe, expect, it, vi } from "vitest";
@@ -42,9 +44,9 @@ describe("LeksiarxeioPageClient — header", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("Leksiarxeio");
   });
 
-  it("renders the leaderboard 🏆 button", () => {
+  it("renders no leaderboard 🏆 button", () => {
     renderHeader();
-    expect(screen.getByRole("button", { name: /πίνακας σκορ/i })).toBeDefined();
+    expect(screen.queryByRole("button", { name: /πίνακας σκορ/i })).toBeNull();
   });
 
   it("renders the HowToPlay ? trigger", () => {
@@ -52,28 +54,26 @@ describe("LeksiarxeioPageClient — header", () => {
     expect(screen.getByRole("button", { name: /πώς να παίξεις/i })).toBeDefined();
   });
 
-  it("leaderboard button and help button appear in the same header row", () => {
+  it("the help button is in the header row", () => {
     const { container } = renderHeader();
-    const lbBtn   = screen.getByRole("button", { name: /πίνακας σκορ/i });
     const helpBtn = screen.getByRole("button", { name: /πώς να παίξεις/i });
-    // Both are descendants of the header row (first child of the fragment)
+    // The header row is the first child of the fragment.
     const headerRow = container.firstElementChild as HTMLElement;
-    expect(headerRow.contains(lbBtn)).toBe(true);
     expect(headerRow.contains(helpBtn)).toBe(true);
   });
 });
 
-// ── Scoring note in rules ──────────────────────────────────────────────────────
+// ── Rules copy ────────────────────────────────────────────────────────────────
 
-describe("LeksiarxeioPageClient — rules scoring note", () => {
-  it("opens the HowToPlay modal and shows a scoring note", async () => {
+describe("LeksiarxeioPageClient — rules", () => {
+  it("opens the HowToPlay modal with no scoring note in it", async () => {
     renderHeader();
     const helpBtn = screen.getByRole("button", { name: /πώς να παίξεις/i });
     await userEvent.click(helpBtn);
-    // At least one element in the modal contains the word "Σκορ".
-    // getAllByText is used because the bold-split rendering produces multiple
-    // DOM nodes that each match the pattern.
-    const scoreNotes = screen.getAllByText(/σκορ/i);
-    expect(scoreNotes.length).toBeGreaterThan(0);
+    // The modal is open — the rules themselves still render …
+    expect(screen.getAllByText(/προσπάθειες/i).length).toBeGreaterThan(0);
+    // … and nothing in it mentions a score or points any more (ADR 0027).
+    expect(screen.queryByText(/σκορ/i)).toBeNull();
+    expect(screen.queryByText(/πόντοι/i)).toBeNull();
   });
 });

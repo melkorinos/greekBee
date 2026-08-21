@@ -59,7 +59,9 @@ describe("Vres Tin Frasi buildShareText", () => {
 
   it("is not a letter grid — one line, one cell per guess", () => {
     const text = buildShareText(state([MISS, MISS, SOLVE], "won"), DATE);
-    expect(text.split("\n")).toHaveLength(4);
+    // Three lines, not four: no `Σκορ` line, because the Game has no score
+    // (ADR 0027).
+    expect(text.split("\n")).toHaveLength(3);
     // Three guesses over a 17-letter phrase would be 51 cells as a grid.
     expect([...text.split("\n")[1]].length).toBe(3);
   });
@@ -69,14 +71,16 @@ describe("Vres Tin Frasi buildShareText", () => {
     expect(row).toBe("⬛⬛⬛⬛⬛⬛");
   });
 
-  it("scores by guesses used, and zero on a loss", () => {
-    expect(buildShareText(state([MISS, MISS, SOLVE], "won"), DATE)).toContain("Σκορ: 4");
-    expect(buildShareText(state(Array(6).fill(MISS), "lost"), DATE)).toContain("Σκορ: 0");
+  // ADR 0027: the Game's scoring is gone, so the summary carries no `Σκορ` line
+  // — omitted, never `Σκορ: 0`, which would read as a bad round.
+  it("carries no score line, won or lost", () => {
+    expect(buildShareText(state([MISS, MISS, SOLVE], "won"), DATE)).not.toContain("Σκορ");
+    expect(buildShareText(state(Array(6).fill(MISS), "lost"), DATE)).not.toContain("Σκορ");
   });
 
   it("carries the identity line and the bare link", () => {
     const lines = buildShareText(state([SOLVE], "won"), DATE).split("\n");
     expect(lines[0]).toBe("Vres Tin Frasi 17/08");
-    expect(lines[3]).toMatch(/\/vres-tin-frasi$/);
+    expect(lines[2]).toMatch(/\/vres-tin-frasi$/);
   });
 });

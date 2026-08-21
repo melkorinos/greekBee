@@ -331,6 +331,20 @@ describe("registry coverage — capabilities", () => {
     }
   });
 
+  // ADR 0027 revoked both capabilities from these two before launch. The generic
+  // guard above proves the config matches the registry whatever it says; this one
+  // names them, so restoring a board to either Game is a deliberate edit here and
+  // not a quiet re-grant that everything else keeps agreeing with.
+  it("keeps Λεξιαρχείο and Βρες τη Φράση out of both capabilities", () => {
+    for (const id of ["leksiarxeio", "vrestifrasi"] as const) {
+      expect(
+        REAL_REGISTRY[id].capabilities,
+        `${id} was stripped of scoring and its leaderboard (ADR 0027)`,
+      ).toEqual([]);
+      expect([...LEADERBOARD_GAME_IDS]).not.toContain(id);
+    }
+  });
+
   it("grants no Game a leaderboard it can never fill", () => {
     // A board with nothing to rank on it. The reverse (scores without a board) is
     // allowed in principle — but nothing does it today, and this catches the typo

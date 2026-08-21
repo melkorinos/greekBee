@@ -7,7 +7,6 @@ import { NominationModal } from "@/components/shared/NominationModal";
 import { GameHeader } from "@/components/shared/GameHeader";
 import { getOrCreateDeviceId } from "@/hooks/useGameStore";
 import { markSuggested } from "@/hooks/suggestions";
-import { LEKSIARXEIO } from "@/config/gameRules";
 import { btnApprove, btnPrimary, btnReject } from "@/styles/recipes";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -15,7 +14,7 @@ import { useSearchParams } from "next/navigation";
 // ── Tab types ─────────────────────────────────────────────────────────────────
 
 type NominationTab = "add" | "remove";
-type CommunityTab  = "leksiarxeio" | "leksindeseis" | "vrestifrasi" | "stavrolekso";
+type CommunityTab  = "leksindeseis" | "stavrolekso";
 type Tab           = NominationTab | CommunityTab;
 
 function isNominationTab(t: Tab): t is NominationTab {
@@ -24,24 +23,10 @@ function isNominationTab(t: Tab): t is NominationTab {
 
 // ── Community puzzle types ────────────────────────────────────────────────────
 
-interface LeksiarxeioCommunityPuzzle {
-  id: number;
-  submitter_name: string;
-  data: Record<string, string>;
-  created_at: string;
-}
-
 interface LeksindeseisCommunityPuzzle {
   id: number;
   submitter_name: string;
   data: Array<{ category: string; words: [string, string, string, string]; difficulty: number }>;
-  created_at: string;
-}
-
-interface VresTinFrasiCommunityPuzzle {
-  id: number;
-  submitter_name: string;
-  data: { phrase: string };
   created_at: string;
 }
 
@@ -69,15 +54,13 @@ const nominationTabCopy = {
 } as const;
 
 const communityTabCopy = {
-  leksiarxeio:  { label: "Παζλ Leksiarxeio",      emptyState: "Δεν υπάρχουν παζλ σε αναμονή." },
   leksindeseis: { label: "Παζλ Leksindeseis",     emptyState: "Δεν υπάρχουν παζλ σε αναμονή." },
-  vrestifrasi:  { label: "Φράσεις Vres Tin Frasi", emptyState: "Δεν υπάρχουν φράσεις σε αναμονή." },
   stavrolekso:  { label: "Παζλ Stavrolekso",       emptyState: "Δεν υπάρχουν παζλ σε αναμονή." },
 } as const;
 
 // ── Community queue card ──────────────────────────────────────────────────────
 // One shell owning the admin verb of the Community Puzzle Lifecycle — review a
-// pending Community Puzzle — for all four queues. Per-game variation enters as a
+// pending Community Puzzle — for every queue. Per-game variation enters as a
 // body renderer (the QUEUE_BODY registry below), the same shape the lifecycle
 // itself uses server-side: shared machine, per-game config at the seam. The
 // admin wire (URL shape, X-Admin-Secret, PATCH body) is stated once, here.
@@ -140,31 +123,6 @@ function CommunityQueueCard({
 
 // ── Per-game bodies ───────────────────────────────────────────────────────────
 
-function LeksiarxeioBody({ puzzle }: { puzzle: LeksiarxeioCommunityPuzzle }) {
-  return (
-    <>
-      <SubmitterLine name={puzzle.submitter_name} />
-      <div className="grid grid-cols-5 gap-1">
-        {LEKSIARXEIO.LENGTHS.map((len) => (
-          <div key={len} className="text-center">
-            <p className="text-xs text-muted">{len}γρ</p>
-            <p className="text-sm font-semibold text-foreground">{puzzle.data[String(len)]}</p>
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
-
-function VresTinFrasiBody({ puzzle }: { puzzle: VresTinFrasiCommunityPuzzle }) {
-  return (
-    <>
-      <SubmitterLine name={puzzle.submitter_name} />
-      <p className="text-base font-semibold text-foreground">{puzzle.data.phrase}</p>
-    </>
-  );
-}
-
 function LeksindeseisBody({ puzzle }: { puzzle: LeksindeseisCommunityPuzzle }) {
   return (
     <>
@@ -207,14 +165,12 @@ function StavroleksoBody({ puzzle }: { puzzle: StavroleksoCommunityPuzzle }) {
 
 // ── Body registry ─────────────────────────────────────────────────────────────
 // The cast is the seam's cost: the page holds its queues as unknown[] (one
-// QueueMap for four row shapes), so each body re-states the shape it was
+// QueueMap for every row shape), so each body re-states the shape it was
 // registered for. Wrong shape → runtime, not compile — the same trade the
 // lifecycle's validate() adapters make server-side.
 
 const QUEUE_BODY: Record<CommunityTab, (puzzle: unknown) => React.ReactNode> = {
-  leksiarxeio:  (p) => <LeksiarxeioBody  puzzle={p as LeksiarxeioCommunityPuzzle} />,
   leksindeseis: (p) => <LeksindeseisBody puzzle={p as LeksindeseisCommunityPuzzle} />,
-  vrestifrasi:  (p) => <VresTinFrasiBody puzzle={p as VresTinFrasiCommunityPuzzle} />,
   stavrolekso:  (p) => <StavroleksoBody  puzzle={p as StavroleksoCommunityPuzzle} />,
 };
 
@@ -369,7 +325,7 @@ function LeksikastiríoClient() {
   }
 
   const nominationTabs: NominationTab[] = ["add", "remove"];
-  const communityTabs: CommunityTab[]   = ["leksiarxeio", "leksindeseis", "vrestifrasi", "stavrolekso"];
+  const communityTabs: CommunityTab[]   = ["leksindeseis", "stavrolekso"];
 
   return (
     <div data-game="leksikastirio" className="flex-1 bg-background">
