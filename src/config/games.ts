@@ -40,6 +40,11 @@ interface GameRegistryRow {
   label:        string;
   emoji:        string;
   title:        string;
+  /**
+   * One-line pitch, shown on the picker card. Keep it under ~48 characters:
+   * the card gives it exactly two lines at the 24rem picker width and clamps
+   * whatever does not fit, so a longer string loses its ending to an ellipsis.
+   */
   description:  string;
   href:         string;
   /** Unfinished. Independent of `hidden` — see the header block. */
@@ -64,7 +69,7 @@ export const GAME_REGISTRY = {
     label:       "✏️ Leksiarxeio",
     emoji:       "✏️",
     title:       "Leksiarxeio",
-    description: "Μάντεψε τη λέξη σε 6 προσπάθειες — 4 έως 8 γράμματα.",
+    description: "Μάντεψε τις λέξεις της ημέρας σε 6 προσπάθειες.",
     href:         "/leksiarxeio",
     wip:          false,
     hidden:       false,
@@ -109,7 +114,7 @@ export const GAME_REGISTRY = {
     label:       "🏁 Leksodromia",
     emoji:       "🏁",
     title:       "Leksodromia",
-    description: "Ξεμπέρδεψε 10 λέξεις — όσο πιο γρήγορα, τόσο περισσότεροι πόντοι.",
+    description: "Ξεμπέρδεψε 10 λέξεις όσο πιο γρήγορα μπορείς.",
     href:         "/leksodromia",
     wip:          false,
     hidden:       false,
@@ -119,7 +124,7 @@ export const GAME_REGISTRY = {
     label:       "🕸️ Leksoplegma",
     emoji:       "🕸️",
     title:       "Leksoplegma",
-    description: "Βρες τις κρυμμένες λέξεις πάνω στις γραμμές του πλέγματος.",
+    description: "Βρες τις κρυμμένες λέξεις στο πλέγμα.",
     href:         "/leksoplegma",
     wip:          false,
     hidden:       false,
@@ -141,7 +146,7 @@ export const GAME_REGISTRY = {
     label:       "⚖️ Leksikastirio",
     emoji:       "⚖️",
     title:       "Leksikastirio",
-    description: "Ψηφίστε λέξεις για προσθήκη ή αφαίρεση από τη λίστα.",
+    description: "Ψήφισε λέξεις για προσθήκη ή αφαίρεση.",
     href:         "/leksikastirio",
     wip:          false,
     hidden:       false,
@@ -155,7 +160,7 @@ export const GAME_REGISTRY = {
     label:       "🗺️ Topothesies",
     emoji:       "🗺️",
     title:       "Topothesies",
-    description: "Μάντεψε την περιφερειακή ενότητα από το σχήμα της.",
+    description: "Μάντεψε την περιφερειακή ενότητα από το σχήμα.",
     href:         "/topothesies",
     wip:          false,
     hidden:       false,

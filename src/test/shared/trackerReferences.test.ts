@@ -95,15 +95,21 @@ const SPENT: Record<string, string> = {
   // itself is not gone — it went back to ISSUE-03's deferred list.
   "TICKET-18": "e2e happy path, Topothesies — withdrawn 2026-08-20, back to ISSUE-03",
   "TICKET-21": "e2e happy path, Leksikastirio — withdrawn 2026-08-20, back to ISSUE-03",
-  // ADR 0027 §1–§3 only. §5 (the schema migration) is TICKET-24 and is still on disk.
+  // ADR 0027 §1–§3 only; §5 was TICKET-24, below.
   // Scheduled work rather than a deferred problem: the DROP rode the one migration
   // ADR 0027 §5 called for instead of its own release-day step. ADR 0013's amendment
   // now records the column as dropped, which is where a cold reader is already sent.
-  "ISSUE-05": "dead is_perfect column — shipped 2026-08-20 in TICKET-24's migration",
+  "ISSUE-05": "dead is_perfect column — dropped 2026-08-21 in TICKET-24's migration",
   "TICKET-22": "scoring + leaderboard off two Games — shipped 2026-08-20",
   // ADR 0027 §4. Both queues were 0 rows, so removing the community read changed no
-  // served puzzle. The tables themselves survive until TICKET-24 drops them.
+  // served puzzle; the tables outlived it by a day and then went with TICKET-24.
   "TICKET-23": "community submission off two Games — shipped 2026-08-20",
+  // ADR 0027 §5, the last piece that ADR owed. One migration: both orphaned
+  // community queues dropped, game_scores.data and is_perfect dropped, ISSUE-01 §3's
+  // nominations index created and its one final-sigma row normalised. Written
+  // 2026-08-20, applied 2026-08-21 once the removal code was live in production —
+  // the ordering was the whole reason it waited. Release day lost step 5 with it.
+  "TICKET-24": "schema cleanup migration — applied 2026-08-21, release day now five steps",
 };
 
 /**

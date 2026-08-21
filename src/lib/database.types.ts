@@ -14,33 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      community_leksiarxeio_puzzles: {
-        Row: {
-          created_at: string
-          data: Json
-          id: number
-          scheduled_date: string | null
-          status: Database["public"]["Enums"]["community_puzzle_status"]
-          submitter_name: string
-        }
-        Insert: {
-          created_at?: string
-          data: Json
-          id?: number
-          scheduled_date?: string | null
-          status?: Database["public"]["Enums"]["community_puzzle_status"]
-          submitter_name?: string
-        }
-        Update: {
-          created_at?: string
-          data?: Json
-          id?: number
-          scheduled_date?: string | null
-          status?: Database["public"]["Enums"]["community_puzzle_status"]
-          submitter_name?: string
-        }
-        Relationships: []
-      }
       community_leksindeseis_puzzles: {
         Row: {
           created_at: string
@@ -98,61 +71,28 @@ export type Database = {
         }
         Relationships: []
       }
-      community_vrestifrasi_puzzles: {
-        Row: {
-          created_at: string
-          data: Json
-          id: number
-          scheduled_date: string | null
-          status: Database["public"]["Enums"]["community_puzzle_status"]
-          submitter_name: string
-        }
-        Insert: {
-          created_at?: string
-          data: Json
-          id?: number
-          scheduled_date?: string | null
-          status?: Database["public"]["Enums"]["community_puzzle_status"]
-          submitter_name?: string
-        }
-        Update: {
-          created_at?: string
-          data?: Json
-          id?: number
-          scheduled_date?: string | null
-          status?: Database["public"]["Enums"]["community_puzzle_status"]
-          submitter_name?: string
-        }
-        Relationships: []
-      }
       game_scores: {
         Row: {
-          data: Json
           device_id: string
           display_name: string
           game_id: string
           id: number
-          is_perfect: boolean
           puzzle_date: string
           score: number
         }
         Insert: {
-          data?: Json
           device_id: string
           display_name?: string
           game_id: string
           id?: number
-          is_perfect?: boolean
           puzzle_date: string
           score: number
         }
         Update: {
-          data?: Json
           device_id?: string
           display_name?: string
           game_id?: string
           id?: number
-          is_perfect?: boolean
           puzzle_date?: string
           score?: number
         }

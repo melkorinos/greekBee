@@ -61,7 +61,7 @@ describe("community puzzle loaders — the date reaches the query", () => {
 // ── The two loaders that no longer consult the queue ──────────────────────────
 // Λεξιαρχείο and Βρες τη Φράση lost Community Puzzle submission on 2026-08-20
 // (ADR 0027). A call to consumeApprovedPuzzle from either would mean the read
-// came back — and it would point at a table TICKET-24 drops.
+// came back — and it would point at a table that no longer exists (dropped 2026-08-21).
 
 describe("loaders with no community read", () => {
   it("Vres Tin Frasi never touches the queue", async () => {

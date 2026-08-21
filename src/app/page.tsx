@@ -198,7 +198,15 @@ function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submit
           <p className="font-semibold text-foreground">
             {game.title}
           </p>
-          <p className="text-sm text-muted mt-0.5">{game.description}</p>
+          {/* Two lines is the BOX, not just the cap: min-h-10 (two text-sm lines
+              at leading-5) reserves the second line even for a one-line
+              description, so a short one no longer leaves a dead gap once
+              auto-rows-fr levels the row up to the tallest card. line-clamp-2
+              still caps the long ones. Deliberately NO text-balance: it shortens
+              both lines to even them out, which leaves a wide gutter on the
+              right and cost Leksiarxeio its last words to the clamp. The
+              descriptions are kept short enough to fit two full lines instead. */}
+          <p className="text-sm text-muted mt-0.5 line-clamp-2 min-h-10">{game.description}</p>
         </div>
       </Link>
       <div className="flex flex-col items-center justify-center gap-1 px-3 border-l border-border shrink-0">
@@ -219,7 +227,10 @@ export default function HomePage() {
       <h1 className="text-3xl font-bold text-foreground mb-2">{PLATFORM_NAME}</h1>
       <p className="text-muted text-sm mb-10">Επίλεξε παιχνίδι για να ξεκινήσεις</p>
 
-      <ul className="w-full max-w-game space-y-4">
+      {/* grid + auto-rows-fr, not space-y: every row takes the height of the
+          tallest, so all the cards match instead of each sizing to its own
+          description. gap-4 replaces the space-y-4 it displaces. */}
+      <ul className="w-full max-w-picker grid gap-4 auto-rows-fr">
         {gameList.map((game) => (
           <GameCard
             key={game.id}
@@ -229,13 +240,13 @@ export default function HomePage() {
         ))}
       </ul>
 
-      <div className="w-full max-w-game mt-8 mb-4 flex items-center gap-3">
+      <div className="w-full max-w-picker mt-8 mb-4 flex items-center gap-3">
         <hr className="flex-1 border-border" />
         <span className="text-xs font-semibold text-muted uppercase tracking-widest">Κοινότητα</span>
         <hr className="flex-1 border-border" />
       </div>
 
-      <ul className="w-full max-w-game space-y-4">
+      <ul className="w-full max-w-picker grid gap-4 auto-rows-fr">
         {communityList.map((game) => <GameCard key={game.id} game={game} />)}
       </ul>
 

@@ -67,10 +67,10 @@ skill entry is about to decide something, **spend the one command**, and **date 
 The live-DB tests talk to Postgres directly — no deployed app code runs — so they go green the moment
 a migration lands, whether the deploy succeeded, failed or never started: **a green suite actively
 reassuring the operator while every write 500s**. Any migration window needs one check hitting the
-**deployed route** (release day does this at runbook step 2). **Live as of s174:** the migration is
-committed but not applied and its removal code not deployed, while `CONTEXT.md` already describes the
-post-migration schema — docs ahead of the database, honest only while the branch stays unpushed.
-Check the deployed commit, never the green suite.
+**deployed route** (release day does this at runbook step 2). **s174 closed one such window by hand:** the deploy was proven with the
+Vercel API's `githubCommitSha`, not with a ready-state or a green suite, before any DDL ran. That is
+the check — a deployment can be READY, recent and serving the wrong commit, and every artifact here
+will look identical. Check the deployed commit, never the green suite.
 
 ## 🟡 Authored content vs derived word lists — the s133 class of bug
 
