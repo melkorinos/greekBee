@@ -255,6 +255,10 @@ export function LeksiarxeioBoard({
     .filter((r): r is LeksiarxeioLengthRound => r !== undefined && r.status !== "playing");
   const isRoundEnd = resolvedRounds.length === LENGTHS.length;
 
+  // How many of the five Lengths were actually solved — the number the Result
+  // Panel reports. Resolved ≠ won, so this is counted, not taken from the length.
+  const wonCount = resolvedRounds.filter((r) => r.status === "won").length;
+
   // Length switcher — wraps around
   function prevLength() {
     setActiveLength((l) => {
@@ -297,9 +301,13 @@ export function LeksiarxeioBoard({
           shareText={buildShareText(resolvedRounds, today)}
         >
           {/* With no score heading above it (ADR 0027) this line IS the panel's
-              heading, so it carries the size. */}
+              heading, so it carries the size. It reports how many of the five
+              Lengths were SOLVED, not that all five were reached — reaching Round
+              End with two words found and three missed is a different day from a
+              clean sweep, and "Ολοκλήρωσες και τα 5 μήκη" told them apart not at
+              all. Zero is a real outcome and reads plainly. */}
           <h2 className="text-2xl font-bold text-foreground text-center">
-            {`Ολοκλήρωσες και τα ${LENGTHS.length} μήκη`}
+            {wonCount === 1 ? "Βρήκες 1 λέξη" : `Βρήκες ${wonCount} λέξεις`}
           </h2>
         </ShareResultPanel>
       )}

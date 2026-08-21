@@ -4,6 +4,7 @@
 // Four-state colouring: correct (green), present (yellow), misplaced-word (purple), absent (grey).
 // Also has a clear-word button instead of the length switcher.
 
+import { DeleteMark, SubmitMark } from "@/components/shared/KeyMarks";
 import type { PhraseLetterStateMap } from "@/games/vrestifrasi/types";
 
 interface KeyboardProps {
@@ -48,16 +49,22 @@ export function Keyboard({
     ].join(" ");
   };
 
+  // Enter/Delete carry the SAME neutral fill an untouched letter key has
+  // (`unknown` above). Enter used to be bg-correct, which put the game's "this
+  // letter is in the right place" green on a key that is not a letter and reports
+  // nothing — the feedback colours have to stay reserved for feedback. Both keys
+  // are told apart by their drawn mark instead of by colour.
   const actionBase = [
     "flex items-center justify-center",
     "h-14 rounded border",
     "font-semibold cursor-pointer select-none",
     "active:opacity-70 transition-colors",
     disabled ? "opacity-50 pointer-events-none" : "",
+    STATE_CLASSES.unknown,
   ].join(" ");
 
-  const enterClass  = `${actionBase} flex-1 min-w-0 px-1 text-base bg-correct border-correct text-white`;
-  const deleteClass = `${actionBase} flex-1 min-w-0 px-1 text-sm  bg-border  border-border  text-muted`;
+  const enterClass  = `${actionBase} flex-1 min-w-0 px-1`;
+  const deleteClass = `${actionBase} flex-1 min-w-0 px-1`;
 
   return (
     <div className="flex flex-col items-center gap-1.5 w-full" aria-label="Keyboard">
@@ -70,7 +77,7 @@ export function Keyboard({
               aria-label="Submit guess"
               data-testid="btn-enter"
             >
-              ↵
+              <SubmitMark />
             </button>
           )}
           {row.map((letter) => (
@@ -91,7 +98,7 @@ export function Keyboard({
               aria-label="Delete letter"
               data-testid="btn-delete"
             >
-              ⌫
+              <DeleteMark />
             </button>
           )}
         </div>

@@ -91,11 +91,14 @@ export function VresTinFrasiBoard({
             testId="vrestifrasi-result"
             shareText={buildShareText({ puzzle, guesses, status }, today)}
           >
-            {/* The phrase is revealed HERE and only here — it stays on screen and
-                never enters the shared text. With no score heading above it (ADR
-                0027) this reveal IS the panel's heading, so it carries the size. */}
+            {/* The verdict, not the phrase. With no score heading above it (ADR
+                0027) this line IS the panel's heading, so it carries the size.
+                The phrase itself is no longer printed here (operator's call,
+                2026-08-21): on a win the solved grid already spells it out, and it
+                never enters the shared text either way — so on a LOSS the phrase
+                now stays unrevealed. */}
             <h2 className="text-2xl font-bold text-foreground text-center">
-              {puzzle.phrase}
+              {status === "won" ? "Βρήκες τη φράση" : "Δεν βρήκες τη φράση"}
             </h2>
           </ShareResultPanel>
       )}

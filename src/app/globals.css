@@ -59,6 +59,14 @@
   --absent:    var(--color-stone-500);
   --misplaced: var(--color-purple-600);
 
+  /* Share action — the Result Panel's share button, in EVERY game. Deliberately
+     NOT --game-accent: on a Wordle-shaped board the accent doubles as a feedback
+     colour (Leksiarxeio's green IS `correct`), so an accent-filled button reads as
+     a scored tile. One platform-wide purple instead, so the share action means the
+     same thing on every Round End. */
+  --share:            var(--color-purple-600);
+  --share-foreground: #ffffff;
+
   /* Achievement badge tiers (TICKET-03) — one strong colour for the ring and one
      soft colour for the disc behind the mark. The mark itself is always
      currentColor and never tinted, which is what lets five drawings serve all four
@@ -184,6 +192,8 @@
   --color-present:        var(--present);
   --color-absent:         var(--absent);
   --color-misplaced:      var(--misplaced);
+  --color-share:            var(--share);
+  --color-share-foreground: var(--share-foreground);
 
   /* Badge tiers → bg-tier-chryso / bg-tier-chryso-soft and friends (TICKET-03). */
   --color-tier-chalkino:      var(--tier-chalkino);

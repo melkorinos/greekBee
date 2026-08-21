@@ -67,11 +67,23 @@ describe("Vres Tin Frasi Round End", () => {
     expect(screen.getByTestId("vrestifrasi-result")).toBeInTheDocument();
   });
 
-  it("reveals the phrase on screen without letting it into the shared text", () => {
+  // The panel states the verdict rather than printing the phrase (2026-08-21).
+  // On a loss that means the phrase stays unrevealed — deliberate, and the reason
+  // this test asserts its ABSENCE where it once asserted the reveal.
+  it("says the phrase was found on a win", () => {
+    seedSession("won");
+    renderBoard();
+
+    expect(screen.getByTestId("vrestifrasi-result")).toHaveTextContent("Βρήκες τη φράση");
+  });
+
+  it("says the phrase was not found on a loss, and does not print it", () => {
     seedSession("lost");
     renderBoard();
 
-    expect(screen.getByTestId("vrestifrasi-result")).toHaveTextContent(PHRASE);
+    const panel = screen.getByTestId("vrestifrasi-result");
+    expect(panel).toHaveTextContent("Δεν βρήκες τη φράση");
+    expect(panel).not.toHaveTextContent(PHRASE);
   });
 
   // ADR 0027: the Game has no scoring and no leaderboard, so the panel it renders

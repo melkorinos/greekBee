@@ -51,3 +51,26 @@ Pre-redesign seam work (sessions 102–104) completed the chrome consolidation t
 4. **Shape tokens** (`--radius-card`/`--radius-control`/`--shadow-card`, see ADR 0008's extension) adopted inside `Modal.tsx` + `recipes.ts` only — call sites keep their classes; the classes now read from knobs.
 
 Net effect: the redesign surface is `globals.css` (colour/shape/width), `recipes.ts` (buttons/inputs/cards/tooltips), `Modal.tsx` (popups), `GamePageShell`/`GameHeader` (frame), `GameLeaderboardModal` (leaderboards).
+
+## Extension (2026-08-21) — the share action is platform-coloured, not game-accented
+
+The Result Panel's share button was filled with `--game-accent`. On a Wordle-shaped
+board that collides with the governing rule above from the other side: the accent
+*value* may equal a feedback colour, and on Leksiarxeio it literally is one
+(`green-600` = `--correct`). A full-width green button sitting under a grid of green
+tiles reads as a scored result, not as an action.
+
+**New token `--share` (purple-600) + `--share-foreground`**, consumed by
+`ShareResultPanel` for every Game. Consequences:
+
+- The share action means the same thing on every Round End — one colour, learned once.
+- The per-game accent stays the game's identity everywhere else (leaderboard pill,
+  header, links); this is one deliberate exception, not a retreat from ADR 0009.
+- Recolouring share across the platform is a one-line edit in `globals.css`.
+
+Landed alongside two related gameplay-surface changes (game-owned, so outside this
+ADR's scope but noted for the reader): the Leksiarxeio and Vres Tin Frasi keyboards
+dropped `bg-correct` from their Enter key — feedback colours stay reserved for
+feedback — and now carry the drawn `DeleteMark` / `SubmitMark` from the new
+`src/components/shared/KeyMarks.tsx`, graduated out of `leksokipos/icons.tsx` on the
+three-consumer rule.

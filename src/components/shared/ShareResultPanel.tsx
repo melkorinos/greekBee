@@ -36,9 +36,12 @@
 //   - Any OTHER rejection is a genuine failure, so it falls through to the
 //     clipboard rather than losing the summary.
 //
-// The accent-fill share button is the known recipe debt (memory Topothesies row):
-// there is no recipe for accent fills yet, so the string is hand-rolled here — but
-// now in ONE place, so fixing it later is a single edit.
+// The share button is filled with --share, NOT --game-accent. On a Wordle-shaped
+// board the game accent doubles as a feedback colour — Leksiarxeio's accent IS
+// `correct` green — so an accent-filled button reads as a scored tile sitting under
+// the grid. One platform-wide purple makes the share action mean the same thing on
+// every Round End. The fill string is still hand-rolled (no recipe for solid fills
+// yet, the known recipe debt in the memory Topothesies row), but in ONE place.
 
 import { useState, type ReactNode } from "react";
 
@@ -110,7 +113,7 @@ export function ShareResultPanel({
       <button
         data-testid="btn-share-result"
         onClick={share}
-        className="w-full max-w-game px-6 py-3 rounded-control bg-game-accent text-game-accent-foreground text-base font-bold hover:opacity-90 transition-opacity"
+        className="w-full max-w-game px-6 py-3 rounded-control bg-share text-share-foreground text-base font-bold hover:opacity-90 transition-opacity"
       >
         {copied ? "Αντιγράφηκε" : "Κοινοποίηση"}
       </button>

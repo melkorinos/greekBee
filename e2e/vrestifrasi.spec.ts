@@ -54,9 +54,10 @@ test.describe("Vres Tin Frasi flow", () => {
     await vrestifrasi.submitGuess();
 
     await expect(vrestifrasi.resultPanel).toBeVisible();
-    // The reveal is the panel's leading line for this Game, since there is no
-    // score heading above it (ADR 0027).
-    await expect(vrestifrasi.resultPanel).toContainText("Εδώ και τώρα");
+    // The verdict is the panel's leading line for this Game, since there is no
+    // score heading above it (ADR 0027). The phrase itself is not printed here
+    // any more (2026-08-21) — on a win the solved grid already spells it out.
+    await expect(vrestifrasi.resultPanel).toContainText("Βρήκες τη φράση");
     await expect(vrestifrasi.resultPanel.getByTestId("btn-share-result")).toBeVisible();
   });
 

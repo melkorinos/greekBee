@@ -5,6 +5,33 @@
 
 ---
 
+## Session 178 — 2026-08-21: the feedback colours stop leaking onto things that are not feedback
+
+Operator-directed polish across two Wordle-shaped Games and the shared Result Panel. 2657 tests
+(+4), eslint 0, build 0, e2e 18 passed / 2 skipped.
+
+**One rule explains three of the four changes: a colour that means something must not appear on a
+control that means nothing.** Leksiarxeio's Enter key was `bg-correct` — the *same green* as a
+letter in the right place — and the Result Panel's share button was `bg-game-accent`, whose value on
+that Game **is** `--correct` (ADR 0009 explicitly permits accent = feedback value, which is how this
+went unnoticed). So a finished board showed a green grid, a green Enter and a green full-width
+button, only one of which was reporting anything. Enter and Delete now carry the *unknown* letter
+state's exact fill on both keyboards and are told apart by their drawn mark; the share button gets a
+new platform token `--share` (purple-600), the same on every Game. ADR 0009 extended, not annotated.
+
+**`DeleteMark` / `SubmitMark` graduated to `src/components/shared/KeyMarks.tsx`** — third genuine
+consumer, which is the bar. `ClearMark` / `ShuffleMark` stayed in `leksokipos/icons.tsx`, which
+re-exports the two so the action row still imports all four from one place.
+
+**Both Round End copy changes were ambiguous in a way worth asking about, and the answers cost
+information on purpose.** Leksiarxeio's «Ολοκλήρωσες και τα 5 μήκη» is true on every Round End and so
+distinguishes a clean sweep from a 0/5 not at all; it now reads «Βρήκες Χ λέξεις», counted from
+`status === "won"` and **not** from `resolvedRounds.length`, with a singular form and a plain zero.
+Vres Tin Frasi's panel printed the phrase; the operator chose to replace it with the verdict, so on
+a **loss the phrase is now revealed nowhere** — the grid spells it out on a win and the shared text
+never carried it. Flagged before implementing, confirmed, and the test that once asserted the reveal
+now asserts its absence.
+
 ## Session 177 — 2026-08-21: the drag holds up, and the issue that held the suite is closed
 
 `TICKET-20` end to end, the last of the three Tier A happy paths, and `ISSUE-03` deleted with it by
@@ -42,51 +69,11 @@ surviving home is `.claude/aiHelper/e2e-coverage/analysis.md`, which now carries
 saying exactly that; `goals.md`, `reflections.md` and `docs/launch-runbook.md` were rewritten to
 point there rather than at a file that no longer exists.
 
-## Session 176 — 2026-08-21: the timed Game gets a browser, and "stop after one word" turns out not to be a guard
-
-`TICKET-19` end to end, the second of `ISSUE-03`'s Tier A happy paths. `e2e/pages/LeksodromiaPage.ts`
-+ a fixture entry + `e2e/leksodromia.spec.ts` (1 test): the page mounts, the pinned rack renders,
-three tile clicks land their letters in the answer row, and the fourth auto-submits so the board
-advances to word 2 of 10 wearing the second word's rack. e2e **16 → 17 passed / 2 skipped**; 2653 tests, eslint 0, build 0.
-
-**The ticket's production guard did not guard anything, and that was the session's real
-find.** Its done-when read *no new row appears in `game_scores`*, and its scope reasoned
-that stopping after one word achieves it because ten words finish the round. But
-Λεξοδρομία posts through `useLiveScorePost`, which fires on **every score increase**, so
-one solve writes a row and the spec as specified would have written to shared production
-every run. The analysis document's own escape hatch, *"assert before the post"*, is
-unavailable here: the post rides the exact state change the assertion waits for. Fix is to
-stub `POST /api/game-scores` in the browser and **assert the stub fired**, since an
-interception that quietly stopped matching would write every run while staying green.
-Verified as s175 did rather than argued: `game_scores` read 593 / 25 leksodromia / 0 on the
-pinned date both before and after **eight** full suite runs.
-
-**Two of the ticket's instructions named controls that do not exist.** It asked for a
-locator on `data-testid="btn-enter"`; Λεξοδρομία has no submit button and no hint button —
-a word is submitted by *filling its last slot*, which `pickTile` queues behind the
-completing pick. The board's own header comment claimed "hint / two-phase skip / submit
-actions", so the ticket was reasoning off a comment false for some time; rewritten, not
-annotated. Second session running where a ticket described one Game from another's shape.
-
-**The pin was chosen by search, and the second word corrected an assumption.** Forty dates
-were driven through the real loader for one whose first word has four distinct letters and
-exactly one accepted answer — 2026-05-22, «φεσι» on rack «φιεσ». The first draft asserted
-the rack grew to five tiles on word 2, on the strength of "ten words, ascending by length";
-the words are **2 × each length**, so word 2 is «φανω», four letters again. Asserting the
-rack's *letters* rather than its count proves a different word rather than a re-render, so
-it was the better assertion regardless. Nothing here touches the clock: the assertions are
-the word counter and the *fact* that the total left zero, which `MIN_SOLVED_POINTS` makes
-certain however slow the run.
-
-**`TICKET-20` was corrected in place** — Λεξόπλεγμα posts through the same hook and would
-have inherited the same false premise — along with `ISSUE-03`, the analysis document and
-memory's e2e rows. One non-reproducing failure in eight runs, `profile.spec.ts`, wearing
-the recorded Next dev-overlay signature.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 176 | 2026-08-21 | **The timed Game gets a browser, and the ticket's production guard turned out not to guard anything.** `TICKET-19` end to end: `e2e/pages/LeksodromiaPage.ts` + fixture + `e2e/leksodromia.spec.ts` (1 test) — page mounts, pinned rack renders, three tile clicks land letters and the fourth auto-submits so the board advances to word 2 wearing the second word's rack. e2e 16 → 17 passed / 2 skipped. **Λεξοδρομία posts through `useLiveScorePost`, which fires on every score increase**, so the ticket's "stop after one word" done-when would have written to shared production every run, and the analysis doc's "assert before the post" escape is unavailable when the post rides the exact state change the assertion waits for — fix is to stub `POST /api/game-scores` and assert the stub fired; verified 593/25/0 before and after eight full runs, and `TICKET-20` corrected in place for the same premise. **Two ticket instructions named controls that do not exist** (`btn-enter`, a hint button): a word is submitted by filling its last slot, and the board's own header comment had been false for some time — rewritten, not annotated. Pin 2026-05-22 («φεσι» on rack «φιεσ») chosen by driving the real loader; words are 2× each length, so word 2 is four letters again and asserting the rack's *letters* beats asserting its count. |
 | 175 | 2026-08-21 | **The first Game plays a whole round in a browser.** `TICKET-17` end to end, the first Tier A happy path: `e2e/pages/VresTinFrasiPage.ts` + a fixture entry + `e2e/vrestifrasi.spec.ts` (3 tests) — page mounts, a key click reaches the reducer, the round is **played to completion** and the Result Panel renders, plus the ADR 0027 absences guarded at browser level (no 🏆, no πόντοι heading, no board link, neither ➕ nor 🏆 on the picker card) with Λεξοδρομία's card as the positive control. e2e 13 → 16 passed / 2 skipped. **The full round is affordable ONLY because ADR 0027 left this Game no Score to post** — live count 592/10 unchanged either side — so memory's never-finish-a-round rule became conditional on the registry row. **Two of the ticket's instructions were wrong and reading the code caught it**: the phrase grid is an ARIA grid with no per-row testid, and a guess is the WHOLE phrase (the reducer auto-advances at each word's length) — a page object does not transfer between Games even inside one round-spine family. Pin 2026-05-22 («Εδώ και τώρα», the rotation's shortest phrase) and the probe `ενα ωρα καλη` were both chosen by driving the real evaluator, not by taste. |
 | 174 | 2026-08-20/21 | **The migration lands, and release day loses a step it can no longer justify.** `TICKET-24` end to end, ADR 0027 §5 — one migration `20260820120000`: both orphaned community queues dropped, `game_scores.data` and `is_perfect` dropped, `ISSUE-01` §3's nominations index created and its one final-sigma row normalised. Written on the 20th, **applied 09:44 on the 21st** once the operator deployed; runbook step 5 gone and the list renumbered to **five**, `ISSUE-05` deleted, `memory.md`'s launch-reset row corrected so no cold session re-freezes `supabase/migrations/` on a spent rule. **The cheap check beat the plausible inference, twice:** `git branch -v` read `dev [ahead 5]`, settling what the ticket framed as needing a production probe; then the Vercel API's `githubCommitSha` proved the deployed commit, where a READY state and a 7-minute age would have looked identical on the wrong one. **For one commit the docs were ahead of the database on purpose** — tolerable only because the branch was unpushed and the gap closed inside the session; had the migration slipped a week those docs were the ones lying, and nothing would have flagged it. **I wrote a falsehood into `ISSUE-01` and caught it by opening the route:** the §3 rewrite said nothing normalises `word` on the way in — `api/nominations/route.ts:119` does. The operator also waived the offsite-upload gate on the grounds that the launch reset wipes most of this anyway: true of `game_scores`, **not** of `nominations` or `player_profiles`. Commits `1ee2c71`, `9504b3d`, `e0f85cc`. |
 | 173 | 2026-08-20 | **Submission comes off two Games, and their tables are left standing on purpose.** `TICKET-23` end to end (ADR 0027 §4): both submit modals, both submit and review routes, both `validateSubmission` adapters, both loaders' community read; `/leksikastirio` drops to two review tabs. **Verifying the ticket before starting it was worth ten minutes** — every file existed and every claim held, but four `CONTEXT.md` line numbers were 4–6 off and `rlsInvariantsLiveDb.test.ts` covers only the Stavrolekso table, so one checklist box was a no-op. A ticket's *line numbers* rot first; its *claims* survived four days. **The removal changed no puzzle, and the tests now prove it** — rather than deleting the community-path coverage, both loader tests mock Supabase to **return** a row on purpose (a served row would mean the read came back), and `communityPuzzleScheduling.test.ts` asserts `consumeApprovedPuzzle` is never called. **Deleting a doc row would have been the wrong tidy:** the two tables still existed, so `CONTEXT.md` was rewritten to *"Orphaned, 0 rows … TICKET-24 drops it"* — a cold session reading the schema needs to know why a table with no code is there. `ScheduledPuzzleTable` narrowed itself (derived types age; prose restating them does not). Commit `a0c4590`. |

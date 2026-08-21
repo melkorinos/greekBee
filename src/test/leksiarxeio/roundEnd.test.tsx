@@ -89,6 +89,33 @@ describe("Leksiarxeio Round End", () => {
     expect(screen.getByTestId("leksiarxeio-result")).toBeInTheDocument();
   });
 
+  // The panel reports words FOUND, not Lengths reached — the whole point of the
+  // 2026-08-21 copy change, and the reason it counts `won` rather than reusing
+  // `resolvedRounds.length`, which is five on every Round End including this one.
+  it("counts only the Lengths that were solved", () => {
+    seedSession(4, "lost");
+    seedSession(5, "lost");
+    for (const length of [6, 7, 8] as LeksiarxeioLength[]) seedSession(length, "won");
+    renderBoard();
+
+    expect(screen.getByTestId("leksiarxeio-result")).toHaveTextContent("Βρήκες 3 λέξεις");
+  });
+
+  it("says «Βρήκες 1 λέξη» in the singular", () => {
+    for (const length of [4, 5, 6, 7] as LeksiarxeioLength[]) seedSession(length, "lost");
+    seedSession(8, "won");
+    renderBoard();
+
+    expect(screen.getByTestId("leksiarxeio-result")).toHaveTextContent("Βρήκες 1 λέξη");
+  });
+
+  it("says «Βρήκες 0 λέξεις» when every Length was lost", () => {
+    for (const length of LENGTHS) seedSession(length, "lost");
+    renderBoard();
+
+    expect(screen.getByTestId("leksiarxeio-result")).toHaveTextContent("Βρήκες 0 λέξεις");
+  });
+
   // ADR 0027: the Game has no scoring and no leaderboard, so the panel carries
   // neither the πόντοι heading nor the link to a board.
   it("shows no score heading and no leaderboard link", () => {
