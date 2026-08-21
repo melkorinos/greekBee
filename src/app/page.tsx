@@ -198,7 +198,10 @@ function GameCard({ game, submitButton }: { game: (typeof GAMES)[number]; submit
           <p className="font-semibold text-foreground">
             {game.title}
           </p>
-          <p className="text-sm text-muted mt-0.5">{game.description}</p>
+          {/* Clamped to two lines so no description can push its card taller
+              than the others; the list's auto-rows-fr then levels the shorter
+              ones up to match. Two lines is the cap, not the height. */}
+          <p className="text-sm text-muted mt-0.5 line-clamp-2">{game.description}</p>
         </div>
       </Link>
       <div className="flex flex-col items-center justify-center gap-1 px-3 border-l border-border shrink-0">
@@ -219,7 +222,10 @@ export default function HomePage() {
       <h1 className="text-3xl font-bold text-foreground mb-2">{PLATFORM_NAME}</h1>
       <p className="text-muted text-sm mb-10">Επίλεξε παιχνίδι για να ξεκινήσεις</p>
 
-      <ul className="w-full max-w-game space-y-4">
+      {/* grid + auto-rows-fr, not space-y: every row takes the height of the
+          tallest, so all the cards match instead of each sizing to its own
+          description. gap-4 replaces the space-y-4 it displaces. */}
+      <ul className="w-full max-w-picker grid gap-4 auto-rows-fr">
         {gameList.map((game) => (
           <GameCard
             key={game.id}
@@ -229,13 +235,13 @@ export default function HomePage() {
         ))}
       </ul>
 
-      <div className="w-full max-w-game mt-8 mb-4 flex items-center gap-3">
+      <div className="w-full max-w-picker mt-8 mb-4 flex items-center gap-3">
         <hr className="flex-1 border-border" />
         <span className="text-xs font-semibold text-muted uppercase tracking-widest">Κοινότητα</span>
         <hr className="flex-1 border-border" />
       </div>
 
-      <ul className="w-full max-w-game space-y-4">
+      <ul className="w-full max-w-picker grid gap-4 auto-rows-fr">
         {communityList.map((game) => <GameCard key={game.id} game={game} />)}
       </ul>
 

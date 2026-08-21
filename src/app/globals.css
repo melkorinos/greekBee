@@ -228,6 +228,15 @@
      content column (header row, boards, grids, recaps, modal). Tailwind v4 reads
      the --container-* namespace to generate the max-w-* utility. */
   --container-game: 24rem;
+
+  /* Picker column width → max-w-picker. Deliberately WIDER than --container-game
+     and deliberately a separate knob: the picker is a list of cards, not a game
+     board, and its cards carry a one-line title plus a two-line description
+     beside an icon and a button rail. At the game column's 24rem two of the
+     descriptions wrapped to three lines and made their cards taller than the
+     rest. Widening the game column instead would have resized every board to
+     fix a list. */
+  --container-picker: 28rem;
 }
 
 body {
