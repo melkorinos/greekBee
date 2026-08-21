@@ -1,26 +1,28 @@
 # E2E coverage leaves most of the Platform browser-unverified
 
 **Deferred:** 2026-08-11
-**Revisit when:** TICKET-19 and TICKET-20 have shipped — TICKET-17 landed 2026-08-21, and
-once the other two follow, the three remaining per-Game happy paths below are the cheapest
-work left in this file, and it should be re-read to decide whether they are worth ticketing.
+**Revisit when:** TICKET-20 has shipped — TICKET-17 and TICKET-19 both landed 2026-08-21,
+and once the last one follows, the three remaining per-Game happy paths below are the
+cheapest work left in this file, and it should be re-read to decide whether they are worth
+ticketing.
 
 ## Problem
 
-`npm run test:e2e` runs **18 tests across 6 spec files** — `games`, `flows`, `vrestifrasi`,
-`profile`, `privacy`, `offlineMode` — of which 16 run and 2 are permanently skipped (the
-Offline Mode acceptance tests, which fail on purpose and are deliberately not a gate).
-Against that sit 213 unit/component test files.
+`npm run test:e2e` runs **19 tests across 7 spec files** — `games`, `flows`, `vrestifrasi`,
+`leksodromia`, `profile`, `privacy`, `offlineMode` — of which 17 run and 2 are permanently
+skipped (the Offline Mode acceptance tests, which fail on purpose and are deliberately not
+a gate). Against that sit 209 unit/component test files.
 
 The full breakdown of what those tests do and do not guarantee is in
 `.claude/aiHelper/e2e-coverage/analysis.md`, measured 2026-08-20 — read it as of that
-date, before TICKET-17 closed the Βρες τη Φράση row. The headline facts:
+date, before TICKET-17 and TICKET-19 closed the Βρες τη Φράση and Λεξοδρομία rows. The
+headline facts:
 
-- **5 of 11 registered routes are never loaded by any browser test.** All five are
-  launched and unhidden; three of them still write to the shared database
-  (Λεξοδρομία, Λεξόπλεγμα, Τοποθεσίες).
-- **Only 3 of 11 Games have a turn played in a browser** (Leksokipos, Leksiarxeio,
-  Βρες τη Φράση).
+- **4 of 11 registered routes are never loaded by any browser test.** All four are
+  launched and unhidden; two of them still write to the shared database
+  (Λεξόπλεγμα, Τοποθεσίες).
+- **Only 4 of 11 Games have a turn played in a browser** (Leksokipos, Leksiarxeio,
+  Βρες τη Φράση, Λεξοδρομία).
 - **End of round is browser-tested for exactly one Game.** TICKET-17 plays Βρες τη Φράση
   to completion and asserts its Result Panel; that was affordable only because ADR 0027
   left the Game with no score to post. The leaderboard modal and the achievement toast
@@ -60,9 +62,20 @@ rows are addressed by role — the Leksiarxeio `data-row` locator does not trans
 guess is the **whole phrase**, not one word: the reducer auto-advances the cursor at each
 word's length, so the phrase is typed as one unbroken run of key clicks.
 
-TICKET-19 and TICKET-20 are unaffected by ADR 0027: Leksodromia and Leksoplegma keep both
-capabilities, so their stop-after-one-word constraint holds and neither can copy this
-spec's full round.
+**TICKET-19 shipped 2026-08-21** as `e2e/leksodromia.spec.ts` — one word unscrambled on a
+pinned rack, asserting the word counter reaches 2 of 10. Two things it settled, both of
+which the ticket had stated wrongly. Λεξοδρομία has **no submit control at all** (no
+`btn-enter`, and no hint control either): filling the answer row's last slot is what
+submits, so the auto-submit is the input path rather than a detail to route around. And
+**stopping after one word does not keep a round out of production** — `useLiveScorePost`
+posts on every score *increase*, not at Round End, so a single solve writes to the shared
+`game_scores` by itself. The spec stubs `POST /api/game-scores` in the browser and asserts
+the stub fired; `game_scores` was 593/25/0 before and after eight suite runs. **TICKET-20
+inherits that correction** — Λεξόπλεγμα posts through the same hook.
+
+Neither Game can copy TICKET-17's full round: both keep the `scores` capability that
+ADR 0027 took off Βρες τη Φράση, so finishing would post a real Score even with the POST
+stubbed on the happy path.
 
 Topothesies and Leksikastirio were ticketed the same day and withdrawn within the hour
 as low priority — TICKET-18 and TICKET-21 are retired in the `SPENT` ledger and must
@@ -86,9 +99,10 @@ objects and specs, not instrumentation.
     nomination modal. No vote and no submit; a vote is a real write that shapes the
     dictionary, and no test suite should be casting them.
 
-  Consequence to be aware of: five routes currently have **zero** coverage of any kind
-  in a browser. The shape of all three specs, and the `?puzzle=` pinning they need, is
-  in the analysis document.
+  Consequence to be aware of: Stavrolekso's three routes plus Τοποθεσίες and
+  Λεξικαστήριο have **zero** coverage of any kind in a browser — five routes — and
+  Λεξόπλεγμα joins them until TICKET-20 ships. The shape of all three specs, and the
+  `?puzzle=` pinning they need, is in the analysis document.
 - **Breadth work** — a registry-driven smoke test over every `GAME_REGISTRY` href, the
   same table at a mobile viewport, and drawer-navigation coverage. Cheap and valuable,
   but the mobile half needs a second Playwright project, which roughly doubles run time

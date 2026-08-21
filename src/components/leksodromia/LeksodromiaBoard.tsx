@@ -1,8 +1,12 @@
 "use client";
 
 // LeksodromiaBoard — the anagram-sprint play surface.
-// Scrambled tile rack → answer row; live decaying points counter; hint /
-// two-phase skip / submit actions; end-of-round recap.
+// Scrambled tile rack → answer row; live decaying points counter; clear /
+// two-phase skip actions; end-of-round recap.
+// There is NO submit control and NO hint control: a word is submitted by filling
+// its last slot (pickTile queues SUBMIT_WORD behind the completing pick), and
+// while the reducer supports USE_HINT nothing renders a trigger for it — the
+// recap's 💡 count is the only trace. e2e/leksodromia.spec.ts depends on both.
 // First skip requeues the word for a second chance at the end of the run
 // (clock resumes); a second-chance skip is final (0 pts).
 // Score posts CONTINUOUSLY on every live increase (abandoned rounds still

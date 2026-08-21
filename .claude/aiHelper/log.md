@@ -5,6 +5,47 @@
 
 ---
 
+## Session 176 — 2026-08-21: the timed Game gets a browser, and "stop after one word" turns out not to be a guard
+
+`TICKET-19` end to end, the second of `ISSUE-03`'s Tier A happy paths. `e2e/pages/LeksodromiaPage.ts`
++ a fixture entry + `e2e/leksodromia.spec.ts` (1 test): the page mounts, the pinned rack renders,
+three tile clicks land their letters in the answer row, and the fourth auto-submits so the board
+advances to word 2 of 10 wearing the second word's rack. e2e **16 → 17 passed / 2 skipped**; 2653 tests, eslint 0, build 0.
+
+**The ticket's production guard did not guard anything, and that was the session's real
+find.** Its done-when read *no new row appears in `game_scores`*, and its scope reasoned
+that stopping after one word achieves it because ten words finish the round. But
+Λεξοδρομία posts through `useLiveScorePost`, which fires on **every score increase**, so
+one solve writes a row and the spec as specified would have written to shared production
+every run. The analysis document's own escape hatch, *"assert before the post"*, is
+unavailable here: the post rides the exact state change the assertion waits for. Fix is to
+stub `POST /api/game-scores` in the browser and **assert the stub fired**, since an
+interception that quietly stopped matching would write every run while staying green.
+Verified as s175 did rather than argued: `game_scores` read 593 / 25 leksodromia / 0 on the
+pinned date both before and after **eight** full suite runs.
+
+**Two of the ticket's instructions named controls that do not exist.** It asked for a
+locator on `data-testid="btn-enter"`; Λεξοδρομία has no submit button and no hint button —
+a word is submitted by *filling its last slot*, which `pickTile` queues behind the
+completing pick. The board's own header comment claimed "hint / two-phase skip / submit
+actions", so the ticket was reasoning off a comment false for some time; rewritten, not
+annotated. Second session running where a ticket described one Game from another's shape.
+
+**The pin was chosen by search, and the second word corrected an assumption.** Forty dates
+were driven through the real loader for one whose first word has four distinct letters and
+exactly one accepted answer — 2026-05-22, «φεσι» on rack «φιεσ». The first draft asserted
+the rack grew to five tiles on word 2, on the strength of "ten words, ascending by length";
+the words are **2 × each length**, so word 2 is «φανω», four letters again. Asserting the
+rack's *letters* rather than its count proves a different word rather than a re-render, so
+it was the better assertion regardless. Nothing here touches the clock: the assertions are
+the word counter and the *fact* that the total left zero, which `MIN_SOLVED_POINTS` makes
+certain however slow the run.
+
+**`TICKET-20` was corrected in place** — Λεξόπλεγμα posts through the same hook and would
+have inherited the same false premise — along with `ISSUE-03`, the analysis document and
+memory's e2e rows. One non-reproducing failure in eight runs, `profile.spec.ts`, wearing
+the recorded Next dev-overlay signature.
+
 ## Session 175 — 2026-08-21: the first Game plays a whole round in a browser
 
 `TICKET-17` end to end, the first of `ISSUE-03`'s Tier A happy paths. `e2e/pages/VresTinFrasiPage.ts`
@@ -40,50 +81,11 @@ scores is unchanged — but a positive control that lives in a human's memory do
 session. Λεξοδρομία's picker card asserting a 🏆 is one line, and it proves the three removal
 assertions are not passing on a broken locator.
 
-## Session 174 — 2026-08-20/21: the migration lands, and release day loses a step it can no longer justify
-
-`TICKET-24` end to end, ADR 0027 §5 — the last piece that ADR owed. One migration,
-`20260820120000_drop_two_community_queues_and_dead_score_columns.sql`: both orphaned community
-queues dropped, `game_scores.data` and `is_perfect` dropped, `ISSUE-01` §3's nominations index
-created and its one final-sigma row normalised. Written on the 20th, **applied 09:44 on the 21st**
-once the operator deployed; all four verify queries green, types regenerated, ticket deleted with a
-`SPENT` row. Docs swept with it: runbook step 5 gone and the list renumbered to **five**, ADR 0013
-amended in place, `ISSUE-05` deleted, `ISSUE-01` §3 cut to its moderation half, both dropped-table
-rows out of `CONTEXT.md`, `memory.md`'s launch-reset row corrected so no cold session re-freezes the
-folder on a spent rule. Also levelled the picker cards. 2653 tests, eslint 0, build 0, 13 e2e.
-Commits `1ee2c71`, `9504b3d`, `e0f85cc`.
-
-**The cheap check beat the plausible inference, twice.** The ticket said both ADR 0027 halves must be
-*deployed*, not merged: `git branch -v` read `dev [ahead 5]`, settling what the ticket framed as
-needing a production probe. After the merge, the Vercel deployment API gave the actual
-`githubCommitSha` — `40c709a` — where a READY state and a 7-minute age would have looked identical
-on the wrong commit.
-
-**For one commit the docs were ahead of the database, on purpose.** `CONTEXT.md` said both community
-tables were gone while they still existed — the ticket's instruction, tolerable only because the
-branch was unpushed and the gap closed inside the session. It did close. But that tolerance was
-bought by timing, not by anything structural: had the migration slipped a week, those docs were the
-ones lying and nothing would have flagged it.
-
-**I wrote a falsehood into `ISSUE-01` and caught it by opening the route.** The §3 rewrite said
-nothing stops the next non-normalised nomination row "because the route does not normalise `word` on
-the way in". It does — `normalizeLetters(word).trim()` at `api/nominations/route.ts:119`. The tell
-was reaching for a plausible general case to make a closed finding sound less finished. Second
-instance of s173's lesson too: the ticket's line number was 6 off and its claim about the enum
-paragraph named four tables that paragraph never mentions.
-
-**Two checks that only exist because someone went looking**, plus one call recorded. The `data` drop
-was verified against both live-DB suites *before* the push — `ISSUE-05` ticked that box for
-`is_perfect` and explicitly not for `data`. `gen types` needs Docker this machine has none of, so the
-hand-applied regeneration was **read back against the generator's live output**, byte-identical. And
-the operator waived the offsite-upload gate on the grounds that the launch reset wipes most of this
-anyway — true of `game_scores`, **not** true of `nominations` or `player_profiles`, which survive
-step 4 and which the un-uploaded local archive was the only cover for.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 174 | 2026-08-20/21 | **The migration lands, and release day loses a step it can no longer justify.** `TICKET-24` end to end, ADR 0027 §5 — one migration `20260820120000`: both orphaned community queues dropped, `game_scores.data` and `is_perfect` dropped, `ISSUE-01` §3's nominations index created and its one final-sigma row normalised. Written on the 20th, **applied 09:44 on the 21st** once the operator deployed; runbook step 5 gone and the list renumbered to **five**, `ISSUE-05` deleted, `memory.md`'s launch-reset row corrected so no cold session re-freezes `supabase/migrations/` on a spent rule. **The cheap check beat the plausible inference, twice:** `git branch -v` read `dev [ahead 5]`, settling what the ticket framed as needing a production probe; then the Vercel API's `githubCommitSha` proved the deployed commit, where a READY state and a 7-minute age would have looked identical on the wrong one. **For one commit the docs were ahead of the database on purpose** — tolerable only because the branch was unpushed and the gap closed inside the session; had the migration slipped a week those docs were the ones lying, and nothing would have flagged it. **I wrote a falsehood into `ISSUE-01` and caught it by opening the route:** the §3 rewrite said nothing normalises `word` on the way in — `api/nominations/route.ts:119` does. The operator also waived the offsite-upload gate on the grounds that the launch reset wipes most of this anyway: true of `game_scores`, **not** of `nominations` or `player_profiles`. Commits `1ee2c71`, `9504b3d`, `e0f85cc`. |
 | 173 | 2026-08-20 | **Submission comes off two Games, and their tables are left standing on purpose.** `TICKET-23` end to end (ADR 0027 §4): both submit modals, both submit and review routes, both `validateSubmission` adapters, both loaders' community read; `/leksikastirio` drops to two review tabs. **Verifying the ticket before starting it was worth ten minutes** — every file existed and every claim held, but four `CONTEXT.md` line numbers were 4–6 off and `rlsInvariantsLiveDb.test.ts` covers only the Stavrolekso table, so one checklist box was a no-op. A ticket's *line numbers* rot first; its *claims* survived four days. **The removal changed no puzzle, and the tests now prove it** — rather than deleting the community-path coverage, both loader tests mock Supabase to **return** a row on purpose (a served row would mean the read came back), and `communityPuzzleScheduling.test.ts` asserts `consumeApprovedPuzzle` is never called. **Deleting a doc row would have been the wrong tidy:** the two tables still existed, so `CONTEXT.md` was rewritten to *"Orphaned, 0 rows … TICKET-24 drops it"* — a cold session reading the schema needs to know why a table with no code is there. `ScheduledPuzzleTable` narrowed itself (derived types age; prose restating them does not). Commit `a0c4590`. |
 | 172 | 2026-08-20 | **Two Games lose their scoreboard, and the migrations folder unfreezes.** Docs only, `/grill-with-docs` on the operator's pre-launch subtraction pass: ADR 0027, `TICKET-22`/`23`/`24`, rewritten `TICKET-17`. Both community queues measured **0 rows**, so "drop the tables" cost nothing to decide, and runbook step 4 already wipes the 50 orphan `game_scores` rows — reading the runbook answered a question the grill was about to ask. **"Remove the leaderboard" was four decisions:** `scores` is a separate grant, so keeping it would leave rows accruing that nothing ranks, and following it through reached `useGuessRound.scoreFn` and `ShareResultPanel.score` — made optional **one day** after ADR 0025 shipped it across eight boards. **The load-bearing find was in a doc, not the code:** the freeze on `supabase/migrations/` bought exactly one thing, DDL against an empty `game_scores`, and dropping the now-dead `data` column early **spends** it — so one migration takes everything and release day drops from six steps to five. |
 | 171 | 2026-08-20 | **The e2e gap gets measured, and two of five tickets die within the hour.** `ISSUE-03` asked what the browser actually guarantees; the answer is `.claude/aiHelper/e2e-coverage/analysis.md`. **The issue was its own worst narrator in both directions** — 15 tests across five specs, not ten across four, and every testid a happy path needs already exists (what is missing is page objects, not instrumentation). The real number: **6 of 11 routes never loaded by any browser test, only 2 of 11 Games with a turn played**, and end-of-round browser-untested for every Game one session after it was built. Two determinism rules now in memory and in every e2e ticket: pin a past date with `?puzzle=`, and **no spec may finish a round** (round end writes to the shared production `game_scores`). Five tickets written, two deleted the same hour by operator priority call — `TICKET-18`/`TICKET-21` are the first ids retired without ever being started, their content returned to `ISSUE-03`. **The lesson is order:** the priority call belonged before the tickets, not after. A tracker file is deleted when it is empty, not when it is smaller. |
@@ -115,6 +117,4 @@ step 4 and which the un-uploaded local archive was the only cover for.
 | 102–113 | 2026-07-17/19 | **Redesign-prep, then the achievements-display era.** The 01/02/03 handoff chain (doc/refactor only) extracted the game-page frame to `GamePageShell` + `GameHeader` + `max-w-game`, swept `max-w-sm` to zero behind `noLiteralColumnWidth`, closed the recipe leaks (`btnModalSubmit`/`btnModalPrimary`, `tooltipBubble`, `cardShell`), and landed status + shape tokens — closing with the **ADR 0008 extension** and **ADR 0009**. Then badge display shipped grill→built same-day: `glyph` + Trophy Case, `selected_badge_id`, earned-validated badge routes, `LeaderboardBadge` resolving the highest tier at read time, `FEATURE_FLAGS.achievements` flipped **true**; plus the words-by-length lane (`player_words`, invoker-rights RPC, 4th sync lane). **Perfect-round/Τζιμάνι removed on all four surfaces** — the whole `isPerfect` wire — ADR 0013's first deliberate frozen-id exception. **Migration debt cleared:** 7 owed file versions repaired to `applied`, 5 invented MCP rows `reverted`, `db push` safe again. 28 zero-pangram Leksokipos boards fixed + a drift guard. |
 | 83–101 | 2026-07-15/17 | **DB-hardening, route-envelope, docs-audit and CI era.** A full DB review (live schema × repo wiring) found Stavrolekso's creator edit **silently no-oping in prod** — anon UPDATE, RLS matched 0 rows, `ok:true` — and became four migrations: transfer codes server-only + atomic claim, anon RLS narrowed **per-command**, dedup backstops (vote UNIQUE + pending partial unique, 23505 → 409), and a `community_puzzle_status` PG enum whose regenerated types immediately caught a raw `?status=` `.eq()` bug. Supabase types wired into the compiler (**ADR 0017**) — `QueryBuilder = any` deleted, 3 routes caught passing URL strings into `bigint` `.eq()`; lesson banked: **a type nothing enforces will rot.** **ADR 0016**'s route envelope migrated 14 routes (admin secret body→header, 403→401 on purpose); **ADR 0015**'s re-sync registry gave every premade game an adapter. Then CI at last (`ci.yml`, no live-DB secrets by design; `loadEnv` let the live-DB suites run locally for the first time), `edit_pin` made unreadable by the anon key, and the blocklist ∩ dictionary shrink-only invariant. Un-ticketed find that became s133: 147/498 phrases were already unwinnable. |
 | 74–82 | 2026-07-13/15 | **Architecture-review + two-new-games era.** Four arch-review seams landed back to back: `usePlayerIdentity` (one hook bundling migrate + identity/profile/auth, 6 call sites), the **session spine owning score-posting** (`rawDispatch` vs wrapped dispatch flipping `hasLiveActedRef`; shared `useLiveScorePost`), **one `GameLeaderboardModal` + `GAME_LEADERBOARD_CONFIG`** replacing 6 per-game wrappers (type trap: annotate the map `Record<LeaderboardGameId,…>`, never `satisfies`), and the Daily-Answer seam `answerPools.ts`. **Λεξοδρομία** (decay-to-floor scoring, refresh-proof decay clock) and **Λεξόπλεγμα** (pure graph/scoring lib, single `TRACE_WORD` reducer seam, offline generator) both built `/tdd` in 7 slices each off design grills, QA-polished, and **graduated `wip:false` → 7 live games**; Leksodromia gained Second Chance. Fluid CPU prerender read-out: **VERDICT FIXED ✅**, `[center]/[outer]` 44→~1 inv/60s; Vercel Pro. |
-| 54–73 | 2026-07-02/13 | **Identity, Profile Page and Achievements B1/B2 era.** Sign-in Restore: design grill → **ADR 0012** (auth = the durable anchor, restore adopts the account DeviceId), `planScoreMerge`, `adoptDeviceIdentity`, `identity_audit`, hard `reloadApp()` on Disconnect. Epic B complete: `/profile` + `GET /api/profile/stats` + `aggregateLifetimeStats` + page-local TrophyCase. Fixed `game_scores` pruning that contradicted append-forever — **cron never deletes scores**, regression-locked. Achievements B1 (points tier, unlock toast, TrophyCase progress, earned-at-mount suppression) then B2 (`player_pangrams` append-only find-set, ADR 0013, `detectEarnedPangramTiers`, 3rd sync lane + self-heal). Fluid CPU: puzzle-index (route chunk 22MB→0.2MB), **lazy-load words-el**, then **prerender daily combos** (1008 SSG pages, custom keeps ISR). Plus the ADR 0008 palette sweep + `noRawPaletteClasses`, `GameId`→`SliceId`, and soul.md's "coverage never goes down". |
-| 43–53 | 2026-06-22/29 | **Design-system + nomination-pipeline era.** Full design-token consolidation (**ADR 0008**) + rank rename (`RANKS` single source) + `platform.ts`; UI consolidation (**ADR 0009**) — per-game `--game-accent`, shared `Modal` across 9 modals, recipes split platform vs leksokipos. `consumeApprovedPuzzle` lifecycle + shared `useGuessRound` spine + Leksokipos `sync.ts`. Fixed broken score cleanup (`void` not `await`) → `cleanup-scores` cron. Wordlist proper-noun cleanup: 16,933 removals (812k→795k) via a Hunspell capitalisation signal. Nomination apply pipeline (`npm run apply-nominations[:dry]` + surgical re-sync), re-proposal warning flow, `useDayChange` auto-advance. |
-| 1–42 | 2026-05-12 / 05-30 | **Foundation + rebrand + community era.** Shell, routing, persistence, types · Leksiarxeio · Theming · Leksindeseis · Greeklish URLs · puzzle quality filter · word suggestions · per-puzzle leaderboard + 7-day strip · mobile layout · the no-accent invariant · `maxScore` cap. Shared-lib consolidation: `postScore`+`upsertAndClean`, `useRoundPersistence`, `useLeaderboard`, `isDailyPuzzle`/`isISODate`; Connections leaderboard; the first Fluid CPU mitigations (`validWordsCache`, ISR, Edge routes); `CONTEXT.md` created. Then the rebrand to Greek names (routes + identifiers; puzzle IDs frozen); `FlowerGrid` SVG + variant presets; `useGameIdentity`; `useScoreSubmission` unified; dark mode (**ADR 0002**) + Shell drawer split; community puzzles (review routes, async loaders, admin tabs); Leksokipos restore slimmed (**ADR 0003**); **Vres Tin Frasi** (4th game) built; game-state restore + FOUC fixes; Google OAuth augments device identity (`useAuth`, PKCE callback, `/api/auth/link`, **ADR 0007**). |
+| 1–73 | 2026-05-12 / 07-13 | **Foundation + rebrand + community era.** Shell, routing, persistence, types · Leksiarxeio · Theming · Leksindeseis · Greeklish URLs · puzzle quality filter · word suggestions · per-puzzle leaderboard + 7-day strip · mobile layout · the no-accent invariant · `maxScore` cap. Shared-lib consolidation: `postScore`+`upsertAndClean`, `useRoundPersistence`, `useLeaderboard`, `isDailyPuzzle`/`isISODate`; Connections leaderboard; the first Fluid CPU mitigations (`validWordsCache`, ISR, Edge routes); `CONTEXT.md` created. Then the rebrand to Greek names (routes + identifiers; puzzle IDs frozen); `FlowerGrid` SVG + variant presets; `useGameIdentity`; `useScoreSubmission` unified; dark mode (**ADR 0002**) + Shell drawer split; community puzzles (review routes, async loaders, admin tabs); Leksokipos restore slimmed (**ADR 0003**); **Vres Tin Frasi** (4th game) built; game-state restore + FOUC fixes; Google OAuth augments device identity (`useAuth`, PKCE callback, `/api/auth/link`, **ADR 0007**). — **Design-system + nomination-pipeline era.** Full design-token consolidation (**ADR 0008**) + rank rename (`RANKS` single source) + `platform.ts`; UI consolidation (**ADR 0009**) — per-game `--game-accent`, shared `Modal` across 9 modals, recipes split platform vs leksokipos. `consumeApprovedPuzzle` lifecycle + shared `useGuessRound` spine + Leksokipos `sync.ts`. Fixed broken score cleanup (`void` not `await`) → `cleanup-scores` cron. Wordlist proper-noun cleanup: 16,933 removals (812k→795k) via a Hunspell capitalisation signal. Nomination apply pipeline (`npm run apply-nominations[:dry]` + surgical re-sync), re-proposal warning flow, `useDayChange` auto-advance. — **Identity, Profile Page and Achievements B1/B2 era.** Sign-in Restore: design grill → **ADR 0012** (auth = the durable anchor, restore adopts the account DeviceId), `planScoreMerge`, `adoptDeviceIdentity`, `identity_audit`, hard `reloadApp()` on Disconnect. Epic B complete: `/profile` + `GET /api/profile/stats` + `aggregateLifetimeStats` + page-local TrophyCase. Fixed `game_scores` pruning that contradicted append-forever — **cron never deletes scores**, regression-locked. Achievements B1 (points tier, unlock toast, TrophyCase progress, earned-at-mount suppression) then B2 (`player_pangrams` append-only find-set, ADR 0013, `detectEarnedPangramTiers`, 3rd sync lane + self-heal). Fluid CPU: puzzle-index (route chunk 22MB→0.2MB), **lazy-load words-el**, then **prerender daily combos** (1008 SSG pages, custom keeps ISR). Plus the ADR 0008 palette sweep + `noRawPaletteClasses`, `GameId`→`SliceId`, and soul.md's "coverage never goes down". |

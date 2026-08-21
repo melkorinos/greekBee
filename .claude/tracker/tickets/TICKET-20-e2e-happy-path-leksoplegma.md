@@ -33,8 +33,14 @@ hardest input to make non-flaky and the other four establish the pattern first.
       timeouts**. Fall back to whatever click-to-select path the board supports, and
       record in the spec header that the drag itself is still browser-unverified — an
       honest gap beats a green test that proves nothing.
-- [ ] Stop after one word; a completed grid fires score submission to the shared
-      production `game_scores`
+- [ ] **Stop after one word — but that alone does NOT keep the round out of
+      production.** This ticket said a *completed grid* fires score submission; it is
+      wrong, and TICKET-19 hit the same wrong sentence. `LeksoplegmaBoard` posts
+      through `useLiveScorePost`, which fires on **every score increase**, so tracing
+      one word writes a row to the shared `game_scores` by itself. Do what
+      `e2e/leksodromia.spec.ts` does: `page.route` the `POST /api/game-scores` to a
+      stub, and **assert the stub fired**, so an interception that silently stops
+      matching cannot pass while writing to production every run.
 
 ## Done when
 

@@ -115,6 +115,12 @@ const SPENT: Record<string, string> = {
   // round is the first browser proof that ANY Game reaches its Result Panel — only
   // affordable because ADR 0027 left this Game with no score to post.
   "TICKET-17": "e2e happy path, Vres Tin Frasi — shipped 2026-08-21",
+  // The second Tier A path, and the one that found the ticket's own instructions
+  // wrong twice: Leksodromia has no btn-enter (filling the last slot submits) and
+  // "stop after one word" does NOT keep the round out of production, because
+  // useLiveScorePost posts on every score increase. The spec stubs the POST in the
+  // browser; game_scores was 593/25/0 before and after eight suite runs.
+  "TICKET-19": "e2e happy path, Leksodromia — shipped 2026-08-21",
 };
 
 /**

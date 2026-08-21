@@ -97,7 +97,7 @@ can be **regenerated empty** — before "just add a list", ask whether a re-sync
 
 ## 🟡 Smaller live watches
 
-- **Most routes have no browser test at all (s152, widened s171, narrowed s175)** — measured state lives in `ISSUE-03`; pure logic is tests-deep, and a dropped listener passes all of it. Exactly one Game is now played to Round End in a browser, and only because ADR 0027 left it with no Score to post — the other two Tier A specs still have to stop mid-round.
+- **Most routes have no browser test at all (s152, widened s171, narrowed s175/s176)** — measured state lives in `ISSUE-03`; pure logic is tests-deep, and a dropped listener passes all of it. Exactly one Game is played to Round End in a browser, and only because ADR 0027 left it with no Score to post. **The rule that kept the others out of production was weaker than it read (s176):** "stop before the end" assumes posting happens at the end, and for the three `useLiveScorePost` Games one scoring move already writes to the shared `game_scores` — so growing this suite means stubbing the POST *and asserting the stub fired*, never trusting a stopping point. Watch for the same shape elsewhere: **a safety rule phrased as a place to stop, where the hazard is actually a per-change effect.**
 - **Deferring a threshold on a live-capture counter destroys data (s139).** "Lower is safe, raise is
   impossible" is about **earned** rows, not **unwritten** ones — ask what the gap is not recording.
 - **Zero rows is the reason to look, not reassurance (s134).** `consumeApprovedPuzzle`'s two bugs were

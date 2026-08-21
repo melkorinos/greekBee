@@ -110,8 +110,14 @@ JSON. A pinned past date makes the puzzle, the valid input and the correct answe
 deterministic, instead of leaving the spec at the mercy of whatever rotates in that
 morning.
 
-**Never finish a round.** Score submission fires at round end and writes to the shared
-production `game_scores`, which is append-forever. One move, assert, stop.
+**Never finish a round — and for three Games, one move is already too much.** This
+section said score submission "fires at round end"; that is true only for the Games
+posting through `useScoreSubmission` alone. Τοποθεσίες, Λεξοδρομία and Λεξόπλεγμα post
+through **`useLiveScorePost`, which fires on every score increase**, so a single scoring
+move writes a row to the shared append-forever `game_scores`. Corrected 2026-08-21, when
+TICKET-19 met it. Those three need the POST stubbed in the browser
+(`page.route("**/api/game-scores", …)`) with an assertion that the stub fired — see
+`e2e/leksodromia.spec.ts`. Elsewhere: one move, assert, stop.
 
 | # | Game | Happy path | Assertion | Notes |
 | --- | --- | --- | --- | --- |
@@ -153,7 +159,10 @@ write that shapes the dictionary, and no test suite should be casting them.
 - **The shared production database.** Every Game with the `scores` capability posts to
   the real `game_scores`, which is append-forever. Prefer custom/unranked puzzle URLs
   (the Leksokipos flow test already does this), assert before the post, or use a
-  throwaway identity. No Tier A spec should casually finish a ranked round.
+  throwaway identity. No Tier A spec should casually finish a ranked round. **"Assert
+  before the post" is not available on the three `useLiveScorePost` Games** — the post
+  rides the same state change the assertion is waiting for — so stub the request
+  instead, per the corrected note in §5.
 - **The cold-chunk flake.** A stale Turbopack chunk makes `/` fail with
   `Runtime SyntaxError: Unexpected end of JSON input`; it survives re-runs and passes in
   isolation. The fix is `Remove-Item -Recurse -Force .next`, not a retry. Read the
