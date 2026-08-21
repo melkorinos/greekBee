@@ -3,6 +3,13 @@
 Written 2026-08-20 against ISSUE-03. Numbers verified by `npx playwright test --list`
 and a route/registry sweep, not from the issue text (which was written at 10 tests).
 
+> **Status, 2026-08-21.** All three Tier A specs shipped — `e2e/vrestifrasi.spec.ts`,
+> `e2e/leksodromia.spec.ts`, `e2e/leksoplegma.spec.ts` — and the suite reads 18 passed /
+> 2 skipped. **ISSUE-03 was closed and deleted with them**, so every "stays deferred in
+> ISSUE-03" below now means *deferred and untracked*: this document is the only surviving
+> costing of Tier B, Tier C and the three unticketed Games. The baseline counts in §1 are
+> as-measured on 2026-08-20 and have moved; re-run `--list` rather than quoting them.
+
 ## 1. The measured baseline
 
 - **15 e2e tests in 5 spec files**: 13 run, 2 permanently skipped (`offlineMode`,

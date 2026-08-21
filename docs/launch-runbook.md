@@ -27,7 +27,7 @@ Delete this file once the launch has happened and the first week's error checks 
    Κοινοποίηση**, to see the native share sheet rather than a clipboard copy.
 3. **The `dev → main` merge**. Gate:
    `npm run test -- --run`, `npx eslint .`, `npm run build` and `npm run test:e2e` all green on the
-   merge commit (`ISSUE-03` — the gate is the existing suite green, not a bigger one), plus the
+   merge commit (the gate is the existing suite green, not a bigger one — ruling 2026-08-11), plus the
    operator's preview play-through of `dev`, which is a habit rather than a tracked task (ruling
    2026-08-15). Re-measure the merge before planning the window: `git rev-list --count origin/dev..dev`.
 4. **Release day** — the five steps below, in that order.
@@ -38,7 +38,8 @@ Delete this file once the launch has happened and the first week's error checks 
 ## Consciously not being done before launch — so it cannot resurface as a blocker
 
 Terms of service (no payments, no lockable accounts, no user-to-user messaging — revisit if money or
-public user-generated content enters) · growing E2E coverage (`ISSUE-03`) · a dev/prod project split
+public user-generated content enters) · growing E2E coverage beyond the shipped happy paths (costed in
+`.claude/aiHelper/e2e-coverage/analysis.md`; five routes have no browser test and nothing tracks them) · a dev/prod project split
 (**decided against**, ADR 0024; migration safety is `npm run db:rehearse`) · Offline Mode and its
 manual device pass (parked, ADR 0010) · the game-icon system (`.claude/handoffs/game-icon-system.md`,
 nothing designed) · the UI redesign (operator-driven, separate sessions) · content for the three
@@ -94,6 +95,6 @@ copies beat one, so an external disk is worth the trouble.
 ## References
 
 - `.claude/tracker/tickets/` — read the folder, never a list here. The folder is the state: a file on disk is open work, a deleted file is done.
-- [`ISSUE-01`](../.claude/tracker/issues/ISSUE-01-no-disaster-recovery-backups.md) · [`ISSUE-03`](../.claude/tracker/issues/ISSUE-03-thin-e2e-coverage.md) — the two deferred problems this run deliberately does not close.
+- [`ISSUE-01`](../.claude/tracker/issues/ISSUE-01-no-disaster-recovery-backups.md) — the one deferred problem this run deliberately does not close.
 - [`docs/disaster-recovery.md`](disaster-recovery.md) — the backup and restore procedure step 3 depends on.
 - ADRs [0022](adr/0022-hidden-is-not-wip.md) (hidden Games), [0023](adr/0023-error-monitoring-is-vercel-only.md) (error checks), [0024](adr/0024-no-dev-prod-split-migration-safety-is-local.md) (no split), [0025](adr/0025-round-end-result-panel-and-share.md) (Round End + share, built 2026-08-20).

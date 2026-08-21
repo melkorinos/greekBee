@@ -121,6 +121,20 @@ const SPENT: Record<string, string> = {
   // useLiveScorePost posts on every score increase. The spec stubs the POST in the
   // browser; game_scores was 593/25/0 before and after eight suite runs.
   "TICKET-19": "e2e happy path, Leksodromia — shipped 2026-08-21",
+  // The third and last Tier A path, and the only Game whose input is a pointer
+  // drag: the spec drives page.mouse across the tiles' real bounding boxes rather
+  // than falling back to the tap path the Board also supports, because the drag is
+  // precisely what jsdom cannot make a claim about. Same POST stub as TICKET-19;
+  // game_scores read 593/15/0 before and after four suite runs.
+  "TICKET-20": "e2e happy path, Leksoplegma — shipped 2026-08-21",
+  // Closed by operator ruling on 2026-08-21 once TICKET-20 shipped, rather than
+  // re-read to decide whether the rest was worth ticketing. What it still deferred
+  // — happy paths for Stavrolekso, Topothesies and Leksikastirio, a registry-driven
+  // smoke test, a mobile viewport project, dark mode — is NOT lost: the shape and
+  // the cost of every one of them is in .claude/aiHelper/e2e-coverage/analysis.md,
+  // and the live watch survives in reflections.md. Deleted rather than trimmed,
+  // because an issue kept alive for its appendix is a second source of truth.
+  "ISSUE-03": "thin e2e coverage — closed 2026-08-21 when the last Tier A path shipped",
 };
 
 /**
