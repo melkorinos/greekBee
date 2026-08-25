@@ -66,6 +66,55 @@ describe("ShareResultPanel", () => {
     });
   });
 
+  // ── The two paths must not wear the same label (2026-08-25) ────────────────
+  //
+  // A desktop player pressed «Κοινοποίηση», got a working-but-invisible clipboard
+  // write, and read the button as broken. The label is the whole fix, so it is the
+  // thing asserted: what the button PROMISES has to match the path it will take.
+
+  it("labels the button Αντιγραφή where there is no native sheet", async () => {
+    renderPanel();
+
+    // Resolved in an effect, so the assertion waits for the post-mount paint
+    // rather than the server-shaped first one.
+    await waitFor(() => {
+      expect(screen.getByTestId("btn-share-result")).toHaveTextContent("Αντιγραφή");
+    });
+  });
+
+  it("labels the button Κοινοποίηση where a native sheet exists", async () => {
+    Object.assign(navigator, { share: vi.fn().mockResolvedValue(undefined) });
+
+    renderPanel();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("btn-share-result")).toHaveTextContent("Κοινοποίηση");
+    });
+  });
+
+  it("reveals the summary for manual copying when the clipboard refuses", async () => {
+    // Insecure origin or a permissions policy. This used to be swallowed whole:
+    // the button did nothing at all and the player lost the round's summary.
+    writeText.mockRejectedValue(new Error("NotAllowedError"));
+
+    renderPanel();
+    await clickShare();
+
+    const fallback = await screen.findByTestId("share-manual-fallback");
+    expect(fallback).toHaveTextContent("Η αντιγραφή δεν έγινε");
+    // The summary itself has to be present and selectable, not merely mentioned.
+    expect(screen.getByRole("textbox")).toHaveValue(SHARE_TEXT);
+    // And the button must not claim a copy that did not happen.
+    expect(screen.getByTestId("btn-share-result")).not.toHaveTextContent("Αντιγράφηκε");
+  });
+
+  it("shows no manual fallback while the clipboard is working", async () => {
+    renderPanel();
+    await clickShare();
+
+    expect(screen.queryByTestId("share-manual-fallback")).not.toBeInTheDocument();
+  });
+
   it("hands the summary to the native sheet when one exists, without copying", async () => {
     const share = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { share });

@@ -670,18 +670,6 @@ describe("Sound Cues", () => {
     localStorage.setItem(SOUND_PREFERENCE_KEY, "on");
   }
 
-  it("plays the pangram Cue on a pangram — and only that one", async () => {
-    enableSound();
-    const { user } = setup();
-    await user.keyboard("painted{Enter}");
-
-    const played = playedSources();
-    expect(played).toHaveLength(1);
-    expect(played[0]).toContain(SOUND_CUES.pangram.src);
-    // Never the rooster layered over the word blip — that sounds like a bug.
-    expect(blips).toBe(0);
-  });
-
   it("plays the word-found Cue on a valid non-pangram", async () => {
     enableSound();
     const { user } = setup();
@@ -691,12 +679,29 @@ describe("Sound Cues", () => {
     expect(playSpy).not.toHaveBeenCalled(); // synthesized: no file is fetched
   });
 
-  it("plays the missing-centre Cue when the centre letter is forgotten", async () => {
+  it("plays the SAME word-found Cue on a pangram — the rooster never sounds", async () => {
+    enableSound();
+    const { user } = setup();
+    await user.keyboard("painted{Enter}");
+
+    expect(blips).toBe(1);
+    // The whole reason the file Cues were silenced rather than deleted: the MP3s
+    // are still in public/sounds/ and still in SOUND_CUES, so the thing worth
+    // asserting is that no Audio element is ever constructed for them.
+    expect(playSpy).not.toHaveBeenCalled();
+    // Spelled out rather than `not.toContain(expect.stringContaining(...))`, which
+    // compares the matcher OBJECT against the array's members and so passes even
+    // when the rooster did play.
+    expect(playedSources().some((src) => src.includes(SOUND_CUES.pangram.src))).toBe(false);
+  });
+
+  it("stays silent when the centre letter is forgotten — the applause never sounds", async () => {
     enableSound();
     const { user } = setup();
     await user.keyboard("pint{Enter}");
 
-    expect(playedSources()).toEqual([expect.stringContaining(SOUND_CUES.missingCenter.src)]);
+    expect(playSpy).not.toHaveBeenCalled();
+    expect(blips).toBe(0);
   });
 
   it("stays silent on the rejections that have no Cue", async () => {
@@ -719,6 +724,21 @@ describe("Sound Cues", () => {
 
     expect(playSpy).not.toHaveBeenCalled();
     expect(blips).toBe(0);
+  });
+
+  it("never plays a FILE Cue, for any submission, with sound fully on", async () => {
+    // The silencing held as one assertion over a whole round: two MP3s ship in
+    // public/sounds/ and neither is reachable from play. If a future edit restores
+    // a file Cue's branch in selectSoundCue, this is what fails.
+    enableSound();
+    const { user } = setup();
+    await user.keyboard("painted{Enter}"); // pangram
+    await user.keyboard("paint{Enter}");   // valid
+    await user.keyboard("pint{Enter}");    // missing_center
+    await user.keyboard("panda{Enter}");   // not_in_list
+
+    expect(playSpy).not.toHaveBeenCalled();
+    expect(blips).toBe(2); // exactly the two accepted words
   });
 
   it("stays silent while typing — entering letters is not a Cue", async () => {

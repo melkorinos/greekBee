@@ -186,21 +186,29 @@ describe("validateWord", () => {
 // ADR 0021. Every case is driven through the REAL validateWord rather than a
 // hand-built ValidationResult, so the cue rule is proven against what the game
 // actually emits — a literal fixture could drift from the validator silently.
+//
+// The rule narrowed on 2026-08-25 to ONE audible Cue: `wordFound` on an accepted
+// word, nothing anywhere else. The two cases that used to have their own voice —
+// a Pangram's rooster and the missing-centre applause — are asserted here as
+// SILENT-OR-BLIP explicitly rather than dropped, because a deleted test cannot
+// fail if a future edit brings either sound back by accident.
 
 describe("selectSoundCue", () => {
-  it("plays the pangram cue for a pangram, never the word cue too", () => {
-    // Precedence: "πολεμας" is valid AND isPangram — one event, one cue.
-    const result = validateWord("πολεμας", puzzle, []);
-    expect(result.isPangram).toBe(true);
-    expect(selectSoundCue(result)).toBe("pangram");
-  });
-
   it("plays the word-found cue for a valid non-pangram", () => {
     expect(selectSoundCue(validateWord("σαλος", puzzle, []))).toBe("wordFound");
   });
 
-  it("plays the missing-centre cue for a word without the centre letter", () => {
-    expect(selectSoundCue(validateWord("πολεμος", puzzle, []))).toBe("missingCenter");
+  it("plays the SAME word-found cue for a pangram — the rooster is silenced", () => {
+    // "πολεμας" is valid AND isPangram: still one event and one cue, but the cue
+    // no longer depends on which. The pangram row survives in src/config/sound.ts
+    // and must not be reachable from here.
+    const result = validateWord("πολεμας", puzzle, []);
+    expect(result.isPangram).toBe(true);
+    expect(selectSoundCue(result)).toBe("wordFound");
+  });
+
+  it("stays silent for a word without the centre letter — the applause is silenced", () => {
+    expect(selectSoundCue(validateWord("πολεμος", puzzle, []))).toBeNull();
   });
 
   it("stays silent for the other four rejections", () => {
@@ -210,5 +218,15 @@ describe("selectSoundCue", () => {
     expect(selectSoundCue(validateWord("σαλα", puzzle, ["σαλα"]))).toBeNull();  // already_found
     expect(selectSoundCue(validateWord("σαλ", puzzle, []))).toBeNull();         // too_short
     expect(selectSoundCue(validateWord("βαλε", puzzle, []))).toBeNull();        // invalid_letter
+  });
+
+  it("never returns a Cue other than wordFound, for any submission at all", () => {
+    // The whole point of the narrowing, held as one assertion: whatever the
+    // validator emits, the only sound the Platform can ask for is the blip.
+    const submissions = ["σαλος", "πολεμας", "πολεμος", "μελα", "σαλ", "βαλε"];
+    for (const word of submissions) {
+      const cue = selectSoundCue(validateWord(word, puzzle, []));
+      expect(cue === null || cue === "wordFound").toBe(true);
+    }
   });
 });
