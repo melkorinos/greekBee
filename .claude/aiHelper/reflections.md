@@ -10,23 +10,19 @@ The repo's most expensive recurring failure — sixteen instances across s130–
 visual/preview corollary — lives in `docs/adr/0026-measure-the-artifact-not-the-narrator.md`. Read it
 in any session touching a spec, an issue file, a tool claim or a rendered artifact. Short form: **a
 plausible, load-bearing, cheap-to-check claim is the one believed instead of checked**, and every
-narrator has been wrong — APIs, type signatures, tools, test files, the tracker, my own probe, the
-operator. Closed to routine appends: add a row only for a **new narrator class**.
+narrator has been wrong — APIs, tools, test files, the tracker, my own probe, the operator. Closed to
+routine appends: add a row only for a **new narrator class**.
 
 ## 🔴 Two sessions can share one working tree, and only git will tell you (s156, s159, s170)
 
-The session-start `git status` is a **photograph, not a feed**. s156 found `HEAD` moved twice and a
+The session-start `git status` is a **photograph, not a feed** — s156 found `HEAD` moved twice and a
 file modified by nobody in the session. Hazards: parallel tool calls race the other session's writes;
-**`git stash` is not read-only** (use `git stash create`, or read the diff); a test can fail for a
-reason true for seconds. Rule: **re-run `git log --oneline -3` and `git status` immediately before
-staging, and stage explicit paths, never `-A`.** Still open — no lock, no branch-per-session
-convention, and the Dream itself writes four shared files. s159: two sessions grilled the same file,
-relayed through the operator because neither could see the other — **when consolidating, ask what
-concurrency the split was buying.** s170 lost it the other way: a staged `git rm` and three edited docs
-were swept into **another session's commit**. The mechanism is not `-A` — that session staged explicit
-paths, then ran a bare `git commit`, which commits **the whole index**. So `git commit -- <paths>`, or
-read `git status` for foreign staged entries first. **Commit the moment a change is coherent;
-never stage and keep working.**
+**`git stash` is not read-only** (use `git stash create`); a test can fail for a reason true for
+seconds; and a bare `git commit` commits **the whole index**, which is how s170's work was swept into
+another session's commit — staging explicit paths is not enough. Rules: **re-run `git log --oneline
+-3` and `git status` immediately before staging**, never `-A`, **`git commit -- <paths>`**, and
+**commit the moment a change is coherent — never stage and keep working.** Still open: no lock, no
+branch-per-session convention, and the Dream itself writes four shared files.
 
 ## 🟠 Gates whose entire enforcement is a human reading a line
 
@@ -39,13 +35,17 @@ never stage and keep working.**
   chip in both themes (s144), Shell header at four buttons (jsdom has no layout), letter-box grid
   legibility (s162), and **the native share sheet** (s169 — a mock of `navigator.share` is a claim
   about someone else's contract, so pressing Κοινοποίηση on a phone is the only proof). Watch whether
-  "flagged it in the reply" is becoming this repo's substitute for a gate.
+  "flagged it in the reply" is becoming this repo's substitute for a gate. **s179 is what an unpaid
+  check costs, and it came back in the worst shape: a real player, on the path nobody pressed.** The
+  desktop half was correct code — it copied — but both paths wore one label, so the working path read
+  as a dead button. **No unit test can fail for this**; every one passed. Where a mock stands in for a
+  contract, the untested residue is not just the API's behaviour but **what the screen tells a player
+  the button will do.**
 - **The 180-day horizon test** in `dailyPuzzleSelection.test.ts` is the only thing between Λεξόκηπος
   and a silent year of replayed boards past the calendar's end. Corpus runs to 2028-03-26, warning
   fires ~Sept 2027, and any prune moves the warning closer without moving the date anyone has in mind.
 - **`validateEmitted`** proves the Topothesies geo data is well-formed, not that it is right — two
-  wrong peel rules shipped through it clean; what caught both was reading the generator's own
-  diagnostic numbers (ADR 0018).
+  wrong peel rules shipped through it clean; the generator's own diagnostic numbers caught both (ADR 0018).
 
 The inverse also happens, twice on the same gate: a `DROP COLUMN` was once blocked behind a backup
 protecting rows `launch-reset.sql` deletes one step earlier; then the freeze on
@@ -97,7 +97,7 @@ can be **regenerated empty** — before "just add a list", ask whether a re-sync
 
 ## 🟡 Smaller live watches
 
-- **Most routes have no browser test at all (s152, widened s171, narrowed s175/s176/s177)** — five routes still have none (Stavrolekso's three, Τοποθεσίες, Λεξικαστήριο), and **nothing tracks them any more**: the issue that held them was closed 2026-08-21 with the last Tier A path, so the only surviving costing is `.claude/aiHelper/e2e-coverage/analysis.md`, which is dated, not current-state. Pure logic is tests-deep, and a dropped listener passes all of it. Exactly one Game is played to Round End in a browser, and only because ADR 0027 left it with no Score to post. **The rule that kept the others out of production was weaker than it read (s176):** "stop before the end" assumes posting happens at the end, and for the three `useLiveScorePost` Games one scoring move already writes to the shared `game_scores` — so growing this suite means stubbing the POST *and asserting the stub fired*, never trusting a stopping point. Watch for the same shape elsewhere: **a safety rule phrased as a place to stop, where the hazard is actually a per-change effect.**
+- **Most routes have no browser test at all (s152, widened s171, narrowed s175–s177)** — five still have none (Stavrolekso's three, Τοποθεσίες, Λεξικαστήριο), and **nothing tracks them**: the issue closed 2026-08-21 with the last Tier A path, leaving only the dated `.claude/aiHelper/e2e-coverage/analysis.md`. Pure logic is tests-deep and a dropped listener passes all of it. Growing this suite means **stubbing `POST /api/game-scores` and asserting the stub fired** — never trusting a stopping point, since for `useLiveScorePost` Games one scoring move already writes. General shape to watch: **a safety rule phrased as a place to stop, where the hazard is a per-change effect.**
 - **Deferring a threshold on a live-capture counter destroys data (s139).** "Lower is safe, raise is
   impossible" is about **earned** rows, not **unwritten** ones — ask what the gap is not recording.
 - **Zero rows is the reason to look, not reassurance (s134).** `consumeApprovedPuzzle`'s two bugs were
@@ -114,7 +114,7 @@ can be **regenerated empty** — before "just add a list", ask whether a re-sync
   the decided risk, noted in CONTEXT/ADR at the wip→live flip. **Πόσο κάνει; needs real content and
   nothing tracks it** — ticket first, flip `wip:false` only after.
 - **Two accepted UX gaps, unfiled:** Leksindeseis never shows *which* group is one away; `/leksokipos/[center]/[outer]` warns below 5 valid words but has no 404 floor.
-- **One behaviour, two seams — the ticket names one (s169).** ADR 0025 rejected the auto-opening
-  leaderboard; two Games did it with their own `setTimeout`, three more through
-  `useLiveScorePost`'s `onFinish`, so fixing the two the ticket listed left half the Platform still
-  doing it, and only playing found that. **Grep for the behaviour, not the files the scope names.**
+- **The report names a symptom, not the seam (s169, s179).** ADR 0025's auto-opening leaderboard lived
+  in two seams and the ticket named one, so fixing it left half the Platform doing it. s179's "sharing
+  doesn't work on desktop" was a *label* bug in code that worked. **Grep for the behaviour, not the
+  files the scope names — and reproduce the complaint before believing its diagnosis.**

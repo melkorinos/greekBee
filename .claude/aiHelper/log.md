@@ -5,6 +5,52 @@
 
 ---
 
+## Session 179 — 2026-08-25: the two share paths stop lying, and sound narrows to one blip
+
+Two operator-directed changes, both starting from a real player. 2663 tests (+6), eslint 0, build 0,
+e2e 18 passed / 2 skipped.
+
+**The share bug was not where it was reported, and finding that out was the whole job.** A friend
+finished a round on a desktop, pressed «Κοινοποίηση», and reported it did not work — read as
+"sharing is mobile-only, add a desktop path". The code already had both paths: `navigator.share`
+where it exists, a clipboard copy everywhere else, feature-detected correctly since ADR 0025. The
+copy had **succeeded**. What failed is that both paths wore the same label, and a clipboard write is
+invisible — a native sheet announces itself, so pressing a button named «Κοινοποίηση» and watching
+nothing happen reads as broken. The fix is the label: «Αντιγραφή» where there is no sheet,
+«Κοινοποίηση» where there is. **The operator never saw the screen, so this is a diagnosis, not a
+confirmed cause** — said so in the reply rather than banking it.
+
+**`useSyncExternalStore`, not an effect, and the linter is why.** `navigator` does not exist during
+the server render, so the capability cannot be read in the render body without a hydration mismatch;
+the obvious `useEffect`+`setState` version is exactly what `react-hooks/set-state-in-effect` rejects,
+and it was caught at lint after the tests were already green. The hook's third argument is the server
+snapshot, so server and first paint both say «Αντιγραφή» and a phone corrects itself upward — the
+safe direction, since the label starts by describing the path that always exists. Subscribe is a
+no-op: `navigator.share` cannot change for the life of the page.
+
+**A refused clipboard write used to be swallowed whole** — an empty `catch` — leaving a dead button
+on any insecure origin. It now reveals the summary in a selectable box: the only path that can leave
+a player with no way to get their round out is the only one with a visible fallback.
+
+**Sound narrows to ONE audible Cue by operator decision: `wordFound`, the blip on an accepted word.**
+A pangram plays that same blip instead of the rooster; missing-centre joins the four rejections in
+silence. Operator chose **silence at the selector over deletion**, so both rows stay in
+`src/config/sound.ts`, both MP3s stay in `public/sounds/`, and the hook, preference and header toggle
+are untouched — restoring either sound is one line in `selectSoundCue`. The property worth testing is
+therefore not "the rooster is quiet" but **"no file Cue is reachable at all"**: a whole-round test
+walks pangram → valid → missing-centre → not-in-list and asserts `playSpy` was never called. Nothing
+downloads those MP3s while no branch names them.
+
+**Both behaviours were verified to fail against the old code before being trusted** — the old
+selector restored, six sound assertions failed; the old label restored, two share ones failed. Cheap,
+and the only thing separating a test that pins behaviour from one that merely passes. One assertion
+was rewritten mid-session for the same reason: `not.toContain(expect.stringContaining(...))` compares
+the matcher **object** against the array's members and would have passed with the rooster playing.
+
+**The build failed once for an unrelated reason worth recognising on sight.** `.next/dev/` carried a
+generated validator for `api/community-puzzles/leksiarxeio/[id]/review`, a route deleted by `a0c4590`
+(ADR 0027). A stale generated artifact, not a regression — `rm -rf .next` and it builds clean.
+
 ## Session 178 — 2026-08-21: the feedback colours stop leaking onto things that are not feedback
 
 Operator-directed polish across two Wordle-shaped Games and the shared Result Panel. 2657 tests
@@ -32,47 +78,11 @@ a **loss the phrase is now revealed nowhere** — the grid spells it out on a wi
 never carried it. Flagged before implementing, confirmed, and the test that once asserted the reveal
 now asserts its absence.
 
-## Session 177 — 2026-08-21: the drag holds up, and the issue that held the suite is closed
-
-`TICKET-20` end to end, the last of the three Tier A happy paths, and `ISSUE-03` deleted with it by
-operator ruling. `e2e/pages/LeksoplegmaPage.ts` + a fixture entry + `e2e/leksoplegma.spec.ts`
-(1 test): the web renders, a pointer drag across four tiles traces «λεγα», and the required-word
-counter goes 0/9 → 1/9. e2e **17 → 18 passed / 2 skipped**; 2653 tests, eslint 0, build 0.
-
-**The drag was the risk and it did not materialise — green on the first run and on every run
-since.** The ticket allowed falling back to the tap path if the drag proved flaky and recording the
-gap honestly; that escape was not needed. What made it cheap was choosing the fixture for the
-*gesture* rather than for the word: sixty dates were driven through the real `getPuzzleForDate`
-looking for a required word whose tile path is a **straight orthogonal run**, and 2026-06-09's «λεγα»
-is the bottom row swept right to left, 15 → 14 → 13 → 12. Every other candidate turned a corner, and
-a diagonal step's straight line clips the two cells it passes between for no gain. The word also has
-no proper prefix among the required words or the extras in either direction, so nothing can
-auto-submit mid-trace and steal it. Stepped moves rather than jumps, because `elementFromPoint` is
-sampled once per `pointermove`.
-
-**Two grid facts the ticket did not know, both load-bearing for any future drag spec.** The press
-tile joins the trace only on the first `pointermove` over a *different* tile — `onPointerDown`
-records it and adds nothing — so a drag must cross at least two tiles. And `pointerup` is listened
-for on `window`, so release submits from wherever the pointer lifts. The path also fails **closed**:
-a tile crossed without an edge to the trace's end is ignored by `extended()`, so an imprecise drag
-cannot silently trace a different word.
-
-**The production guard was inherited correctly this time.** Session 176 had already rewritten this
-ticket in place after finding that "stop after one word" is not a guard for a `useLiveScorePost`
-Game, so the spec stubbed `POST /api/game-scores` and asserted the stub fired from the first draft.
-`game_scores` read 593 / 15 leksoplegma / 0 on the pinned date before and after four full suite runs.
-
-**Closing `ISSUE-03` moved work out of the tracker rather than finishing it.** Five routes still have
-no browser test of any kind — Stavrolekso's three, Τοποθεσίες, Λεξικαστήριο — plus Tier B's breadth
-sweep and the mobile viewport. That is the operator's call and the content is not lost, but its only
-surviving home is `.claude/aiHelper/e2e-coverage/analysis.md`, which now carries a status block
-saying exactly that; `goals.md`, `reflections.md` and `docs/launch-runbook.md` were rewritten to
-point there rather than at a file that no longer exists.
-
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 177 | 2026-08-21 | `TICKET-20`: Leksoplegma's pointer drag traced in a browser (e2e 17→18), the last Tier A path; `ISSUE-03` deleted with it, moving five untested routes out of the tracker into `e2e-coverage/analysis.md`. Fixture chosen for the **gesture** (a straight orthogonal run, no proper prefix) not the word; press tile joins only on the first move over a different tile; `pointerup` listens on `window` |
 | 176 | 2026-08-21 | **The timed Game gets a browser, and the ticket's production guard turned out not to guard anything.** `TICKET-19` end to end: `e2e/pages/LeksodromiaPage.ts` + fixture + `e2e/leksodromia.spec.ts` (1 test) — page mounts, pinned rack renders, three tile clicks land letters and the fourth auto-submits so the board advances to word 2 wearing the second word's rack. e2e 16 → 17 passed / 2 skipped. **Λεξοδρομία posts through `useLiveScorePost`, which fires on every score increase**, so the ticket's "stop after one word" done-when would have written to shared production every run, and the analysis doc's "assert before the post" escape is unavailable when the post rides the exact state change the assertion waits for — fix is to stub `POST /api/game-scores` and assert the stub fired; verified 593/25/0 before and after eight full runs, and `TICKET-20` corrected in place for the same premise. **Two ticket instructions named controls that do not exist** (`btn-enter`, a hint button): a word is submitted by filling its last slot, and the board's own header comment had been false for some time — rewritten, not annotated. Pin 2026-05-22 («φεσι» on rack «φιεσ») chosen by driving the real loader; words are 2× each length, so word 2 is four letters again and asserting the rack's *letters* beats asserting its count. |
 | 175 | 2026-08-21 | **The first Game plays a whole round in a browser.** `TICKET-17` end to end, the first Tier A happy path: `e2e/pages/VresTinFrasiPage.ts` + a fixture entry + `e2e/vrestifrasi.spec.ts` (3 tests) — page mounts, a key click reaches the reducer, the round is **played to completion** and the Result Panel renders, plus the ADR 0027 absences guarded at browser level (no 🏆, no πόντοι heading, no board link, neither ➕ nor 🏆 on the picker card) with Λεξοδρομία's card as the positive control. e2e 13 → 16 passed / 2 skipped. **The full round is affordable ONLY because ADR 0027 left this Game no Score to post** — live count 592/10 unchanged either side — so memory's never-finish-a-round rule became conditional on the registry row. **Two of the ticket's instructions were wrong and reading the code caught it**: the phrase grid is an ARIA grid with no per-row testid, and a guess is the WHOLE phrase (the reducer auto-advances at each word's length) — a page object does not transfer between Games even inside one round-spine family. Pin 2026-05-22 («Εδώ και τώρα», the rotation's shortest phrase) and the probe `ενα ωρα καλη` were both chosen by driving the real evaluator, not by taste. |
 | 174 | 2026-08-20/21 | **The migration lands, and release day loses a step it can no longer justify.** `TICKET-24` end to end, ADR 0027 §5 — one migration `20260820120000`: both orphaned community queues dropped, `game_scores.data` and `is_perfect` dropped, `ISSUE-01` §3's nominations index created and its one final-sigma row normalised. Written on the 20th, **applied 09:44 on the 21st** once the operator deployed; runbook step 5 gone and the list renumbered to **five**, `ISSUE-05` deleted, `memory.md`'s launch-reset row corrected so no cold session re-freezes `supabase/migrations/` on a spent rule. **The cheap check beat the plausible inference, twice:** `git branch -v` read `dev [ahead 5]`, settling what the ticket framed as needing a production probe; then the Vercel API's `githubCommitSha` proved the deployed commit, where a READY state and a 7-minute age would have looked identical on the wrong one. **For one commit the docs were ahead of the database on purpose** — tolerable only because the branch was unpushed and the gap closed inside the session; had the migration slipped a week those docs were the ones lying, and nothing would have flagged it. **I wrote a falsehood into `ISSUE-01` and caught it by opening the route:** the §3 rewrite said nothing normalises `word` on the way in — `api/nominations/route.ts:119` does. The operator also waived the offsite-upload gate on the grounds that the launch reset wipes most of this anyway: true of `game_scores`, **not** of `nominations` or `player_profiles`. Commits `1ee2c71`, `9504b3d`, `e0f85cc`. |

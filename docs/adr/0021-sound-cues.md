@@ -227,3 +227,31 @@ Two new traps, both about Web Audio rather than `HTMLAudioElement`:
 The two `volume` fields are **not the same scale** — `file` sets `HTMLAudioElement.volume`, `synth`
 sets a Web Audio gain. Normalise the Cues against each other by ear; matching the numbers means
 nothing.
+
+## Amendment (2026-08-25) — one Cue is audible, and the other two are silenced rather than deleted
+
+**The operator cut the Platform down to a single sound: `wordFound`, the blip on an accepted word.**
+A Pangram now plays that same blip instead of the rooster, and `missing_center` joins the four
+rejections in silence. The registry above still describes what a Cue *is* and what each one was for;
+what changed is which moments reach it.
+
+The whole change is `selectSoundCue`, which is now `result.status === "valid" ? "wordFound" : null`.
+Everything else is untouched by choice — both other rows stay in `SOUND_CUES`, both MP3s stay in
+`public/sounds/`, and the hook, the preference and the header toggle are exactly as they were. This
+is a **silencing, not a removal**: restoring either sound is one line in this one pure function,
+which is the cheapest reversal available and the reason deletion was declined.
+
+That posture decides what the tests must assert. "The rooster is quiet" is too weak, because the
+rooster is still registered, still shipped, and one edit away from playing. The property worth
+holding is that **no file Cue is reachable at all**: `GameBoard.test.tsx` walks a whole round —
+pangram, valid, missing-centre, not-in-list — and asserts no `HTMLMediaElement.play` ever happens
+while sound is fully on. A player who never enables sound still downloads nothing, and a player who
+does still downloads nothing, because no branch names either file.
+
+One assertion in that test was written wrong first and is worth recording, since it is invisible on
+a green run: `expect(arr).not.toContain(expect.stringContaining(x))` compares the **matcher object**
+against the array's members, so it passes even when `x` is present. Spell such a check out —
+`arr.some((s) => s.includes(x))` — or it asserts nothing at all.
+
+**The two silenced Cues keep their provenance and licence lines in `src/config/sound.ts`.** They are
+still shipped bytes, so the CC0 records stay accurate rather than being cleaned up as dead weight.
