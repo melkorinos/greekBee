@@ -59,6 +59,16 @@
   --absent:    var(--color-stone-500);
   --misplaced: var(--color-purple-600);
 
+  /* On-screen keyboard key fills (Leksiarxeio). Split out of --border and
+     --absent because those two are pinned elsewhere: --absent is a feedback
+     colour the guess tiles hold identical in both themes, and --border is page
+     chrome. That left dark mode painting an eliminated key LIGHTER than a key
+     still in play — the used-up letters were the brightest thing on the board.
+     The rule both themes now keep: eliminated recedes, still-in-play stands out.
+     These light values compile to exactly what the keys had before. */
+  --key-idle:   var(--border);
+  --key-absent: var(--absent);
+
   /* Share action — the Result Panel's share button, in EVERY game. Deliberately
      NOT --game-accent: on a Wordle-shaped board the accent doubles as a feedback
      colour (Leksiarxeio's green IS `correct`), so an accent-filled button reads as
@@ -123,6 +133,12 @@
   --info-border:     var(--color-sky-800);
   --success-surface: var(--color-green-950);
   --success-border:  var(--color-green-700);
+
+  /* Keyboard keys, dark. Reversed against the old values, not against :root —
+     the ordering is the same rule in both themes (eliminated is the darker
+     fill), measured against a stone-950 page instead of a white one. */
+  --key-idle:   var(--color-stone-500);
+  --key-absent: var(--color-stone-800);
 
   /* Badge tiers, dark. The ring lifts (a dark ring vanishes against a dark page)
      and the disc drops to a deep tint of the same hue, so the ring/disc/mark
@@ -192,6 +208,8 @@
   --color-present:        var(--present);
   --color-absent:         var(--absent);
   --color-misplaced:      var(--misplaced);
+  --color-key-idle:       var(--key-idle);
+  --color-key-absent:     var(--key-absent);
   --color-share:            var(--share);
   --color-share-foreground: var(--share-foreground);
 

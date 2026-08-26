@@ -24,8 +24,8 @@ const ROWS = [
 const STATE_CLASSES: Record<string, string> = {
   correct: "bg-correct text-white border-correct",
   present: "bg-present text-white border-present",
-  absent:  "bg-absent  text-white border-absent",
-  unknown: "bg-border  text-foreground border-border",
+  absent:  "bg-key-absent text-white border-key-absent",
+  unknown: "bg-key-idle   text-foreground border-key-idle",
 };
 
 export function Keyboard({
