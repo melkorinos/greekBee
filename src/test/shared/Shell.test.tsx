@@ -23,7 +23,7 @@ vi.mock("next/navigation", () => ({
 // between renders — `vi.hoisted` because vi.mock's factory is hoisted above any
 // normal const and would otherwise hit the temporal dead zone. Mirror the real
 // defaults here; each block that needs a different value sets it explicitly.
-const flags = vi.hoisted(() => ({ achievements: true, soundCues: false }));
+const flags = vi.hoisted(() => ({ achievements: true, soundCues: true }));
 vi.mock("@/config/featureFlags", () => ({ FEATURE_FLAGS: flags }));
 
 const { Shell }               = await import("@/components/shared/Shell");
@@ -170,6 +170,23 @@ describe("Drawer game links", () => {
     expect(hrefs).not.toContain("/leksindeseis");
   });
 
+  it("puts Stavrolekso last in the Παιχνίδια list", async () => {
+    // Operator decision, 2026-08-26. Key order in GAME_REGISTRY IS display order
+    // for both this drawer and the picker, so the ordering has no owner other
+    // than that object — and nothing else in the suite would notice a row being
+    // moved back. Scoped to the first <ul>, which is the main game list: the
+    // community section and the privacy link live below it and are not games.
+    const { user } = setup();
+    await user.click(getHamburger());
+
+    const nav = screen.getByRole("navigation", { name: /game navigation/i });
+    const gameHrefs = Array.from(
+      nav.querySelector("ul")!.querySelectorAll("a"),
+    ).map((a) => a.getAttribute("href"));
+
+    expect(gameHrefs.at(-1)).toBe("/stavrolekso");
+  });
+
   it("closes the drawer when a game link is clicked", async () => {
     const { user } = setup();
     await user.click(getHamburger());
@@ -263,63 +280,21 @@ describe("Theme toggle", () => {
   });
 });
 
-// ── sound toggle ──────────────────────────────────────────────────────────────
-// ADR 0021. A Platform preference like theme, so it renders on every page even
-// though only Leksokipos has Cues — hiding it per-route would force the Shell to
-// know which Games make noise. Off by default: unexpected audio is the most
-// complained-about behaviour on the web, and mobile blocks the first play anyway.
+// ── no sound toggle ───────────────────────────────────────────────────────────
+// REMOVED 2026-08-26 by operator decision. ADR 0021 shipped the button as a
+// Platform preference beside the theme toggle; s179 then narrowed the Cues to one
+// audible blip, and a phone's own mute switch already governs a single blip. What
+// it cost was the fourth button in a 320 px header.
 //
-// TICKET-05 Part A put the whole button behind FEATURE_FLAGS.soundCues, which shipped
-// FALSE while `public/sounds/` was empty and is TRUE since 2026-08-17, when the audio
-// landed. These tests set the flag on themselves rather than leaning on that default;
-// the block below them owns the flag-off half, which is now the gate's fallback.
+// These are NOT "the FEATURE_FLAGS.soundCues gate is down" tests. That flag is
+// still TRUE (the mock above ships its real value) and the blip still plays — the
+// flag moved to `useSoundCue` and now gates playback, not this button. So the
+// absence below is proved in the shipped configuration: the control is gone from
+// the markup, not merely gated off. That distinction is the whole reason this
+// block survives instead of being deleted along with the button.
 
-describe("Sound toggle — flag on", () => {
-  beforeEach(() => { flags.soundCues = true;  });
-  afterEach(()  => { flags.soundCues = false; });
-
-  it("renders muted by default (sound is opt-in)", () => {
-    setup();
-    expect(screen.getByRole("button", { name: /turn sound on/i })).toBeInTheDocument();
-  });
-
-  it("clicking the toggle turns sound on", async () => {
-    const { user } = setup();
-    await user.click(screen.getByRole("button", { name: /turn sound on/i }));
-    expect(screen.getByRole("button", { name: /turn sound off/i })).toBeInTheDocument();
-  });
-
-  it("persists the sound preference to localStorage", async () => {
-    const { user } = setup();
-    await user.click(screen.getByRole("button", { name: /turn sound on/i }));
-    expect(localStorage.getItem("sound-preference")).toBe("on");
-  });
-
-  it("clicking the toggle twice returns to muted and persists it", async () => {
-    const { user } = setup();
-    await user.click(screen.getByRole("button", { name: /turn sound on/i }));
-    await user.click(screen.getByRole("button", { name: /turn sound off/i }));
-    expect(screen.getByRole("button", { name: /turn sound on/i })).toBeInTheDocument();
-    expect(localStorage.getItem("sound-preference")).toBe("off");
-  });
-
-  it("sits beside the theme toggle in the header", () => {
-    setup();
-    const themeBtn = screen.getByRole("button", { name: /switch to dark mode/i });
-    const soundBtn = screen.getByRole("button", { name: /turn sound on/i });
-    expect(themeBtn.parentElement).toBe(soundBtn.parentElement);
-    expect(themeBtn.nextElementSibling).toBe(soundBtn);
-  });
-});
-
-// The state the gate exists to produce: with `public/sounds/` empty, a rendered toggle
-// would switch between silence and silence, and nothing else in the suite would
-// notice — no test in this stack can hear anything. It shipped that way until the
-// MP3s landed on 2026-08-17, and this block keeps the off half honest in case a
-// future Cue change needs the flag turned back down.
-
-describe("Sound toggle — flag off (the gate's fallback)", () => {
-  it("renders no sound button at all", () => {
+describe("Header — the sound toggle is gone", () => {
+  it("renders no sound button at either label, with Sound Cues enabled", () => {
     setup();
     expect(screen.queryByRole("button", { name: /turn sound on/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /turn sound off/i })).toBeNull();
@@ -331,10 +306,21 @@ describe("Sound toggle — flag off (the gate's fallback)", () => {
     expect(themeBtn.nextElementSibling).toBe(getHamburger());
   });
 
-  it("leaves the stored preference untouched, so flipping the flag back restores it", () => {
-    localStorage.setItem("sound-preference", "on");
+  it("leaves the header three buttons wide", () => {
+    // The 320 px concern in reflections.md, as the only thing jsdom can actually
+    // check: a count, never a width. Profile, theme, hamburger — nothing else.
     setup();
-    expect(localStorage.getItem("sound-preference")).toBe("on");
+    const controls = getHamburger().parentElement!;
+    expect(controls.querySelectorAll("button")).toHaveLength(3);
+  });
+
+  it("never writes the sound preference — a stored choice outlives the button", () => {
+    // The preference is not deleted with its control. A player who muted before
+    // the removal stays muted, and re-adding the button restores their choice
+    // rather than resetting it.
+    localStorage.setItem("sound-preference", "off");
+    setup();
+    expect(localStorage.getItem("sound-preference")).toBe("off");
   });
 });
 

@@ -171,7 +171,7 @@ npm run batch-generate -- --target=200 --min-words=50 --lang=el
 6. **Scoring** — 4-letter word = 1 pt, 5+ = 1 pt per letter, pangram = +7. `maxScore` is the sum scaled by `SCORE_SCALE` and passed through a soft cap so the rank bar tracks each puzzle's richness. **All knobs live in `src/config/gameRules.ts`** — never copy the numbers.
 7. **Rank** — score as a % of `maxScore` against the `RANKS` ladder in `src/games/leksokipos/lib/ranking.ts`, which is the source of truth for both the names and the thresholds. `rankProgress()` derives everything the UI shows, so no rank logic sits in a component.
 8. **Persistence** — the snapshot is written to the `wordgames:state` envelope under the game's slice via `useGameStore`, keyed on the session key, so switching puzzles starts fresh.
-9. **UI** — score bar, word input, feedback toast, the SVG `FlowerGrid` (two variants, **Pie Slice** and **Flower**, player-toggled), found-words list and the rules modal. **Sound Cues** (ADR 0021) map each submission to at most one Cue; off by default, and the toggle itself is behind `FEATURE_FLAGS.soundCues`.
+9. **UI** — score bar, word input, feedback toast, the SVG `FlowerGrid` (two variants, **Pie Slice** and **Flower**, player-toggled), found-words list and the rules modal. **Sound Cues** (ADR 0021) map each submission to at most one Cue; on by default since the header toggle was removed on 2026-08-26, with `FEATURE_FLAGS.soundCues` gating playback as the only off switch.
 
 ---
 

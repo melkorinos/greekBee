@@ -15,6 +15,12 @@ import { act, renderHook } from "@testing-library/react";
 import { SOUND_CUES, SOUND_PREFERENCE_KEY } from "@/config/sound";
 import { useSoundCue } from "@/hooks/useSoundCue";
 
+// Mutable so one test can turn the kill switch off — the same `vi.hoisted` shape
+// Shell.test.tsx uses. Defaults to the SHIPPED value (true), so every other test
+// in the file runs against the real configuration.
+const flags = vi.hoisted(() => ({ achievements: true, soundCues: true }));
+vi.mock("@/config/featureFlags", () => ({ FEATURE_FLAGS: flags }));
+
 /** Every Audio the hook constructs during a test, in construction order. */
 let created: HTMLAudioElement[] = [];
 let playSpy: ReturnType<typeof vi.spyOn>;
@@ -43,15 +49,52 @@ function enableSound() {
   localStorage.setItem(SOUND_PREFERENCE_KEY, "on");
 }
 
+// Sound is ON by default since 2026-08-26 (the header toggle was removed, so an
+// opt-in nobody could opt into meant permanent silence). "Off" is therefore a
+// stored choice that must be written explicitly — an absent key is now ON.
+function disableSound() {
+  localStorage.setItem(SOUND_PREFERENCE_KEY, "off");
+}
+
 describe("useSoundCue", () => {
   it("fetches nothing at all while the preference is off", () => {
-    // The whole point of opt-in: a player who never turns sound on never
-    // downloads a byte of audio.
+    // A player who stored "off" — before the toggle was removed, or in another
+    // tab — never downloads a byte of audio.
+    disableSound();
     const { result } = renderHook(() => useSoundCue());
     act(() => { result.current.play("missingCenter"); });
 
     expect(created).toHaveLength(0);
     expect(playSpy).not.toHaveBeenCalled();
+  });
+
+  it("plays nothing at all with FEATURE_FLAGS.soundCues off", () => {
+    // Since 2026-08-26 this flag is the Platform's only off switch for sound: the
+    // header toggle is gone, so nothing else can silence a player who never
+    // stored a preference. It must cut playback, not merely a control.
+    flags.soundCues = false;
+    enableSound();
+    try {
+      const { result } = renderHook(() => useSoundCue());
+      act(() => { result.current.play("pangram"); });
+
+      expect(created).toHaveLength(0);
+      expect(playSpy).not.toHaveBeenCalled();
+    } finally {
+      flags.soundCues = true;
+    }
+  });
+
+  it("plays with NO stored preference at all — sound is on by default", () => {
+    // The 2026-08-26 flip, and the one assertion that fails if the default goes
+    // back to opt-in. With the header toggle removed there is no in-app way to
+    // reach "on", so an absent key defaulting to off would silence the Platform
+    // permanently and no other test in the suite would notice — every one of them
+    // writes the preference explicitly.
+    const { result } = renderHook(() => useSoundCue());
+    act(() => { result.current.play("pangram"); });
+
+    expect(playSpy).toHaveBeenCalledTimes(1);
   });
 
   it("plays the registered file at the registered volume when sound is on", () => {
@@ -157,6 +200,7 @@ function stubAudioContext() {
 
 describe("useSoundCue — synth Cues", () => {
   it("constructs no AudioContext while the preference is off", () => {
+    disableSound();
     const ctx = stubAudioContext();
     const { result } = renderHook(() => useSoundCue());
     act(() => { result.current.play("wordFound"); });

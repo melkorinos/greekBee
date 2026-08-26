@@ -4,7 +4,6 @@
 // Provides a sticky header with the platform name, a theme toggle, and a
 // hamburger button that opens a slide-out drawer listing all available games.
 
-import { FEATURE_FLAGS } from "@/config/featureFlags";
 import { GAME_REGISTRY, type RegistryGameId } from "@/config/games";
 import { PLATFORM_NAME } from "@/config/platform";
 import { BrandMark } from "./BrandMark";
@@ -12,7 +11,6 @@ import { FeedbackModal } from "./FeedbackModal";
 import { ProfileToggleButton } from "./ProfileToggleButton";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { useSoundEnabled } from "@/hooks/useSoundEnabled";
 import { useTheme } from "@/hooks/useTheme";
 
 // ── Hamburger icon ────────────────────────────────────────────────────────────
@@ -70,7 +68,6 @@ export function Shell({ children }: ShellProps) {
   const [drawerOpen,   setDrawerOpen]   = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const { theme, toggle } = useTheme();
-  const { soundEnabled, toggle: toggleSound } = useSoundEnabled();
 
   // Offline Mode is PARKED (2026-08-04) — the drawer toggle and its help modal are
   // removed, so the mode can never be activated and this guard has nothing to guard.
@@ -128,26 +125,13 @@ export function Shell({ children }: ShellProps) {
               {theme === "dark" ? "☀️" : "🌙"}
             </button>
 
-            {/* Sound toggle — a Platform preference like theme (ADR 0021), so it
-                renders on every page even though only Leksokipos has Cues today.
-                Written inline exactly like the theme toggle rather than extracted:
-                the two are siblings and should read as one pair.
-
-                Gated on FEATURE_FLAGS.soundCues, ON since 2026-08-17 — the gate
-                exists because the button used to toggle silence against silence
-                while `public/sounds/` was empty. Only the button is gated —
-                useSoundEnabled above still runs and still persists the preference, so
-                turning the flag off and on again restores the player's stored choice
-                rather than resetting it. */}
-            {FEATURE_FLAGS.soundCues && (
-              <button
-                onClick={toggleSound}
-                aria-label={soundEnabled ? "Turn sound off" : "Turn sound on"}
-                className="flex items-center justify-center w-9 h-9 rounded-full text-muted hover:bg-surface-raised active:bg-border transition-colors"
-              >
-                {soundEnabled ? "🔊" : "🔇"}
-              </button>
-            )}
+            {/* There is NO sound toggle here, by operator decision on 2026-08-26.
+                One audible Cue survives (the word blip, s179), a phone's own mute
+                switch already governs it, and a third icon bought nothing but a
+                fourth button competing for 320 px of header. The preference
+                (`useSoundEnabled`) and FEATURE_FLAGS.soundCues both stay wired —
+                restoring the button is re-adding this block, and a player who
+                stored "off" before the removal is still silent. */}
 
             {/* Hamburger */}
             <button

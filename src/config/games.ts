@@ -22,6 +22,11 @@
  * Leksindeseis is why the split exists: it is finished and community-backed, and
  * it is out of scope for launch. Collapsing the two back into one flag would lose
  * that distinction and re-brand a finished Game as unfinished.
+ *
+ * KEY ORDER IS DISPLAY ORDER. Both the picker (`app/page.tsx`) and the drawer
+ * (`Shell.tsx`) walk `Object.keys(GAME_REGISTRY)` and filter, never sort — so
+ * reordering the rows below is the ONLY way to reorder either surface, and moving
+ * a row moves both at once. Hidden rows keep their place and are filtered out.
  */
 
 /**
@@ -130,18 +135,6 @@ export const GAME_REGISTRY = {
     hidden:       false,
     capabilities: ["scores", "leaderboard"],
   },
-  stavrolekso: {
-    label:       "♟️ Stavrolekso",
-    emoji:       "♟️",
-    title:       "Stavrolekso",
-    description: "Λύσε και δημιούργησε σταυρόλεξα της κοινότητας.",
-    href:         "/stavrolekso",
-    wip:          false,
-    hidden:       false,
-    // A browsable pool of community crosswords, not a dated Puzzle — no Score to
-    // post and nothing to rank.
-    capabilities: [],
-  },
   leksikastirio: {
     label:       "⚖️ Leksikastirio",
     emoji:       "⚖️",
@@ -165,6 +158,23 @@ export const GAME_REGISTRY = {
     wip:          false,
     hidden:       false,
     capabilities: ["scores", "leaderboard"],
+  },
+  // LAST of the visible rows by operator decision on 2026-08-26, and that is the
+  // only reason it sits here: key order IS display order (see the header note), so
+  // moving a row moves the picker card and the drawer link together. Stavrolekso
+  // is a browsable pool rather than a daily Puzzle, so it reads as the odd one out
+  // among the dailies and belongs at the bottom of the list.
+  stavrolekso: {
+    label:       "♟️ Stavrolekso",
+    emoji:       "♟️",
+    title:       "Stavrolekso",
+    description: "Λύσε και δημιούργησε σταυρόλεξα της κοινότητας.",
+    href:         "/stavrolekso",
+    wip:          false,
+    hidden:       false,
+    // A browsable pool of community crosswords, not a dated Puzzle — no Score to
+    // post and nothing to rank.
+    capabilities: [],
   },
   // Daily "guess the supermarket price" game. Ships wip:true (single placeholder
   // puzzle + sample photo); flip to false once real content is sourced (photos +

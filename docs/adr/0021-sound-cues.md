@@ -255,3 +255,40 @@ against the array's members, so it passes even when `x` is present. Spell such a
 
 **The two silenced Cues keep their provenance and licence lines in `src/config/sound.ts`.** They are
 still shipped bytes, so the CC0 records stay accurate rather than being cleaned up as dead weight.
+
+---
+
+## Amendment (2026-08-26) — the toggle is removed, sound defaults ON, and the flag moves to playback
+
+**Operator decision, ahead of a launch to a wider round of players: the 🔊 / 🔇 button leaves the
+Shell header.** The reasoning is that a phone's own mute switch already governs one short blip, and
+the button's real cost was the fourth control in a 320 px header — the layout risk `reflections.md`
+has carried unpaid since the flag went on. The header is three buttons wide again.
+
+Three consequences follow, and the middle one is the whole point of writing this down.
+
+**The preference now defaults to ON.** «The preference» section above chose off-by-default because
+unexpected audio is the web's most complained-about behaviour, and that reasoning was sound *while a
+control existed*. Removing the button turns opt-in into a closed door: there is no in-app path to
+"on" any more, so a default of off would mean the surviving Cue is unreachable by every player
+forever — the feature deleted by accident rather than by decision. `readStored()` therefore reads
+`!== "off"` rather than `=== "on"`, and the `useSyncExternalStore` server snapshot follows it to
+`true`. **A stored `"off"` is still honoured**: the preference outlives its control, so a player who
+muted before today stays muted, and re-adding the button restores their choice rather than resetting
+it. `useSoundCue.test.ts` pins the default with a test that renders with **no stored key at all** —
+every other test in that file writes the preference explicitly, so nothing else would notice a
+revert to opt-in.
+
+**`FEATURE_FLAGS.soundCues` moves from the button to `play()`.** The 2026-08-15 amendment introduced
+it to gate the control; a flag that gates a control which no longer exists gates nothing. It now sits
+at the top of `useSoundCue.play`, which makes it the Platform's **only** off switch for sound. That
+is deliberate rather than incidental: with no player-facing control, one edit has to be able to
+silence every Cue everywhere, without touching anyone's stored preference. Nothing is fetched and no
+`AudioContext` is opened while it is down.
+
+**What the Shell test now proves is an absence, in the shipped configuration.** The two old describe
+blocks — "flag on" and "flag off" — are replaced by one that forces `soundCues` **true** and asserts
+no button renders at either label. Testing the absence with the flag down would prove only that the
+gate works; the fact worth holding is that the markup no longer contains the control while sound is
+fully live. The same block counts the header's buttons, because a count is the only thing jsdom can
+say about a layout concern that is really about width.

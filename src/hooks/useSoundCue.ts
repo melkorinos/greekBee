@@ -3,8 +3,9 @@
 // Sound Cue playback (ADR 0021) — the only place in the Platform that touches
 // Audio or Web Audio.
 //
-// Returns play(cue). Nothing is fetched or constructed at all while the preference
-// is off, so a player who never enables sound never downloads a byte of audio.
+// Returns play(cue). Nothing is fetched or constructed at all while sound is off —
+// whether that is FEATURE_FLAGS.soundCues (the Platform-wide switch, and since
+// 2026-08-26 the only one) or a player's stored preference.
 //
 // Two kinds of Cue, both dispatched from here: file Cues stream an MP3 through an
 // HTMLAudioElement, synth Cues are generated on the spot and have no asset at all.
@@ -13,6 +14,7 @@
 
 import { useCallback, useRef } from "react";
 
+import { FEATURE_FLAGS } from "@/config/featureFlags";
 import { SOUND_CUES, type CueSound, type SoundCue } from "@/config/sound";
 import { useSoundEnabled } from "./useSoundEnabled";
 
@@ -70,6 +72,12 @@ export function useSoundCue() {
   const ctxRef = useRef<AudioContext | null>(null);
 
   const play = useCallback((cue: SoundCue) => {
+    // The flag moved here on 2026-08-26, when the Shell's toggle was removed. It
+    // used to gate that button, and gating a control that no longer exists gates
+    // nothing — so it now gates playback itself and becomes the Platform's ONLY
+    // off switch for sound: one edit silences every Cue everywhere, without
+    // touching any player's stored preference.
+    if (!FEATURE_FLAGS.soundCues) return;
     if (!soundEnabled) return;
 
     const sound: CueSound = SOUND_CUES[cue];

@@ -9,11 +9,16 @@ import { useSyncExternalStore } from "react";
 
 import { SOUND_PREFERENCE_KEY as KEY } from "@/config/sound";
 
+// ON unless the player explicitly stored "off". The default flipped on 2026-08-26
+// when the header toggle was removed: with no control on screen, opt-in meant the
+// one surviving Cue could never be heard by anybody. A stored "off" from before
+// the removal is still honoured — the preference outlives its button, so bringing
+// the toggle back restores that player's choice rather than overriding it.
 function readStored(): boolean {
   try {
-    return localStorage.getItem(KEY) === "on";
+    return localStorage.getItem(KEY) !== "off";
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -31,9 +36,11 @@ function subscribeSound(callback: () => void): () => void {
 }
 
 export function useSoundEnabled() {
-  // Server snapshot is false, which is also the default → server and initial
+  // Server snapshot is true, which is also the default → server and initial
   // client render agree, so there is no hydration mismatch by construction.
-  const soundEnabled = useSyncExternalStore(subscribeSound, readStored, () => false);
+  // Nothing renders from this value today (the header toggle is gone), but the
+  // snapshot stays honest so a restored toggle cannot flash the wrong icon.
+  const soundEnabled = useSyncExternalStore(subscribeSound, readStored, () => true);
 
   function toggle() {
     const next = !soundEnabled;

@@ -670,6 +670,11 @@ describe("Sound Cues", () => {
     localStorage.setItem(SOUND_PREFERENCE_KEY, "on");
   }
 
+  /** Sound is ON by default since 2026-08-26 — silence must be written. */
+  function disableSound() {
+    localStorage.setItem(SOUND_PREFERENCE_KEY, "off");
+  }
+
   it("plays the word-found Cue on a valid non-pangram", async () => {
     enableSound();
     const { user } = setup();
@@ -715,8 +720,11 @@ describe("Sound Cues", () => {
   });
 
   it("stays silent for every Cue while the preference is off", async () => {
-    // No enableSound() — the default. A player who never opts in hears nothing
-    // and fetches nothing.
+    // "Off" is now a stored choice rather than the default (2026-08-26 — the
+    // header toggle went, so an absent key means ON). This is the player who
+    // muted before the removal, or in another tab: still silent, still fetching
+    // nothing.
+    disableSound();
     const { user } = setup();
     await user.keyboard("painted{Enter}");
     await user.keyboard("paint{Enter}");

@@ -17,17 +17,19 @@ export interface FeatureFlags {
   achievements: boolean;
 
   /**
-   * Sound Cues (ADR 0021): the 🔊 / 🔇 toggle in the Shell header. Off = the button
-   * does not render at all. The hook (`useSoundCue`), the preference
-   * (`useSoundEnabled`) and the three Leksokipos Cues stay wired and inert behind
-   * it, exactly as Offline Mode is parked — this flag hides one control, it does
-   * not dismantle the machine.
+   * Sound Cues (ADR 0021). Off = `useSoundCue.play()` is a no-op, so nothing is
+   * fetched, no AudioContext is opened and no Cue sounds anywhere on the Platform.
+   * The hook, the preference (`useSoundEnabled`) and both MP3s stay wired and
+   * inert behind it, exactly as Offline Mode is parked.
    *
-   * ON since 2026-08-17: the condition this flag waited on is met. All three Cues
-   * now make a sound — `pangram` and `missingCenter` are committed MP3s in
-   * `public/sounds/`, `wordFound` is synthesized — so the toggle no longer switches
-   * between silence and silence. TICKET-05 is closed; what it left behind is the
-   * operator's ear check on a phone, which needs this button visible to happen.
+   * ON since 2026-08-17, when the audio landed.
+   *
+   * **What this flag gates changed on 2026-08-26.** It used to gate the 🔊 / 🔇
+   * button in the Shell header; that button was removed by operator decision, and
+   * a flag guarding a control that no longer exists guards nothing. It now guards
+   * playback, which makes it the Platform's ONLY off switch for sound — there is
+   * no in-app control any more, so if a round of players finds the blip annoying,
+   * this one edit is the answer. It does not touch anyone's stored preference.
    */
   soundCues: boolean;
 }
