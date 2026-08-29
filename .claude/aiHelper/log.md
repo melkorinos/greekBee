@@ -5,83 +5,52 @@
 
 ---
 
-## Session 179 — 2026-08-25: the two share paths stop lying, and sound narrows to one blip
+## Session 181 — 2026-08-29: the eliminated key stops arguing about grey and gets struck through
 
-Two operator-directed changes, both starting from a real player. 2663 tests (+6), eslint 0, build 0,
-e2e 18 passed / 2 skipped.
+Operator-directed polish on both Wordle-shaped keyboards, arrived at through a published picker
+rather than a guess. Tests +8 (one new shared guard), eslint 0, build 0, e2e 18 passed / 2 skipped.
 
-**The share bug was not where it was reported, and finding that out was the whole job.** A friend
-finished a round on a desktop, pressed «Κοινοποίηση», and reported it did not work — read as
-"sharing is mobile-only, add a desktop path". The code already had both paths: `navigator.share`
-where it exists, a clipboard copy everywhere else, feature-detected correctly since ADR 0025. The
-copy had **succeeded**. What failed is that both paths wore the same label, and a clipboard write is
-invisible — a native sheet announces itself, so pressing a button named «Κοινοποίηση» and watching
-nothing happen reads as broken. The fix is the label: «Αντιγραφή» where there is no sheet,
-«Κοινοποίηση» where there is. **The operator never saw the screen, so this is a diagnosis, not a
-confirmed cause** — said so in the reply rather than banking it.
+**The previous session's fix was the right diagnosis and the wrong instrument, and it took a
+side-by-side to see that.** s180 had split the keyboard's fills into `--key-idle` / `--key-absent`
+so dark mode stopped painting an eliminated key brighter than a live one. The operator was still
+unhappy, and the reason is that the *whole* mechanism was colour: even ordered correctly, it asks a
+player mid-round to rank two greys, and it says nothing at all to a colour-blind one. Both tokens
+were **reverted** — `git checkout HEAD~1 --` on the four files, which is the clean move when the
+commit to undo is HEAD — and `keyStruck` (`src/styles/recipes.ts`) draws a diagonal across the key
+face instead. Both keyboards now share it; the fills are back to `--border` / `--absent`.
 
-**`useSyncExternalStore`, not an effect, and the linter is why.** `navigator` does not exist during
-the server render, so the capability cannot be read in the render body without a hydration mismatch;
-the obvious `useEffect`+`setState` version is exactly what `react-hooks/set-state-in-effect` rejects,
-and it was caught at lint after the tests were already green. The hook's third argument is the server
-snapshot, so server and first paint both say «Αντιγραφή» and a phone corrects itself upward — the
-safe direction, since the label starts by describing the path that always exists. Subscribe is a
-no-op: `navigator.share` cannot change for the life of the page.
+**Six treatments were published as an Artifact and one was chosen, which is how a taste question
+should be settled.** The page drew each candidate at the real key size on both real grounds, with a
+switcher between the two Games' state sets. The operator picked the full-face slash over the red
+prohibition sign they had originally asked for — worth noting, because the page's argument was that
+the *shape* does the work and the red only adds a fifth colour to a board already spending four on
+meaning. **Showing the options cost one file and changed the answer.**
 
-**A refused clipboard write used to be swallowed whole** — an empty `catch` — leaving a dead button
-on any insecure origin. It now reveals the summary in a selectable box: the only path that can leave
-a player with no way to get their round out is the only one with a visible fallback.
+**A gradient, not an SVG, and the reason is geometry.** The strike has to hit both corners at
+whatever width flex hands a key, and a stroke scaled non-uniformly into a rectangle goes lopsided.
+CSS's `to top right` corner keyword lands the stripe on the corners at any aspect ratio, so
+`after:[background-image:linear-gradient(to_top_right,…)]` in `currentColor` needs no token and no
+`dark:` pair. Two traps: `calc()` needs its spaces (`calc(50%_-_1px)`, not `calc(50%-1px)`), and the
+glyph needs `relative z-10` — both it and `::after` are positioned at `z-index: auto`, so DOM order
+would otherwise paint the strike **over** the letter. Verified in the built CSS, not just in tests.
 
-**Sound narrows to ONE audible Cue by operator decision: `wordFound`, the blip on an accepted word.**
-A pangram plays that same blip instead of the rooster; missing-centre joins the four rejections in
-silence. Operator chose **silence at the selector over deletion**, so both rows stay in
-`src/config/sound.ts`, both MP3s stay in `public/sounds/`, and the hook, preference and header toggle
-are untouched — restoring either sound is one line in `selectSoundCue`. The property worth testing is
-therefore not "the rooster is quiet" but **"no file Cue is reachable at all"**: a whole-round test
-walks pangram → valid → missing-centre → not-in-list and asserts `playSpy` was never called. Nothing
-downloads those MP3s while no branch names them.
+**The operator's third ask was already true, so it was turned into a guard instead of a change.**
+Enter and Delete already carried the untouched-letter fill on both keyboards (s178). Nothing pinned
+it, so `src/test/shared/keyOutOfPlay.test.tsx` now compares the colour-bearing utilities of an
+unplayed letter key against both action keys, and asserts the recipe declares `content` — a
+pseudo-element without it renders nothing while every className assertion still passes.
 
-**Both behaviours were verified to fail against the old code before being trusted** — the old
-selector restored, six sound assertions failed; the old label restored, two share ones failed. Cheap,
-and the only thing separating a test that pins behaviour from one that merely passes. One assertion
-was rewritten mid-session for the same reason: `not.toContain(expect.stringContaining(...))` compares
-the matcher **object** against the array's members and would have passed with the rooster playing.
-
-**The build failed once for an unrelated reason worth recognising on sight.** `.next/dev/` carried a
-generated validator for `api/community-puzzles/leksiarxeio/[id]/review`, a route deleted by `a0c4590`
-(ADR 0027). A stale generated artifact, not a regression — `rm -rf .next` and it builds clean.
-
-## Session 178 — 2026-08-21: the feedback colours stop leaking onto things that are not feedback
-
-Operator-directed polish across two Wordle-shaped Games and the shared Result Panel. 2657 tests
-(+4), eslint 0, build 0, e2e 18 passed / 2 skipped.
-
-**One rule explains three of the four changes: a colour that means something must not appear on a
-control that means nothing.** Leksiarxeio's Enter key was `bg-correct` — the *same green* as a
-letter in the right place — and the Result Panel's share button was `bg-game-accent`, whose value on
-that Game **is** `--correct` (ADR 0009 explicitly permits accent = feedback value, which is how this
-went unnoticed). So a finished board showed a green grid, a green Enter and a green full-width
-button, only one of which was reporting anything. Enter and Delete now carry the *unknown* letter
-state's exact fill on both keyboards and are told apart by their drawn mark; the share button gets a
-new platform token `--share` (purple-600), the same on every Game. ADR 0009 extended, not annotated.
-
-**`DeleteMark` / `SubmitMark` graduated to `src/components/shared/KeyMarks.tsx`** — third genuine
-consumer, which is the bar. `ClearMark` / `ShuffleMark` stayed in `leksokipos/icons.tsx`, which
-re-exports the two so the action row still imports all four from one place.
-
-**Both Round End copy changes were ambiguous in a way worth asking about, and the answers cost
-information on purpose.** Leksiarxeio's «Ολοκλήρωσες και τα 5 μήκη» is true on every Round End and so
-distinguishes a clean sweep from a 0/5 not at all; it now reads «Βρήκες Χ λέξεις», counted from
-`status === "won"` and **not** from `resolvedRounds.length`, with a singular form and a plain zero.
-Vres Tin Frasi's panel printed the phrase; the operator chose to replace it with the verdict, so on
-a **loss the phrase is now revealed nowhere** — the grid spells it out on a win and the shared text
-never carried it. Flagged before implementing, confirmed, and the test that once asserted the reveal
-now asserts its absence.
+**Found and not fixed:** Vres Tin Frasi had never received s180's token change at all, so its dark
+keyboard still had the inversion the commit message claimed to have fixed. Moot now — the revert put
+both Games back on the same two tokens — but it is why the fix must be applied per Game, not assumed.
 
 ## Older Sessions
 
 | Session | Date | Summary |
 |---------|------|---------|
+| 180 | 2026-08-26/27 | **Sound turns itself on, and the keyboard's two greys get swapped.** `src/config/sound.ts` defaults the preference to on and the header toggle is dropped (the drawer keeps it); Stavrolekso moves last in the picker. Then the Leksiarxeio keyboard's fills were split out of `--border`/`--absent` into `--key-idle`/`--key-absent`, because dark mode had been painting an *eliminated* key lighter than one still in play. **The token half was reverted the next session** — see 181; the split was the right diagnosis and the wrong instrument. Never written up at the time, which is why this row is short. |
+| 179 | 2026-08-25 | **The two share paths stop lying, and sound narrows to one blip.** A friend's «δεν δουλεύει» on desktop was not a missing desktop path — both paths existed and the clipboard write had *succeeded*; what failed is that both wore the label «Κοινοποίηση», and a clipboard write is invisible where a native sheet announces itself. Label now splits «Αντιγραφή»/«Κοινοποίηση», read through `useSyncExternalStore` (an effect trips `react-hooks/set-state-in-effect`, and `navigator` does not exist server-side); a refused write reveals a selectable box instead of an empty `catch`. Sound narrowed to one audible Cue, `wordFound`, by **silencing the selector rather than deleting the rows** — so the property tested is "no file Cue is reachable at all", not "the rooster is quiet". Both behaviours were **verified to fail against the old code** before being trusted, which is what caught `not.toContain(expect.stringContaining(...))` comparing the matcher object and passing vacuously. |
+| 178 | 2026-08-21 | **The feedback colours stop leaking onto things that are not feedback.** One rule behind three changes: a colour that means something must not sit on a control that means nothing. Leksiarxeio's Enter was `bg-correct` and the Result Panel's share button `bg-game-accent`, whose value on that Game **is** `--correct` (ADR 0009 permits accent = feedback value, which is how it went unnoticed) — a finished board was green in three places, one of them reporting anything. Enter/Delete took the *unknown* letter fill on both keyboards; share got the platform token `--share`. `DeleteMark`/`SubmitMark` graduated to `shared/KeyMarks.tsx` on the third genuine consumer. Both Round End copy changes cost information **on purpose** and were flagged before implementing — Vres Tin Frasi now reveals the phrase nowhere on a loss. |
 | 177 | 2026-08-21 | `TICKET-20`: Leksoplegma's pointer drag traced in a browser (e2e 17→18), the last Tier A path; `ISSUE-03` deleted with it, moving five untested routes out of the tracker into `e2e-coverage/analysis.md`. Fixture chosen for the **gesture** (a straight orthogonal run, no proper prefix) not the word; press tile joins only on the first move over a different tile; `pointerup` listens on `window` |
 | 176 | 2026-08-21 | **The timed Game gets a browser, and the ticket's production guard turned out not to guard anything.** `TICKET-19` end to end: `e2e/pages/LeksodromiaPage.ts` + fixture + `e2e/leksodromia.spec.ts` (1 test) — page mounts, pinned rack renders, three tile clicks land letters and the fourth auto-submits so the board advances to word 2 wearing the second word's rack. e2e 16 → 17 passed / 2 skipped. **Λεξοδρομία posts through `useLiveScorePost`, which fires on every score increase**, so the ticket's "stop after one word" done-when would have written to shared production every run, and the analysis doc's "assert before the post" escape is unavailable when the post rides the exact state change the assertion waits for — fix is to stub `POST /api/game-scores` and assert the stub fired; verified 593/25/0 before and after eight full runs, and `TICKET-20` corrected in place for the same premise. **Two ticket instructions named controls that do not exist** (`btn-enter`, a hint button): a word is submitted by filling its last slot, and the board's own header comment had been false for some time — rewritten, not annotated. Pin 2026-05-22 («φεσι» on rack «φιεσ») chosen by driving the real loader; words are 2× each length, so word 2 is four letters again and asserting the rack's *letters* beats asserting its count. |
 | 175 | 2026-08-21 | **The first Game plays a whole round in a browser.** `TICKET-17` end to end, the first Tier A happy path: `e2e/pages/VresTinFrasiPage.ts` + a fixture entry + `e2e/vrestifrasi.spec.ts` (3 tests) — page mounts, a key click reaches the reducer, the round is **played to completion** and the Result Panel renders, plus the ADR 0027 absences guarded at browser level (no 🏆, no πόντοι heading, no board link, neither ➕ nor 🏆 on the picker card) with Λεξοδρομία's card as the positive control. e2e 13 → 16 passed / 2 skipped. **The full round is affordable ONLY because ADR 0027 left this Game no Score to post** — live count 592/10 unchanged either side — so memory's never-finish-a-round rule became conditional on the registry row. **Two of the ticket's instructions were wrong and reading the code caught it**: the phrase grid is an ARIA grid with no per-row testid, and a guess is the WHOLE phrase (the reducer auto-advances at each word's length) — a page object does not transfer between Games even inside one round-spine family. Pin 2026-05-22 («Εδώ και τώρα», the rotation's shortest phrase) and the probe `ενα ωρα καλη` were both chosen by driving the real evaluator, not by taste. |

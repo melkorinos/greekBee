@@ -4,6 +4,7 @@
 // Layout mirrors a standard Greek soft keyboard, adapted for Leksiarxeio.
 
 import { DeleteMark, SubmitMark } from "@/components/shared/KeyMarks";
+import { keyStruck } from "@/styles/recipes";
 import type { LetterStateMap } from "@/games/leksiarxeio/types";
 
 interface KeyboardProps {
@@ -24,8 +25,8 @@ const ROWS = [
 const STATE_CLASSES: Record<string, string> = {
   correct: "bg-correct text-white border-correct",
   present: "bg-present text-white border-present",
-  absent:  "bg-key-absent text-white border-key-absent",
-  unknown: "bg-key-idle   text-foreground border-key-idle",
+  absent:  "bg-absent  text-white border-absent",
+  unknown: "bg-border  text-foreground border-border",
 };
 
 export function Keyboard({
@@ -45,6 +46,9 @@ export function Keyboard({
       "active:opacity-70",
       disabled ? "opacity-50 pointer-events-none" : "",
       STATE_CLASSES[state],
+      // "Out of play" is said with a shape, not with a second shade of grey —
+      // the fills stay exactly as they are and the strike carries the meaning.
+      state === "absent" ? keyStruck : "",
     ].join(" ");
   };
 
@@ -87,7 +91,8 @@ export function Keyboard({
               aria-label={`Letter ${letter.toUpperCase()}`}
               data-testid={`key-${letter}`}
             >
-              {letter.toUpperCase()}
+              {/* Own stacking context, so the strike passes UNDER the glyph. */}
+              <span className="relative z-10">{letter.toUpperCase()}</span>
             </button>
           ))}
           {ri === ROWS.length - 1 && (

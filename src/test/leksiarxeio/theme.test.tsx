@@ -5,8 +5,6 @@
 
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { readFileSync } from "fs";
-import { resolve } from "path";
 
 import { Keyboard } from "@/components/leksiarxeio/Keyboard";
 import { Tile } from "@/components/leksiarxeio/Tile";
@@ -45,7 +43,7 @@ describe("Keyboard light theme classes", () => {
   const noop = () => {};
   const emptyStates = {};
 
-  it("unknown key has bg-key-idle token", () => {
+  it("unknown key has bg-border token", () => {
     render(
       <Keyboard
         letterStates={emptyStates}
@@ -58,7 +56,7 @@ describe("Keyboard light theme classes", () => {
     const buttons = screen.getAllByRole("button");
     const letterButton = buttons.find((b) => b.textContent && b.textContent.trim().length === 1);
     expect(letterButton).toBeDefined();
-    expect(letterButton!.className).toContain("bg-key-idle");
+    expect(letterButton!.className).toContain("bg-border");
   });
 
   it("unknown key has text-foreground token", () => {
@@ -164,72 +162,5 @@ describe("Keyboard responsive layout classes", () => {
     const del = getByTestId("btn-delete");
     expect(del.className).toContain("flex-1");
     expect(del.className).toContain("min-w-0");
-  });
-});
-// ── Keyboard key fills: eliminated must recede ───────────────────────────────
-// One rule in both themes: the eliminated key is the DARKER fill. Dark mode had
-// it backwards — the key borrowed --absent (stone-500) while an untouched key
-// borrowed --border (stone-700), so used-up letters were the brightest thing on
-// the keyboard. Hence --key-idle / --key-absent: the tiles keep --absent, which
-// is a feedback colour and identical in both themes, and the keys get their own.
-//
-// This asserts the RELATIONSHIP, not the shades — a retune may pick any stone
-// steps, as long as dark keeps --key-absent below --key-idle.
-
-describe("Keyboard absent key", () => {
-  const noop = () => {};
-
-  it("uses the bg-key-absent token, not the shared bg-absent tile fill", () => {
-    const { container } = render(
-      <Keyboard
-        letterStates={{ α: "absent" }}
-        onLetter={noop}
-        onDelete={noop}
-        onEnter={noop}
-      />
-    );
-    const alphaButton = container.querySelector('[data-testid="key-α"]') as HTMLElement;
-    expect(alphaButton).not.toBeNull();
-    expect(alphaButton.className).toContain("bg-key-absent");
-  });
-});
-
-describe("keyboard key fill tokens (globals.css)", () => {
-  const css = readFileSync(resolve(__dirname, "../../../src/app/globals.css"), "utf8");
-
-  /** Body of the first `selector { … }` block in globals.css. */
-  function block(selector: string): string {
-    const start = css.indexOf(`${selector} {`);
-    expect(start, `${selector} block not found in globals.css`).toBeGreaterThan(-1);
-    return css.slice(start, css.indexOf("\n}", start));
-  }
-
-  function value(selector: string, token: string): string {
-    const hit = new RegExp(`${token}:\s*([^;]+);`).exec(block(selector));
-    expect(hit, `${token} not declared in ${selector}`).not.toBeNull();
-    return hit![1].trim();
-  }
-
-  /** Stone step of a `var(--color-stone-N)` value — higher N is darker. */
-  function stoneStep(v: string): number {
-    const hit = /--color-stone-(\d{2,4})\)/.exec(v);
-    expect(hit, `expected a stone token, got "${v}"`).not.toBeNull();
-    return Number(hit![1]);
-  }
-
-  it("light mode leaves both keys exactly as they were before the split", () => {
-    expect(value(":root", "--key-idle")).toBe("var(--border)");
-    expect(value(":root", "--key-absent")).toBe("var(--absent)");
-  });
-
-  it("dark mode paints the eliminated key darker than a key still in play", () => {
-    const idle   = stoneStep(value(".dark", "--key-idle"));
-    const absent = stoneStep(value(".dark", "--key-absent"));
-    expect(absent).toBeGreaterThan(idle);
-  });
-
-  it("both tokens are exposed as utilities in @theme inline", () => {
-    expect(css).toContain("--color-key-idle:");
-    expect(css).toContain("--color-key-absent:");
   });
 });

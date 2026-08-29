@@ -114,6 +114,35 @@ export const chipWarning =
 export const tooltipBubble =
   "pointer-events-none absolute top-full mt-1.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-inverted px-2.5 py-1 text-xs text-inverted-foreground opacity-0 group-hover:opacity-100 transition-opacity z-10";
 
+// ── On-screen keyboard ────────────────────────────────────────────────────────
+
+/** Marks an eliminated ("absent") key as out of play, on every game that draws a
+ * Wordle-style keyboard. Cross-game by construction: Leksiarxeio and Vres Tin
+ * Frasi both use it, which is what earns it a place here.
+ *
+ * A SHAPE, not a colour. Colour alone had to carry "this letter is gone", which
+ * asks the player to tell two greys apart mid-game — and in dark mode the two
+ * greys were the wrong way round, the eliminated key being the brighter one. A
+ * strike survives a glance, a colour-blind player, and a bright screen outdoors,
+ * and it leaves the four feedback colours to mean only what they already mean.
+ *
+ * Drawn as a gradient on `::after` rather than an `<svg>` child: it has to run
+ * corner to corner at whatever width flex hands the key, and a stroke scaled
+ * non-uniformly to a rectangle cannot do that without going lopsided. The
+ * `to top right` corner keyword makes the stripe land on both corners at any
+ * aspect ratio. `currentColor` keeps it on the key's own foreground, so it needs
+ * no token and no `dark:` pair.
+ *
+ * Call sites must give the glyph its own stacking context (`relative z-10`) —
+ * both are positioned with `z-index: auto`, so DOM order would otherwise paint
+ * the strike over the letter instead of under it. */
+export const keyStruck = [
+  "relative",
+  "after:content-[''] after:pointer-events-none after:absolute after:inset-0 after:rounded",
+  "after:[background-image:linear-gradient(to_top_right,transparent_calc(50%_-_1px),currentColor_calc(50%_-_1px),currentColor_calc(50%_+_1px),transparent_calc(50%_+_1px))]",
+  "after:opacity-60",
+].join(" ");
+
 // ── Card shell ────────────────────────────────────────────────────────────────
 // The platform card: rounded panel, hairline border, surface fill. Call sites
 // add their own overflow-hidden / layout / padding.

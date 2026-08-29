@@ -5,6 +5,7 @@
 // Also has a clear-word button instead of the length switcher.
 
 import { DeleteMark, SubmitMark } from "@/components/shared/KeyMarks";
+import { keyStruck } from "@/styles/recipes";
 import type { PhraseLetterStateMap } from "@/games/vrestifrasi/types";
 
 interface KeyboardProps {
@@ -46,6 +47,9 @@ export function Keyboard({
       "active:opacity-70",
       disabled ? "opacity-50 pointer-events-none" : "",
       STATE_CLASSES[state],
+      // "Out of play" is said with a shape, not with a second shade of grey —
+      // the fills stay exactly as they are and the strike carries the meaning.
+      state === "absent" ? keyStruck : "",
     ].join(" ");
   };
 
@@ -88,7 +92,8 @@ export function Keyboard({
               aria-label={`Letter ${letter.toUpperCase()}`}
               data-testid={`key-${letter}`}
             >
-              {letter.toUpperCase()}
+              {/* Own stacking context, so the strike passes UNDER the glyph. */}
+              <span className="relative z-10">{letter.toUpperCase()}</span>
             </button>
           ))}
           {ri === ROWS.length - 1 && (
