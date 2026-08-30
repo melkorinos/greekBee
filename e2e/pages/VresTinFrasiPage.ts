@@ -15,6 +15,15 @@ export class VresTinFrasiPage {
   readonly firstGuessRow;
   readonly resultPanel;
   readonly leaderboardTrigger;
+  readonly keyboard;
+  /**
+   * The one row being typed. PhraseGrid marks it `data-active-row`, which is also
+   * what the board scrolls to — so a spec asserting the row is on screen and the
+   * board deciding where to scroll agree by construction.
+   */
+  readonly activeRow;
+  /** Every tile of the row being typed, in phrase order. Tap targets since word focus. */
+  readonly activeTiles;
 
   constructor(private page: Page) {
     this.heading            = page.getByRole("heading", { name: /Vres Tin Frasi/i, level: 1 });
@@ -22,6 +31,14 @@ export class VresTinFrasiPage {
     this.firstGuessRow      = this.grid.getByRole("row").first();
     this.resultPanel        = page.getByTestId("vrestifrasi-result");
     this.leaderboardTrigger = page.getByRole("button", { name: "Πίνακας σκορ" });
+    this.keyboard           = page.getByLabel("Keyboard");
+    this.activeRow          = this.grid.locator("[data-active-row]");
+    this.activeTiles        = this.activeRow.getByRole("button");
+  }
+
+  /** The letters currently drawn in the row being typed, blanks included. */
+  async activeRowLetters(): Promise<string[]> {
+    return this.activeTiles.allTextContents();
   }
 
   /**

@@ -5,6 +5,42 @@
 
 ---
 
+## Session 182 — 2026-08-29: one CSS keyword had disabled every sticky element on the Platform
+
+Two player-reported faults on Βρες τη Φράση, diagnosed with a browser loop before any theory. Tests
++13 (one new shared guard, one new e2e spec), eslint 0, build 0, e2e 24 passed / 2 skipped.
+
+**`overflow-x: hidden` on `body` had silently killed `position: sticky` everywhere, and had done so
+since long before either sticky element was written.** The player said the keyboard and the phrase
+could not be on screen together; the keyboard was **already** `sticky bottom-0`, so the interesting
+question was why it did nothing. Measured at 390x664: the keys sat at y=898 on a 664px screen, and
+scrolling moved them 1:1 — not sticking at all. The mechanism is that `overflow-x: hidden` with a
+visible y axis computes the y axis to `auto`, making `body` a **scroll container that can never
+scroll** (its height always equals its content); sticky measures against its nearest scrollport,
+found that dead one instead of the viewport, and never engaged. `overflow-x: clip` clips identically
+and creates no scroll container. **The Shell header was inert the same way on every page** — nobody
+had reported it, and no test could see it. One keyword fixed both.
+
+**The second request was for a feature that had never existed, and the git history is what
+established that.** The player remembered clicking a filled word to delete only that word. No such
+code was ever committed (`git log -S` over every plausible action name); the cursor moved only by
+auto-advance or by backspacing into the previous word. `CLEAR_WORD` **was** in the reducer, exposed
+by the hook, and called by nothing — dead since day one. Built it as `FOCUS_WORD` + a tap target on
+the active row only. **A latent bug fell out of the design**: the grid drew a typed letter as `empty`
+whenever its word sat past the cursor — always false while the cursor could only advance, and an
+instant vanishing act once it could go back. Fixed in the same change; guarded in both suites.
+
+**The cursor was drawn twice, because the first version failed on a screenshot and nowhere else.** An
+outer `ring-2 ring-foreground` rendered correctly — the computed box-shadow proved it — and still read
+as one slightly thicker border at 32px, with a 4px inter-tile gap to sit in. Darkening the focused
+word's **own** border to `border-foreground` reads instantly in both themes; that needed the state map
+split into fill and border, since two competing `border-*` utilities in one class string are ordered by
+Tailwind's sort, not by writing order, so the cursor would have won or lost at random.
+
+**Not a defect:** four full-suite runs on the same tree gave 5 / 2 / 1 / 0 failures, each naming a
+different assertion and every one passing in isolation. Reproduced with the session's changes stashed,
+so it is neither new nor in the code — the operator identified it as the machine. Re-run, do not chase.
+
 ## Session 181 — 2026-08-29: the eliminated key stops arguing about grey and gets struck through
 
 Operator-directed polish on both Wordle-shaped keyboards, arrived at through a published picker

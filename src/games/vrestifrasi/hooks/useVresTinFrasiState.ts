@@ -36,6 +36,7 @@ export interface UseVresTinFrasiStateReturn {
   addLetter:    (letter: string) => void;
   deleteLetter: () => void;
   clearWord:    () => void;
+  focusWord:    (wordIndex: number) => void;
   submitGuess:  () => void;
   clearMessage: () => void;
 }
@@ -71,6 +72,7 @@ export function useVresTinFrasiState(
   const addLetter    = useCallback((letter: string) => dispatch({ type: "ADD_LETTER", letter }), [dispatch]);
   const deleteLetter = useCallback(() => dispatch({ type: "DELETE_LETTER" }), [dispatch]);
   const clearWord    = useCallback(() => dispatch({ type: "CLEAR_WORD" }), [dispatch]);
+  const focusWord    = useCallback((wordIndex: number) => dispatch({ type: "FOCUS_WORD", wordIndex }), [dispatch]);
   const submitGuess  = useCallback(() => dispatch({ type: "SUBMIT_GUESS", validWords: validSet }), [dispatch, validSet]);
   const clearMessage = useCallback(() => dispatch({ type: "CLEAR_MESSAGE" }), [dispatch]);
 
@@ -85,6 +87,7 @@ export function useVresTinFrasiState(
     addLetter,
     deleteLetter,
     clearWord,
+    focusWord,
     submitGuess,
     clearMessage,
   };

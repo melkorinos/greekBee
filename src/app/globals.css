@@ -269,10 +269,20 @@ body {
 /* Prevent horizontal scroll on all game pages.
    Without this, wide elements (e.g. the Leksiarxeio keyboard) expand the
    CSS layout-viewport, which shifts fixed-position modals to the right
-   and lets users drag the screen revealing a black strip on the left. */
+   and lets users drag the screen revealing a black strip on the left.
+
+   `clip`, NOT `hidden`, and the difference is not cosmetic: `hidden` makes the
+   element a SCROLL CONTAINER on both axes (a box with `overflow-x: hidden` and
+   `overflow-y: visible` computes the y axis to `auto`). That turned `body` into
+   a scrollport that can never scroll — its height always equals its content —
+   and every `position: sticky` descendant then measured itself against that dead
+   scrollport instead of the viewport, so it never stuck. Both of the Platform's
+   sticky elements were silently inert because of this line: the Shell header
+   (`sticky top-0`) and the Vres Tin Frasi keyboard (`sticky bottom-0`).
+   `clip` clips exactly the same overflow and creates no scroll container. */
 html,
 body {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Leksiarxeio tile flip animation */

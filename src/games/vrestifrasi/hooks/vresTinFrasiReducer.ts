@@ -11,6 +11,7 @@ export type VresTinFrasiAction =
   | { type: "ADD_LETTER";    letter: string }
   | { type: "DELETE_LETTER" }
   | { type: "CLEAR_WORD" }
+  | { type: "FOCUS_WORD";   wordIndex: number }
   | { type: "SUBMIT_GUESS";  validWords: Set<string> }
   | { type: "RESTORE_STATE"; guesses: PhraseGuessResult[]; status: VresTinFrasiState["status"] }
   | { type: "CLEAR_MESSAGE" };
@@ -97,6 +98,29 @@ export function vresTinFrasiReducer(
       const newWords = [...state.currentWords];
       newWords[state.currentWordIndex] = "";
       return { ...state, currentWords: newWords, lastMessage: null };
+    }
+
+    /**
+     * Put the cursor on a word the player pointed at, changing nothing else.
+     *
+     * The whole phrase is typed as one unbroken run of letters (ADD_LETTER
+     * auto-advances), so before this action the ONLY way back to a typo three
+     * words ago was to backspace through everything typed since. This is the one
+     * action that moves the cursor backwards without destroying anything.
+     *
+     * Deliberately NOT clamped to "words you have already reached": the player
+     * may jump to any word of the phrase, including an empty one further on.
+     * Typing and deleting behave there exactly as they do when the word is
+     * reached in order, so a focus jump adds no second input mode.
+     */
+    case "FOCUS_WORD": {
+      if (state.status !== "playing") return state;
+      const { wordIndex } = action;
+      if (wordIndex < 0 || wordIndex >= state.puzzle.wordLengths.length) return state;
+      // Identity on a re-tap of the focused word — a tap that changes nothing
+      // must not re-render the grid.
+      if (wordIndex === state.currentWordIndex) return state;
+      return { ...state, currentWordIndex: wordIndex, lastMessage: null };
     }
 
     case "SUBMIT_GUESS": {

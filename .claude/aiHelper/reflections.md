@@ -114,7 +114,4 @@ can be **regenerated empty** — before "just add a list", ask whether a re-sync
   the decided risk, noted in CONTEXT/ADR at the wip→live flip. **Πόσο κάνει; needs real content and
   nothing tracks it** — ticket first, flip `wip:false` only after.
 - **Two accepted UX gaps, unfiled:** Leksindeseis never shows *which* group is one away; `/leksokipos/[center]/[outer]` warns below 5 valid words but has no 404 floor.
-- **The report names a symptom, not the seam (s169, s179).** ADR 0025's auto-opening leaderboard lived
-  in two seams and the ticket named one, so fixing it left half the Platform doing it. s179's "sharing
-  doesn't work on desktop" was a *label* bug in code that worked. **Grep for the behaviour, not the
-  files the scope names — and reproduce the complaint before believing its diagnosis.**
+- **The report names a symptom, not the seam (s169, s179, s182).** ADR 0025's auto-opening leaderboard lived in two seams and the ticket named one, so fixing it left half the Platform doing it. s179's "sharing doesn't work on desktop" was a *label* bug in code that worked. s182 twice over: "the keyboard won't stay in view" was already `sticky bottom-0`, disabled from **another file** by an `overflow-x: hidden` written years earlier for an unrelated reason; and "I used to be able to click a word" named a feature `git log -S` proves was **never built**. **Grep for the behaviour, not the files the scope names; reproduce before believing the diagnosis; check the history before believing a regression.** And **jsdom cannot see layout** — a fix about what is *on screen* is unguarded until a browser spec asserts it against a real viewport.

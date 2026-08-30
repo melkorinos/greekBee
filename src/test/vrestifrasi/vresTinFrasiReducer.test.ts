@@ -85,6 +85,63 @@ describe("vresTinFrasiReducer — CLEAR_WORD", () => {
   });
 });
 
+describe("vresTinFrasiReducer — FOCUS_WORD", () => {
+  // The player types the whole phrase as one run of letters, so a typo three
+  // words back used to cost every letter typed since — backspace is the only way
+  // to reach it. FOCUS_WORD is what lets a tap put the cursor on the bad word and
+  // edit it in place, and it is the ONLY action that moves the cursor backwards
+  // without destroying anything on the way.
+  function typed(words: string[], cursor: number) {
+    return { ...initState(), currentWords: words, currentWordIndex: cursor };
+  }
+
+  it("moves the cursor to the clicked word and leaves every word intact", () => {
+    const s = vresTinFrasiReducer(typed(["καλη", "μερα", "φι"], 2), {
+      type: "FOCUS_WORD",
+      wordIndex: 0,
+    });
+    expect(s.currentWordIndex).toBe(0);
+    expect(s.currentWords).toEqual(["καλη", "μερα", "φι"]);
+  });
+
+  it("deleting after a focus jump eats the focused word, not the last one typed", () => {
+    let s = vresTinFrasiReducer(typed(["καλη", "μερα", "φι"], 2), {
+      type: "FOCUS_WORD",
+      wordIndex: 0,
+    });
+    s = vresTinFrasiReducer(s, { type: "DELETE_LETTER" });
+    expect(s.currentWords).toEqual(["καλ", "μερα", "φι"]);
+  });
+
+  it("typing after a focus jump refills the focused word", () => {
+    let s = vresTinFrasiReducer(typed(["καλ", "μερα", ""], 0), {
+      type: "FOCUS_WORD",
+      wordIndex: 0,
+    });
+    s = vresTinFrasiReducer(s, { type: "ADD_LETTER", letter: "η" });
+    expect(s.currentWords[0]).toBe("καλη");
+    // The word is full, so the cursor auto-advances exactly as it does when the
+    // word is reached in order — a focus jump does not create a second mode.
+    expect(s.currentWordIndex).toBe(1);
+  });
+
+  it("ignores an index outside the phrase", () => {
+    const before = typed(["καλη", "", ""], 1);
+    expect(vresTinFrasiReducer(before, { type: "FOCUS_WORD", wordIndex: 3 })).toBe(before);
+    expect(vresTinFrasiReducer(before, { type: "FOCUS_WORD", wordIndex: -1 })).toBe(before);
+  });
+
+  it("is identity when the word is already focused, so a stray tap re-renders nothing", () => {
+    const before = typed(["καλη", "", ""], 1);
+    expect(vresTinFrasiReducer(before, { type: "FOCUS_WORD", wordIndex: 1 })).toBe(before);
+  });
+
+  it("ignores a focus jump once the round is over", () => {
+    const over = { ...initState(), status: "won" as const, currentWordIndex: 2 };
+    expect(vresTinFrasiReducer(over, { type: "FOCUS_WORD", wordIndex: 0 })).toBe(over);
+  });
+});
+
 describe("vresTinFrasiReducer — SUBMIT_GUESS", () => {
   it("rejects when not all words are filled", () => {
     const s = vresTinFrasiReducer(initState(), { type: "SUBMIT_GUESS", validWords: VALID_WORDS });
