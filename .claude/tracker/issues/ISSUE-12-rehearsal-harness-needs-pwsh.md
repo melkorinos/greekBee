@@ -23,8 +23,23 @@ It does not run here. Measured 2026-08-30 while preparing
   interpolated string, which 5.1's parser rejects (`Unexpected token 'line'`), and the
   cascade takes out the `try` at line 151 and the `if` at line 303 with it. So the failure
   reads as a broken script rather than a missing interpreter.
-- Two of the script's own dependencies are also absent from PATH: **`psql`** and **`7z`**.
-  Even with a working interpreter it would fail at the extraction step.
+- **`pwsh` is missing from the operator's own shell too**, not just the agent's — confirmed
+  by the operator running `npm run db:rehearse` directly on 2026-08-30. So this is not an
+  agent-environment quirk; the harness has no working interpreter on this machine at all,
+  and `db:backup` / `db:backup:schedule-weekly` invoke `pwsh` the same way.
+- Re-probed the rest of the chain the same day, and **more of it is missing than the
+  interpreter**. `Find-PgBin` / `Find-SevenZip` do not need PATH, so probe where they look:
+  **7-Zip is present** (`C:\Program Files\7-Zip\7z.exe`), but **no PostgreSQL install
+  exists** (`C:\Program Files\PostgreSQL` absent, `pg_dump` not on PATH), **`db-backups/`
+  does not exist**, and `.env.local` holds neither **`BACKUP_ARCHIVE_PASSWORD`** nor
+  **`LOCAL_PGPASSWORD`** — it has only the five app/Supabase keys.
+
+  Every one of those is a prerequisite the script's own header names. Taken together they
+  say the rehearsal has **never run on this machine**, and that `npm run db:backup` has
+  never written an archive here either. That last point is worth reconciling against
+  `ISSUE-01`'s note that "one archive is uploaded" and against the `memory.md` Backup-order
+  row, both of which read as though the local half of that chain is working. This file does
+  not resolve the contradiction — it records that the folder is absent here.
 
 The consequence is not "an agent is inconvenienced". It is that the rehearsal gate is
 **unenforceable in this environment**, and a session that follows CLAUDE.md to the letter
@@ -41,8 +56,10 @@ shell, where the harness presumably works.
 
 Three options, cheapest first — none investigated, all guesses:
 
-1. **Install PowerShell 7** on this machine and change nothing else. Likeliest correct
-   answer if the operator's own shell is already pwsh.
+1. **Install PowerShell 7 and the PostgreSQL client tools**, then set the two missing
+   `.env.local` keys and run `npm run db:backup` once to create the first archive. This is
+   the whole chain, not one dependency — an interpreter alone still leaves the script
+   throwing at `Find-PgBin`.
 2. **Make `db:rehearse` fail loudly and early** on a missing `pwsh`/`psql`/`7z` with a
    one-line message naming what is absent, instead of a parser cascade. Worth doing
    regardless of (1) — a gate that cannot run must say so in one line.
