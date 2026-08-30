@@ -94,12 +94,26 @@ const GAME_LEADERBOARD_CONFIG: Record<LeaderboardGameId, LeaderboardViewConfig> 
     buildUrl: buildLeaderboardUrl("leksokipos"),
     ...playLinkSlots("/leksokipos"),
   },
+  leksiarxeio: {
+    buildUrl:   buildLeaderboardUrl("leksiarxeio"),
+    subtitle:   "Άθροισμα σκορ (4–8 γράμματα) · υψηλότερο = καλύτερο",
+    scoreLabel: "Σκορ",
+    ...playLinkSlots("/leksiarxeio"),
+  },
   leksindeseis: {
     buildUrl:    buildLeaderboardUrl("leksindeseis"),
     title:       "🏆 Κατάταξη",
     subtitle:    ({ score }) => ((score ?? 0) > 0 ? `Σκορ σου: ${score}/4` : undefined),
     scoreLabel:  "Σκορ",
     formatScore: (n: number) => `${n}/4`,
+  },
+  vrestifrasi: {
+    // Points, higher-is-better (fewer guesses → more points), sorted desc like
+    // every other board (ADR 0014). No sort override.
+    buildUrl:   buildLeaderboardUrl("vrestifrasi"),
+    subtitle:   "Πόντοι (λιγότερες προσπάθειες = περισσότεροι) · υψηλότερο = καλύτερο",
+    scoreLabel: "Σκορ",
+    ...playLinkSlots("/vres-tin-frasi"),
   },
   leksodromia: {
     buildUrl:   buildLeaderboardUrl("leksodromia"),

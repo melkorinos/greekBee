@@ -63,22 +63,20 @@ describe("Leksiarxeio buildShareText", () => {
     expect(buildShareText(ALL_WON, DATE)).not.toMatch(/\d\/6/);
   });
 
-  // ADR 0027: the Game's scoring is gone, so the summary carries no `Σκορ` line
-  // — omitted, never `Σκορ: 0`, which would read as a bad day.
-  it("carries no score line", () => {
-    expect(buildShareText(ALL_WON, DATE)).not.toContain("Σκορ");
+  it("scores the day as the sum of its five Lengths", () => {
+    // 6 + 5 + 4 + 3 + 2 — the same per-length points the leaderboard already sums.
+    expect(buildShareText(ALL_WON, DATE)).toContain("Σκορ: 20");
   });
 
-  it("shares a mostly-lost day all the same", () => {
+  it("scores a lost Length as zero and still shares", () => {
     const text = buildShareText([won(4, "καλο", 1), lost(5), lost(6), lost(7), lost(8)], DATE);
-    expect(text).toContain("🟩");
+    expect(text).toContain("Σκορ: 6");
     expect(text).toContain("⬛");
   });
 
   it("carries the identity line and the bare link", () => {
     const lines = buildShareText(ALL_WON, DATE).split("\n");
-    expect(lines).toHaveLength(3);
     expect(lines[0]).toBe("Leksiarxeio 17/08");
-    expect(lines[2]).toMatch(/\/leksiarxeio$/);
+    expect(lines[3]).toMatch(/\/leksiarxeio$/);
   });
 });

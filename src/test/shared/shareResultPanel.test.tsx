@@ -154,26 +154,4 @@ describe("ShareResultPanel", () => {
     renderPanel();
     expect(screen.queryByText("Δες τον πίνακα σκορ")).not.toBeInTheDocument();
   });
-
-  // ADR 0027 made `score` optional for the two Games that lost their scoring
-  // outright. Both halves matter: the heading must vanish rather than render as
-  // zero, and the six Games that still pass a score must look exactly as before.
-  it("renders the score heading when a score is passed", () => {
-    renderPanel();
-    expect(screen.getByRole("heading")).toHaveTextContent("17 πόντοι");
-  });
-
-  it("renders no score element at all when score is undefined", () => {
-    render(
-      <ShareResultPanel testId="panel-under-test" shareText={SHARE_TEXT}>
-        <p>reveal</p>
-      </ShareResultPanel>,
-    );
-
-    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
-    expect(screen.getByTestId("panel-under-test")).not.toHaveTextContent(/πόντοι/);
-    // The rest of the panel is untouched: the reveal and the share button stay.
-    expect(screen.getByText("reveal")).toBeInTheDocument();
-    expect(screen.getByTestId("btn-share-result")).toBeInTheDocument();
-  });
 });

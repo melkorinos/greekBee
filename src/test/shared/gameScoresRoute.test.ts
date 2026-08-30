@@ -179,34 +179,68 @@ describe("GET /api/game-scores — validation", () => {
   });
 });
 
-// ── POST — the Leksiarxeio branch is gone (ADR 0027) ──────────────────────────
-//
-// The route had a second code path: Leksiarxeio posted `word_length` + `points`
-// per Length and the route read the day's row, folded the length into its `data`
-// blob and wrote it back. Λεξιαρχείο lost its scoring, so the branch, the fold
-// and the only writer of `data` went with it. The guard is that the old payload
-// shape no longer has anywhere to land: it carries no `score`, so it is rejected
-// like any other malformed body rather than quietly taking a special path.
+// ── POST — Leksiarxeio branch ─────────────────────────────────────────────────
 
-describe("POST /api/game-scores — no per-game branch", () => {
-  it("rejects the retired Leksiarxeio payload shape (word_length + points, no score)", async () => {
+describe("POST /api/game-scores — Leksiarxeio read-modify-write", () => {
+  it("returns 400 for invalid word_length", async () => {
+    const res = await POST(makePostReq({
+      game_id: "leksiarxeio", puzzle_date: "2026-05-22", device_id: "d1", word_length: 3, points: 4,
+    }));
+    expect(res.status).toBe(400);
+    const json = await res.json() as { error: string };
+    expect(json.error).toMatch(/word_length/i);
+  });
+
+  it("returns 400 when points is out of range", async () => {
+    const res = await POST(makePostReq({
+      game_id: "leksiarxeio", puzzle_date: "2026-05-22", device_id: "d1", word_length: 5, points: 7,
+    }));
+    expect(res.status).toBe(400);
+    const json = await res.json() as { error: string };
+    expect(json.error).toMatch(/points/i);
+  });
+
+  it("creates a new row when no prior row exists", async () => {
+    // SELECT → no existing row; upsert → ok
+    enqueue({ data: null, error: { message: "no rows" } }, { error: null });
     const res = await POST(makePostReq({
       game_id: "leksiarxeio", puzzle_date: "2026-05-22",
       device_id: "d1", display_name: "Νίκος", word_length: 5, points: 4,
     }));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(200);
+    const json = await res.json() as { ok: boolean };
+    expect(json.ok).toBe(true);
   });
 
-  it("takes the one code path for a leksiarxeio row that does carry a score", async () => {
-    enqueue({ error: null });
+  it("merges a new length into an existing row", async () => {
+    // SELECT returns existing data with length 4 already recorded
+    enqueue(
+      { data: { data: { "4": 5 } }, error: null }, // existing row
+      { error: null },                               // upsert
+    );
     const res = await POST(makePostReq({
       game_id: "leksiarxeio", puzzle_date: "2026-05-22",
-      device_id: "d1", display_name: "Νίκος", score: 12,
+      device_id: "d1", display_name: "Νίκος", word_length: 5, points: 3,
     }));
     expect(res.status).toBe(200);
-    const upsert = calls.find((c) => c.op === "upsert");
-    // No read-modify-write: one upsert, and nothing folded into `data`.
-    expect(upsert!.args[0]).not.toHaveProperty("data");
+  });
+
+  it("returns 500 when upsert fails", async () => {
+    enqueue({ data: null, error: null }, { error: { message: "write failed" } });
+    const res = await POST(makePostReq({
+      game_id: "leksiarxeio", puzzle_date: "2026-05-22",
+      device_id: "d1", word_length: 6, points: 2,
+    }));
+    expect(res.status).toBe(500);
+  });
+
+  it("does not strip locale suffix from Leksiarxeio puzzle_date (plain YYYY-MM-DD)", async () => {
+    enqueue({ data: null, error: null }, { error: null });
+    const res = await POST(makePostReq({
+      game_id: "leksiarxeio", puzzle_date: "2026-05-22",
+      device_id: "d1", word_length: 4, points: 6,
+    }));
+    expect(res.status).toBe(200);
   });
 });
 

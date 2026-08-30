@@ -19,6 +19,10 @@ vi.mock("@/hooks/usePlayerIdentity", () => ({
   }),
 }));
 
+vi.mock("@/hooks/useLeksiarxeioScoreSubmission", () => ({
+  useLeksiarxeioScoreSubmission: () => ({ submitLength: vi.fn() }),
+}));
+
 const TODAY   = "2026-08-05";
 const ARCHIVE = "2026-08-01";
 

@@ -100,7 +100,10 @@ const SPENT: Record<string, string> = {
   // ADR 0027 §5 called for instead of its own release-day step. ADR 0013's amendment
   // now records the column as dropped, which is where a cold reader is already sent.
   "ISSUE-05": "dead is_perfect column — dropped 2026-08-21 in TICKET-24's migration",
-  "TICKET-22": "scoring + leaderboard off two Games — shipped 2026-08-20",
+  // Reversed by ADR 0028 on 2026-08-30 — `git revert` of the ticket's own commit gave
+  // both Games their leaderboards back. The id stays spent either way: a retired number
+  // is never reused, whatever became of the work.
+  "TICKET-22": "scoring + leaderboard off two Games — shipped 2026-08-20, reversed 2026-08-30",
   // ADR 0027 §4. Both queues were 0 rows, so removing the community read changed no
   // served puzzle; the tables outlived it by a day and then went with TICKET-24.
   "TICKET-23": "community submission off two Games — shipped 2026-08-20",

@@ -185,3 +185,14 @@ Two rulings, both narrower than they look:
 - **The other six Games are unchanged.** The prop is optional, not removed; every Game that passes a
   score renders exactly what it rendered before, which is pinned by a guard in
   `shareResultPanel.test.tsx` asserting both halves.
+
+## Amendment (2026-08-30, ADR 0028)
+
+**`score` is required again**, on `ShareResultPanel` and on `composeShareText` alike, and the share
+text is four lines on every Game. [ADR 0028](0028-two-games-get-their-leaderboards-back.md) gave
+Λεξιαρχείο and Βρες τη Φράση their scoring back, which left the optional-`score` path with no
+callers; it is deleted rather than kept for a third Game that does not exist.
+
+The 2026-08-20 amendment below the previous heading is history, not contract. What survives it is
+the reasoning, should this ever come up again: a missing score omits the heading rather than
+printing `0 πόντοι`, and the Game's reveal line is what takes its place.

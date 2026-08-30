@@ -73,6 +73,7 @@ export type Database = {
       }
       game_scores: {
         Row: {
+          data: Json
           device_id: string
           display_name: string
           game_id: string
@@ -81,6 +82,7 @@ export type Database = {
           score: number
         }
         Insert: {
+          data?: Json
           device_id: string
           display_name?: string
           game_id: string
@@ -89,6 +91,7 @@ export type Database = {
           score: number
         }
         Update: {
+          data?: Json
           device_id?: string
           display_name?: string
           game_id?: string

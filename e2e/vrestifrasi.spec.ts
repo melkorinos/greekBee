@@ -7,11 +7,13 @@ import { expect, test } from "./fixtures";
 // keypress reaches the reducer — a hydration error or a keyboard wired to nothing
 // would ship green without it.
 //
-// Playing the round to its end is possible only since ADR 0027: the Game's
-// `scores` capability is revoked, so finishing writes no row to the shared
-// production `game_scores` (verified with a live count either side of this spec's
-// first run). The general rule in memory — "never finish a round in a test" —
-// still holds for every Game that DOES score.
+// Playing the round to its end used to be free: ADR 0027 had revoked the Game's
+// `scores` capability, so finishing wrote no row. **ADR 0028 gave it back on
+// 2026-08-30**, which puts this spec squarely under the general rule — never
+// finish a round in a test against the shared production `game_scores`. So the
+// POST is stubbed, and the stub is asserted to have fired: an interception that
+// silently stops matching would write to production on every run while still
+// passing green (the trap `e2e/leksodromia.spec.ts` documents).
 //
 // ── The pinned fixture ───────────────────────────────────────────────────────
 // 2026-05-22 → «Εδώ και τώρα» → normalised εδω / και / τωρα (lengths 3, 3, 4).
@@ -30,8 +32,20 @@ const PROBE_GUESS = "ενα ωρα καλη";
 
 test.describe("Vres Tin Frasi flow", () => {
   test("page mounts → guess is scored → round end shows the Result Panel", async ({
+    page,
     vrestifrasi,
   }) => {
+    let scorePosts = 0;
+    await page.route("**/api/game-scores", async (route) => {
+      if (route.request().method() !== "POST") return route.continue();
+      scorePosts += 1;
+      await route.fulfill({
+        status:      200,
+        contentType: "application/json",
+        body:        JSON.stringify({ ok: true }),
+      });
+    });
+
     await vrestifrasi.goto(PUZZLE_DATE);
     await expect(vrestifrasi.heading).toBeVisible();
     await expect(vrestifrasi.grid).toBeVisible();
@@ -54,40 +68,50 @@ test.describe("Vres Tin Frasi flow", () => {
     await vrestifrasi.submitGuess();
 
     await expect(vrestifrasi.resultPanel).toBeVisible();
-    // The verdict is the panel's leading line for this Game, since there is no
-    // score heading above it (ADR 0027). The phrase itself is not printed here
-    // any more (2026-08-21) — on a win the solved grid already spells it out.
+    await expect(vrestifrasi.resultPanel).toContainText("πόντοι");
+    // The verdict line sits under the score heading. The phrase itself is not
+    // printed here (2026-08-21) — on a win the solved grid already spells it out.
     await expect(vrestifrasi.resultPanel).toContainText("Βρήκες τη φράση");
     await expect(vrestifrasi.resultPanel.getByTestId("btn-share-result")).toBeVisible();
+
+    // The stub, not the network, took the round's score.
+    expect(scorePosts, "the score POST must have been intercepted, not sent").toBeGreaterThan(0);
   });
 
-  // ── ADR 0027 regression guard, browser level ───────────────────────────────
-  // A re-added button is visible here and invisible to jsdom, which is the whole
-  // reason these two live in a browser spec.
-  test("no leaderboard control and no score heading anywhere in the round", async ({
+  // ── ADR 0028 guard, browser level ──────────────────────────────────────────
+  // A missing button is invisible to jsdom exactly as a re-added one was, which is
+  // the whole reason this lives in a browser spec.
+  test("the leaderboard is reachable from the header and from the Result Panel", async ({
+    page,
     vrestifrasi,
   }) => {
+    await page.route("**/api/game-scores", async (route) => {
+      if (route.request().method() !== "POST") return route.continue();
+      await route.fulfill({
+        status:      200,
+        contentType: "application/json",
+        body:        JSON.stringify({ ok: true }),
+      });
+    });
+
     await vrestifrasi.goto(PUZZLE_DATE);
 
     await expect(
       vrestifrasi.leaderboardTrigger,
-      "the 🏆 header trigger is revoked with the leaderboard capability",
-    ).toHaveCount(0);
+      "the 🏆 header trigger comes back with the leaderboard capability",
+    ).toHaveCount(1);
 
     await vrestifrasi.typePhrase(ANSWER);
     await vrestifrasi.submitGuess();
     await expect(vrestifrasi.resultPanel).toBeVisible();
 
-    await expect(
-      vrestifrasi.resultPanel,
-      "a scoreless Game must render no «πόντοι» heading — an empty 0 would be a lie",
-    ).not.toContainText("πόντοι");
+    await expect(vrestifrasi.resultPanel).toContainText("πόντοι");
     await expect(
       vrestifrasi.resultPanel.getByText("Δες τον πίνακα σκορ"),
-    ).toHaveCount(0);
+    ).toHaveCount(1);
   });
 
-  test("the picker card offers neither community submission nor a leaderboard", async ({
+  test("the picker card offers the leaderboard but not community submission", async ({
     page,
   }) => {
     await page.goto("/");
@@ -95,13 +119,14 @@ test.describe("Vres Tin Frasi flow", () => {
     const card = page.locator('li:has(a[href="/vres-tin-frasi"])');
     await expect(card).toHaveCount(1);
 
+    // Community submission stayed removed when ADR 0028 restored the leaderboard —
+    // the two halves of ADR 0027 were reversed separately, and only one of them was.
     await expect(card.getByRole("button", { name: "Υποβολή Παζλ" })).toHaveCount(0);
-    await expect(card.getByRole("button", { name: "Πίνακας Σκορ" })).toHaveCount(0);
-
-    // Positive control: a Game that still scores is untouched by ADR 0027, so the
-    // assertions above are proving a removal rather than a broken locator.
-    await expect(
-      page.locator('li:has(a[href="/leksodromia"])').getByRole("button", { name: "Πίνακας Σκορ" }),
-    ).toHaveCount(1);
+    await expect(card.getByRole("button", { name: "Πίνακας Σκορ" })).toHaveCount(1);
+    // That last assertion is also the positive control for the one above it: the
+    // same `card` locator finds a button, so the missing submit button is a removal
+    // and not a locator that quietly stopped matching. No second card is needed —
+    // Λεξινδέσεις is the only other Game with a submit button and it is `hidden`,
+    // so it never reaches the picker.
   });
 });

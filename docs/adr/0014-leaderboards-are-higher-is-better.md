@@ -28,3 +28,10 @@ Nothing about the rule changes: every Game that writes `game_scores` still store
 score, the leaderboard still sorts descending, and the `sort=asc` escape hatch still has no live
 caller. What is gone is the only Game that ever needed converting — read this ADR as the reason the
 rule exists, not as a description of Βρες τη Φράση.
+
+## Amendment (2026-08-30, ADR 0028)
+
+**The worked example is back.** [ADR 0028](0028-two-games-get-their-leaderboards-back.md) restored
+both capabilities to Βρες τη Φράση and Λεξιαρχείο, so `scoreVresTinFrasi` and the board this ADR
+converted exist again, unchanged — attempts inverted to points, `6 − attempts + 1`, floored at 1.
+Read the 2026-08-20 amendment above as history: it was true for ten days.

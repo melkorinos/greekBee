@@ -7,10 +7,22 @@
 // declined, so this test is the trigger, not a convenience.
 
 import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LeksiarxeioBoard } from "@/components/leksiarxeio/LeksiarxeioBoard";
 import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
+
+vi.mock("@/hooks/usePlayerIdentity", () => ({
+  usePlayerIdentity: () => ({
+    deviceId:         "dev-1",
+    displayName:      "Tester",
+    leaderboardProps: { deviceId: "dev-1", displayName: "Tester" },
+  }),
+}));
+
+vi.mock("@/hooks/useLeksiarxeioScoreSubmission", () => ({
+  useLeksiarxeioScoreSubmission: () => ({ submitLength: vi.fn() }),
+}));
 
 const TODAY = "2026-08-17";
 const LENGTHS: LeksiarxeioLength[] = [4, 5, 6, 7, 8];
@@ -58,6 +70,9 @@ function renderBoard() {
       puzzles={PUZZLES}
       wordLists={WORD_LISTS}
       today={TODAY}
+      isLeaderboardOpen={false}
+      onOpenLeaderboard={() => {}}
+      onCloseLeaderboard={() => {}}
     />,
   );
 }
@@ -116,14 +131,13 @@ describe("Leksiarxeio Round End", () => {
     expect(screen.getByTestId("leksiarxeio-result")).toHaveTextContent("Βρήκες 0 λέξεις");
   });
 
-  // ADR 0027: the Game has no scoring and no leaderboard, so the panel carries
-  // neither the πόντοι heading nor the link to a board.
-  it("shows no score heading and no leaderboard link", () => {
+  // The scoring and the board came back on 2026-08-30 (ADR 0028), so the panel
+  // carries both again — the πόντοι heading and the link to the board.
+  it("shows the score heading and the leaderboard link", () => {
     for (const length of LENGTHS) seedSession(length, "won");
     renderBoard();
 
-    const panel = screen.getByTestId("leksiarxeio-result");
-    expect(panel).not.toHaveTextContent(/πόντοι/i);
-    expect(screen.queryByRole("button", { name: /πίνακα σκορ/i })).not.toBeInTheDocument();
+    expect(screen.getByTestId("leksiarxeio-result")).toHaveTextContent(/πόντοι/i);
+    expect(screen.getByRole("button", { name: /πίνακα σκορ/i })).toBeInTheDocument();
   });
 });

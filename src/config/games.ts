@@ -78,10 +78,11 @@ export const GAME_REGISTRY = {
     href:         "/leksiarxeio",
     wip:          false,
     hidden:       false,
-    // Stripped of both capabilities before launch (ADR 0027): the leaderboard was
-    // removed, and a Score that nothing ranks is a write worth nothing. Scoring is
-    // gone whole — there is no πόντοι number left in the Game to post.
-    capabilities: [],
+    // Both capabilities restored on 2026-08-30 by operator decision (ADR 0028),
+    // reversing the pre-launch removal ADR 0027 made. The 41 beta rows this Game
+    // already holds in game_scores were never deleted, so the board repopulates
+    // with real history the moment the writes resume.
+    capabilities: ["scores", "leaderboard"],
   },
   // Fully built and community-backed, but DELIBERATELY still wip:true — confirmed
   // by the operator on 2026-08-06, when a docs audit found every doc calling it
@@ -111,9 +112,9 @@ export const GAME_REGISTRY = {
     href:         "/vres-tin-frasi",
     wip:          false,
     hidden:       false,
-    // Same pass as leksiarxeio (ADR 0027): leaderboard and Score both removed. The
-    // Game stays live and listed — revoking capabilities is not hiding it.
-    capabilities: [],
+    // Same pass as leksiarxeio, and restored in the same one (ADR 0028): the
+    // leaderboard and the Score are both back. Its 10 beta rows survived too.
+    capabilities: ["scores", "leaderboard"],
   },
   leksodromia: {
     label:       "🏁 Leksodromia",

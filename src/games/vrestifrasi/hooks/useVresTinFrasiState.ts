@@ -12,6 +12,7 @@ import {
 import { useCallback, useMemo } from "react";
 
 import { buildPhraseLetterStateMap } from "../lib/letterState";
+import { scoreVresTinFrasi } from "../lib/scoring";
 import { useGuessRound, type GuessRoundSnapshot } from "@/hooks/useGuessRound";
 import { VRESTIFRASI } from "@/config/gameRules";
 
@@ -32,6 +33,7 @@ export interface UseVresTinFrasiStateReturn {
   lastMessage:      string | null;
   letterStates:     ReturnType<typeof buildPhraseLetterStateMap>;
   maxGuesses:       number;
+  score:            number;
 
   addLetter:    (letter: string) => void;
   deleteLetter: () => void;
@@ -41,16 +43,14 @@ export interface UseVresTinFrasiStateReturn {
   clearMessage: () => void;
 }
 
-// No `onGameEnd`: nothing happens at Round End beyond the Result Panel appearing.
-// The Score submission this once fed is gone (ADR 0027), and unlike Λεξιαρχείο
-// there is no second round to auto-advance to.
 export function useVresTinFrasiState(
   puzzle: VresTinFrasiPuzzle,
   validWords: string[],
+  onGameEnd?: (attempts: number, won: boolean) => void,
 ): UseVresTinFrasiStateReturn {
   const validSet = useMemo(() => new Set(validWords), [validWords]);
 
-  const { state, dispatch } = useGuessRound<
+  const { state, dispatch, score } = useGuessRound<
     VresTinFrasiState,
     VresTinFrasiAction,
     PhraseGuessResult,
@@ -62,6 +62,8 @@ export function useVresTinFrasiState(
     reducer:           vresTinFrasiReducer,
     makeInitialState:  makeInitialVresTinFrasiState,
     makeRestoreAction: restoreVresTinFrasi,
+    scoreFn:           scoreVresTinFrasi,
+    onGameEnd,
   });
 
   const letterStates = useMemo(
@@ -84,6 +86,7 @@ export function useVresTinFrasiState(
     lastMessage:      state.lastMessage,
     letterStates,
     maxGuesses:       VRESTIFRASI.MAX_GUESSES,
+    score,
     addLetter,
     deleteLetter,
     clearWord,
