@@ -349,3 +349,67 @@ describe("LeaderboardModal — display name editor (unlinked)", () => {
     expect(screen.getByRole("button", { name: "Αποθήκευση" })).toBeEnabled();
   });
 });
+
+// ── The empty-day message survives a day switch ──────────────────────────────
+//
+// Reported 2026-08-30: the «Κανείς δεν έχει παίξει…» line is there on open, and
+// looks like it goes missing after picking a different unplayed day. The file's
+// top-level mock cannot see that — it returns the same empty payload whatever
+// date it is handed, so every day looks empty and a switch proves nothing.
+//
+// This block replaces the mock with a date-AWARE one, so today has rows and the
+// past day has none, and drives the actual pill click.
+
+describe("LeaderboardModal — the empty-day message across a day switch", () => {
+  const PLAYED_ROW = {
+    rank: 1, display_name: "Παίκτης", score: 42, isPlayer: false, badge: null,
+  };
+  const EMPTY_MESSAGE = /Κανείς δεν έχει παίξει/;
+
+  function mockByDate() {
+    vi.doMock("@/hooks/useLeaderboard", () => ({
+      useLeaderboard: (puzzleId: string) => ({
+        data: puzzleId === TODAY
+          ? { top20: [PLAYED_ROW], playerRow: null }
+          : { top20: [], playerRow: null },
+        isLoading: false,
+        error:     null,
+        refresh:   vi.fn(),
+      }),
+    }));
+  }
+
+  it("shows the message after switching from a played day to an unplayed one", async () => {
+    vi.resetModules();
+    mockByDate();
+    const { GameLeaderboardModal: Fresh } = await import("@/components/shared/GameLeaderboardModal");
+
+    render(
+      <Fresh
+        gameId="leksokipos"
+        isOpen
+        today={TODAY}
+        defaultDate={TODAY}
+        dates={RECENT_DATES}
+        deviceId="test-device-id"
+        displayName=""
+        profileLinked={false}
+        onSaveName={vi.fn()}
+        onProfileCreate={vi.fn().mockResolvedValue(undefined)}
+        onTransferGenerate={vi.fn().mockResolvedValue("ABCDEF")}
+        onTransferClaim={vi.fn().mockResolvedValue(undefined)}
+        onDisconnect={vi.fn()}
+        onSignIn={vi.fn().mockResolvedValue(undefined)}
+        onClose={vi.fn()}
+      />,
+    );
+
+    // Today has a row, so the message must NOT be there — the positive control
+    // that makes its later presence mean something.
+    expect(screen.queryByText(EMPTY_MESSAGE)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText(RECENT_DATES[1]));
+
+    expect(screen.getByText(EMPTY_MESSAGE)).toBeInTheDocument();
+  });
+});
