@@ -60,6 +60,25 @@ export const LEKSOKIPOS = {
 export const LEKSIARXEIO = {
   MAX_GUESSES: 6,
   LENGTHS:     [4, 5, 6, 7, 8] as const,
+  // ── Curated rotation ────────────────────────────────────────────────────────
+  // The answer pools are FREQUENCY-ordered and `dateToIndex` walks them one step
+  // per day, so answer quality degrades monotonically with time. By day 627 the
+  // 4-letter game was serving loanwords (ΓΙΟΚ, ΝΑΙΤ), archaic inflections (ΓΙΟΝ)
+  // and worse. From this date forward the covered lengths sample their pool by
+  // hash instead, skipping answers-excluded.json.
+  //
+  // Enforced from this date forward ONLY, for the same reason as
+  // LEKSOKIPOS.SCORE_FLOOR_FROM above: earlier puzzles shipped and were played,
+  // and re-dating them would change which word every past date served. History
+  // is frozen on purpose — the excluded words stay IN the pool so the pre-cutover
+  // walk still resolves exactly as it always did.
+  CURATED_ROTATION_FROM: "2026-09-21",
+  // Which lengths have had their pool audited and so may use the new rotation.
+  // Deliberately 4 only (decided 2026-09-21): lengths 5–8 are still in the clean
+  // HEAD of their frequency lists, so scattering them now would pull their
+  // unaudited tails forward to tomorrow rather than years out. Widen this only
+  // together with an answers-excluded.json entry for that length.
+  CURATED_ROTATION_LENGTHS: [4] as const,
 } as const;
 
 export const VRESTIFRASI = {

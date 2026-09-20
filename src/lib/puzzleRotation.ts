@@ -49,3 +49,26 @@ export function pickByDateOrRotate<T extends DatedPuzzleRow>(
   const sorted = [...pool].sort((a, b) => a.date.localeCompare(b.date));
   return sorted[dateToIndex(dateISO, sorted.length)];
 }
+
+/**
+ * Maps a date string to a scattered index into a puzzle list.
+ *
+ * `dateToIndex` walks the list one step per day, which is only as good as the
+ * list's ORDER. Leksiarxeio's answer pools are frequency-ordered, so a linear
+ * walk serves progressively rarer words: by day 627 the 4-letter game had
+ * marched into a tail of loanwords and archaic inflections. This samples the
+ * whole list from day one instead.
+ *
+ * FNV-1a over `date:salt` — deterministic, dependency-free, and stable across
+ * deploys, which is the whole requirement (every player must see the same word
+ * on the same day). Repeats before the list is exhausted are possible and
+ * accepted (decided 2026-09-21).
+ */
+export function dateToHashIndex(dateStr: string, listLength: number, salt = ""): number {
+  let hash = 0x811c9dc5;
+  for (const ch of `${dateStr}:${salt}`) {
+    hash ^= ch.codePointAt(0)!;
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash % listLength;
+}

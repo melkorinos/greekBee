@@ -7,7 +7,8 @@
 
 import type { LeksiarxeioLength, LeksiarxeioPuzzle } from "@/games/leksiarxeio/types";
 import { LEKSIARXEIO } from "@/config/gameRules";
-import { dateToIndex } from "@/lib/puzzleRotation";
+
+import { pickDailyAnswer } from "./answerPools";
 
 import words4 from "./words-4.json";
 import words5 from "./words-5.json";
@@ -40,10 +41,11 @@ const ANSWER_POOLS: Record<LeksiarxeioLength, string[]> = {
 
 
 function buildFallbackPuzzle(date: string, length: LeksiarxeioLength): LeksiarxeioPuzzle {
-  const pool = getAnswerPool(length);
-  if (pool.length === 0) throw new Error(`No answer pool for length ${length}`);
-  const answer = pool[dateToIndex(date, pool.length)];
-  return { id: `${date}-wordle-${length}`, date, answer, length };
+  // The pick itself belongs to answerPools.ts, which must stay the only place
+  // that knows it — getSameDayFallbackAnswers derives the leak guard from the
+  // same function, and the two silently disagreeing is exactly how a derived
+  // game would surface today's answer.
+  return { id: `${date}-wordle-${length}`, date, answer: pickDailyAnswer(date, length), length };
 }
 
 interface LeksiarxeioDaily {

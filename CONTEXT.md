@@ -287,6 +287,6 @@ No deletion policy is implemented. `last_active` is updated on every profile ups
 
 **"Score" is overloaded** — Leksokipos Score = accumulated word points (higher = better). Leksiarxeio Leaderboard Score = sum of In-game Points across 5 Lengths (higher = better). API field is named `score` for interface compatibility only.
 
-**"Valid words" is context-dependent** — In Leksokipos it's the accepted-answer list. In Leksiarxeio it's the guess-validation pool (same file as the Answer pool).
+**"Valid words" is context-dependent** — In Leksokipos it's the accepted-answer list. In Leksiarxeio it is **three different sets in two files**: `words-{N}.json` is the guess-validation pool (what a player may type), `answers-{N}.json` is the pool a daily answer is drawn from, and the **Playable Pool** is that pool minus `answers-excluded.json`. A word can be typeable but never posed — ΣΟΥΤ, ΚΛΙΚ and ΓΙΟΚ all are.
 
 **Leksindeseis Puzzle has no `id`** — Identified by `date` alone. Inconsistent with the other two games; treat `date` as the effective ID.

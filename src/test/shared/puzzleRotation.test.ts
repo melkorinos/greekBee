@@ -1,12 +1,14 @@
-// puzzleRotation.test.ts — the platform's two date→puzzle primitives.
+// puzzleRotation.test.ts — the platform's three date→puzzle primitives.
 // dateToIndex: epoch is 2025-01-01; the double-modulo must keep all results in
 // [0, listLength). pickByDateOrRotate: the shared miss rule for a hand-authored
 // daily calendar — the invariant is that a miss can never serve a future board
 // and can never freeze on one board forever.
+// dateToHashIndex: the scattering variant, for lists whose ORDER carries quality
+// (Leksiarxeio's frequency-ordered answer pools) and so must not be walked.
 
 import { describe, expect, it } from "vitest";
 
-import { dateToIndex, pickByDateOrRotate } from "@/lib/puzzleRotation";
+import { dateToHashIndex, dateToIndex, pickByDateOrRotate } from "@/lib/puzzleRotation";
 
 describe("dateToIndex", () => {
   it("returns 0 on the epoch day itself (2025-01-01)", () => {
@@ -115,5 +117,42 @@ describe("pickByDateOrRotate", () => {
     expect(pickByDateOrRotate("2020-01-01", one).id).toBe("only");
     expect(pickByDateOrRotate("2026-01-01", one).id).toBe("only");
     expect(pickByDateOrRotate("2099-01-01", one).id).toBe("only");
+  });
+});
+
+describe("dateToHashIndex", () => {
+  it("is deterministic for the same date, length and salt", () => {
+    expect(dateToHashIndex("2026-09-21", 867, "4")).toBe(dateToHashIndex("2026-09-21", 867, "4"));
+  });
+
+  it("stays in range for every day of a decade", () => {
+    const start = new Date("2026-01-01").getTime();
+    for (let i = 0; i < 3650; i++) {
+      const date = new Date(start + i * 86_400_000).toISOString().slice(0, 10);
+      const index = dateToHashIndex(date, 867, "4");
+      expect(index).toBeGreaterThanOrEqual(0);
+      expect(index).toBeLessThan(867);
+      expect(Number.isInteger(index)).toBe(true);
+    }
+  });
+
+  it("scatters rather than walking — consecutive days are not consecutive indices", () => {
+    // The whole point of replacing dateToIndex for the frequency-ordered answer
+    // pools: a +1/day walk marches into the rare tail and never comes back.
+    const start = new Date("2026-01-01").getTime();
+    const indices: number[] = [];
+    for (let i = 0; i < 60; i++) {
+      const date = new Date(start + i * 86_400_000).toISOString().slice(0, 10);
+      indices.push(dateToHashIndex(date, 867, "4"));
+    }
+    const adjacent = indices.filter((n, i) => i > 0 && n === indices[i - 1] + 1);
+    expect(adjacent.length).toBeLessThan(3);
+    expect(new Set(indices).size).toBeGreaterThan(55);
+  });
+
+  it("gives different lengths different answers on the same date", () => {
+    expect(dateToHashIndex("2026-09-21", 867, "4")).not.toBe(
+      dateToHashIndex("2026-09-21", 867, "5"),
+    );
   });
 });
